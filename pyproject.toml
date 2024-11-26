@@ -6,6 +6,8 @@ authors = ["Nikhil Shahi <nshahi1998@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 include = ["LICENSE"]
+homepage = "https://github.com/hyperbrowserai/python-sdk"
+repository = "https://github.com/hyperbrowserai/python-sdk"
 
 [tool.poetry.dependencies]
 python = "^3.9"
