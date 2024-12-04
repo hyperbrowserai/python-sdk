@@ -1,11 +1,18 @@
 from typing import Optional
 from ..transport.sync import SyncTransport
 from .base import HyperbrowserBase
-from ..models.session import BasicResponse, SessionDetail, SessionListParams, SessionListResponse
+from ..models.session import (
+    BasicResponse,
+    SessionDetail,
+    SessionListParams,
+    SessionListResponse,
+)
 from ..config import ClientConfig
+
 
 class Hyperbrowser(HyperbrowserBase):
     """Synchronous Hyperbrowser client"""
+
     def __init__(
         self,
         config: Optional[ClientConfig] = None,
@@ -28,8 +35,7 @@ class Hyperbrowser(HyperbrowserBase):
 
     def get_session_list(self, params: SessionListParams) -> SessionListResponse:
         response = self.transport.get(
-            self._build_url("/sessions"),
-            params=params.__dict__
+            self._build_url("/sessions"), params=params.__dict__
         )
         return SessionListResponse(**response.data)
 

@@ -1,11 +1,18 @@
 from typing import Optional
 from ..transport.async_transport import AsyncTransport
 from .base import HyperbrowserBase
-from ..models.session import BasicResponse, SessionDetail, SessionListParams, SessionListResponse
+from ..models.session import (
+    BasicResponse,
+    SessionDetail,
+    SessionListParams,
+    SessionListResponse,
+)
 from ..config import ClientConfig
+
 
 class AsyncHyperbrowser(HyperbrowserBase):
     """Asynchronous Hyperbrowser client"""
+
     def __init__(
         self,
         config: Optional[ClientConfig] = None,
@@ -26,10 +33,11 @@ class AsyncHyperbrowser(HyperbrowserBase):
         response = await self.transport.put(self._build_url(f"/session/{id}/stop"))
         return BasicResponse(**response.data)
 
-    async def get_session_list(self, params: SessionListParams = SessionListParams()) -> SessionListResponse:
+    async def get_session_list(
+        self, params: SessionListParams = SessionListParams()
+    ) -> SessionListResponse:
         response = await self.transport.get(
-            self._build_url("/sessions"),
-            params=params.__dict__
+            self._build_url("/sessions"), params=params.__dict__
         )
         return SessionListResponse(**response.data)
 

@@ -4,16 +4,20 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 SessionStatus = Literal["active", "closed", "error"]
 
+
 class BasicResponse(BaseModel):
     """
     Represents a basic Hyperbrowser response.
     """
+
     success: bool
+
 
 class Session(BaseModel):
     """
     Represents a basic session in the Hyperbrowser system.
     """
+
     model_config = ConfigDict(
         populate_by_alias=True,
     )
@@ -28,7 +32,7 @@ class Session(BaseModel):
     duration: Optional[int] = None
     session_url: str = Field(alias="sessionUrl")
 
-    @field_validator('start_time', 'end_time', mode='before')
+    @field_validator("start_time", "end_time", mode="before")
     @classmethod
     def parse_timestamp(cls, value: Optional[Union[str, int]]) -> Optional[int]:
         """Convert string timestamps to integers."""
@@ -38,16 +42,20 @@ class Session(BaseModel):
             return int(value)
         return value
 
+
 class SessionDetail(Session):
     """
     Detailed session information including websocket endpoint.
     """
+
     websocket_url: Optional[str] = Field(alias="wsEndpoint", default=None)
+
 
 class SessionListParams(BaseModel):
     """
     Parameters for listing sessions.
     """
+
     model_config = ConfigDict(
         populate_by_alias=True,
     )
@@ -55,10 +63,12 @@ class SessionListParams(BaseModel):
     status: Optional[SessionStatus] = Field(default=None, exclude=None)
     page: int = Field(default=1, ge=1)
 
+
 class SessionListResponse(BaseModel):
     """
     Response containing a list of sessions with pagination information.
     """
+
     model_config = ConfigDict(
         populate_by_alias=True,
     )
