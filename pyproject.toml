@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hyperbrowser"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python SDK for hyperbrowser"
 authors = ["Nikhil Shahi <nshahi1998@gmail.com>"]
 license = "MIT"
@@ -11,9 +11,8 @@ repository = "https://github.com/hyperbrowserai/python-sdk"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-requests = "^2.32.3"
 pydantic = "^2.10.0"
-aiohttp = "^3.11.7"
+httpx = "^0.28.0"
 
 
 [tool.poetry.group.dev.dependencies]

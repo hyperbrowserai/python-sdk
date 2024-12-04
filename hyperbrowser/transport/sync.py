@@ -1,4 +1,4 @@
-import requests
+import httpx
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -6,20 +6,19 @@ from .base import TransportStrategy, APIResponse
 
 
 class SyncTransport(TransportStrategy):
-    """Synchronous transport implementation using requests"""
+    """Synchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str):
-        self.session = requests.Session()
-        self.session.headers.update({"x-api-key": api_key})
+        self.client = httpx.Client(headers={"x-api-key": api_key})
 
-    def _handle_response(self, response: requests.Response) -> APIResponse:
+    def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:
             response.raise_for_status()
             try:
                 if not response.content:
                     return APIResponse.from_status(response.status_code)
                 return APIResponse(response.json())
-            except requests.exceptions.JSONDecodeError as e:
+            except httpx.DecodingError as e:
                 if response.status_code >= 400:
                     raise HyperbrowserError(
                         response.text or "Unknown error occurred",
@@ -28,7 +27,7 @@ class SyncTransport(TransportStrategy):
                         original_error=e,
                     )
                 return APIResponse.from_status(response.status_code)
-        except requests.exceptions.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
@@ -40,15 +39,15 @@ class SyncTransport(TransportStrategy):
                 response=response,
                 original_error=e,
             )
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             raise HyperbrowserError("Request failed", original_error=e)
 
     def close(self) -> None:
-        self.session.close()
+        self.client.close()
 
     def post(self, url: str) -> APIResponse:
         try:
-            response = self.session.post(url)
+            response = self.client.post(url)
             return self._handle_response(response)
         except HyperbrowserError:
             raise
@@ -59,7 +58,7 @@ class SyncTransport(TransportStrategy):
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         try:
-            response = self.session.get(url, params=params)
+            response = self.client.get(url, params=params)
             return self._handle_response(response)
         except HyperbrowserError:
             raise
@@ -68,7 +67,7 @@ class SyncTransport(TransportStrategy):
 
     def put(self, url: str) -> APIResponse:
         try:
-            response = self.session.put(url)
+            response = self.client.put(url)
             return self._handle_response(response)
         except HyperbrowserError:
             raise

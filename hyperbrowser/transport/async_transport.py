@@ -1,5 +1,5 @@
 import asyncio
-import aiohttp
+import httpx
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -7,16 +7,16 @@ from .base import TransportStrategy, APIResponse
 
 
 class AsyncTransport(TransportStrategy):
-    """Asynchronous transport implementation using aiohttp"""
+    """Asynchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str):
-        self.session = aiohttp.ClientSession(headers={"x-api-key": api_key})
+        self.client = httpx.AsyncClient(headers={"x-api-key": api_key})
         self._closed = False
 
     async def close(self) -> None:
-        if not self._closed and not self.session.closed:
+        if not self._closed:
             self._closed = True
-            await self.session.close()
+            await self.client.aclose()
 
     async def __aenter__(self):
         return self
@@ -25,52 +25,51 @@ class AsyncTransport(TransportStrategy):
         await self.close()
 
     def __del__(self):
-        if not self._closed and not self.session.closed:
+        if not self._closed:
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    loop.create_task(self.session.close())
+                    loop.create_task(self.client.aclose())
                 else:
-                    loop.run_until_complete(self.session.close())
+                    loop.run_until_complete(self.client.aclose())
             except Exception:
                 pass
 
-    async def _handle_response(self, response: aiohttp.ClientResponse) -> APIResponse:
+    async def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:
             response.raise_for_status()
             try:
-                if response.content_length is None or response.content_length == 0:
-                    return APIResponse.from_status(response.status)
-                return APIResponse(await response.json())
-            except aiohttp.ContentTypeError as e:
-                if response.status >= 400:
-                    text = await response.text()
+                if not response.content:
+                    return APIResponse.from_status(response.status_code)
+                return APIResponse(response.json())
+            except httpx.DecodingError as e:
+                if response.status_code >= 400:
                     raise HyperbrowserError(
-                        text or "Unknown error occurred",
-                        status_code=response.status,
+                        response.text or "Unknown error occurred",
+                        status_code=response.status_code,
                         response=response,
                         original_error=e,
                     )
-                return APIResponse.from_status(response.status)
-        except aiohttp.ClientResponseError as e:
+                return APIResponse.from_status(response.status_code)
+        except httpx.HTTPStatusError as e:
             try:
-                error_data = await response.json()
+                error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
             except:
                 message = str(e)
             raise HyperbrowserError(
                 message,
-                status_code=response.status,
+                status_code=response.status_code,
                 response=response,
                 original_error=e,
             )
-        except aiohttp.ClientError as e:
+        except httpx.RequestError as e:
             raise HyperbrowserError("Request failed", original_error=e)
 
     async def post(self, url: str) -> APIResponse:
         try:
-            async with self.session.post(url) as response:
-                return await self._handle_response(response)
+            response = await self.client.post(url)
+            return await self._handle_response(response)
         except HyperbrowserError:
             raise
         except Exception as e:
@@ -80,8 +79,8 @@ class AsyncTransport(TransportStrategy):
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         try:
-            async with self.session.get(url, params=params) as response:
-                return await self._handle_response(response)
+            response = await self.client.get(url, params=params)
+            return await self._handle_response(response)
         except HyperbrowserError:
             raise
         except Exception as e:
@@ -89,8 +88,8 @@ class AsyncTransport(TransportStrategy):
 
     async def put(self, url: str) -> APIResponse:
         try:
-            async with self.session.put(url) as response:
-                return await self._handle_response(response)
+            response = await self.client.put(url)
+            return await self._handle_response(response)
         except HyperbrowserError:
             raise
         except Exception as e:
