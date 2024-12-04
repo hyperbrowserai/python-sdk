@@ -2,6 +2,8 @@ from typing import List, Literal, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+from hyperbrowser.models.consts import Country, OperatingSystem, Platform, ISO639_1
+
 SessionStatus = Literal["active", "closed", "error"]
 
 
@@ -87,3 +89,42 @@ class SessionListResponse(BaseModel):
     def total_pages(self) -> int:
         """Calculate the total number of pages."""
         return -(-self.total_count // self.per_page)
+
+
+class ScreenConfig(BaseModel):
+    """
+    Screen configuration parameters for browser session.
+    """
+
+    max_width: int = Field(default=1280, le=4096, serialization_alias="maxWidth")
+    max_height: int = Field(default=720, le=4096, serialization_alias="maxHeight")
+    min_width: int = Field(default=800, ge=360, serialization_alias="minWidth")
+    min_height: int = Field(default=480, ge=360, serialization_alias="minHeight")
+
+
+class CreateSessionParams(BaseModel):
+    """
+    Parameters for creating a new browser session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    proxy_server: Optional[str] = Field(default=None, serialization_alias="proxyServer")
+    proxy_server_password: Optional[str] = Field(
+        default=None, serialization_alias="proxyServerPassword"
+    )
+    proxy_server_username: Optional[str] = Field(
+        default=None, serialization_alias="proxyServerUsername"
+    )
+    proxy_country: Optional[Country] = Field(
+        default="US", serialization_alias="proxyCountry"
+    )
+    operating_systems: Optional[List[OperatingSystem]] = Field(
+        default=None, serialization_alias="operatingSystems"
+    )
+    device: Optional[List[Literal["desktop", "mobile"]]] = Field(default=None)
+    platform: Optional[List[Platform]] = Field(default=None)
+    locales: List[ISO639_1] = Field(default=["en"])
+    screen: Optional[ScreenConfig] = Field(default=None)

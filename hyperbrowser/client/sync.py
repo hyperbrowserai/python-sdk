@@ -3,6 +3,7 @@ from ..transport.sync import SyncTransport
 from .base import HyperbrowserBase
 from ..models.session import (
     BasicResponse,
+    CreateSessionParams,
     SessionDetail,
     SessionListParams,
     SessionListResponse,
@@ -21,8 +22,11 @@ class Hyperbrowser(HyperbrowserBase):
     ):
         super().__init__(SyncTransport, config, api_key, base_url)
 
-    def create_session(self) -> SessionDetail:
-        response = self.transport.post(self._build_url("/session"))
+    def create_session(self, params: CreateSessionParams) -> SessionDetail:
+        response = self.transport.post(
+            self._build_url("/session"),
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
         return SessionDetail(**response.data)
 
     def get_session(self, id: str) -> SessionDetail:

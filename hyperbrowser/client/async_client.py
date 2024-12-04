@@ -3,6 +3,7 @@ from ..transport.async_transport import AsyncTransport
 from .base import HyperbrowserBase
 from ..models.session import (
     BasicResponse,
+    CreateSessionParams,
     SessionDetail,
     SessionListParams,
     SessionListResponse,
@@ -21,8 +22,11 @@ class AsyncHyperbrowser(HyperbrowserBase):
     ):
         super().__init__(AsyncTransport, config, api_key, base_url)
 
-    async def create_session(self) -> SessionDetail:
-        response = await self.transport.post(self._build_url("/session"))
+    async def create_session(self, params: CreateSessionParams) -> SessionDetail:
+        response = await self.transport.post(
+            self._build_url("/session"),
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
         return SessionDetail(**response.data)
 
     async def get_session(self, id: str) -> SessionDetail:
