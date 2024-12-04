@@ -21,6 +21,8 @@ class AsyncTransport(TransportStrategy):
                 return APIResponse.from_status(response.status)
 
     async def get(self, url: str, params: Optional[dict] = None) -> APIResponse:
+        if params:
+            params = {k: v for k, v in params.items() if v is not None}
         async with self.session.get(url, params=params) as response:
             response.raise_for_status()
             try:

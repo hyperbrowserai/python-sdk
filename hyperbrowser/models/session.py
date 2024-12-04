@@ -4,6 +4,12 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 SessionStatus = Literal["active", "closed", "error"]
 
+class BasicResponse(BaseModel):
+    """
+    Represents a basic Hyperbrowser response.
+    """
+    success: bool
+
 class Session(BaseModel):
     """
     Represents a basic session in the Hyperbrowser system.
@@ -46,9 +52,8 @@ class SessionListParams(BaseModel):
         populate_by_alias=True,
     )
 
-    status: Optional[SessionStatus] = None
+    status: Optional[SessionStatus] = Field(default=None, exclude=None)
     page: int = Field(default=1, ge=1)
-    per_page: int = Field(alias="perPage", default=20, ge=1, le=100)
 
 class SessionListResponse(BaseModel):
     """

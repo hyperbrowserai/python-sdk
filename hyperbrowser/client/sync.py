@@ -1,7 +1,7 @@
 from typing import Optional
 from ..transport.sync import SyncTransport
 from .base import HyperbrowserBase
-from ..models.session import SessionDetail, Session, SessionListParams, SessionListResponse
+from ..models.session import BasicResponse, SessionDetail, SessionListParams, SessionListResponse
 from ..config import ClientConfig
 
 class Hyperbrowser(HyperbrowserBase):
@@ -22,9 +22,9 @@ class Hyperbrowser(HyperbrowserBase):
         response = self.transport.get(self._build_url(f"/session/{id}"))
         return SessionDetail(**response.data)
 
-    def stop_session(self, id: str) -> bool:
+    def stop_session(self, id: str) -> BasicResponse:
         response = self.transport.put(self._build_url(f"/session/{id}/stop"))
-        return response.is_success()
+        return BasicResponse(**response.data)
 
     def get_session_list(self, params: SessionListParams) -> SessionListResponse:
         response = self.transport.get(

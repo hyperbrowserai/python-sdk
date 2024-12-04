@@ -1,7 +1,7 @@
 from typing import Optional
 from ..transport.async_transport import AsyncTransport
 from .base import HyperbrowserBase
-from ..models.session import SessionDetail, Session, SessionListParams, SessionListResponse
+from ..models.session import BasicResponse, SessionDetail, SessionListParams, SessionListResponse
 from ..config import ClientConfig
 
 class AsyncHyperbrowser(HyperbrowserBase):
@@ -22,11 +22,11 @@ class AsyncHyperbrowser(HyperbrowserBase):
         response = await self.transport.get(self._build_url(f"/session/{id}"))
         return SessionDetail(**response.data)
 
-    async def stop_session(self, id: str) -> bool:
+    async def stop_session(self, id: str) -> BasicResponse:
         response = await self.transport.put(self._build_url(f"/session/{id}/stop"))
-        return response.is_success()
+        return BasicResponse(**response.data)
 
-    async def get_session_list(self, params: SessionListParams) -> SessionListResponse:
+    async def get_session_list(self, params: SessionListParams = SessionListParams()) -> SessionListResponse:
         response = await self.transport.get(
             self._build_url("/sessions"),
             params=params.__dict__
@@ -35,3 +35,9 @@ class AsyncHyperbrowser(HyperbrowserBase):
 
     async def close(self) -> None:
         await self.transport.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
