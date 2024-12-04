@@ -25,15 +25,15 @@ The API key can be configured either from the constructor arguments or environme
 ```python
 import asyncio
 from pyppeteer import connect
-from hyperbrowser.client.async_client import AsyncHyperbrowser as Hyperbrowser
+from hyperbrowser import AsyncHyperbrowser
 
 HYPERBROWSER_API_KEY = "test-key"
 
 async def main():
-    async with Hyperbrowser(api_key=HYPERBROWSER_API_KEY) as client:
+    async with AsyncHyperbrowser(api_key=HYPERBROWSER_API_KEY) as client:
         session = await client.create_session()
 
-        ws_endpoint = f"{session.websocket_url}&apiKey={HYPERBROWSER_API_KEY}"
+        ws_endpoint = session.websocket_url
         browser = await connect(browserWSEndpoint=ws_endpoint, defaultViewport=None)
 
         # Get pages
@@ -51,6 +51,7 @@ async def main():
 
         await page.close()
         await browser.disconnect()
+        await client.stop_session(session.id)
         print("Session completed!")
 
 # Run the asyncio event loop
@@ -60,7 +61,7 @@ asyncio.get_event_loop().run_until_complete(main())
 
 ```python
 from playwright.sync_api import sync_playwright
-from hyperbrowser.client.sync import Hyperbrowser
+from hyperbrowser import Hyperbrowser
 
 HYPERBROWSER_API_KEY = "test-key"
 
@@ -68,7 +69,7 @@ def main():
     client = Hyperbrowser(api_key=HYPERBROWSER_API_KEY)
     session = client.create_session()
 
-    ws_endpoint = f"{session.websocket_url}&apiKey={HYPERBROWSER_API_KEY}"
+    ws_endpoint = session.websocket_url
 
     # Launch Playwright and connect to the remote browser
     with sync_playwright() as p:
@@ -90,6 +91,7 @@ def main():
         page.close()
         browser.close()
         print("Session completed!")
+    client.stop_session(session.id)
 
 # Run the asyncio event loop
 main()
