@@ -1,4 +1,10 @@
 from typing import Optional
+
+from hyperbrowser.models.scrape import (
+    ScrapeJobResponse,
+    StartScrapeJobParams,
+    StartScrapeJobResponse,
+)
 from ..transport.sync import SyncTransport
 from .base import HyperbrowserBase
 from ..models.session import (
@@ -42,6 +48,17 @@ class Hyperbrowser(HyperbrowserBase):
             self._build_url("/sessions"), params=params.__dict__
         )
         return SessionListResponse(**response.data)
+
+    def start_scrape_job(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
+        response = self.transport.post(
+            self._build_url("/scrape"),
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return StartScrapeJobResponse(**response.data)
+
+    def get_scrape_job(self, job_id: str) -> ScrapeJobResponse:
+        response = self.transport.get(self._build_url(f"/api/scrape/{job_id}"))
+        return ScrapeJobResponse(**response.data)
 
     def close(self) -> None:
         self.transport.close()

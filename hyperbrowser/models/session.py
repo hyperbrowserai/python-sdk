@@ -96,10 +96,8 @@ class ScreenConfig(BaseModel):
     Screen configuration parameters for browser session.
     """
 
-    max_width: int = Field(default=1280, le=4096, serialization_alias="maxWidth")
-    max_height: int = Field(default=720, le=4096, serialization_alias="maxHeight")
-    min_width: int = Field(default=800, ge=360, serialization_alias="minWidth")
-    min_height: int = Field(default=480, ge=360, serialization_alias="minHeight")
+    width: int = Field(default=1280, le=3840, ge=640, serialization_alias="width")
+    height: int = Field(default=720, le=2160, ge=360, serialization_alias="height")
 
 
 class CreateSessionParams(BaseModel):
@@ -111,6 +109,8 @@ class CreateSessionParams(BaseModel):
         populate_by_alias=True,
     )
 
+    use_stealth: bool = Field(default=False, serialization_alias="useStealth")
+    use_proxy: bool = Field(default=False, serialization_alias="useProxy")
     proxy_server: Optional[str] = Field(default=None, serialization_alias="proxyServer")
     proxy_server_password: Optional[str] = Field(
         default=None, serialization_alias="proxyServerPassword"
@@ -128,3 +128,7 @@ class CreateSessionParams(BaseModel):
     platform: Optional[List[Platform]] = Field(default=None)
     locales: List[ISO639_1] = Field(default=["en"])
     screen: Optional[ScreenConfig] = Field(default=None)
+    solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
+    adblock: bool = Field(default=False, serialization_alias="adblock")
+    trackers: bool = Field(default=False, serialization_alias="trackers")
+    annoyances: bool = Field(default=False, serialization_alias="annoyances")
