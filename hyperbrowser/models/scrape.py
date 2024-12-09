@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
@@ -14,6 +14,8 @@ class StartScrapeJobParams(BaseModel):
     )
 
     url: str
+    use_proxy: bool = Field(default=False, serialization_alias="useProxy")
+    solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
 
 
 class StartScrapeJobResponse(BaseModel):
@@ -44,7 +46,7 @@ class ScrapeJobMetadata(BaseModel):
     og_description: str = Field(alias="ogDescription")
     og_url: str = Field(alias="ogUrl")
     og_image: str = Field(alias="ogImage")
-    og_locale_alternate: list[str] = Field(alias="ogLocaleAlternate")
+    og_locale_alternate: List[str] = Field(alias="ogLocaleAlternate")
     og_site_name: str = Field(alias="ogSiteName")
     source_url: str = Field(alias="sourceURL")
 
