@@ -80,7 +80,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         return StartCrawlJobResponse(**response.data)
 
     async def get_crawl_job(
-        self, job_id: str, params: GetCrawlJobParams
+        self, job_id: str, params: GetCrawlJobParams = GetCrawlJobParams()
     ) -> CrawlJobResponse:
         response = await self.transport.get(
             self._build_url(f"/crawl/{job_id}"), params=params.__dict__

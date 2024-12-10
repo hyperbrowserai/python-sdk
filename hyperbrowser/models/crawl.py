@@ -76,7 +76,7 @@ class GetCrawlJobParams(BaseModel):
 
     page: Optional[int] = Field(default=None, serialization_alias="page")
     batch_size: Optional[int] = Field(
-        default=10, ge=1, le=50, serialization_alias="batchSize"
+        default=20, ge=1, le=50, serialization_alias="batchSize"
     )
 
 
