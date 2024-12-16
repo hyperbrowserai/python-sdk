@@ -1,5 +1,7 @@
 from typing import Literal
 
+ScrapeFormat = Literal["markdown", "html", "links"]
+
 Country = Literal[
     "AD",
     "AE",

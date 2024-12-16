@@ -1,5 +1,7 @@
+import asyncio
 from typing import Optional
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.crawl import (
     CrawlJobResponse,
     GetCrawlJobParams,
@@ -86,6 +88,30 @@ class AsyncHyperbrowser(HyperbrowserBase):
             self._build_url(f"/crawl/{job_id}"), params=params.__dict__
         )
         return CrawlJobResponse(**response.data)
+
+    async def start_scrape_job_and_wait_until_complete(
+        self, params: StartScrapeJobParams
+    ) -> ScrapeJobResponse:
+        job_id = await self.start_scrape_job(params)
+        if not job_id:
+            raise HyperbrowserError("Failed to start scrape job")
+        while True:
+            job = await self.get_scrape_job(job_id)
+            if job.status == "completed" or job.status == "failed":
+                return job
+            await asyncio.sleep(2)
+
+    async def start_crawl_job_and_wait_until_complete(
+        self, params: StartCrawlJobParams
+    ) -> CrawlJobResponse:
+        job_id = await self.start_crawl_job(params)
+        if not job_id:
+            raise HyperbrowserError("Failed to start crawl job")
+        while True:
+            job = await self.get_crawl_job(job_id)
+            if job.status == "completed" or job.status == "failed":
+                return job
+            await asyncio.sleep(2)
 
     async def close(self) -> None:
         await self.transport.close()

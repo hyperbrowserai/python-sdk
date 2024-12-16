@@ -1,7 +1,26 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
+from hyperbrowser.models.consts import ScrapeFormat
+
 ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
+
+
+class ScrapeOptions(BaseModel):
+    """
+    Options for scraping a page.
+    """
+
+    formats: Optional[List[ScrapeFormat]] = None
+    include_tags: Optional[List[str]] = Field(
+        default=None, serialization_alias="includeTags"
+    )
+    exclude_tags: Optional[List[str]] = Field(
+        default=None, serialization_alias="excludeTags"
+    )
+    only_main_content: Optional[bool] = Field(
+        default=None, serialization_alias="onlyMainContent"
+    )
 
 
 class StartScrapeJobParams(BaseModel):
@@ -16,6 +35,7 @@ class StartScrapeJobParams(BaseModel):
     url: str
     use_proxy: bool = Field(default=False, serialization_alias="useProxy")
     solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
+    options: Optional[ScrapeOptions] = None
 
 
 class StartScrapeJobResponse(BaseModel):
@@ -69,6 +89,7 @@ class ScrapeJobResponse(BaseModel):
         populate_by_alias=True,
     )
 
+    job_id: str = Field(alias="jobId")
     status: ScrapeJobStatus
     error: Optional[str] = None
     data: Optional[ScrapeJobData] = None

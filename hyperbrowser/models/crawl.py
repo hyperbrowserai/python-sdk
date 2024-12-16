@@ -1,6 +1,8 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
+from hyperbrowser.models.scrape import ScrapeOptions
+
 CrawlJobStatus = Literal["pending", "running", "completed", "failed"]
 
 
@@ -16,6 +18,7 @@ class StartCrawlJobParams(BaseModel):
     url: str
     max_pages: int = Field(default=10, ge=1, le=50, serialization_alias="maxPages")
     follow_links: bool = Field(default=True, serialization_alias="followLinks")
+    ignore_sitemap: bool = Field(default=False, serialization_alias="ignoreSitemap")
     exclude_patterns: List[str] = Field(
         default=[], serialization_alias="excludePatterns"
     )
@@ -24,6 +27,7 @@ class StartCrawlJobParams(BaseModel):
     )
     use_proxy: bool = Field(default=False, serialization_alias="useProxy")
     solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
+    options: Optional[ScrapeOptions] = None
 
 
 class StartCrawlJobResponse(BaseModel):
@@ -89,6 +93,7 @@ class CrawlJobResponse(BaseModel):
         populate_by_alias=True,
     )
 
+    job_id: str = Field(alias="jobId")
     status: CrawlJobStatus
     error: Optional[str] = None
     data: List[CrawledPage] = Field(alias="data")
