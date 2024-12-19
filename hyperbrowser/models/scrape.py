@@ -50,34 +50,15 @@ class StartScrapeJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
 
 
-class ScrapeJobMetadata(BaseModel):
-    """
-    Metadata for the scraped site.
-    """
-
-    model_config = ConfigDict(
-        populate_by_alias=True,
-    )
-
-    title: str
-    description: str
-    robots: str
-    og_title: str = Field(alias="ogTitle")
-    og_description: str = Field(alias="ogDescription")
-    og_url: str = Field(alias="ogUrl")
-    og_image: str = Field(alias="ogImage")
-    og_locale_alternate: List[str] = Field(alias="ogLocaleAlternate")
-    og_site_name: str = Field(alias="ogSiteName")
-    source_url: str = Field(alias="sourceURL")
-
-
 class ScrapeJobData(BaseModel):
     """
     Data from a scraped site.
     """
 
-    metadata: ScrapeJobMetadata
-    markdown: str
+    metadata: dict[str, str | list[str]]
+    html: Optional[str] = None
+    markdown: Optional[str] = None
+    links: Optional[List[str]] = None
 
 
 class ScrapeJobResponse(BaseModel):

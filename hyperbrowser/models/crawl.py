@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from hyperbrowser.models.scrape import ScrapeOptions
 
 CrawlJobStatus = Literal["pending", "running", "completed", "failed"]
+CrawlPageStatus = Literal["completed", "failed"]
 
 
 class StartCrawlJobParams(BaseModel):
@@ -42,35 +43,18 @@ class StartCrawlJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
 
 
-class CrawledPageMetadata(BaseModel):
-    """
-    Metadata for the crawled page.
-    """
-
-    model_config = ConfigDict(
-        populate_by_alias=True,
-    )
-
-    title: str
-    description: str
-    robots: str
-    og_title: str = Field(alias="ogTitle")
-    og_description: str = Field(alias="ogDescription")
-    og_url: str = Field(alias="ogUrl")
-    og_image: str = Field(alias="ogImage")
-    og_locale_alternate: List[str] = Field(alias="ogLocaleAlternate")
-    og_site_name: str = Field(alias="ogSiteName")
-    source_url: str = Field(alias="sourceURL")
-
-
 class CrawledPage(BaseModel):
     """
     Data from a crawled page.
     """
 
-    metadata: CrawledPageMetadata
-    markdown: str
+    metadata: dict[str, str | list[str]]
+    html: Optional[str] = None
+    markdown: Optional[str] = None
+    links: Optional[List[str]] = None
     url: str
+    status: CrawlPageStatus
+    error: Optional[str] = None
 
 
 class GetCrawlJobParams(BaseModel):
