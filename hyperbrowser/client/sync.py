@@ -86,25 +86,25 @@ class Hyperbrowser(HyperbrowserBase):
     def scrape_and_wait_until_complete(
         self, params: StartScrapeJobParams
     ) -> ScrapeJobResponse:
-        job_id = self.start_scrape_job(params)
-        if not job_id:
+        job_start_resp = self.start_scrape_job(params)
+        if not job_start_resp.job_id:
             raise HyperbrowserError("Failed to start scrape job")
         while True:
-            job = self.get_scrape_job(job_id)
-            if job.status == "completed" or job.status == "failed":
-                return job
+            job_response = self.get_scrape_job(job_start_resp.job_id)
+            if job_response.status == "completed" or job_response.status == "failed":
+                return job_response
             time.sleep(2)
 
     def crawl_and_wait_until_complete(
-        self, params: StartCrawlJobParams, return_all_pages: bool = False
+        self, params: StartCrawlJobParams, return_all_pages: bool = True
     ) -> CrawlJobResponse:
-        job_id = self.start_crawl_job(params)
-        if not job_id:
+        job_start_resp = self.start_crawl_job(params)
+        if not job_start_resp.job_id:
             raise HyperbrowserError("Failed to start crawl job")
 
         job_response: CrawlJobResponse
         while True:
-            job_response = self.get_crawl_job(job_id)
+            job_response = self.get_crawl_job(job_start_resp.job_id)
             if job_response.status == "completed" or job_response.status == "failed":
                 break
             time.sleep(2)
@@ -114,7 +114,8 @@ class Hyperbrowser(HyperbrowserBase):
 
         while job_response.current_page_batch < job_response.total_page_batches:
             tmp_job_response = self.get_crawl_job(
-                job_id, GetCrawlJobParams(page=job_response.current_page_batch + 1)
+                job_start_resp.job_id,
+                GetCrawlJobParams(page=job_response.current_page_batch + 1),
             )
             if tmp_job_response.data:
                 job_response.data.extend(tmp_job_response.data)

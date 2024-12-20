@@ -92,25 +92,25 @@ class AsyncHyperbrowser(HyperbrowserBase):
     async def scrape_and_wait_until_complete(
         self, params: StartScrapeJobParams
     ) -> ScrapeJobResponse:
-        job_id = await self.start_scrape_job(params)
-        if not job_id:
+        job_start_resp = await self.start_scrape_job(params)
+        if not job_start_resp.job_id:
             raise HyperbrowserError("Failed to start scrape job")
         while True:
-            job = await self.get_scrape_job(job_id)
-            if job.status == "completed" or job.status == "failed":
-                return job
+            job_response = await self.get_scrape_job(job_start_resp.job_id)
+            if job_response.status == "completed" or job_response.status == "failed":
+                return job_response
             await asyncio.sleep(2)
 
     async def crawl_and_wait_until_complete(
-        self, params: StartCrawlJobParams, return_all_pages: bool = False
+        self, params: StartCrawlJobParams, return_all_pages: bool = True
     ) -> CrawlJobResponse:
-        job_id = await self.start_crawl_job(params)
-        if not job_id:
+        job_start_resp = await self.start_crawl_job(params)
+        if not job_start_resp.job_id:
             raise HyperbrowserError("Failed to start crawl job")
 
         job_response: CrawlJobResponse
         while True:
-            job_response = await self.get_crawl_job(job_id)
+            job_response = await self.get_crawl_job(job_start_resp.job_id)
             if job_response.status == "completed" or job_response.status == "failed":
                 break
             await asyncio.sleep(2)
@@ -120,7 +120,8 @@ class AsyncHyperbrowser(HyperbrowserBase):
 
         while job_response.current_page_batch < job_response.total_page_batches:
             tmp_job_response = await self.get_crawl_job(
-                job_id, GetCrawlJobParams(page=job_response.current_page_batch + 1)
+                job_start_resp.job_id,
+                GetCrawlJobParams(page=job_response.current_page_batch + 1),
             )
             if tmp_job_response.data:
                 job_response.data.extend(tmp_job_response.data)
