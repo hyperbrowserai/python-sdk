@@ -28,7 +28,7 @@ class CrawlManager:
         )
         return CrawlJobResponse(**response.data)
 
-    async def wait_until_complete(
+    async def start_and_wait(
         self, params: StartCrawlJobParams, return_all_pages: bool = True
     ) -> CrawlJobResponse:
         job_start_resp = await self.start(params)

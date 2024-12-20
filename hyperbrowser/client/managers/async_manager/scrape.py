@@ -25,9 +25,7 @@ class ScrapeManager:
         )
         return ScrapeJobResponse(**response.data)
 
-    async def wait_until_complete(
-        self, params: StartScrapeJobParams
-    ) -> ScrapeJobResponse:
+    async def start_and_wait(self, params: StartScrapeJobParams) -> ScrapeJobResponse:
         job_start_resp = await self.start(params)
         if not job_start_resp.job_id:
             raise HyperbrowserError("Failed to start scrape job")
