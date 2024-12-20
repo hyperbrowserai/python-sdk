@@ -50,7 +50,7 @@ class SessionDetail(Session):
     Detailed session information including websocket endpoint.
     """
 
-    websocket_url: Optional[str] = Field(alias="wsEndpoint", default=None)
+    ws_endpoint: Optional[str] = Field(alias="wsEndpoint", default=None)
 
 
 class SessionListParams(BaseModel):

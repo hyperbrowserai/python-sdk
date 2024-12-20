@@ -33,7 +33,7 @@ async def main():
     async with AsyncHyperbrowser(api_key=HYPERBROWSER_API_KEY) as client:
         session = await client.create_session()
 
-        ws_endpoint = session.websocket_url
+        ws_endpoint = session.ws_endpoint
         browser = await connect(browserWSEndpoint=ws_endpoint, defaultViewport=None)
 
         # Get pages
@@ -69,7 +69,7 @@ def main():
     client = Hyperbrowser(api_key=HYPERBROWSER_API_KEY)
     session = client.create_session()
 
-    ws_endpoint = session.websocket_url
+    ws_endpoint = session.ws_endpoint
 
     # Launch Playwright and connect to the remote browser
     with sync_playwright() as p:
