@@ -83,7 +83,7 @@ class Hyperbrowser(HyperbrowserBase):
         )
         return CrawlJobResponse(**response.data)
 
-    def start_scrape_job_and_wait_until_complete(
+    def scrape_and_wait_until_complete(
         self, params: StartScrapeJobParams
     ) -> ScrapeJobResponse:
         job_id = self.start_scrape_job(params)
@@ -95,7 +95,7 @@ class Hyperbrowser(HyperbrowserBase):
                 return job
             time.sleep(2)
 
-    def start_crawl_job_and_wait_until_complete(
+    def crawl_and_wait_until_complete(
         self, params: StartCrawlJobParams, return_all_pages: bool = False
     ) -> CrawlJobResponse:
         job_id = self.start_crawl_job(params)

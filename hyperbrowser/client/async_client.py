@@ -89,7 +89,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         )
         return CrawlJobResponse(**response.data)
 
-    async def start_scrape_job_and_wait_until_complete(
+    async def scrape_and_wait_until_complete(
         self, params: StartScrapeJobParams
     ) -> ScrapeJobResponse:
         job_id = await self.start_scrape_job(params)
@@ -101,7 +101,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
                 return job
             await asyncio.sleep(2)
 
-    async def start_crawl_job_and_wait_until_complete(
+    async def crawl_and_wait_until_complete(
         self, params: StartCrawlJobParams, return_all_pages: bool = False
     ) -> CrawlJobResponse:
         job_id = await self.start_crawl_job(params)
