@@ -2,6 +2,7 @@ from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 from hyperbrowser.models.consts import ScrapeFormat
+from hyperbrowser.models.session import CreateSessionParams
 
 ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
 
@@ -33,9 +34,12 @@ class StartScrapeJobParams(BaseModel):
     )
 
     url: str
-    use_proxy: bool = Field(default=False, serialization_alias="useProxy")
-    solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
-    options: Optional[ScrapeOptions] = None
+    session_options: Optional[CreateSessionParams] = Field(
+        default=None, serialization_alias="sessionOptions"
+    )
+    scrape_options: Optional[ScrapeOptions] = Field(
+        default=None, serialization_alias="scrapeOptions"
+    )
 
 
 class StartScrapeJobResponse(BaseModel):
