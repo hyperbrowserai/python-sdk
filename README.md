@@ -31,7 +31,7 @@ HYPERBROWSER_API_KEY = "test-key"
 
 async def main():
     async with AsyncHyperbrowser(api_key=HYPERBROWSER_API_KEY) as client:
-        session = await client.create_session()
+        session = await client.sessions.create()
 
         ws_endpoint = session.ws_endpoint
         browser = await connect(browserWSEndpoint=ws_endpoint, defaultViewport=None)
@@ -51,7 +51,7 @@ async def main():
 
         await page.close()
         await browser.disconnect()
-        await client.stop_session(session.id)
+        await client.sessions.stop(session.id)
         print("Session completed!")
 
 # Run the asyncio event loop
@@ -67,7 +67,7 @@ HYPERBROWSER_API_KEY = "test-key"
 
 def main():
     client = Hyperbrowser(api_key=HYPERBROWSER_API_KEY)
-    session = client.create_session()
+    session = client.sessions.create()
 
     ws_endpoint = session.ws_endpoint
 
@@ -91,7 +91,7 @@ def main():
         page.close()
         browser.close()
         print("Session completed!")
-    client.stop_session(session.id)
+    client.sessions.stop(session.id)
 
 # Run the asyncio event loop
 main()
