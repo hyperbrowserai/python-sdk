@@ -22,12 +22,8 @@ class ScrapeOptions(BaseModel):
     only_main_content: Optional[bool] = Field(
         default=None, serialization_alias="onlyMainContent"
     )
-    wait_for: Optional[int] = Field(
-        default=None, serialization_alias="waitFor"
-    )
-    timeout: Optional[int] = Field(
-        default=None, serialization_alias="timeout"
-    )
+    wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
+    timeout: Optional[int] = Field(default=None, serialization_alias="timeout")
 
 
 class StartScrapeJobParams(BaseModel):
