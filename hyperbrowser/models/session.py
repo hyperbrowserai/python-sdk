@@ -96,8 +96,8 @@ class ScreenConfig(BaseModel):
     Screen configuration parameters for browser session.
     """
 
-    width: int = Field(default=1280, le=3840, ge=640, serialization_alias="width")
-    height: int = Field(default=720, le=2160, ge=360, serialization_alias="height")
+    width: int = Field(default=1280, serialization_alias="width")
+    height: int = Field(default=720, serialization_alias="height")
 
 
 class CreateSessionParams(BaseModel):
