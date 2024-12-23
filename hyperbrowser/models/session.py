@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
@@ -132,3 +132,18 @@ class CreateSessionParams(BaseModel):
     adblock: bool = Field(default=False, serialization_alias="adblock")
     trackers: bool = Field(default=False, serialization_alias="trackers")
     annoyances: bool = Field(default=False, serialization_alias="annoyances")
+
+
+class SessionRecording(BaseModel):
+    """
+    Model for session recording data.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    type: int
+    data: Any
+    timestamp: int
+    delay: Optional[int] = None

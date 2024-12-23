@@ -1,10 +1,11 @@
-from typing import Optional
+from typing import List
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
     SessionDetail,
     SessionListParams,
     SessionListResponse,
+    SessionRecording,
 )
 
 
@@ -38,3 +39,9 @@ class SessionManager:
             self._client._build_url("/sessions"), params=params.__dict__
         )
         return SessionListResponse(**response.data)
+
+    async def get_recording(self, id: str) -> List[SessionRecording]:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/recording")
+        )
+        return [SessionRecording(**recording) for recording in response.data]
