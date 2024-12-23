@@ -132,6 +132,9 @@ class CreateSessionParams(BaseModel):
     adblock: bool = Field(default=False, serialization_alias="adblock")
     trackers: bool = Field(default=False, serialization_alias="trackers")
     annoyances: bool = Field(default=False, serialization_alias="annoyances")
+    enable_web_recording: Optional[bool] = Field(
+        default=False, serialization_alias="enableWebRecording"
+    )
 
 
 class SessionRecording(BaseModel):
