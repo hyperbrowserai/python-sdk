@@ -33,6 +33,7 @@ class Session(BaseModel):
     end_time: Optional[int] = Field(default=None, alias="endTime")
     duration: Optional[int] = None
     session_url: str = Field(alias="sessionUrl")
+    token: str = Field(alias="token")
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
