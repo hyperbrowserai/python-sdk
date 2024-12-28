@@ -13,10 +13,10 @@ class SessionManager:
     def __init__(self, client):
         self._client = client
 
-    def create(self, params: CreateSessionParams) -> SessionDetail:
+    def create(self, params: CreateSessionParams = None) -> SessionDetail:
         response = self._client.transport.post(
             self._client._build_url("/session"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data={} if params is None else params.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionDetail(**response.data)
 
