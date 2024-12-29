@@ -94,3 +94,12 @@ class AsyncTransport(TransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError("Put request failed", original_error=e)
+
+    async def delete(self, url: str) -> APIResponse:
+        try:
+            response = await self.client.delete(url)
+            return await self._handle_response(response)
+        except HyperbrowserError:
+            raise
+        except Exception as e:
+            raise HyperbrowserError("Delete request failed", original_error=e)

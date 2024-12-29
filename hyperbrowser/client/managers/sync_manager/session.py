@@ -16,7 +16,11 @@ class SessionManager:
     def create(self, params: CreateSessionParams = None) -> SessionDetail:
         response = self._client.transport.post(
             self._client._build_url("/session"),
-            data={} if params is None else params.model_dump(exclude_none=True, by_alias=True),
+            data=(
+                {}
+                if params is None
+                else params.model_dump(exclude_none=True, by_alias=True)
+            ),
         )
         return SessionDetail(**response.data)
 

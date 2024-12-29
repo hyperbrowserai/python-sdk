@@ -55,3 +55,7 @@ class TransportStrategy(ABC):
     @abstractmethod
     def put(self, url: str) -> APIResponse:
         pass
+
+    @abstractmethod
+    def delete(self, url: str) -> APIResponse:
+        pass

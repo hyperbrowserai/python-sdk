@@ -73,3 +73,12 @@ class SyncTransport(TransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError("Put request failed", original_error=e)
+
+    def delete(self, url: str) -> APIResponse:
+        try:
+            response = self.client.delete(url)
+            return self._handle_response(response)
+        except HyperbrowserError:
+            raise
+        except Exception as e:
+            raise HyperbrowserError("Delete request failed", original_error=e)

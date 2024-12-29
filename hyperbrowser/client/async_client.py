@@ -1,4 +1,6 @@
 from typing import Optional
+
+from .managers.async_manager.context import ContextManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.scrape import ScrapeManager
 from .managers.async_manager.crawl import CrawlManager
@@ -15,11 +17,14 @@ class AsyncHyperbrowser(HyperbrowserBase):
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        timeout: Optional[int] = 30,
     ):
         super().__init__(AsyncTransport, config, api_key, base_url)
+        self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
+        self.contexts = ContextManager(self)
 
     async def close(self) -> None:
         await self.transport.close()
