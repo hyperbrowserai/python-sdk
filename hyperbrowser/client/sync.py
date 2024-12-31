@@ -1,5 +1,5 @@
 from typing import Optional
-from .managers.sync_manager.context import ContextManager
+from .managers.sync_manager.profile import ProfileManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.crawl import CrawlManager
@@ -23,7 +23,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.sessions = SessionManager(self)
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
-        self.contexts = ContextManager(self)
+        self.profiles = ProfileManager(self)
 
     def close(self) -> None:
         self.transport.close()

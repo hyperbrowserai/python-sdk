@@ -2,11 +2,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
-class CreateContextResponse(BaseModel):
+class CreateProfileResponse(BaseModel):
     id: str
 
 
-class ContextResponse(BaseModel):
+class ProfileResponse(BaseModel):
     model_config = ConfigDict(
         populate_by_alias=True,
     )

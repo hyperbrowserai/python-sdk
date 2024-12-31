@@ -101,13 +101,15 @@ class ScreenConfig(BaseModel):
     height: int = Field(default=720, serialization_alias="height")
 
 
-class CreateSessionContext(BaseModel):
+class CreateSessionProfile(BaseModel):
     """
-    Context configuration parameters for browser session.
+    Profile configuration parameters for browser session.
     """
 
     id: Optional[str] = Field(default=None, serialization_alias="id")
-    persist: Optional[bool] = Field(default=None, serialization_alias="persist")
+    persist_changes: Optional[bool] = Field(
+        default=None, serialization_alias="persistChanges"
+    )
 
 
 class CreateSessionParams(BaseModel):
@@ -145,7 +147,7 @@ class CreateSessionParams(BaseModel):
     enable_web_recording: Optional[bool] = Field(
         default=False, serialization_alias="enableWebRecording"
     )
-    context: Optional[CreateSessionContext] = Field(default=None)
+    profile: Optional[CreateSessionProfile] = Field(default=None)
 
 
 class SessionRecording(BaseModel):
