@@ -1,3 +1,7 @@
+# Hyperbrowser Python SDK
+
+Checkout the full documentation [here](https://docs.hyperbrowser.ai/)
+
 ## Installation
 
 Currently Hyperbrowser supports creating a browser session in two ways:
