@@ -2,12 +2,6 @@ from datetime import datetime
 from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-from hyperbrowser.models.consts import ScrapeFormat
-from hyperbrowser.models.session import CreateSessionParams
-
-ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
-
-
 class CreateExtensionParams(BaseModel):
     """
     Parameters for creating a new extension.
