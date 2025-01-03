@@ -145,10 +145,12 @@ class CreateSessionParams(BaseModel):
     trackers: bool = Field(default=False, serialization_alias="trackers")
     annoyances: bool = Field(default=False, serialization_alias="annoyances")
     enable_web_recording: Optional[bool] = Field(
-        default=False, serialization_alias="enableWebRecording"
+        default=True, serialization_alias="enableWebRecording"
     )
     profile: Optional[CreateSessionProfile] = Field(default=None)
-    extension_ids: Optional[List[str]] = Field(default=None, serialization_alias="extensionIds")
+    extension_ids: Optional[List[str]] = Field(
+        default=None, serialization_alias="extensionIds"
+    )
 
 
 class SessionRecording(BaseModel):

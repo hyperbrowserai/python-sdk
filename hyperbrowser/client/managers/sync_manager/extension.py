@@ -33,5 +33,8 @@ class ExtensionManager:
             self._client._build_url("/extensions/list"),
         )
         if not isinstance(response.data, list):
-            raise HyperbrowserError(f"Expected list response but got {type(response.data)}", original_error=None)
+            raise HyperbrowserError(
+                f"Expected list response but got {type(response.data)}",
+                original_error=None,
+            )
         return [ExtensionResponse(**extension) for extension in response.data]

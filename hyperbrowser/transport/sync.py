@@ -45,7 +45,9 @@ class SyncTransport(TransportStrategy):
     def close(self) -> None:
         self.client.close()
 
-    def post(self, url: str, data: Optional[dict] = None, files: Optional[dict] = None) -> APIResponse:
+    def post(
+        self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
+    ) -> APIResponse:
         try:
             if files:
                 response = self.client.post(url, data=data, files=files)
