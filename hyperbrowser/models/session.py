@@ -148,6 +148,7 @@ class CreateSessionParams(BaseModel):
         default=False, serialization_alias="enableWebRecording"
     )
     profile: Optional[CreateSessionProfile] = Field(default=None)
+    extension_ids: Optional[List[str]] = Field(default=None, serialization_alias="extensionIds")
 
 
 class SessionRecording(BaseModel):

@@ -3,6 +3,7 @@ from .managers.sync_manager.profile import ProfileManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.crawl import CrawlManager
+from .managers.sync_manager.extension import ExtensionManager
 from .base import HyperbrowserBase
 from ..transport.sync import SyncTransport
 from ..config import ClientConfig
@@ -24,6 +25,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
         self.profiles = ProfileManager(self)
+        self.extensions = ExtensionManager(self)
 
     def close(self) -> None:
         self.transport.close()

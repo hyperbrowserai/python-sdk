@@ -4,6 +4,7 @@ from .managers.async_manager.profile import ProfileManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.scrape import ScrapeManager
 from .managers.async_manager.crawl import CrawlManager
+from .managers.async_manager.extension import ExtensionManager
 from .base import HyperbrowserBase
 from ..transport.async_transport import AsyncTransport
 from ..config import ClientConfig
@@ -25,6 +26,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
         self.profiles = ProfileManager(self)
+        self.extensions = ExtensionManager(self)
 
     async def close(self) -> None:
         await self.transport.close()

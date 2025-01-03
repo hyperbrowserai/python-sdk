@@ -45,9 +45,12 @@ class SyncTransport(TransportStrategy):
     def close(self) -> None:
         self.client.close()
 
-    def post(self, url: str, data: Optional[dict] = None) -> APIResponse:
+    def post(self, url: str, data: Optional[dict] = None, files: Optional[dict] = None) -> APIResponse:
         try:
-            response = self.client.post(url, json=data)
+            if files:
+                response = self.client.post(url, data=data, files=files)
+            else:
+                response = self.client.post(url, json=data)
             return self._handle_response(response)
         except HyperbrowserError:
             raise
