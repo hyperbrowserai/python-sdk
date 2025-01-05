@@ -56,6 +56,7 @@ class CrawledPage(BaseModel):
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None
+    screenshot: Optional[str] = None
     url: str
     status: CrawlPageStatus
     error: Optional[str] = None

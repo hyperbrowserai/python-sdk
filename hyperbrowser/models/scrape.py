@@ -65,6 +65,7 @@ class ScrapeJobData(BaseModel):
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None
+    screenshot: Optional[str] = None
 
 
 class ScrapeJobResponse(BaseModel):
