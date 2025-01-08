@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hyperbrowser"
-version = "0.15.0"
+version = "0.16.0"
 description = "Python SDK for hyperbrowser"
 authors = ["Nikhil Shahi <nshahi1998@gmail.com>"]
 license = "MIT"
