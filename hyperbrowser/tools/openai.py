@@ -54,6 +54,7 @@ SCRAPE_TOOL_OPENAI: ChatCompletionToolParam = {
         "name": "scrape_webpage",
         "description": "Scrape content from a webpage and return the content in markdown format",
         "parameters": SCRAPE_SCHEMA,
+        "strict": True,
     },
 }
 
@@ -63,5 +64,6 @@ CRAWL_TOOL_OPENAI: ChatCompletionToolParam = {
         "name": "crawl_website",
         "description": "Crawl a website and return the content in markdown format",
         "parameters": CRAWL_SCHEMA,
+        "strict": True,
     },
 }

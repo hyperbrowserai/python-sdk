@@ -21,6 +21,8 @@ SCRAPE_OPTIONS = {
             "description": "Whether to only return the main content of the page. If true, only the main content of the page will be returned, excluding any headers, navigation menus,footers, or other non-main content.",
         },
     },
+    "required": ["include_tags", "exclude_tags", "only_main_content"],
+    "additionalProperties": False,
 }
 
 SCRAPE_SCHEMA = {
@@ -32,7 +34,8 @@ SCRAPE_SCHEMA = {
         },
         "scrape_options": SCRAPE_OPTIONS,
     },
-    "required": ["url"],
+    "required": ["url", "scrape_options"],
+    "additionalProperties": False,
 }
 
 CRAWL_SCHEMA = {
@@ -44,7 +47,6 @@ CRAWL_SCHEMA = {
         },
         "max_pages": {
             "type": "number",
-            "default": 10,
             "description": "The maximum number of pages to crawl",
         },
         "follow_links": {
@@ -71,5 +73,14 @@ CRAWL_SCHEMA = {
         },
         "scrape_options": SCRAPE_OPTIONS,
     },
-    "required": ["url"],
+    "required": [
+        "url",
+        "max_pages",
+        "follow_links",
+        "ignore_sitemap",
+        "exclude_patterns",
+        "include_patterns",
+        "scrape_options",
+    ],
+    "additionalProperties": False,
 }
