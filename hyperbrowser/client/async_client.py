@@ -1,5 +1,6 @@
 from typing import Optional
 
+from .managers.async_manager.extract import ExtractManager
 from .managers.async_manager.profile import ProfileManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.scrape import ScrapeManager
@@ -25,6 +26,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.sessions = SessionManager(self)
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
+        self.extract = ExtractManager(self)
         self.profiles = ProfileManager(self)
         self.extensions = ExtensionManager(self)
 

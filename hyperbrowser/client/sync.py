@@ -1,4 +1,6 @@
 from typing import Optional
+
+from .managers.sync_manager.extract import ExtractManager
 from .managers.sync_manager.profile import ProfileManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.scrape import ScrapeManager
@@ -24,6 +26,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.sessions = SessionManager(self)
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
+        self.extract = ExtractManager(self)
         self.profiles = ProfileManager(self)
         self.extensions = ExtensionManager(self)
 
