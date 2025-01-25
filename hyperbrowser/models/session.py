@@ -1,8 +1,9 @@
-from typing import Any, List, Literal, Optional, Union
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import Any, List, Literal, Optional, Union
 
-from hyperbrowser.models.consts import Country, OperatingSystem, Platform, ISO639_1
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from hyperbrowser.models.consts import ISO639_1, Country, OperatingSystem, Platform
 
 SessionStatus = Literal["active", "closed", "error"]
 
@@ -66,6 +67,7 @@ class SessionListParams(BaseModel):
 
     status: Optional[SessionStatus] = Field(default=None, exclude=None)
     page: int = Field(default=1, ge=1)
+    limit: int = Field(default=10, ge=1)
 
 
 class SessionListResponse(BaseModel):

@@ -29,6 +29,7 @@ class ProfileListParams(BaseModel):
     )
 
     page: int = Field(default=1, ge=1)
+    limit: int = Field(default=10, ge=1)
 
 
 class ProfileListResponse(BaseModel):
