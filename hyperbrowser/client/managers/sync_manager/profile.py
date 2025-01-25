@@ -1,4 +1,9 @@
-from hyperbrowser.models.profile import ProfileResponse, CreateProfileResponse
+from hyperbrowser.models.profile import (
+    CreateProfileResponse,
+    ProfileListParams,
+    ProfileListResponse,
+    ProfileResponse,
+)
 from hyperbrowser.models.session import BasicResponse
 
 
@@ -23,3 +28,11 @@ class ProfileManager:
             self._client._build_url(f"/profile/{id}"),
         )
         return BasicResponse(**response.data)
+
+    def list(
+        self, params: ProfileListParams = ProfileListParams()
+    ) -> ProfileListResponse:
+        response = self._client.transport.get(
+            self._client._build_url("/profiles"), params=params.__dict__
+        )
+        return ProfileListResponse(**response.data)
