@@ -152,6 +152,7 @@ class CreateSessionParams(BaseModel):
     extension_ids: Optional[List[str]] = Field(
         default=None, serialization_alias="extensionIds"
     )
+    static_ip_id: Optional[str] = Field(default=None, serialization_alias="staticIpId")
 
 
 class SessionRecording(BaseModel):
