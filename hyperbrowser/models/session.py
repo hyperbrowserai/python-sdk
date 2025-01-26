@@ -155,6 +155,9 @@ class CreateSessionParams(BaseModel):
         default=None, serialization_alias="extensionIds"
     )
     static_ip_id: Optional[str] = Field(default=None, serialization_alias="staticIpId")
+    accept_cookies: Optional[bool] = Field(
+        default=None, serialization_alias="acceptCookies"
+    )
 
 
 class SessionRecording(BaseModel):
