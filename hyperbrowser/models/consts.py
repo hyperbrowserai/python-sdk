@@ -1,6 +1,7 @@
 from typing import Literal
 
 ScrapeFormat = Literal["markdown", "html", "links", "screenshot"]
+ScrapeWaitUntil = Literal["load", "domcontentloaded", "networkidle"]
 
 Country = Literal[
     "AD",

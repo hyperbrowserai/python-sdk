@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
-from hyperbrowser.models.consts import ScrapeFormat
+from hyperbrowser.models.consts import ScrapeFormat, ScrapeWaitUntil
 from hyperbrowser.models.session import CreateSessionParams
 
 ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
@@ -24,6 +24,9 @@ class ScrapeOptions(BaseModel):
     )
     wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
     timeout: Optional[int] = Field(default=None, serialization_alias="timeout")
+    wait_until: Optional[ScrapeWaitUntil] = Field(
+        default=None, serialization_alias="waitUntil"
+    )
 
 
 class StartScrapeJobParams(BaseModel):
