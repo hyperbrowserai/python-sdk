@@ -17,13 +17,17 @@ class StartExtractJobParams(BaseModel):
     )
 
     urls: List[str]
-    prompt: Optional[str] = None
+    system_prompt: Optional[str] = Field(
+        default=None, serialization_alias="systemPrompt"
+    )
+    prompt: Optional[str] = Field(default=None, serialization_alias="prompt")
     schema_: Optional[Any] = pydantic.Field(
         None, alias="schema", serialization_alias="schema"
     )
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"
     )
+    max_links: Optional[int] = Field(default=None, serialization_alias="maxLinks")
 
 
 class StartExtractJobResponse(BaseModel):

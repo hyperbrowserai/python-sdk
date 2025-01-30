@@ -18,7 +18,7 @@ class StartCrawlJobParams(BaseModel):
     )
 
     url: str
-    max_pages: int = Field(default=10, ge=1, serialization_alias="maxPages")
+    max_pages: Optional[int] = Field(default=None, ge=1, serialization_alias="maxPages")
     follow_links: bool = Field(default=True, serialization_alias="followLinks")
     ignore_sitemap: bool = Field(default=False, serialization_alias="ignoreSitemap")
     exclude_patterns: List[str] = Field(
@@ -69,7 +69,7 @@ class GetCrawlJobParams(BaseModel):
 
     page: Optional[int] = Field(default=None, serialization_alias="page")
     batch_size: Optional[int] = Field(
-        default=20, ge=1, le=30, serialization_alias="batchSize"
+        default=None, ge=1, serialization_alias="batchSize"
     )
 
 

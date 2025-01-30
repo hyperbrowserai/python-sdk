@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
-from hyperbrowser.models.consts import ScrapeFormat, ScrapeWaitUntil
+from hyperbrowser.models.consts import ScrapeFormat, ScrapePageStatus, ScrapeWaitUntil
 from hyperbrowser.models.session import CreateSessionParams
 
 ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
@@ -84,3 +84,78 @@ class ScrapeJobResponse(BaseModel):
     status: ScrapeJobStatus
     error: Optional[str] = None
     data: Optional[ScrapeJobData] = None
+
+
+class StartBatchScrapeJobParams(BaseModel):
+    """
+    Parameters for creating a new batch scrape job.
+    """
+
+    urls: List[str]
+    session_options: Optional[CreateSessionParams] = Field(
+        default=None, serialization_alias="sessionOptions"
+    )
+    scrape_options: Optional[ScrapeOptions] = Field(
+        default=None, serialization_alias="scrapeOptions"
+    )
+
+
+class ScrapedPage(BaseModel):
+    """
+    A scraped page.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    url: str
+    status: ScrapePageStatus
+    error: Optional[str] = None
+    metadata: Optional[dict[str, Union[str, list[str]]]] = None
+    html: Optional[str] = None
+    markdown: Optional[str] = None
+    links: Optional[List[str]] = None
+    screenshot: Optional[str] = None
+
+
+class GetBatchScrapeJobParams(BaseModel):
+    """
+    Parameters for getting a batch scrape job.
+    """
+
+    page: Optional[int] = Field(default=None, serialization_alias="page")
+    batch_size: Optional[int] = Field(
+        default=None, ge=1, serialization_alias="batchSize"
+    )
+
+
+class StartBatchScrapeJobResponse(BaseModel):
+    """
+    Response from starting a batch scrape job.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    job_id: str = Field(alias="jobId")
+
+
+class BatchScrapeJobResponse(BaseModel):
+    """
+    Response from getting a batch scrape job.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    job_id: str = Field(alias="jobId")
+    status: ScrapeJobStatus
+    error: Optional[str] = None
+    data: Optional[List[ScrapedPage]] = Field(alias="data")
+    total_scraped_pages: int = Field(alias="totalScrapedPages")
+    total_page_batches: int = Field(alias="totalPageBatches")
+    current_page_batch: int = Field(alias="currentPageBatch")
+    batch_size: int = Field(alias="batchSize")
