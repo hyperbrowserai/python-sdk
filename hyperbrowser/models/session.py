@@ -34,8 +34,6 @@ class Session(BaseModel):
     end_time: Optional[int] = Field(default=None, alias="endTime")
     duration: Optional[int] = None
     session_url: str = Field(alias="sessionUrl")
-    live_url: str = Field(alias="liveUrl")
-    token: str = Field(alias="token")
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
@@ -53,7 +51,13 @@ class SessionDetail(Session):
     Detailed session information including websocket endpoint.
     """
 
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
     ws_endpoint: Optional[str] = Field(alias="wsEndpoint", default=None)
+    live_url: str = Field(alias="liveUrl")
+    token: str = Field(alias="token")
 
 
 class SessionListParams(BaseModel):

@@ -1,10 +1,26 @@
 from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
-from hyperbrowser.models.consts import ScrapeFormat, ScrapePageStatus, ScrapeWaitUntil
+from hyperbrowser.models.consts import (
+    ScrapeFormat,
+    ScrapePageStatus,
+    ScrapeScreenshotFormat,
+    ScrapeWaitUntil,
+)
 from hyperbrowser.models.session import CreateSessionParams
 
 ScrapeJobStatus = Literal["pending", "running", "completed", "failed"]
+
+
+class ScreenshotOptions(BaseModel):
+    """
+    Options for screenshot.
+    """
+
+    full_page: Optional[bool] = Field(default=None, serialization_alias="fullPage")
+    format: Optional[ScrapeScreenshotFormat] = Field(
+        default=None, serialization_alias="format"
+    )
 
 
 class ScrapeOptions(BaseModel):
@@ -26,6 +42,9 @@ class ScrapeOptions(BaseModel):
     timeout: Optional[int] = Field(default=None, serialization_alias="timeout")
     wait_until: Optional[ScrapeWaitUntil] = Field(
         default=None, serialization_alias="waitUntil"
+    )
+    screenshot_options: Optional[ScreenshotOptions] = Field(
+        default=None, serialization_alias="screenshotOptions"
     )
 
 

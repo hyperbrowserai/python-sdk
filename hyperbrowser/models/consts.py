@@ -3,6 +3,8 @@ from typing import Literal
 ScrapeFormat = Literal["markdown", "html", "links", "screenshot"]
 ScrapeWaitUntil = Literal["load", "domcontentloaded", "networkidle"]
 ScrapePageStatus = Literal["completed", "failed", "pending", "running"]
+ScrapeScreenshotFormat = Literal["jpeg", "png", "webp"]
+
 POLLING_ATTEMPTS = 5
 
 Country = Literal[
