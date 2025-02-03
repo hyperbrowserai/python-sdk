@@ -162,6 +162,8 @@ class CreateSessionParams(BaseModel):
     accept_cookies: Optional[bool] = Field(
         default=None, serialization_alias="acceptCookies"
     )
+    url_blocklist: Optional[List[str]] = Field(default=None, serialization_alias="urlBlocklist")
+    browser_args: Optional[List[str]] = Field(default=None, serialization_alias="browserArgs")
 
 
 class SessionRecording(BaseModel):
