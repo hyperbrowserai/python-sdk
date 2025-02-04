@@ -162,8 +162,12 @@ class CreateSessionParams(BaseModel):
     accept_cookies: Optional[bool] = Field(
         default=None, serialization_alias="acceptCookies"
     )
-    url_blocklist: Optional[List[str]] = Field(default=None, serialization_alias="urlBlocklist")
-    browser_args: Optional[List[str]] = Field(default=None, serialization_alias="browserArgs")
+    url_blocklist: Optional[List[str]] = Field(
+        default=None, serialization_alias="urlBlocklist"
+    )
+    browser_args: Optional[List[str]] = Field(
+        default=None, serialization_alias="browserArgs"
+    )
 
 
 class SessionRecording(BaseModel):
@@ -179,3 +183,15 @@ class SessionRecording(BaseModel):
     data: Any
     timestamp: int
     delay: Optional[int] = None
+
+
+class GetSessionRecordingUrlResponse(BaseModel):
+    """
+    Response containing the signed URL for the session recording.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    recording_url: str = Field(alias="recordingUrl")
