@@ -24,6 +24,7 @@ class StartExtractJobParams(BaseModel):
     schema_: Optional[Any] = pydantic.Field(
         None, alias="schema", serialization_alias="schema"
     )
+    wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"
     )
