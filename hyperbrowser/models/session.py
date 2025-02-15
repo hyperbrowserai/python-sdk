@@ -3,7 +3,13 @@ from typing import Any, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from hyperbrowser.models.consts import ISO639_1, Country, OperatingSystem, Platform
+from hyperbrowser.models.consts import (
+    ISO639_1,
+    Country,
+    OperatingSystem,
+    Platform,
+    State,
+)
 
 SessionStatus = Literal["active", "closed", "error"]
 
@@ -140,6 +146,8 @@ class CreateSessionParams(BaseModel):
     proxy_country: Optional[Country] = Field(
         default="US", serialization_alias="proxyCountry"
     )
+    proxy_state: Optional[State] = Field(default=None, serialization_alias="proxyState")
+    proxy_city: Optional[str] = Field(default=None, serialization_alias="proxyCity")
     operating_systems: Optional[List[OperatingSystem]] = Field(
         default=None, serialization_alias="operatingSystems"
     )
