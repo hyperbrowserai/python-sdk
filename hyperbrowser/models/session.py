@@ -176,6 +176,9 @@ class CreateSessionParams(BaseModel):
     browser_args: Optional[List[str]] = Field(
         default=None, serialization_alias="browserArgs"
     )
+    save_downloads: Optional[bool] = Field(
+        default=None, serialization_alias="saveDownloads"
+    )
 
 
 class SessionRecording(BaseModel):
@@ -203,3 +206,15 @@ class GetSessionRecordingUrlResponse(BaseModel):
     )
 
     recording_url: str = Field(alias="recordingUrl")
+
+
+class GetSessionDownloadsUrlResponse(BaseModel):
+    """
+    Response containing the signed URL for the session downloads.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    downloads_url: str = Field(alias="downloadsUrl")

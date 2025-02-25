@@ -59,11 +59,15 @@ class SyncTransport(TransportStrategy):
         except Exception as e:
             raise HyperbrowserError("Post request failed", original_error=e)
 
-    def get(self, url: str, params: Optional[dict] = None) -> APIResponse:
+    def get(
+        self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
+    ) -> APIResponse:
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         try:
-            response = self.client.get(url, params=params)
+            response = self.client.get(
+                url, params=params, follow_redirects=follow_redirects
+            )
             return self._handle_response(response)
         except HyperbrowserError:
             raise

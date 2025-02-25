@@ -2,6 +2,7 @@ from typing import List
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
+    GetSessionDownloadsUrlResponse,
     GetSessionRecordingUrlResponse,
     SessionDetail,
     SessionListParams,
@@ -47,7 +48,7 @@ class SessionManager:
 
     async def get_recording(self, id: str) -> List[SessionRecording]:
         response = await self._client.transport.get(
-            self._client._build_url(f"/session/{id}/recording")
+            self._client._build_url(f"/session/{id}/recording"), None, True
         )
         return [SessionRecording(**recording) for recording in response.data]
 
@@ -56,3 +57,9 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/recording-url")
         )
         return GetSessionRecordingUrlResponse(**response.data)
+
+    async def get_downloads_url(self, id: str) -> GetSessionDownloadsUrlResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/downloads-url")
+        )
+        return GetSessionDownloadsUrlResponse(**response.data)

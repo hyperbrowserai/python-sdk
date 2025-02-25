@@ -80,11 +80,15 @@ class AsyncTransport(TransportStrategy):
         except Exception as e:
             raise HyperbrowserError("Post request failed", original_error=e)
 
-    async def get(self, url: str, params: Optional[dict] = None) -> APIResponse:
+    async def get(
+        self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
+    ) -> APIResponse:
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         try:
-            response = await self.client.get(url, params=params)
+            response = await self.client.get(
+                url, params=params, follow_redirects=follow_redirects
+            )
             return await self._handle_response(response)
         except HyperbrowserError:
             raise
