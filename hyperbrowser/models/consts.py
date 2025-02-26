@@ -4,6 +4,12 @@ ScrapeFormat = Literal["markdown", "html", "links", "screenshot"]
 ScrapeWaitUntil = Literal["load", "domcontentloaded", "networkidle"]
 ScrapePageStatus = Literal["completed", "failed", "pending", "running"]
 ScrapeScreenshotFormat = Literal["jpeg", "png", "webp"]
+RecordingStatus = Literal[
+    "not_enabled", "pending", "in_progress", "completed", "failed"
+]
+DownloadsStatus = Literal[
+    "not_enabled", "pending", "in_progress", "completed", "failed"
+]
 
 POLLING_ATTEMPTS = 5
 

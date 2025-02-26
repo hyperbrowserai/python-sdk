@@ -6,8 +6,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from hyperbrowser.models.consts import (
     ISO639_1,
     Country,
+    DownloadsStatus,
     OperatingSystem,
     Platform,
+    RecordingStatus,
     State,
 )
 
@@ -144,7 +146,7 @@ class CreateSessionParams(BaseModel):
         default=None, serialization_alias="proxyServerUsername"
     )
     proxy_country: Optional[Country] = Field(
-        default="US", serialization_alias="proxyCountry"
+        default=None, serialization_alias="proxyCountry"
     )
     proxy_state: Optional[State] = Field(default=None, serialization_alias="proxyState")
     proxy_city: Optional[str] = Field(default=None, serialization_alias="proxyCity")
@@ -205,7 +207,9 @@ class GetSessionRecordingUrlResponse(BaseModel):
         populate_by_alias=True,
     )
 
-    recording_url: str = Field(alias="recordingUrl")
+    status: RecordingStatus = Field(alias="status")
+    recording_url: Optional[str] = Field(default=None, alias="recordingUrl")
+    error: Optional[str] = Field(default=None, alias="error")
 
 
 class GetSessionDownloadsUrlResponse(BaseModel):
@@ -217,4 +221,6 @@ class GetSessionDownloadsUrlResponse(BaseModel):
         populate_by_alias=True,
     )
 
-    downloads_url: str = Field(alias="downloadsUrl")
+    status: DownloadsStatus = Field(alias="status")
+    downloads_url: Optional[str] = Field(default=None, alias="downloadsUrl")
+    error: Optional[str] = Field(default=None, alias="error")
