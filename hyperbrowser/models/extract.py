@@ -55,4 +55,4 @@ class ExtractJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
     status: ExtractJobStatus
     error: Optional[str] = None
-    data: Optional[Any] = None
+    data: Optional[dict] = None
