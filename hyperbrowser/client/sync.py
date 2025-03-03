@@ -5,6 +5,7 @@ from .managers.sync_manager.profile import ProfileManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.crawl import CrawlManager
+from .managers.sync_manager.task import TaskManager
 from .managers.sync_manager.extension import ExtensionManager
 from .base import HyperbrowserBase
 from ..transport.sync import SyncTransport
@@ -29,6 +30,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.extract = ExtractManager(self)
         self.profiles = ProfileManager(self)
         self.extensions = ExtensionManager(self)
+        self.tasks = TaskManager(self)
 
     def close(self) -> None:
         self.transport.close()
