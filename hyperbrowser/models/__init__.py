@@ -11,6 +11,7 @@ from .consts import (
     Platform,
     ISO639_1,
     State,
+    BrowserUseLlm,
 )
 from .crawl import (
     CrawlJobStatus,
@@ -62,16 +63,17 @@ from .session import (
     GetSessionRecordingUrlResponse,
     GetSessionDownloadsUrlResponse,
 )
-from .task import (
-    TaskJobStatusResponse,
-    StartTaskJobParams,
-    StartTaskJobResponse,
-    TaskJobResponse,
-    TaskJobStatus,
+from .beta.agents.browser_use import (
+    StartBrowserUseTaskParams,
+    StartBrowserUseTaskResponse,
+    BrowserUseTaskStatusResponse,
+    BrowserUseTaskData,
+    BrowserUseTaskResponse,
 )
 
 __all__ = [
     # consts
+    "BrowserUseLlm",
     "ScrapeFormat",
     "ScrapeWaitUntil",
     "ScrapePageStatus",
@@ -131,10 +133,10 @@ __all__ = [
     "SessionRecording",
     "GetSessionRecordingUrlResponse",
     "GetSessionDownloadsUrlResponse",
-    # task
-    "TaskJobStatusResponse",
-    "StartTaskJobParams",
-    "StartTaskJobResponse",
-    "TaskJobResponse",
-    "TaskJobStatus",
+    # agents
+    "StartBrowserUseTaskParams",
+    "StartBrowserUseTaskResponse",
+    "BrowserUseTaskStatusResponse",
+    "BrowserUseTaskData",
+    "BrowserUseTaskResponse",
 ]

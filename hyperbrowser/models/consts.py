@@ -13,7 +13,7 @@ DownloadsStatus = Literal[
 
 POLLING_ATTEMPTS = 5
 
-Llm = Literal[
+BrowserUseLlm = Literal[
     "gpt-4o",
     "gpt-4o-mini",
     "claude-3-7-sonnet-20250219",
