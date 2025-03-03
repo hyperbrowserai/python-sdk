@@ -60,6 +60,7 @@ class StartBrowserUseTaskResponse(BaseModel):
     )
 
     job_id: str = Field(alias="jobId")
+    live_url: Optional[str] = Field(default=None, alias="liveUrl")
 
 
 class BrowserUseTaskStatusResponse(BaseModel):
@@ -159,7 +160,12 @@ class BrowserUseAgentHistory(BaseModel):
 
 
 class BrowserUseTaskData(BaseModel):
-    history: list[BrowserUseAgentHistory]
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    steps: list[BrowserUseAgentHistory]
+    final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 
 class BrowserUseTaskResponse(BaseModel):
@@ -175,3 +181,4 @@ class BrowserUseTaskResponse(BaseModel):
     status: BrowserUseTaskStatus
     data: Optional[BrowserUseTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
+    live_url: Optional[str] = Field(default=None, alias="liveUrl")
