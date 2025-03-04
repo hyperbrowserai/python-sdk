@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from typing_extensions import Literal, Required, TypedDict, TypeAlias
 
-from hyperbrowser.tools.schema import CRAWL_SCHEMA, SCRAPE_SCHEMA
+from hyperbrowser.tools.schema import CRAWL_SCHEMA, EXTRACT_SCHEMA, SCRAPE_SCHEMA
 
 FunctionParameters: TypeAlias = Dict[str, object]
 
@@ -64,6 +64,16 @@ CRAWL_TOOL_OPENAI: ChatCompletionToolParam = {
         "name": "crawl_website",
         "description": "Crawl a website and return the content in markdown format",
         "parameters": CRAWL_SCHEMA,
+        "strict": True,
+    },
+}
+
+EXTRACT_TOOL_OPENAI: ChatCompletionToolParam = {
+    "type": "function",
+    "function": {
+        "name": "extract_data",
+        "description": "Extract data in a structured format from multiple URLs in a single function call. IMPORTANT: When information must be gathered from multiple sources (such as comparing items, researching topics across sites, or answering questions that span multiple webpages), ALWAYS include all relevant URLs in ONE function call. This enables comprehensive answers with cross-referenced information. Returns data as a json string.",
+        "parameters": EXTRACT_SCHEMA,
         "strict": True,
     },
 }

@@ -84,3 +84,30 @@ CRAWL_SCHEMA = {
     ],
     "additionalProperties": False,
 }
+
+EXTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "urls": {
+            "type": "array",
+            "items": {
+                "type": "string",
+            },
+            "description": "A required list of up to 10 urls you want to process IN A SINGLE EXTRACTION. When answering questions that involve multiple sources or topics, ALWAYS include ALL relevant URLs in this single array rather than making separate function calls. This enables cross-referencing information across multiple sources to provide comprehensive answers. To allow crawling for any of the urls provided in the list, simply add /* to the end of the url (https://hyperbrowser.ai/*). This will crawl other pages on the site with the same origin and find relevant pages to use for the extraction context.",
+        },
+        "prompt": {
+            "type": "string",
+            "description": "A prompt describing how you want the data structured, or what you want to extract from the urls provided. Can also be used to guide the extraction process. For multi-source queries, structure this prompt to request unified, comparative, or aggregated information across all provided URLs.",
+        },
+        "schema": {
+            "type": "string",
+            "description": "A strict json schema you want the returned data to be structured as. For multi-source extraction, design this schema to accommodate information from all URLs in a single structure. Ensure that this is a proper json schema, and the root level should be of type 'object'.",
+        },
+        "max_links": {
+            "type": "number",
+            "description": "The maximum number of links to look for if performing a crawl for any given url in the urls list.",
+        },
+    },
+    "required": ["urls", "prompt", "schema", "max_links"],
+    "additionalProperties": False,
+}

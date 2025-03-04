@@ -1,12 +1,16 @@
+import json
 from hyperbrowser.models.crawl import StartCrawlJobParams
+from hyperbrowser.models.extract import StartExtractJobParams
 from hyperbrowser.models.scrape import StartScrapeJobParams
 from hyperbrowser import Hyperbrowser, AsyncHyperbrowser
 
 from .openai import (
+    EXTRACT_TOOL_OPENAI,
     SCRAPE_TOOL_OPENAI,
     CRAWL_TOOL_OPENAI,
 )
 from .anthropic import (
+    EXTRACT_TOOL_ANTHROPIC,
     SCRAPE_TOOL_ANTHROPIC,
     CRAWL_TOOL_ANTHROPIC,
 )
@@ -56,7 +60,27 @@ class WebsiteCrawlTool:
         return markdown
 
 
+class WebsiteExtractTool:
+    openai_tool_definition = EXTRACT_TOOL_OPENAI
+    anthropic_tool_definition = EXTRACT_TOOL_ANTHROPIC
+
+    @staticmethod
+    def runnable(hb: Hyperbrowser, params: dict) -> str:
+        if params.get("schema") and isinstance(params.get("schema"), str):
+            params["schema"] = json.loads(params["schema"])
+        resp = hb.extract.start_and_wait(params=StartExtractJobParams(**params))
+        return json.dumps(resp.data) if resp.data else ""
+
+    @staticmethod
+    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
+        if params.get("schema") and isinstance(params.get("schema"), str):
+            params["schema"] = json.loads(params["schema"])
+        resp = await hb.extract.start_and_wait(params=StartExtractJobParams(**params))
+        return json.dumps(resp.data) if resp.data else ""
+
+
 __all__ = [
     "WebsiteScrapeTool",
     "WebsiteCrawlTool",
+    "WebsiteExtractTool",
 ]
