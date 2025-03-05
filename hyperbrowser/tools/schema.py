@@ -111,3 +111,50 @@ EXTRACT_SCHEMA = {
     "required": ["urls", "prompt", "schema", "max_links"],
     "additionalProperties": False,
 }
+
+BROWSER_USE_LLM_SCHEMA = {
+    "type": "string",
+    "enum": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "claude-3-7-sonnet-20250219",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022",
+        "gemini-2.0-flash",
+    ],
+    "default": "gemini-2.0-flash",
+}
+
+BROWSER_USE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "task": {
+            "type": "string",
+            "description": "The text description of the task to be performed by the agent.",
+        },
+        "llm": {
+            **BROWSER_USE_LLM_SCHEMA,
+            "description": "The language model (LLM) instance to use for generating actions.",
+        },
+        "planner_llm": {
+            **BROWSER_USE_LLM_SCHEMA,
+            "description": "The language model to use specifically for planning future actions, can differ from the main LLM.",
+        },
+        "page_extraction_llm": {
+            **BROWSER_USE_LLM_SCHEMA,
+            "description": "The language model to use for extracting structured data from webpages.",
+        },
+        "keep_browser_open": {
+            "type": "boolean",
+            "description": "When enabled, keeps the browser session open after task completion.",
+        },
+    },
+    "required": [
+        "task",
+        "llm",
+        "planner_llm",
+        "page_extraction_llm",
+        "keep_browser_open",
+    ],
+    "additionalProperties": False,
+}
