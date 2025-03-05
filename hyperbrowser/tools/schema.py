@@ -134,15 +134,15 @@ BROWSER_USE_SCHEMA = {
         },
         "llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model (LLM) instance to use for generating actions.",
+            "description": "The language model (LLM) instance to use for generating actions. Default to gemini-2.0-flash.",
         },
         "planner_llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model to use specifically for planning future actions, can differ from the main LLM.",
+            "description": "The language model to use specifically for planning future actions, can differ from the main LLM. Default to gemini-2.0-flash.",
         },
         "page_extraction_llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model to use for extracting structured data from webpages.",
+            "description": "The language model to use for extracting structured data from webpages. Default to gemini-2.0-flash.",
         },
         "keep_browser_open": {
             "type": "boolean",
