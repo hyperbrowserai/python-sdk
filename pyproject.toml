@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hyperbrowser"
-version = "0.34.0"
+version = "0.35.0"
 description = "Python SDK for hyperbrowser"
 authors = ["Nikhil Shahi <nshahi1998@gmail.com>"]
 license = "MIT"
@@ -19,6 +19,38 @@ httpx = ">=0.23.0,<1"
 ruff = "^0.3.0"
 
 
+
+
+[tool.pdm.build]
+includes = [
+    "LICENSE",
+]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[project]
+authors = [
+    {name = "Nikhil Shahi", email = "nshahi1998@gmail.com"},
+]
+license = {text = "MIT"}
+requires-python = "<4.0,>=3.8"
+dependencies = [
+    "pydantic<3,>=2.0",
+    "httpx<1,>=0.23.0",
+    "jsonref>=1.1.0",
+]
+name = "hyperbrowser"
+version = "0.35.0"
+description = "Python SDK for hyperbrowser"
+readme = "README.md"
+
+[project.urls]
+homepage = "https://github.com/hyperbrowserai/python-sdk"
+repository = "https://github.com/hyperbrowserai/python-sdk"
+
+[dependency-groups]
+dev = [
+    "ruff<1.0.0,>=0.3.0",
+]

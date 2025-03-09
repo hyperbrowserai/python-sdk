@@ -6,6 +6,7 @@ from hyperbrowser.models.extract import (
     StartExtractJobParams,
     StartExtractJobResponse,
 )
+import jsonref
 
 
 class ExtractManager:
@@ -17,7 +18,9 @@ class ExtractManager:
             raise HyperbrowserError("Either schema or prompt must be provided")
         if params.schema_:
             if hasattr(params.schema_, "model_json_schema"):
-                params.schema_ = params.schema_.model_json_schema()
+                params.schema_ = jsonref.replace_refs(
+                    params.schema_.model_json_schema(), proxies=False, lazy_load=False
+                )
 
         response = await self._client.transport.post(
             self._client._build_url("/extract"),
