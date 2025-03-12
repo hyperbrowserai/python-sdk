@@ -1,15 +1,15 @@
 from typing import Optional
 
-from .managers.async_manager.extract import ExtractManager
-from .managers.async_manager.profile import ProfileManager
-from .managers.async_manager.session import SessionManager
-from .managers.async_manager.scrape import ScrapeManager
+from ..config import ClientConfig
+from ..transport.async_transport import AsyncTransport
+from .base import HyperbrowserBase
+from .managers.async_manager.agents import Agents
 from .managers.async_manager.crawl import CrawlManager
 from .managers.async_manager.extension import ExtensionManager
-from .managers.async_manager.beta import Beta
-from .base import HyperbrowserBase
-from ..transport.async_transport import AsyncTransport
-from ..config import ClientConfig
+from .managers.async_manager.extract import ExtractManager
+from .managers.async_manager.profile import ProfileManager
+from .managers.async_manager.scrape import ScrapeManager
+from .managers.async_manager.session import SessionManager
 
 
 class AsyncHyperbrowser(HyperbrowserBase):
@@ -30,7 +30,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.extract = ExtractManager(self)
         self.profiles = ProfileManager(self)
         self.extensions = ExtensionManager(self)
-        self.beta = Beta(self)
+        self.agents = Agents(self)
 
     async def close(self) -> None:
         await self.transport.close()

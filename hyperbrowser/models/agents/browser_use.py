@@ -1,8 +1,9 @@
 from typing import Literal, Optional, Union
+
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...consts import BrowserUseLlm
-from ...session import CreateSessionParams
+from ..consts import BrowserUseLlm
+from ..session import CreateSessionParams
 
 BrowserUseTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
 
@@ -181,4 +182,5 @@ class BrowserUseTaskResponse(BaseModel):
     status: BrowserUseTaskStatus
     data: Optional[BrowserUseTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
+    live_url: Optional[str] = Field(default=None, alias="liveUrl")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")
