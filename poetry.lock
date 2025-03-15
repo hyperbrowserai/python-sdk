@@ -132,6 +132,17 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
+name = "jsonref"
+version = "1.1.0"
+description = "jsonref is a library for automatic dereferencing of JSON Reference objects for Python."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "jsonref-1.1.0-py3-none-any.whl", hash = "sha256:590dc7773df6c21cbf948b5dac07a72a251db28b0238ceecce0a2abfa8ec30a9"},
+    {file = "jsonref-1.1.0.tar.gz", hash = "sha256:32fe8e1d85af0fdefbebce950af85590b22b60f9e95443176adbde4e1ecea552"},
+]
+
+[[package]]
 name = "pydantic"
 version = "2.10.6"
 description = "Data validation using Python type hints"
@@ -314,4 +325,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "68370e0012dd71d9bfaac5c4f4eb66265ebcf15385b895edc3332bb91a3227de"
+content-hash = "7b62e1f0f4a0585712cb1026052e7baaa2c123a0bf48fd94a4e97ca405148ea2"
