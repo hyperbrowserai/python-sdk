@@ -6,6 +6,7 @@ from hyperbrowser.tools.schema import (
     CRAWL_SCHEMA,
     EXTRACT_SCHEMA,
     SCRAPE_SCHEMA,
+    SCREENSHOT_SCHEMA,
 )
 
 
@@ -52,6 +53,12 @@ SCRAPE_TOOL_ANTHROPIC: ToolParam = {
     "input_schema": SCRAPE_SCHEMA,
     "name": "scrape_webpage",
     "description": "Scrape content from a webpage and return the content in markdown format",
+}
+
+SCREENSHOT_TOOL_ANTHROPIC: ToolParam = {
+    "input_schema": SCREENSHOT_SCHEMA,
+    "name": "screenshot_webpage",
+    "description": "Scrape content from a webpage and return the content in screenshot format",
 }
 
 CRAWL_TOOL_ANTHROPIC: ToolParam = {

@@ -1,29 +1,41 @@
-SCRAPE_OPTIONS = {
-    "type": "object",
-    "description": "The options for the scrape",
-    "properties": {
-        "include_tags": {
-            "type": "array",
-            "items": {
+from typing import Literal, List
+
+scrape_types = Literal["markdown", "screenshot"]
+
+
+def get_scrape_options(formats: List[scrape_types] = ["markdown"]):
+    return {
+        "type": "object",
+        "description": "The options for the scrape",
+        "properties": {
+            "format": {
                 "type": "string",
+                "description": "The format of the content to scrape",
+                "enum": formats,
             },
-            "description": "An array of HTML tags, classes, or IDs to include in the scraped content. Only elements matching these selectors will be returned.",
-        },
-        "exclude_tags": {
-            "type": "array",
-            "items": {
-                "type": "string",
+            "include_tags": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "description": "An array of HTML tags, classes, or IDs to include in the scraped content. Only elements matching these selectors will be returned.",
             },
-            "description": "An array of HTML tags, classes, or IDs to exclude from the scraped content. Elements matching these selectors will be omitted from the response.",
+            "exclude_tags": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "description": "An array of HTML tags, classes, or IDs to exclude from the scraped content. Elements matching these selectors will be omitted from the response.",
+            },
+            "only_main_content": {
+                "type": "boolean",
+                "description": "Whether to only return the main content of the page. If true, only the main content of the page will be returned, excluding any headers, navigation menus,footers, or other non-main content.",
+            },
         },
-        "only_main_content": {
-            "type": "boolean",
-            "description": "Whether to only return the main content of the page. If true, only the main content of the page will be returned, excluding any headers, navigation menus,footers, or other non-main content.",
-        },
-    },
-    "required": ["include_tags", "exclude_tags", "only_main_content"],
-    "additionalProperties": False,
-}
+        "required": ["include_tags", "exclude_tags", "only_main_content", "format"],
+        "additionalProperties": False,
+    }
+
 
 SCRAPE_SCHEMA = {
     "type": "object",
@@ -32,7 +44,20 @@ SCRAPE_SCHEMA = {
             "type": "string",
             "description": "The URL of the website to scrape",
         },
-        "scrape_options": SCRAPE_OPTIONS,
+        "scrape_options": get_scrape_options(),
+    },
+    "required": ["url", "scrape_options"],
+    "additionalProperties": False,
+}
+
+SCREENSHOT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "url": {
+            "type": "string",
+            "description": "The URL of the website to scrape",
+        },
+        "scrape_options": get_scrape_options(["screenshot"]),
     },
     "required": ["url", "scrape_options"],
     "additionalProperties": False,
@@ -71,7 +96,7 @@ CRAWL_SCHEMA = {
             },
             "description": "An array of regular expressions or wildcard patterns specifying which URLs should be included in the crawl. Only pages whose URLs' path match one of these path patterns will be visited. Example: ['/admin', '/careers/*']",
         },
-        "scrape_options": SCRAPE_OPTIONS,
+        "scrape_options": get_scrape_options(),
     },
     "required": [
         "url",

@@ -6,6 +6,7 @@ from hyperbrowser.tools.schema import (
     CRAWL_SCHEMA,
     EXTRACT_SCHEMA,
     SCRAPE_SCHEMA,
+    SCREENSHOT_SCHEMA,
 )
 
 FunctionParameters: TypeAlias = Dict[str, object]
@@ -59,6 +60,16 @@ SCRAPE_TOOL_OPENAI: ChatCompletionToolParam = {
         "name": "scrape_webpage",
         "description": "Scrape content from a webpage and return the content in markdown format",
         "parameters": SCRAPE_SCHEMA,
+        "strict": True,
+    },
+}
+
+SCREENSHOT_TOOL_OPENAI: ChatCompletionToolParam = {
+    "type": "function",
+    "function": {
+        "name": "screenshot_webpage",
+        "description": "Scrape content from a webpage and return the content in screenshot format",
+        "parameters": SCREENSHOT_SCHEMA,
         "strict": True,
     },
 }

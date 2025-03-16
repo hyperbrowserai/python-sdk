@@ -1,5 +1,5 @@
 import json
-from hyperbrowser.models.beta.agents.browser_use import StartBrowserUseTaskParams
+from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
 from hyperbrowser.models.scrape import StartScrapeJobParams
@@ -9,12 +9,14 @@ from .openai import (
     BROWSER_USE_TOOL_OPENAI,
     EXTRACT_TOOL_OPENAI,
     SCRAPE_TOOL_OPENAI,
+    SCREENSHOT_TOOL_OPENAI,
     CRAWL_TOOL_OPENAI,
 )
 from .anthropic import (
     BROWSER_USE_TOOL_ANTHROPIC,
     EXTRACT_TOOL_ANTHROPIC,
     SCRAPE_TOOL_ANTHROPIC,
+    SCREENSHOT_TOOL_ANTHROPIC,
     CRAWL_TOOL_ANTHROPIC,
 )
 
@@ -32,6 +34,21 @@ class WebsiteScrapeTool:
     async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
         resp = await hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
         return resp.data.markdown if resp.data and resp.data.markdown else ""
+
+
+class WebsiteScreenshotTool:
+    openai_tool_definition = SCREENSHOT_TOOL_OPENAI
+    anthropic_tool_definition = SCREENSHOT_TOOL_ANTHROPIC
+
+    @staticmethod
+    def runnable(hb: Hyperbrowser, params: dict) -> str:
+        resp = hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
+        return resp.data.screenshot if resp.data and resp.data.screenshot else ""
+
+    @staticmethod
+    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
+        resp = await hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
+        return resp.data.screenshot if resp.data and resp.data.screenshot else ""
 
 
 class WebsiteCrawlTool:
@@ -88,14 +105,14 @@ class BrowserUseTool:
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: dict) -> str:
-        resp = hb.beta.agents.browser_use.start_and_wait(
+        resp = hb.agents.browser_use.start_and_wait(
             params=StartBrowserUseTaskParams(**params)
         )
         return resp.data.final_result if resp.data and resp.data.final_result else ""
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        resp = await hb.beta.agents.browser_use.start_and_wait(
+        resp = await hb.agents.browser_use.start_and_wait(
             params=StartBrowserUseTaskParams(**params)
         )
         return resp.data.final_result if resp.data and resp.data.final_result else ""
