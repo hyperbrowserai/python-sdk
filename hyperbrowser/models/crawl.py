@@ -47,6 +47,18 @@ class StartCrawlJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
 
 
+class CrawlJobStatusResponse(BaseModel):
+    """
+    Response from getting the status of a crawl job.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    status: CrawlJobStatus
+
+
 class CrawledPage(BaseModel):
     """
     Data from a crawled page.

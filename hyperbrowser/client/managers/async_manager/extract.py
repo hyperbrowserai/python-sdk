@@ -3,6 +3,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from hyperbrowser.models.extract import (
     ExtractJobResponse,
+    ExtractJobStatusResponse,
     StartExtractJobParams,
     StartExtractJobResponse,
 )
@@ -28,6 +29,12 @@ class ExtractManager:
         )
         return StartExtractJobResponse(**response.data)
 
+    async def get_status(self, job_id: str) -> ExtractJobStatusResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/extract/{job_id}/status")
+        )
+        return ExtractJobStatusResponse(**response.data)
+
     async def get(self, job_id: str) -> ExtractJobResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/extract/{job_id}")
@@ -43,12 +50,10 @@ class ExtractManager:
         failures = 0
         while True:
             try:
-                job_response = await self.get(job_id)
-                if (
-                    job_response.status == "completed"
-                    or job_response.status == "failed"
-                ):
-                    return job_response
+                job_status_resp = await self.get_status(job_id)
+                job_status = job_status_resp.status
+                if job_status == "completed" or job_status == "failed":
+                    return await self.get(job_id)
                 failures = 0
             except Exception as e:
                 failures += 1

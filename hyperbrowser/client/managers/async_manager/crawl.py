@@ -3,6 +3,8 @@ import asyncio
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ....models.crawl import (
     CrawlJobResponse,
+    CrawlJobStatus,
+    CrawlJobStatusResponse,
     GetCrawlJobParams,
     StartCrawlJobParams,
     StartCrawlJobResponse,
@@ -21,11 +23,18 @@ class CrawlManager:
         )
         return StartCrawlJobResponse(**response.data)
 
+    async def get_status(self, job_id: str) -> CrawlJobStatusResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/crawl/{job_id}/status")
+        )
+        return CrawlJobStatusResponse(**response.data)
+
     async def get(
         self, job_id: str, params: GetCrawlJobParams = GetCrawlJobParams()
     ) -> CrawlJobResponse:
         response = await self._client.transport.get(
-            self._client._build_url(f"/crawl/{job_id}"), params=params.__dict__
+            self._client._build_url(f"/crawl/{job_id}"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
         )
         return CrawlJobResponse(**response.data)
 
@@ -37,18 +46,13 @@ class CrawlManager:
         if not job_id:
             raise HyperbrowserError("Failed to start crawl job")
 
-        job_response: CrawlJobResponse
+        job_status: CrawlJobStatus = "pending"
         failures = 0
         while True:
             try:
-                job_response = await self.get(
-                    job_id,
-                    params=GetCrawlJobParams(batch_size=1),
-                )
-                if (
-                    job_response.status == "completed"
-                    or job_response.status == "failed"
-                ):
+                job_status_resp = await self.get_status(job_id)
+                job_status = job_status_resp.status
+                if job_status == "completed" or job_status == "failed":
                     break
             except Exception as e:
                 failures += 1
@@ -62,8 +66,7 @@ class CrawlManager:
         if not return_all_pages:
             while True:
                 try:
-                    job_response = await self.get(job_id)
-                    return job_response
+                    return await self.get(job_id)
                 except Exception as e:
                     failures += 1
                     if failures >= POLLING_ATTEMPTS:
@@ -73,9 +76,20 @@ class CrawlManager:
                 await asyncio.sleep(0.5)
 
         failures = 0
-        job_response.current_page_batch = 0
-        job_response.data = []
-        while job_response.current_page_batch < job_response.total_page_batches:
+        job_response = CrawlJobResponse(
+            jobId=job_id,
+            status=job_status,
+            data=[],
+            currentPageBatch=0,
+            totalPageBatches=0,
+            totalCrawledPages=0,
+            batchSize=100,
+        )
+        first_check = True
+        while (
+            first_check
+            or job_response.current_page_batch < job_response.total_page_batches
+        ):
             try:
                 tmp_job_response = await self.get(
                     job_start_resp.job_id,
@@ -90,6 +104,7 @@ class CrawlManager:
                 job_response.total_page_batches = tmp_job_response.total_page_batches
                 job_response.batch_size = tmp_job_response.batch_size
                 failures = 0
+                first_check = False
             except Exception as e:
                 failures += 1
                 if failures >= POLLING_ATTEMPTS:

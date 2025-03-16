@@ -42,7 +42,8 @@ class SessionManager:
         self, params: SessionListParams = SessionListParams()
     ) -> SessionListResponse:
         response = await self._client.transport.get(
-            self._client._build_url("/sessions"), params=params.__dict__
+            self._client._build_url("/sessions"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionListResponse(**response.data)
 

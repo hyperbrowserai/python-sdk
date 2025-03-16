@@ -33,6 +33,7 @@ class ProfileManager:
         self, params: ProfileListParams = ProfileListParams()
     ) -> ProfileListResponse:
         response = await self._client.transport.get(
-            self._client._build_url("/profiles"), params=params.__dict__
+            self._client._build_url("/profiles"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
         )
         return ProfileListResponse(**response.data)

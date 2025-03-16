@@ -78,6 +78,18 @@ class StartScrapeJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
 
 
+class ScrapeJobStatusResponse(BaseModel):
+    """
+    Response from getting the status of a scrape job.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    status: ScrapeJobStatus
+
+
 class ScrapeJobData(BaseModel):
     """
     Data from a scraped site.
@@ -117,6 +129,18 @@ class StartBatchScrapeJobParams(BaseModel):
     scrape_options: Optional[ScrapeOptions] = Field(
         default=None, serialization_alias="scrapeOptions"
     )
+
+
+class BatchScrapeJobStatusResponse(BaseModel):
+    """
+    Response from getting the status of a batch scrape job.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    status: ScrapeJobStatus
 
 
 class ScrapedPage(BaseModel):

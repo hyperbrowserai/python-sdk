@@ -24,6 +24,7 @@ from .crawl import (
     CrawledPage,
     CrawlJobResponse,
     CrawlJobStatus,
+    CrawlJobStatusResponse,
     CrawlPageStatus,
     GetCrawlJobParams,
     StartCrawlJobParams,
@@ -33,6 +34,7 @@ from .extension import CreateExtensionParams, ExtensionResponse
 from .extract import (
     ExtractJobResponse,
     ExtractJobStatus,
+    ExtractJobStatusResponse,
     StartExtractJobParams,
     StartExtractJobResponse,
 )
@@ -44,11 +46,13 @@ from .profile import (
 )
 from .scrape import (
     BatchScrapeJobResponse,
+    BatchScrapeJobStatusResponse,
     GetBatchScrapeJobParams,
     ScrapedPage,
     ScrapeJobData,
     ScrapeJobResponse,
     ScrapeJobStatus,
+    ScrapeJobStatusResponse,
     ScrapeOptions,
     ScreenshotOptions,
     StartBatchScrapeJobParams,
@@ -97,6 +101,7 @@ __all__ = [
     "CrawledPage",
     "CrawlJobResponse",
     "CrawlJobStatus",
+    "CrawlJobStatusResponse",
     "CrawlPageStatus",
     "GetCrawlJobParams",
     "StartCrawlJobParams",
@@ -107,6 +112,7 @@ __all__ = [
     # extract
     "ExtractJobResponse",
     "ExtractJobStatus",
+    "ExtractJobStatusResponse",
     "StartExtractJobParams",
     "StartExtractJobResponse",
     # profile
@@ -116,11 +122,13 @@ __all__ = [
     "ProfileResponse",
     # scrape
     "BatchScrapeJobResponse",
+    "BatchScrapeJobStatusResponse",
     "GetBatchScrapeJobParams",
     "ScrapedPage",
     "ScrapeJobData",
     "ScrapeJobResponse",
     "ScrapeJobStatus",
+    "ScrapeJobStatusResponse",
     "ScrapeOptions",
     "ScreenshotOptions",
     "StartBatchScrapeJobParams",

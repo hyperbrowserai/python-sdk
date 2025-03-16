@@ -43,6 +43,18 @@ class StartExtractJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
 
 
+class ExtractJobStatusResponse(BaseModel):
+    """
+    Response from getting the status of a extract job.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    status: ExtractJobStatus
+
+
 class ExtractJobResponse(BaseModel):
     """
     Response from a extract job.
