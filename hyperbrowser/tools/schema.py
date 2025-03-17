@@ -8,23 +8,22 @@ def get_scrape_options(formats: List[scrape_types] = ["markdown"]):
         "type": "object",
         "description": "The options for the scrape",
         "properties": {
-            "format": {
-                "type": "string",
+            "formats": {
+                "type": "array",
                 "description": "The format of the content to scrape",
-                "enum": formats,
+                "items": {
+                    "type": "string",
+                    "enum": formats,
+                },
             },
             "include_tags": {
                 "type": "array",
-                "items": {
-                    "type": "string",
-                },
+                "items": {"type": "string"},
                 "description": "An array of HTML tags, classes, or IDs to include in the scraped content. Only elements matching these selectors will be returned.",
             },
             "exclude_tags": {
                 "type": "array",
-                "items": {
-                    "type": "string",
-                },
+                "items": {"type": "string"},
                 "description": "An array of HTML tags, classes, or IDs to exclude from the scraped content. Elements matching these selectors will be omitted from the response.",
             },
             "only_main_content": {
@@ -32,7 +31,12 @@ def get_scrape_options(formats: List[scrape_types] = ["markdown"]):
                 "description": "Whether to only return the main content of the page. If true, only the main content of the page will be returned, excluding any headers, navigation menus,footers, or other non-main content.",
             },
         },
-        "required": ["include_tags", "exclude_tags", "only_main_content", "format"],
+        "required": [
+            "include_tags",
+            "exclude_tags",
+            "only_main_content",
+            "formats",
+        ],
         "additionalProperties": False,
     }
 
