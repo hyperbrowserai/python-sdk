@@ -183,4 +183,3 @@ class BrowserUseTaskResponse(BaseModel):
     data: Optional[BrowserUseTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")
-    live_url: Optional[str] = Field(default=None, alias="liveUrl")

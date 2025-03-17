@@ -5,6 +5,13 @@ from .agents.browser_use import (
     StartBrowserUseTaskParams,
     StartBrowserUseTaskResponse,
 )
+from .agents.cua import (
+    CuaTaskData,
+    CuaTaskResponse,
+    CuaTaskStatusResponse,
+    StartCuaTaskParams,
+    StartCuaTaskResponse,
+)
 from .consts import (
     ISO639_1,
     POLLING_ATTEMPTS,
@@ -97,6 +104,12 @@ __all__ = [
     "BrowserUseTaskStatusResponse",
     "StartBrowserUseTaskParams",
     "StartBrowserUseTaskResponse",
+    "CuaTaskStatus",
+    "CuaTaskData",
+    "CuaTaskResponse",
+    "CuaTaskStatusResponse",
+    "StartCuaTaskParams",
+    "StartCuaTaskResponse",
     # crawl
     "CrawledPage",
     "CrawlJobResponse",
