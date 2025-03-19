@@ -5,6 +5,13 @@ from .agents.browser_use import (
     StartBrowserUseTaskParams,
     StartBrowserUseTaskResponse,
 )
+from .agents.claude_computer_use import (
+    ClaudeComputerUseTaskData,
+    ClaudeComputerUseTaskResponse,
+    ClaudeComputerUseTaskStatusResponse,
+    StartClaudeComputerUseTaskParams,
+    StartClaudeComputerUseTaskResponse,
+)
 from .agents.cua import (
     CuaTaskData,
     CuaTaskResponse,
@@ -104,6 +111,12 @@ __all__ = [
     "BrowserUseTaskStatusResponse",
     "StartBrowserUseTaskParams",
     "StartBrowserUseTaskResponse",
+    "ClaudeComputerUseTaskStatus",
+    "ClaudeComputerUseTaskData",
+    "ClaudeComputerUseTaskResponse",
+    "ClaudeComputerUseTaskStatusResponse",
+    "StartClaudeComputerUseTaskParams",
+    "StartClaudeComputerUseTaskResponse",
     "CuaTaskStatus",
     "CuaTaskData",
     "CuaTaskResponse",
