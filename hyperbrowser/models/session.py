@@ -127,6 +127,11 @@ class CreateSessionProfile(BaseModel):
     )
 
 
+class ImageCaptchaParam(BaseModel):
+    image_selector: str = Field(serialization_alias="imageSelector")
+    input_selector: str = Field(serialization_alias="inputSelector")
+
+
 class CreateSessionParams(BaseModel):
     """
     Parameters for creating a new browser session.
@@ -180,6 +185,9 @@ class CreateSessionParams(BaseModel):
     )
     save_downloads: Optional[bool] = Field(
         default=None, serialization_alias="saveDownloads"
+    )
+    image_captcha_params: Optional[List[ImageCaptchaParam]] = Field(
+        default=None, serialization_alias="imageCaptchaParams"
     )
 
 
