@@ -17,7 +17,16 @@ class CreateProfileParams(BaseModel):
 
 
 class CreateProfileResponse(BaseModel):
+    """
+    Response containing the created profile.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
     id: str
+    name: Optional[str] = Field(default=None)
 
 
 class ProfileResponse(BaseModel):
@@ -26,6 +35,7 @@ class ProfileResponse(BaseModel):
     )
 
     id: str
+    name: Optional[str] = Field(default=None)
     team_id: str = Field(alias="teamId")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
