@@ -1,7 +1,19 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class CreateProfileParams(BaseModel):
+    """
+    Parameters for creating a new profile.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    name: Optional[str] = Field(default=None, serialization_alias="name")
 
 
 class CreateProfileResponse(BaseModel):
@@ -30,6 +42,7 @@ class ProfileListParams(BaseModel):
 
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=10, ge=1)
+    name: Optional[str] = Field(default=None)
 
 
 class ProfileListResponse(BaseModel):

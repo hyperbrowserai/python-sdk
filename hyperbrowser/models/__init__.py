@@ -53,6 +53,7 @@ from .extract import (
     StartExtractJobResponse,
 )
 from .profile import (
+    CreateProfileParams,
     CreateProfileResponse,
     ProfileListParams,
     ProfileListResponse,
@@ -142,6 +143,7 @@ __all__ = [
     "StartExtractJobParams",
     "StartExtractJobResponse",
     # profile
+    "CreateProfileParams",
     "CreateProfileResponse",
     "ProfileListParams",
     "ProfileListResponse",

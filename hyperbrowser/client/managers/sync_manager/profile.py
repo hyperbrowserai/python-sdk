@@ -1,4 +1,5 @@
 from hyperbrowser.models.profile import (
+    CreateProfileParams,
     CreateProfileResponse,
     ProfileListParams,
     ProfileListResponse,
@@ -11,9 +12,14 @@ class ProfileManager:
     def __init__(self, client):
         self._client = client
 
-    def create(self) -> CreateProfileResponse:
+    def create(self, params: CreateProfileParams = None) -> CreateProfileResponse:
         response = self._client.transport.post(
             self._client._build_url("/profile"),
+            data=(
+                {}
+                if params is None
+                else params.model_dump(exclude_none=True, by_alias=True)
+            ),
         )
         return CreateProfileResponse(**response.data)
 
