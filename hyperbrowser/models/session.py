@@ -189,6 +189,9 @@ class CreateSessionParams(BaseModel):
     image_captcha_params: Optional[List[ImageCaptchaParam]] = Field(
         default=None, serialization_alias="imageCaptchaParams"
     )
+    timeout_minutes: Optional[int] = Field(
+        default=None, serialization_alias="timeoutMinutes"
+    )
 
 
 class SessionRecording(BaseModel):
