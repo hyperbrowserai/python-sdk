@@ -169,6 +169,9 @@ class CreateSessionParams(BaseModel):
     enable_web_recording: Optional[bool] = Field(
         default=True, serialization_alias="enableWebRecording"
     )
+    enable_video_web_recording: Optional[bool] = Field(
+        default=None, serialization_alias="enableVideoWebRecording"
+    )
     profile: Optional[CreateSessionProfile] = Field(default=None)
     extension_ids: Optional[List[str]] = Field(
         default=None, serialization_alias="extensionIds"
@@ -212,6 +215,20 @@ class SessionRecording(BaseModel):
 class GetSessionRecordingUrlResponse(BaseModel):
     """
     Response containing the signed URL for the session recording.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    status: RecordingStatus = Field(alias="status")
+    recording_url: Optional[str] = Field(default=None, alias="recordingUrl")
+    error: Optional[str] = Field(default=None, alias="error")
+
+
+class GetSessionVideoRecordingUrlResponse(BaseModel):
+    """
+    Response containing the signed URL for the session video recording.
     """
 
     model_config = ConfigDict(

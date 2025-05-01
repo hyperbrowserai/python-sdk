@@ -4,6 +4,7 @@ from ....models.session import (
     CreateSessionParams,
     GetSessionDownloadsUrlResponse,
     GetSessionRecordingUrlResponse,
+    GetSessionVideoRecordingUrlResponse,
     SessionDetail,
     SessionListParams,
     SessionListResponse,
@@ -58,6 +59,14 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/recording-url")
         )
         return GetSessionRecordingUrlResponse(**response.data)
+
+    async def get_video_recording_url(
+        self, id: str
+    ) -> GetSessionVideoRecordingUrlResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/video-recording-url")
+        )
+        return GetSessionVideoRecordingUrlResponse(**response.data)
 
     async def get_downloads_url(self, id: str) -> GetSessionDownloadsUrlResponse:
         response = await self._client.transport.get(
