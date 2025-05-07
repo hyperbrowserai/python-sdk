@@ -26,6 +26,7 @@ from .agents.hyper_agent import (
     HyperAgentTaskData,
     HyperAgentTaskResponse,
     HyperAgentTaskStatus,
+    HyperAgentTaskStatusResponse,
     StartHyperAgentTaskParams,
     StartHyperAgentTaskResponse,
 )
