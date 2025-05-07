@@ -21,6 +21,13 @@ BrowserUseLlm = Literal[
     "claude-3-5-haiku-20241022",
     "gemini-2.0-flash",
 ]
+HyperAgentLlm = Literal[
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+]
 
 Country = Literal[
     "AD",

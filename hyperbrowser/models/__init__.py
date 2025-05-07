@@ -19,9 +19,20 @@ from .agents.cua import (
     StartCuaTaskParams,
     StartCuaTaskResponse,
 )
+from .agents.hyper_agent import (
+    HyperAgentActionOutput,
+    HyperAgentOutput,
+    HyperAgentStep,
+    HyperAgentTaskData,
+    HyperAgentTaskResponse,
+    HyperAgentTaskStatus,
+    StartHyperAgentTaskParams,
+    StartHyperAgentTaskResponse,
+)
 from .consts import (
     ISO639_1,
     POLLING_ATTEMPTS,
+    HyperAgentLlm,
     BrowserUseLlm,
     Country,
     DownloadsStatus,
@@ -95,6 +106,7 @@ __all__ = [
     # consts
     "ISO639_1",
     "POLLING_ATTEMPTS",
+    "HyperAgentLlm",
     "BrowserUseLlm",
     "Country",
     "DownloadsStatus",
@@ -107,6 +119,15 @@ __all__ = [
     "ScrapeWaitUntil",
     "State",
     # agents
+    "HyperAgentTaskStatus",
+    "HyperAgentActionOutput",
+    "HyperAgentOutput",
+    "HyperAgentStep",
+    "HyperAgentTaskData",
+    "HyperAgentTaskResponse",
+    "HyperAgentTaskStatusResponse",
+    "StartHyperAgentTaskParams",
+    "StartHyperAgentTaskResponse",
     "BrowserUseTaskStatus",
     "BrowserUseTaskData",
     "BrowserUseTaskResponse",
