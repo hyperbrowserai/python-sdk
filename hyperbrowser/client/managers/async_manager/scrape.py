@@ -111,6 +111,7 @@ class BatchScrapeManager:
                 job_response.total_scraped_pages = tmp_job_response.total_scraped_pages
                 job_response.total_page_batches = tmp_job_response.total_page_batches
                 job_response.batch_size = tmp_job_response.batch_size
+                job_response.error = tmp_job_response.error
                 failures = 0
                 first_check = False
             except Exception as e:
