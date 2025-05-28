@@ -27,7 +27,7 @@ class HyperbrowserBase:
                     base_url
                     if base_url is not None
                     else os.environ.get(
-                        "HYPERBROWSER_BASE_URL", "https://app.hyperbrowser.ai"
+                        "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
                     )
                 ),
             )
