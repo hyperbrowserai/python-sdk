@@ -252,3 +252,11 @@ class GetSessionDownloadsUrlResponse(BaseModel):
     status: DownloadsStatus = Field(alias="status")
     downloads_url: Optional[str] = Field(default=None, alias="downloadsUrl")
     error: Optional[str] = Field(default=None, alias="error")
+
+
+class UploadFileResponse(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    message: str = Field(alias="message")

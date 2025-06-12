@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union, IO
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
@@ -9,6 +9,7 @@ from ....models.session import (
     SessionListParams,
     SessionListResponse,
     SessionRecording,
+    UploadFileResponse,
 )
 
 
@@ -69,3 +70,21 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/downloads-url")
         )
         return GetSessionDownloadsUrlResponse(**response.data)
+
+    def upload_file(self, id: str, file_input: Union[str, IO]) -> UploadFileResponse:
+        response = None
+        if isinstance(file_input, str):
+            with open(file_input, "rb") as file_obj:
+                files = {"file": file_obj}
+                response = self._client.transport.post(
+                    self._client._build_url(f"/session/{id}/uploads"),
+                    files=files,
+                )
+        else:
+            files = {"file": file_input}
+            response = self._client.transport.post(
+                self._client._build_url(f"/session/{id}/uploads"),
+                files=files,
+            )
+
+        return UploadFileResponse(**response.data)

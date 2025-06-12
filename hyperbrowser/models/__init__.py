@@ -35,6 +35,7 @@ from .consts import (
     POLLING_ATTEMPTS,
     HyperAgentLlm,
     BrowserUseLlm,
+    ClaudeComputerUseLlm,
     Country,
     DownloadsStatus,
     OperatingSystem,
@@ -101,6 +102,7 @@ from .session import (
     SessionListResponse,
     SessionRecording,
     SessionStatus,
+    UploadFileResponse,
 )
 
 __all__ = [
@@ -109,6 +111,7 @@ __all__ = [
     "POLLING_ATTEMPTS",
     "HyperAgentLlm",
     "BrowserUseLlm",
+    "ClaudeComputerUseLlm",
     "Country",
     "DownloadsStatus",
     "OperatingSystem",
@@ -200,4 +203,5 @@ __all__ = [
     "SessionListResponse",
     "SessionRecording",
     "SessionStatus",
+    "UploadFileResponse",
 ]
