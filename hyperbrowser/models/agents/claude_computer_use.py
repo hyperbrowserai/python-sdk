@@ -3,6 +3,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..session import CreateSessionParams
+from ..consts import ClaudeComputerUseLlm
 
 ClaudeComputerUseTaskStatus = Literal[
     "pending", "running", "completed", "failed", "stopped"
@@ -19,6 +20,7 @@ class StartClaudeComputerUseTaskParams(BaseModel):
     )
 
     task: str
+    llm: Optional[ClaudeComputerUseLlm] = Field(default=None, serialization_alias="llm")
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     max_steps: Optional[int] = Field(default=None, serialization_alias="maxSteps")
