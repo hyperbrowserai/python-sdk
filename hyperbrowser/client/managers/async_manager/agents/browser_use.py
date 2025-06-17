@@ -1,4 +1,5 @@
 import asyncio
+import jsonref
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -19,6 +20,13 @@ class BrowserUseManager:
     async def start(
         self, params: StartBrowserUseTaskParams
     ) -> StartBrowserUseTaskResponse:
+        if params.output_model_schema:
+            if hasattr(params.output_model_schema, "model_json_schema"):
+                params.output_model_schema = jsonref.replace_refs(
+                    params.output_model_schema.model_json_schema(),
+                    proxies=False,
+                    lazy_load=False,
+                )
         response = await self._client.transport.post(
             self._client._build_url("/task/browser-use"),
             data=params.model_dump(exclude_none=True, by_alias=True),

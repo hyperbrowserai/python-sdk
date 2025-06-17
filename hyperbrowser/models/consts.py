@@ -23,6 +23,7 @@ BrowserUseLlm = Literal[
     "claude-3-5-sonnet-20241022",
     "claude-3-5-haiku-20241022",
     "gemini-2.0-flash",
+    "gemini-2.5-flash",
 ]
 HyperAgentLlm = Literal[
     "gpt-4o",
