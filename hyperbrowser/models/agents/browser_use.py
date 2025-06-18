@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Type, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +46,15 @@ class StartBrowserUseTaskParams(BaseModel):
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     initial_actions: Optional[List[Dict[str, Dict[str, Any]]]] = Field(
         default=None, serialization_alias="initialActions"
+    )
+    sensitive_data: Optional[Dict[str, str]] = Field(
+        default=None, serialization_alias="sensitiveData"
+    )
+    message_context: Optional[str] = Field(
+        default=None, serialization_alias="messageContext"
+    )
+    output_model_schema: Optional[Union[Dict[str, Any], Type[BaseModel]]] = Field(
+        default=None, serialization_alias="outputModelSchema"
     )
     keep_browser_open: Optional[bool] = Field(
         default=None, serialization_alias="keepBrowserOpen"
