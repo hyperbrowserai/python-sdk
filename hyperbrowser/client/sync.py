@@ -10,6 +10,7 @@ from .managers.sync_manager.extract import ExtractManager
 from .managers.sync_manager.profile import ProfileManager
 from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.session import SessionManager
+from .managers.sync_manager.team import TeamManager
 
 
 class Hyperbrowser(HyperbrowserBase):
@@ -31,6 +32,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.profiles = ProfileManager(self)
         self.extensions = ExtensionManager(self)
         self.agents = Agents(self)
+        self.team = TeamManager(self)
 
     def close(self) -> None:
         self.transport.close()

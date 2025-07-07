@@ -104,6 +104,7 @@ from .session import (
     SessionStatus,
     UploadFileResponse,
 )
+from .team import TeamCreditInfo
 
 __all__ = [
     # consts
@@ -204,4 +205,6 @@ __all__ = [
     "SessionRecording",
     "SessionStatus",
     "UploadFileResponse",
+    # team
+    "TeamCreditInfo",
 ]
