@@ -7,6 +7,18 @@ from ..session import CreateSessionParams
 CuaTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
 
 
+class CuaApiKeys(BaseModel):
+    """
+    API keys for the CUA task.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    openai: Optional[str] = Field(default=None, serialization_alias="openai")
+
+
 class StartCuaTaskParams(BaseModel):
     """
     Parameters for creating a new CUA task.
@@ -26,6 +38,10 @@ class StartCuaTaskParams(BaseModel):
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"
     )
+    use_custom_api_keys: Optional[bool] = Field(
+        default=None, serialization_alias="useCustomApiKeys"
+    )
+    api_keys: Optional[CuaApiKeys] = Field(default=None, serialization_alias="apiKeys")
 
 
 class StartCuaTaskResponse(BaseModel):

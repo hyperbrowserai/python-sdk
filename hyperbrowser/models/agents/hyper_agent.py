@@ -8,6 +8,20 @@ from ..session import CreateSessionParams
 HyperAgentTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
 
 
+class HyperAgentApiKeys(BaseModel):
+    """
+    API keys for the HyperAgent task.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    openai: Optional[str] = Field(default=None, serialization_alias="openai")
+    anthropic: Optional[str] = Field(default=None, serialization_alias="anthropic")
+    google: Optional[str] = Field(default=None, serialization_alias="google")
+
+
 class StartHyperAgentTaskParams(BaseModel):
     """
     Parameters for creating a new HyperAgent task.
@@ -26,6 +40,12 @@ class StartHyperAgentTaskParams(BaseModel):
     )
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"
+    )
+    use_custom_api_keys: Optional[bool] = Field(
+        default=None, serialization_alias="useCustomApiKeys"
+    )
+    api_keys: Optional[HyperAgentApiKeys] = Field(
+        default=None, serialization_alias="apiKeys"
     )
 
 
