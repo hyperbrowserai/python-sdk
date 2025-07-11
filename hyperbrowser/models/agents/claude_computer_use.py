@@ -10,6 +10,18 @@ ClaudeComputerUseTaskStatus = Literal[
 ]
 
 
+class ClaudeComputerUseApiKeys(BaseModel):
+    """
+    API keys for the Claude Computer Use task.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    anthropic: Optional[str] = Field(default=None, serialization_alias="anthropic")
+
+
 class StartClaudeComputerUseTaskParams(BaseModel):
     """
     Parameters for creating a new Claude Computer Use task.
@@ -29,6 +41,12 @@ class StartClaudeComputerUseTaskParams(BaseModel):
     )
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"
+    )
+    use_custom_api_keys: Optional[bool] = Field(
+        default=None, serialization_alias="useCustomApiKeys"
+    )
+    api_keys: Optional[ClaudeComputerUseApiKeys] = Field(
+        default=None, serialization_alias="apiKeys"
     )
 
 

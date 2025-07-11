@@ -4,6 +4,7 @@ from .agents.browser_use import (
     BrowserUseTaskStatusResponse,
     StartBrowserUseTaskParams,
     StartBrowserUseTaskResponse,
+    BrowserUseApiKeys,
 )
 from .agents.claude_computer_use import (
     ClaudeComputerUseTaskData,
@@ -11,6 +12,7 @@ from .agents.claude_computer_use import (
     ClaudeComputerUseTaskStatusResponse,
     StartClaudeComputerUseTaskParams,
     StartClaudeComputerUseTaskResponse,
+    ClaudeComputerUseApiKeys,
 )
 from .agents.cua import (
     CuaTaskData,
@@ -18,6 +20,7 @@ from .agents.cua import (
     CuaTaskStatusResponse,
     StartCuaTaskParams,
     StartCuaTaskResponse,
+    CuaApiKeys,
 )
 from .agents.hyper_agent import (
     HyperAgentActionOutput,
@@ -29,6 +32,7 @@ from .agents.hyper_agent import (
     HyperAgentTaskStatusResponse,
     StartHyperAgentTaskParams,
     StartHyperAgentTaskResponse,
+    HyperAgentApiKeys,
 )
 from .consts import (
     ISO639_1,
@@ -151,6 +155,10 @@ __all__ = [
     "CuaTaskStatusResponse",
     "StartCuaTaskParams",
     "StartCuaTaskResponse",
+    "BrowserUseApiKeys",
+    "ClaudeComputerUseApiKeys",
+    "CuaApiKeys",
+    "HyperAgentApiKeys",
     # crawl
     "CrawledPage",
     "CrawlJobResponse",

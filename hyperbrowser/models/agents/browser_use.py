@@ -8,6 +8,20 @@ from ..session import CreateSessionParams
 BrowserUseTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
 
 
+class BrowserUseApiKeys(BaseModel):
+    """
+    API keys for the browser use task.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    openai: Optional[str] = Field(default=None, serialization_alias="openai")
+    anthropic: Optional[str] = Field(default=None, serialization_alias="anthropic")
+    google: Optional[str] = Field(default=None, serialization_alias="google")
+
+
 class StartBrowserUseTaskParams(BaseModel):
     """
     Parameters for creating a new browser use task.
@@ -61,6 +75,12 @@ class StartBrowserUseTaskParams(BaseModel):
     )
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"
+    )
+    use_custom_api_keys: Optional[bool] = Field(
+        default=None, serialization_alias="useCustomApiKeys"
+    )
+    api_keys: Optional[BrowserUseApiKeys] = Field(
+        default=None, serialization_alias="apiKeys"
     )
 
 
