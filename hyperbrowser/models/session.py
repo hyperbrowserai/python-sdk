@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, List, Literal, Optional, Union
+from .computer_action import ComputerActionParams, ComputerActionResponse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -64,6 +65,9 @@ class SessionDetail(Session):
     )
 
     ws_endpoint: Optional[str] = Field(alias="wsEndpoint", default=None)
+    computer_action_endpoint: Optional[str] = Field(
+        alias="computerActionEndpoint", default=None
+    )
     live_url: str = Field(alias="liveUrl")
     token: str = Field(alias="token")
 

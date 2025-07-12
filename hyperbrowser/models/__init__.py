@@ -92,6 +92,19 @@ from .scrape import (
     StartScrapeJobParams,
     StartScrapeJobResponse,
 )
+from .computer_action import (
+    ClickActionParams,
+    ComputerAction,
+    ComputerActionParams,
+    ComputerActionResponse,
+    Coordinate,
+    DragActionParams,
+    MoveMouseActionParams,
+    PressKeysActionParams,
+    ScreenshotActionParams,
+    ScrollActionParams,
+    TypeTextActionParams,
+)
 from .session import (
     BasicResponse,
     CreateSessionParams,
@@ -215,4 +228,16 @@ __all__ = [
     "UploadFileResponse",
     # team
     "TeamCreditInfo",
+    # computer action
+    "ClickActionParams",
+    "ComputerAction",
+    "ComputerActionParams",
+    "ComputerActionResponse",
+    "Coordinate",
+    "DragActionParams",
+    "MoveMouseActionParams",
+    "PressKeysActionParams",
+    "ScreenshotActionParams",
+    "ScrollActionParams",
+    "TypeTextActionParams",
 ]
