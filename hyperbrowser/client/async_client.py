@@ -11,6 +11,7 @@ from .managers.async_manager.profile import ProfileManager
 from .managers.async_manager.scrape import ScrapeManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.team import TeamManager
+from .managers.async_manager.computer_action import ComputerActionManager
 
 
 class AsyncHyperbrowser(HyperbrowserBase):
@@ -33,6 +34,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.extensions = ExtensionManager(self)
         self.agents = Agents(self)
         self.team = TeamManager(self)
+        self.computer_action = ComputerActionManager(self)
 
     async def close(self) -> None:
         await self.transport.close()
