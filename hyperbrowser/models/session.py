@@ -43,6 +43,7 @@ class Session(BaseModel):
     end_time: Optional[int] = Field(default=None, alias="endTime")
     duration: Optional[int] = None
     session_url: str = Field(alias="sessionUrl")
+    proxy_data_consumed: str = Field(alias="proxyDataConsumed")
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
