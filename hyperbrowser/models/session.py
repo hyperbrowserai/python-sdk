@@ -177,6 +177,9 @@ class CreateSessionParams(BaseModel):
     enable_video_web_recording: Optional[bool] = Field(
         default=None, serialization_alias="enableVideoWebRecording"
     )
+    enable_log_capture: Optional[bool] = Field(
+        default=True, serialization_alias="enableLogCapture"
+    )
     profile: Optional[CreateSessionProfile] = Field(default=None)
     extension_ids: Optional[List[str]] = Field(
         default=None, serialization_alias="extensionIds"
