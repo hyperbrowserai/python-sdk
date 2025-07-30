@@ -42,6 +42,9 @@ class StartCuaTaskParams(BaseModel):
         default=None, serialization_alias="useCustomApiKeys"
     )
     api_keys: Optional[CuaApiKeys] = Field(default=None, serialization_alias="apiKeys")
+    use_computer_action: Optional[bool] = Field(
+        default=None, serialization_alias="useComputerAction"
+    )
 
 
 class StartCuaTaskResponse(BaseModel):

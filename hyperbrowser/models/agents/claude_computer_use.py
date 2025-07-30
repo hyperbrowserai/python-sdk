@@ -48,6 +48,9 @@ class StartClaudeComputerUseTaskParams(BaseModel):
     api_keys: Optional[ClaudeComputerUseApiKeys] = Field(
         default=None, serialization_alias="apiKeys"
     )
+    use_computer_action: Optional[bool] = Field(
+        default=None, serialization_alias="useComputerAction"
+    )
 
 
 class StartClaudeComputerUseTaskResponse(BaseModel):
