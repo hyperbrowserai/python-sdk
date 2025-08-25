@@ -203,6 +203,12 @@ class CreateSessionParams(BaseModel):
     timeout_minutes: Optional[int] = Field(
         default=None, serialization_alias="timeoutMinutes"
     )
+    enable_window_manager: Optional[bool] = Field(
+        default=None, serialization_alias="enableWindowManager"
+    )
+    enable_window_manager_taskbar: Optional[bool] = Field(
+        default=None, serialization_alias="enableWindowManagerTaskbar"
+    )
 
 
 class SessionRecording(BaseModel):
