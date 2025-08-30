@@ -12,6 +12,7 @@ from hyperbrowser.models.consts import (
     Platform,
     RecordingStatus,
     State,
+    SessionRegion,
 )
 
 SessionStatus = Literal["active", "closed", "error"]
@@ -209,6 +210,7 @@ class CreateSessionParams(BaseModel):
     enable_window_manager_taskbar: Optional[bool] = Field(
         default=None, serialization_alias="enableWindowManagerTaskbar"
     )
+    region: Optional[SessionRegion] = Field(default=None, serialization_alias="region")
 
 
 class SessionRecording(BaseModel):

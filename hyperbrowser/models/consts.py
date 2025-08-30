@@ -36,6 +36,10 @@ ClaudeComputerUseLlm = Literal[
     "claude-3-7-sonnet-20250219",
     "claude-sonnet-4-20250514",
 ]
+SessionRegion = Literal[
+    "us-central",
+    "asia-south",
+]
 
 Country = Literal[
     "AD",
