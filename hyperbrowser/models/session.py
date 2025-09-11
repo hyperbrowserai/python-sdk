@@ -211,8 +211,8 @@ class CreateSessionParams(BaseModel):
         default=None, serialization_alias="enableWindowManagerTaskbar"
     )
     region: Optional[SessionRegion] = Field(default=None, serialization_alias="region")
-    vnc_view_only: Optional[bool] = Field(
-        default=None, serialization_alias="vncViewOnly"
+    view_only_live_view: Optional[bool] = Field(
+        default=None, serialization_alias="viewOnlyLiveView"
     )
 
 
