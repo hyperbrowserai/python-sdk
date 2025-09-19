@@ -147,6 +147,7 @@ class CreateSessionParams(BaseModel):
         populate_by_alias=True,
     )
 
+    use_ultra_stealth: bool = Field(default=False, serialization_alias="useUltraStealth")
     use_stealth: bool = Field(default=False, serialization_alias="useStealth")
     use_proxy: bool = Field(default=False, serialization_alias="useProxy")
     proxy_server: Optional[str] = Field(default=None, serialization_alias="proxyServer")

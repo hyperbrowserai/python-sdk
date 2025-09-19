@@ -39,6 +39,7 @@ ClaudeComputerUseLlm = Literal[
 SessionRegion = Literal[
     "us-central",
     "asia-south",
+    "us-dev",
 ]
 
 Country = Literal[
