@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union, Dict
 from .computer_action import ComputerActionParams, ComputerActionResponse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -13,6 +13,7 @@ from hyperbrowser.models.consts import (
     RecordingStatus,
     State,
     SessionRegion,
+    SessionEventLogType,
 )
 
 SessionStatus = Literal["active", "closed", "error"]
@@ -147,7 +148,9 @@ class CreateSessionParams(BaseModel):
         populate_by_alias=True,
     )
 
-    use_ultra_stealth: bool = Field(default=False, serialization_alias="useUltraStealth")
+    use_ultra_stealth: bool = Field(
+        default=False, serialization_alias="useUltraStealth"
+    )
     use_stealth: bool = Field(default=False, serialization_alias="useStealth")
     use_proxy: bool = Field(default=False, serialization_alias="useProxy")
     proxy_server: Optional[str] = Field(default=None, serialization_alias="proxyServer")
@@ -280,3 +283,48 @@ class UploadFileResponse(BaseModel):
     )
 
     message: str = Field(alias="message")
+
+
+class SessionEventLog(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str = Field(alias="id")
+    session_id: str = Field(alias="sessionId")
+    target_id: str = Field(alias="targetId")
+    page_url: str = Field(alias="pageUrl")
+    team_id: str = Field(alias="teamId")
+    type: SessionEventLogType = Field(alias="type")
+    metadata: Dict[str, Any] = Field(alias="metadata")
+    timestamp: int = Field(alias="timestamp")
+
+
+class SessionEventLogListParams(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    page: Optional[int] = Field(default=None, serialization_alias="page")
+    limit: Optional[int] = Field(default=None, serialization_alias="limit")
+    start_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="startTimestamp"
+    )
+    end_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="endTimestamp"
+    )
+    target_id: Optional[str] = Field(default=None, serialization_alias="targetId")
+    types: Optional[List[SessionEventLogType]] = Field(
+        default=None, serialization_alias="types"
+    )
+
+
+class SessionEventLogListResponse(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    data: List[SessionEventLog] = Field(alias="data")
+    total_count: int = Field(alias="totalCount")
+    page: int = Field(alias="page")
+    per_page: int = Field(alias="perPage")
