@@ -10,12 +10,32 @@ from ....models.session import (
     SessionListResponse,
     SessionRecording,
     UploadFileResponse,
+    SessionEventLogListParams,
+    SessionEventLogListResponse,
+    SessionEventLog,
 )
+
+
+class SessionEventLogsManager:
+    def __init__(self, client):
+        self._client = client
+
+    def list(
+        self,
+        session_id: str,
+        params: SessionEventLogListParams = SessionEventLogListParams(),
+    ) -> SessionEventLogListResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{session_id}/event-logs"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SessionEventLogListResponse(**response.data)
 
 
 class SessionManager:
     def __init__(self, client):
         self._client = client
+        self.event_logs = SessionEventLogsManager(client)
 
     def create(self, params: CreateSessionParams = None) -> SessionDetail:
         response = self._client.transport.post(

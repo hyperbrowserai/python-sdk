@@ -49,6 +49,7 @@ from .consts import (
     ScrapePageStatus,
     ScrapeScreenshotFormat,
     ScrapeWaitUntil,
+    SessionEventLogType,
     State,
 )
 from .crawl import (
@@ -119,6 +120,9 @@ from .session import (
     SessionListResponse,
     SessionRecording,
     SessionStatus,
+    SessionEventLog,
+    SessionEventLogListParams,
+    SessionEventLogListResponse,
     UploadFileResponse,
 )
 from .team import TeamCreditInfo
@@ -139,6 +143,7 @@ __all__ = [
     "ScrapePageStatus",
     "ScrapeScreenshotFormat",
     "ScrapeWaitUntil",
+    "SessionEventLogType",
     "State",
     # agents
     "HyperAgentTaskStatus",
@@ -225,6 +230,9 @@ __all__ = [
     "SessionListResponse",
     "SessionRecording",
     "SessionStatus",
+    "SessionEventLog",
+    "SessionEventLogListParams",
+    "SessionEventLogListResponse",
     "UploadFileResponse",
     # team
     "TeamCreditInfo",
