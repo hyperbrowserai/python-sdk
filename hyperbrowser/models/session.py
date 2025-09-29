@@ -292,8 +292,8 @@ class SessionEventLog(BaseModel):
 
     id: str = Field(alias="id")
     session_id: str = Field(alias="sessionId")
-    target_id: str = Field(alias="targetId")
-    page_url: str = Field(alias="pageUrl")
+    target_id: Optional[str] = Field(alias="targetId")
+    page_url: Optional[str] = Field(alias="pageUrl")
     team_id: str = Field(alias="teamId")
     type: SessionEventLogType = Field(alias="type")
     metadata: Dict[str, Any] = Field(alias="metadata")

@@ -10,7 +10,9 @@ RecordingStatus = Literal[
 DownloadsStatus = Literal[
     "not_enabled", "pending", "in_progress", "completed", "failed"
 ]
-SessionEventLogType = Literal["captcha_detected", "captcha_solved", "captcha_error"]
+SessionEventLogType = Literal[
+    "captcha_detected", "captcha_solved", "captcha_error", "file_downloaded"
+]
 
 POLLING_ATTEMPTS = 5
 
