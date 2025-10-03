@@ -21,6 +21,9 @@ BrowserUseLlm = Literal[
     "gpt-4o-mini",
     "gpt-4.1",
     "gpt-4.1-mini",
+    "gpt-5",
+    "gpt-5-mini",
+    "claude-sonnet-4-5",
     "claude-sonnet-4-20250514",
     "claude-3-7-sonnet-20250219",
     "claude-3-5-sonnet-20241022",
@@ -36,8 +39,9 @@ HyperAgentLlm = Literal[
     "gpt-4.1-nano",
 ]
 ClaudeComputerUseLlm = Literal[
-    "claude-3-7-sonnet-20250219",
+    "claude-sonnet-4-5",
     "claude-sonnet-4-20250514",
+    "claude-3-7-sonnet-20250219",
 ]
 SessionRegion = Literal[
     "us-central",
