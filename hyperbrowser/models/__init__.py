@@ -123,6 +123,8 @@ from .session import (
     SessionEventLog,
     SessionEventLogListParams,
     SessionEventLogListResponse,
+    SessionProfile,
+    SessionLaunchState,
     UploadFileResponse,
 )
 from .team import TeamCreditInfo
@@ -233,6 +235,8 @@ __all__ = [
     "SessionEventLog",
     "SessionEventLogListParams",
     "SessionEventLogListResponse",
+    "SessionProfile",
+    "SessionLaunchState",
     "UploadFileResponse",
     # team
     "TeamCreditInfo",
