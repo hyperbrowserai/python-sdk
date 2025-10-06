@@ -102,7 +102,9 @@ class Session(BaseModel):
     duration: Optional[int] = None
     session_url: str = Field(alias="sessionUrl")
     proxy_data_consumed: str = Field(alias="proxyDataConsumed")
-    launch_state: Optional[SessionLaunchState] = Field(alias="launchState")
+    launch_state: Optional[SessionLaunchState] = Field(
+        default=None, alias="launchState"
+    )
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
