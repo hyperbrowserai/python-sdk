@@ -27,6 +27,62 @@ class BasicResponse(BaseModel):
     success: bool
 
 
+class ScreenConfig(BaseModel):
+    """
+    Screen configuration parameters for browser session.
+    """
+
+    width: int = Field(default=1280, serialization_alias="width")
+    height: int = Field(default=720, serialization_alias="height")
+
+
+class SessionProfile(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str = Field(alias="id")
+    persist_changes: Optional[bool] = Field(
+        default=None, alias="persistChanges", serialization_alias="persistChanges"
+    )
+
+
+class SessionLaunchState(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    use_ultra_stealth: Optional[bool] = Field(default=None, alias="useUltraStealth")
+    use_stealth: Optional[bool] = Field(default=None, alias="useStealth")
+    use_proxy: Optional[bool] = Field(default=None, alias="useProxy")
+    solve_captchas: Optional[bool] = Field(default=None, alias="solveCaptchas")
+    adblock: Optional[bool] = Field(default=None, alias="adblock")
+    trackers: Optional[bool] = Field(default=None, alias="trackers")
+    annoyances: Optional[bool] = Field(default=None, alias="annoyances")
+    screen: Optional[ScreenConfig] = Field(default=None, alias="screen")
+    enable_web_recording: Optional[bool] = Field(
+        default=None, alias="enableWebRecording"
+    )
+    enable_video_web_recording: Optional[bool] = Field(
+        default=None, alias="enableVideoWebRecording"
+    )
+    enable_log_capture: Optional[bool] = Field(default=None, alias="enableLogCapture")
+    accept_cookies: Optional[bool] = Field(default=None, alias="acceptCookies")
+    profile: Optional[SessionProfile] = Field(default=None, alias="profile")
+    static_ip_id: Optional[str] = Field(default=None, alias="staticIpId")
+    save_downloads: Optional[bool] = Field(default=None, alias="saveDownloads")
+    enable_window_manager: Optional[bool] = Field(
+        default=None, alias="enableWindowManager"
+    )
+    enable_window_manager_taskbar: Optional[bool] = Field(
+        default=None, alias="enableWindowManagerTaskbar"
+    )
+    view_only_live_view: Optional[bool] = Field(default=None, alias="viewOnlyLiveView")
+    disable_password_manager: Optional[bool] = Field(
+        default=None, alias="disablePasswordManager"
+    )
+
+
 class Session(BaseModel):
     """
     Represents a basic session in the Hyperbrowser system.
@@ -46,6 +102,9 @@ class Session(BaseModel):
     duration: Optional[int] = None
     session_url: str = Field(alias="sessionUrl")
     proxy_data_consumed: str = Field(alias="proxyDataConsumed")
+    launch_state: Optional[SessionLaunchState] = Field(
+        default=None, alias="launchState"
+    )
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
@@ -112,15 +171,6 @@ class SessionListResponse(BaseModel):
     def total_pages(self) -> int:
         """Calculate the total number of pages."""
         return -(-self.total_count // self.per_page)
-
-
-class ScreenConfig(BaseModel):
-    """
-    Screen configuration parameters for browser session.
-    """
-
-    width: int = Field(default=1280, serialization_alias="width")
-    height: int = Field(default=720, serialization_alias="height")
 
 
 class CreateSessionProfile(BaseModel):
