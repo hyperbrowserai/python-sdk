@@ -54,7 +54,7 @@ class SessionLaunchState(BaseModel):
 
     use_ultra_stealth: Optional[bool] = Field(default=None, alias="useUltraStealth")
     use_stealth: Optional[bool] = Field(default=None, alias="useStealth")
-    use_proxy: Optional[bool] = Field(alias="useProxy")
+    use_proxy: Optional[bool] = Field(default=None, alias="useProxy")
     solve_captchas: Optional[bool] = Field(default=None, alias="solveCaptchas")
     adblock: Optional[bool] = Field(default=None, alias="adblock")
     trackers: Optional[bool] = Field(default=None, alias="trackers")
