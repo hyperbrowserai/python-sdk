@@ -7,12 +7,24 @@ from .agents.browser_use import (
     BrowserUseApiKeys,
 )
 from .agents.claude_computer_use import (
+    ClaudeComputerUseTaskStatus,
+    ClaudeComputerUseStepResponse,
     ClaudeComputerUseTaskData,
     ClaudeComputerUseTaskResponse,
     ClaudeComputerUseTaskStatusResponse,
     StartClaudeComputerUseTaskParams,
     StartClaudeComputerUseTaskResponse,
     ClaudeComputerUseApiKeys,
+)
+from .agents.gemini_computer_use import (
+    GeminiComputerUseTaskStatus,
+    GeminiComputerUseStepResponse,
+    GeminiComputerUseTaskData,
+    GeminiComputerUseTaskResponse,
+    GeminiComputerUseTaskStatusResponse,
+    StartGeminiComputerUseTaskParams,
+    StartGeminiComputerUseTaskResponse,
+    GeminiComputerUseApiKeys,
 )
 from .agents.cua import (
     CuaTaskData,
@@ -51,6 +63,7 @@ from .consts import (
     ScrapeWaitUntil,
     SessionEventLogType,
     State,
+    SessionRegion,
 )
 from .crawl import (
     CrawledPage,
@@ -126,6 +139,7 @@ from .session import (
     SessionProfile,
     SessionLaunchState,
     UploadFileResponse,
+    ImageCaptchaParam,
 )
 from .team import TeamCreditInfo
 
@@ -147,6 +161,7 @@ __all__ = [
     "ScrapeWaitUntil",
     "SessionEventLogType",
     "State",
+    "SessionRegion",
     # agents
     "HyperAgentTaskStatus",
     "HyperAgentActionOutput",
@@ -164,11 +179,19 @@ __all__ = [
     "StartBrowserUseTaskParams",
     "StartBrowserUseTaskResponse",
     "ClaudeComputerUseTaskStatus",
+    "ClaudeComputerUseStepResponse",
     "ClaudeComputerUseTaskData",
     "ClaudeComputerUseTaskResponse",
     "ClaudeComputerUseTaskStatusResponse",
     "StartClaudeComputerUseTaskParams",
     "StartClaudeComputerUseTaskResponse",
+    "GeminiComputerUseTaskStatus",
+    "GeminiComputerUseStepResponse",
+    "GeminiComputerUseTaskData",
+    "GeminiComputerUseTaskResponse",
+    "GeminiComputerUseTaskStatusResponse",
+    "StartGeminiComputerUseTaskParams",
+    "StartGeminiComputerUseTaskResponse",
     "CuaTaskStatus",
     "CuaTaskData",
     "CuaTaskResponse",
@@ -177,6 +200,7 @@ __all__ = [
     "StartCuaTaskResponse",
     "BrowserUseApiKeys",
     "ClaudeComputerUseApiKeys",
+    "GeminiComputerUseApiKeys",
     "CuaApiKeys",
     "HyperAgentApiKeys",
     # crawl
@@ -238,6 +262,7 @@ __all__ = [
     "SessionProfile",
     "SessionLaunchState",
     "UploadFileResponse",
+    "ImageCaptchaParam",
     # team
     "TeamCreditInfo",
     # computer action

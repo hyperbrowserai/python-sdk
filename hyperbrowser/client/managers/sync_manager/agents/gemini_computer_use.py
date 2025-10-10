@@ -5,51 +5,51 @@ from hyperbrowser.exceptions import HyperbrowserError
 from .....models import (
     POLLING_ATTEMPTS,
     BasicResponse,
-    ClaudeComputerUseTaskResponse,
-    ClaudeComputerUseTaskStatusResponse,
-    StartClaudeComputerUseTaskParams,
-    StartClaudeComputerUseTaskResponse,
+    GeminiComputerUseTaskResponse,
+    GeminiComputerUseTaskStatusResponse,
+    StartGeminiComputerUseTaskParams,
+    StartGeminiComputerUseTaskResponse,
 )
 
 
-class ClaudeComputerUseManager:
+class GeminiComputerUseManager:
     def __init__(self, client):
         self._client = client
 
     def start(
-        self, params: StartClaudeComputerUseTaskParams
-    ) -> StartClaudeComputerUseTaskResponse:
+        self, params: StartGeminiComputerUseTaskParams
+    ) -> StartGeminiComputerUseTaskResponse:
         response = self._client.transport.post(
-            self._client._build_url("/task/claude-computer-use"),
+            self._client._build_url("/task/gemini-computer-use"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartClaudeComputerUseTaskResponse(**response.data)
+        return StartGeminiComputerUseTaskResponse(**response.data)
 
-    def get(self, job_id: str) -> ClaudeComputerUseTaskResponse:
+    def get(self, job_id: str) -> GeminiComputerUseTaskResponse:
         response = self._client.transport.get(
-            self._client._build_url(f"/task/claude-computer-use/{job_id}")
+            self._client._build_url(f"/task/gemini-computer-use/{job_id}")
         )
-        return ClaudeComputerUseTaskResponse(**response.data)
+        return GeminiComputerUseTaskResponse(**response.data)
 
-    def get_status(self, job_id: str) -> ClaudeComputerUseTaskStatusResponse:
+    def get_status(self, job_id: str) -> GeminiComputerUseTaskStatusResponse:
         response = self._client.transport.get(
-            self._client._build_url(f"/task/claude-computer-use/{job_id}/status")
+            self._client._build_url(f"/task/gemini-computer-use/{job_id}/status")
         )
-        return ClaudeComputerUseTaskStatusResponse(**response.data)
+        return GeminiComputerUseTaskStatusResponse(**response.data)
 
     def stop(self, job_id: str) -> BasicResponse:
         response = self._client.transport.put(
-            self._client._build_url(f"/task/claude-computer-use/{job_id}/stop")
+            self._client._build_url(f"/task/gemini-computer-use/{job_id}/stop")
         )
         return BasicResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartClaudeComputerUseTaskParams
-    ) -> ClaudeComputerUseTaskResponse:
+        self, params: StartGeminiComputerUseTaskParams
+    ) -> GeminiComputerUseTaskResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
-            raise HyperbrowserError("Failed to start Claude Computer Use task job")
+            raise HyperbrowserError("Failed to start Gemini Computer Use task job")
 
         failures = 0
         while True:
@@ -66,6 +66,6 @@ class ClaudeComputerUseManager:
                 failures += 1
                 if failures >= POLLING_ATTEMPTS:
                     raise HyperbrowserError(
-                        f"Failed to poll Claude Computer Use task job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
+                        f"Failed to poll Gemini Computer Use task job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
                     )
             time.sleep(2)
