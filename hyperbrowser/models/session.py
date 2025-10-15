@@ -130,6 +130,7 @@ class SessionDetail(Session):
     computer_action_endpoint: Optional[str] = Field(
         alias="computerActionEndpoint", default=None
     )
+    webdriver_endpoint: Optional[str] = Field(alias="webdriverEndpoint", default=None)
     live_url: str = Field(alias="liveUrl")
     token: str = Field(alias="token")
 
