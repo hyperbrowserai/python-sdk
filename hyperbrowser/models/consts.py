@@ -48,6 +48,9 @@ SessionRegion = Literal[
     "us-central",
     "asia-south",
     "us-dev",
+    "europe-west",
+    "us-west",
+    "us-east",
 ]
 
 Country = Literal[

@@ -45,6 +45,9 @@ class StartGeminiComputerUseTaskParams(BaseModel):
     use_custom_api_keys: Optional[bool] = Field(
         default=None, serialization_alias="useCustomApiKeys"
     )
+    use_computer_action: Optional[bool] = Field(
+        default=None, serialization_alias="useComputerAction"
+    )
     api_keys: Optional[GeminiComputerUseApiKeys] = Field(
         default=None, serialization_alias="apiKeys"
     )
