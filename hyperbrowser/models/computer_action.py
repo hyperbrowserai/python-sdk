@@ -9,6 +9,7 @@ class ComputerAction(str, Enum):
     CLICK = "click"
     DRAG = "drag"
     PRESS_KEYS = "press_keys"
+    HOLD_KEY = "hold_key"
     MOVE_MOUSE = "move_mouse"
     SCREENSHOT = "screenshot"
     SCROLL = "scroll"
@@ -28,8 +29,8 @@ class ClickActionParams(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     action: Literal[ComputerAction.CLICK] = ComputerAction.CLICK
-    x: int
-    y: int
+    x: Optional[int] = Field(default=None)
+    y: Optional[int] = Field(default=None)
     button: Literal["left", "right", "middle", "back", "forward", "wheel"] = Field(
         default="left"
     )
@@ -58,6 +59,19 @@ class PressKeysActionParams(BaseModel):
 
     action: Literal[ComputerAction.PRESS_KEYS] = ComputerAction.PRESS_KEYS
     keys: List[str]
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
+class HoldKeyActionParams(BaseModel):
+    """Parameters for hold key action."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.HOLD_KEY] = ComputerAction.HOLD_KEY
+    key: str
+    duration: int
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )

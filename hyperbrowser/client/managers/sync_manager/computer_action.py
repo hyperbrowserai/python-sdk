@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Union, List
+from typing import Union, List, Optional
 from hyperbrowser.models import (
     SessionDetail,
     ComputerActionParams,
@@ -12,6 +12,7 @@ from hyperbrowser.models import (
     ScrollActionParams,
     TypeTextActionParams,
     Coordinate,
+    HoldKeyActionParams,
 )
 
 
@@ -42,8 +43,8 @@ class ComputerActionManager:
     def click(
         self,
         session: Union[SessionDetail, str],
-        x: int,
-        y: int,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
         button: str = "left",
         num_clicks: int = 1,
         return_screenshot: bool = False,
@@ -80,6 +81,18 @@ class ComputerActionManager:
         return_screenshot: bool = False,
     ) -> ComputerActionResponse:
         params = PressKeysActionParams(keys=keys, return_screenshot=return_screenshot)
+        return self._execute_request(session, params)
+
+    def hold_key(
+        self,
+        session: Union[SessionDetail, str],
+        key: str,
+        duration: int,
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = HoldKeyActionParams(
+            key=key, duration=duration, return_screenshot=return_screenshot
+        )
         return self._execute_request(session, params)
 
     def drag(
