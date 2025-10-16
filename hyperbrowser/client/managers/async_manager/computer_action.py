@@ -13,6 +13,9 @@ from hyperbrowser.models import (
     TypeTextActionParams,
     Coordinate,
     HoldKeyActionParams,
+    MouseDownActionParams,
+    MouseUpActionParams,
+    ComputerActionMouseButton,
 )
 
 
@@ -45,7 +48,7 @@ class ComputerActionManager:
         session: Union[SessionDetail, str],
         x: Optional[int] = None,
         y: Optional[int] = None,
-        button: str = "left",
+        button: ComputerActionMouseButton = "left",
         num_clicks: int = 1,
         return_screenshot: bool = False,
     ) -> ComputerActionResponse:
@@ -93,6 +96,26 @@ class ComputerActionManager:
         params = HoldKeyActionParams(
             key=key, duration=duration, return_screenshot=return_screenshot
         )
+        return await self._execute_request(session, params)
+
+    async def mouse_down(
+        self,
+        session: Union[SessionDetail, str],
+        button: ComputerActionMouseButton = "left",
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = MouseDownActionParams(
+            button=button, return_screenshot=return_screenshot
+        )
+        return await self._execute_request(session, params)
+
+    async def mouse_up(
+        self,
+        session: Union[SessionDetail, str],
+        button: ComputerActionMouseButton = "left",
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = MouseUpActionParams(button=button, return_screenshot=return_screenshot)
         return await self._execute_request(session, params)
 
     async def drag(

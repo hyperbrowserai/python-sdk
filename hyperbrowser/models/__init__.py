@@ -114,11 +114,14 @@ from .computer_action import (
     Coordinate,
     DragActionParams,
     HoldKeyActionParams,
+    MouseDownActionParams,
+    MouseUpActionParams,
     MoveMouseActionParams,
     PressKeysActionParams,
     ScreenshotActionParams,
     ScrollActionParams,
     TypeTextActionParams,
+    ComputerActionMouseButton,
 )
 from .session import (
     BasicResponse,
@@ -274,9 +277,12 @@ __all__ = [
     "Coordinate",
     "DragActionParams",
     "HoldKeyActionParams",
+    "MouseDownActionParams",
+    "MouseUpActionParams",
     "MoveMouseActionParams",
     "PressKeysActionParams",
     "ScreenshotActionParams",
     "ScrollActionParams",
     "TypeTextActionParams",
+    "ComputerActionMouseButton",
 ]

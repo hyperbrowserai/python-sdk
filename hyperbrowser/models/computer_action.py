@@ -8,12 +8,19 @@ class ComputerAction(str, Enum):
 
     CLICK = "click"
     DRAG = "drag"
-    PRESS_KEYS = "press_keys"
     HOLD_KEY = "hold_key"
+    MOUSE_DOWN = "mouse_down"
+    MOUSE_UP = "mouse_up"
     MOVE_MOUSE = "move_mouse"
+    PRESS_KEYS = "press_keys"
     SCREENSHOT = "screenshot"
     SCROLL = "scroll"
     TYPE_TEXT = "type_text"
+
+
+ComputerActionMouseButton = Literal[
+    "left", "right", "middle", "back", "forward", "wheel"
+]
 
 
 class Coordinate(BaseModel):
@@ -31,9 +38,7 @@ class ClickActionParams(BaseModel):
     action: Literal[ComputerAction.CLICK] = ComputerAction.CLICK
     x: Optional[int] = Field(default=None)
     y: Optional[int] = Field(default=None)
-    button: Literal["left", "right", "middle", "back", "forward", "wheel"] = Field(
-        default="left"
-    )
+    button: ComputerActionMouseButton = Field(default="left")
     num_clicks: int = Field(serialization_alias="numClicks", default=1)
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
@@ -72,6 +77,30 @@ class HoldKeyActionParams(BaseModel):
     action: Literal[ComputerAction.HOLD_KEY] = ComputerAction.HOLD_KEY
     key: str
     duration: int
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
+class MouseDownActionParams(BaseModel):
+    """Parameters for mouse down action."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.MOUSE_DOWN] = ComputerAction.MOUSE_DOWN
+    button: ComputerActionMouseButton = Field(default="left")
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
+class MouseUpActionParams(BaseModel):
+    """Parameters for mouse up action."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.MOUSE_UP] = ComputerAction.MOUSE_UP
+    button: ComputerActionMouseButton = Field(default="left")
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )
