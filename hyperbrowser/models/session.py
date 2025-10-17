@@ -81,6 +81,9 @@ class SessionLaunchState(BaseModel):
     disable_password_manager: Optional[bool] = Field(
         default=None, alias="disablePasswordManager"
     )
+    enable_always_open_pdf_externally: Optional[bool] = Field(
+        default=None, alias="enableAlwaysOpenPdfExternally"
+    )
 
 
 class Session(BaseModel):
@@ -271,6 +274,9 @@ class CreateSessionParams(BaseModel):
     )
     disable_password_manager: Optional[bool] = Field(
         default=None, serialization_alias="disablePasswordManager"
+    )
+    enable_always_open_pdf_externally: Optional[bool] = Field(
+        default=None, serialization_alias="enableAlwaysOpenPdfExternally"
     )
 
 
