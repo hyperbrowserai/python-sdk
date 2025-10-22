@@ -122,6 +122,9 @@ from .computer_action import (
     ScrollActionParams,
     TypeTextActionParams,
     ComputerActionMouseButton,
+    GetClipboardTextActionParams,
+    ComputerActionResponseDataClipboardText,
+    ComputerActionResponseData,
 )
 from .session import (
     BasicResponse,
@@ -285,4 +288,7 @@ __all__ = [
     "ScrollActionParams",
     "TypeTextActionParams",
     "ComputerActionMouseButton",
+    "GetClipboardTextActionParams",
+    "ComputerActionResponseDataClipboardText",
+    "ComputerActionResponseData",
 ]

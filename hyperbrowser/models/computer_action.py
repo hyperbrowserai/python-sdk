@@ -16,6 +16,7 @@ class ComputerAction(str, Enum):
     SCREENSHOT = "screenshot"
     SCROLL = "scroll"
     TYPE_TEXT = "type_text"
+    GET_CLIPBOARD_TEXT = "get_clipboard_text"
 
 
 ComputerActionMouseButton = Literal[
@@ -154,6 +155,19 @@ class TypeTextActionParams(BaseModel):
     )
 
 
+class GetClipboardTextActionParams(BaseModel):
+    """Parameters for get clipboard text action."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.GET_CLIPBOARD_TEXT] = (
+        ComputerAction.GET_CLIPBOARD_TEXT
+    )
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
 ComputerActionParams = Union[
     ClickActionParams,
     DragActionParams,
@@ -162,7 +176,22 @@ ComputerActionParams = Union[
     ScreenshotActionParams,
     ScrollActionParams,
     TypeTextActionParams,
+    HoldKeyActionParams,
+    MouseDownActionParams,
+    MouseUpActionParams,
+    GetClipboardTextActionParams,
 ]
+
+
+class ComputerActionResponseDataClipboardText(BaseModel):
+    """Data for get clipboard text action."""
+
+    model_config = ConfigDict(populate_by_alias=True)
+
+    clipboard_text: Optional[str] = Field(default=None, alias="clipboardText")
+
+
+ComputerActionResponseData = Union[ComputerActionResponseDataClipboardText]
 
 
 class ComputerActionResponse(BaseModel):
@@ -174,5 +203,6 @@ class ComputerActionResponse(BaseModel):
 
     success: bool
     screenshot: Optional[str] = None
+    data: Optional[ComputerActionResponseData] = None
     error: Optional[str] = None
     message: Optional[str] = None
