@@ -16,6 +16,7 @@ from hyperbrowser.models import (
     MouseDownActionParams,
     MouseUpActionParams,
     ComputerActionMouseButton,
+    GetClipboardTextActionParams,
 )
 
 
@@ -153,4 +154,12 @@ class ComputerActionManager:
             scroll_y=scroll_y,
             return_screenshot=return_screenshot,
         )
+        return self._execute_request(session, params)
+
+    def get_clipboard_text(
+        self,
+        session: Union[SessionDetail, str],
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = GetClipboardTextActionParams(return_screenshot=return_screenshot)
         return self._execute_request(session, params)
