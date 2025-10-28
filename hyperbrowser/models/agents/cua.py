@@ -134,6 +134,18 @@ class CuaTaskData(BaseModel):
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 
+class CuaTaskMetadata(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    input_tokens: Optional[int] = Field(default=None, alias="inputTokens")
+    output_tokens: Optional[int] = Field(default=None, alias="outputTokens")
+    num_task_steps_completed: Optional[int] = Field(
+        default=None, alias="numTaskStepsCompleted"
+    )
+
+
 class CuaTaskResponse(BaseModel):
     """
     Response from a CUA task.
@@ -145,6 +157,7 @@ class CuaTaskResponse(BaseModel):
 
     job_id: str = Field(alias="jobId")
     status: CuaTaskStatus
+    metadata: Optional[CuaTaskMetadata] = Field(default=None, alias="metadata")
     data: Optional[CuaTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")

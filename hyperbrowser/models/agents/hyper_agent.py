@@ -126,6 +126,16 @@ class HyperAgentTaskData(BaseModel):
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 
+class HyperAgentTaskMetadata(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    num_task_steps_completed: Optional[int] = Field(
+        default=None, alias="numTaskStepsCompleted"
+    )
+
+
 class HyperAgentTaskResponse(BaseModel):
     """
     Response from a HyperAgent task.
@@ -137,6 +147,7 @@ class HyperAgentTaskResponse(BaseModel):
 
     job_id: str = Field(alias="jobId")
     status: HyperAgentTaskStatus
+    metadata: Optional[HyperAgentTaskMetadata] = Field(default=None, alias="metadata")
     data: Optional[HyperAgentTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")
