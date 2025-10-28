@@ -104,6 +104,18 @@ class ClaudeComputerUseTaskData(BaseModel):
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 
+class ClaudeComputerUseTaskMetadata(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    input_tokens: Optional[int] = Field(default=None, alias="inputTokens")
+    output_tokens: Optional[int] = Field(default=None, alias="outputTokens")
+    num_task_steps_completed: Optional[int] = Field(
+        default=None, alias="numTaskStepsCompleted"
+    )
+
+
 class ClaudeComputerUseTaskResponse(BaseModel):
     """
     Response from a Claude Computer Use task.
@@ -115,6 +127,9 @@ class ClaudeComputerUseTaskResponse(BaseModel):
 
     job_id: str = Field(alias="jobId")
     status: ClaudeComputerUseTaskStatus
+    metadata: Optional[ClaudeComputerUseTaskMetadata] = Field(
+        default=None, alias="metadata"
+    )
     data: Optional[ClaudeComputerUseTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")

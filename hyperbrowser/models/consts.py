@@ -16,6 +16,8 @@ SessionEventLogType = Literal[
 
 POLLING_ATTEMPTS = 5
 
+BrowserUseVersion = Literal["0.1.40", "0.7.10", "latest"]
+
 BrowserUseLlm = Literal[
     "gpt-4o",
     "gpt-4o-mini",

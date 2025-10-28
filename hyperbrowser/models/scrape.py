@@ -23,6 +23,15 @@ class ScreenshotOptions(BaseModel):
     )
 
 
+class StorageStateOptions(BaseModel):
+    local_storage: Optional[dict[str, str]] = Field(
+        default=None, serialization_alias="localStorage"
+    )
+    session_storage: Optional[dict[str, str]] = Field(
+        default=None, serialization_alias="sessionStorage"
+    )
+
+
 class ScrapeOptions(BaseModel):
     """
     Options for scraping a page.
@@ -45,6 +54,9 @@ class ScrapeOptions(BaseModel):
     )
     screenshot_options: Optional[ScreenshotOptions] = Field(
         default=None, serialization_alias="screenshotOptions"
+    )
+    storage_state: Optional[StorageStateOptions] = Field(
+        default=None, serialization_alias="storageState"
     )
 
 

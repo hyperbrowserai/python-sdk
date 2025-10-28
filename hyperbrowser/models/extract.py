@@ -55,6 +55,16 @@ class ExtractJobStatusResponse(BaseModel):
     status: ExtractJobStatus
 
 
+class ExtractJobMetadata(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    input_tokens: Optional[int] = Field(default=None, alias="inputTokens")
+    output_tokens: Optional[int] = Field(default=None, alias="outputTokens")
+    num_pages_scraped: Optional[int] = Field(default=None, alias="numPagesScraped")
+
+
 class ExtractJobResponse(BaseModel):
     """
     Response from a extract job.
@@ -67,4 +77,5 @@ class ExtractJobResponse(BaseModel):
     job_id: str = Field(alias="jobId")
     status: ExtractJobStatus
     error: Optional[str] = None
+    metadata: Optional[ExtractJobMetadata] = None
     data: Optional[dict] = None

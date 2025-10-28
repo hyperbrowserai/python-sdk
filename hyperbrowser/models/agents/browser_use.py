@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Literal, Optional, Type, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..consts import BrowserUseLlm
+from ..consts import BrowserUseLlm, BrowserUseVersion
 from ..session import CreateSessionParams
 
 BrowserUseTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
@@ -32,6 +32,9 @@ class StartBrowserUseTaskParams(BaseModel):
     )
 
     task: str
+    version: Optional[BrowserUseVersion] = Field(
+        default=None, serialization_alias="version"
+    )
     llm: Optional[BrowserUseLlm] = Field(default=None, serialization_alias="llm")
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     validate_output: Optional[bool] = Field(
@@ -193,13 +196,77 @@ class BrowserUseAgentHistory(BaseModel):
     metadata: Optional[BrowserUseStepMetadata] = None
 
 
+# ===== 0.7.10-specific response models =====
+
+
+class BrowserUseAgentOutputV0710(BaseModel):
+    thinking: Optional[str] = None
+    evaluation_previous_goal: Optional[str] = None
+    memory: Optional[str] = None
+    next_goal: Optional[str] = None
+    action: list[dict]
+
+
+class BrowserUseActionResultV0710(BaseModel):
+    is_done: Optional[bool] = False
+    success: Optional[bool] = None
+    error: Optional[str] = None
+    metadata: Optional[dict] = None
+    attachments: Optional[list[str]] = None
+    long_term_memory: Optional[str] = None
+    extracted_content: Optional[str] = None
+    include_extracted_content_only_once: Optional[bool] = False
+    include_in_memory: bool = False
+
+
+class BrowserUseBrowserStateHistoryV0710(BaseModel):
+    url: str
+    title: str
+    tabs: list[dict]
+    interacted_element: Union[list[Union[dict, None]], list[None]]
+
+
+class BrowserUseStepMetadataV0710(BaseModel):
+    step_start_time: float
+    step_end_time: float
+    step_number: int
+
+
+class BrowserUseAgentHistoryV0710(BaseModel):
+    model_output: Union[BrowserUseAgentOutputV0710, None]
+    result: list[BrowserUseActionResultV0710]
+    state: BrowserUseBrowserStateHistoryV0710
+    metadata: Optional[BrowserUseStepMetadataV0710] = None
+
+
+# ===== latest response models =====
+
+BrowserUseAgentHistoryLatest = Dict[str, Any]
+
+BrowserUseStep = Union[
+    BrowserUseAgentHistory, BrowserUseAgentHistoryV0710, BrowserUseAgentHistoryLatest
+]
+
+
 class BrowserUseTaskData(BaseModel):
     model_config = ConfigDict(
         populate_by_alias=True,
     )
 
-    steps: list[BrowserUseAgentHistory]
+    steps: list[BrowserUseStep]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
+
+
+class BrowserUseTaskMetadata(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    input_tokens: Optional[int] = Field(default=None, alias="inputTokens")
+    output_tokens: Optional[int] = Field(default=None, alias="outputTokens")
+    num_task_steps_completed: Optional[int] = Field(
+        default=None, alias="numTaskStepsCompleted"
+    )
 
 
 class BrowserUseTaskResponse(BaseModel):
@@ -213,6 +280,20 @@ class BrowserUseTaskResponse(BaseModel):
 
     job_id: str = Field(alias="jobId")
     status: BrowserUseTaskStatus
+    metadata: Optional[BrowserUseTaskMetadata] = Field(default=None, alias="metadata")
     data: Optional[BrowserUseTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")
+
+
+def cast_steps_for_version(
+    steps: List[BrowserUseStep], version: BrowserUseVersion
+) -> List[BrowserUseStep]:
+    if version == "0.1.40":
+        return [BrowserUseAgentHistory.model_validate(s) for s in steps]
+    elif version == "0.7.10":
+        return [BrowserUseAgentHistoryV0710.model_validate(s) for s in steps]
+    elif version == "latest":
+        return steps
+    else:
+        raise ValueError(f"Invalid version: {version}")
