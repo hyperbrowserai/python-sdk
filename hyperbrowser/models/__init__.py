@@ -23,6 +23,7 @@ from .agents.browser_use import (
     BrowserUseAgentHistoryV0710,
     BrowserUseAgentHistoryLatest,
     BrowserUseTaskMetadata,
+    BrowserUseStep,
     cast_steps_for_version,
 )
 from .agents.claude_computer_use import (
@@ -83,6 +84,7 @@ from .consts import (
     SessionEventLogType,
     State,
     SessionRegion,
+    BrowserUseVersion,
 )
 from .crawl import (
     CrawledPage,
@@ -190,6 +192,7 @@ __all__ = [
     "SessionEventLogType",
     "State",
     "SessionRegion",
+    "BrowserUseVersion",
     # agents
     "HyperAgentTaskStatus",
     "HyperAgentActionOutput",
@@ -223,6 +226,7 @@ __all__ = [
     "BrowserUseStepMetadataV0710",
     "BrowserUseAgentHistoryV0710",
     "BrowserUseAgentHistoryLatest",
+    "BrowserUseStep",
     "BrowserUseTaskMetadata",
     "cast_steps_for_version",
     "ClaudeComputerUseTaskStatus",
