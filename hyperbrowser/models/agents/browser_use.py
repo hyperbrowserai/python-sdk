@@ -186,6 +186,7 @@ class BrowserUseBrowserStateHistory(BaseModel):
     interacted_element: Union[
         list[Union[BrowserUseDOMHistoryElement, None]], list[None]
     ]
+    screenshot: Optional[str] = None
 
 
 class BrowserUseAgentHistory(BaseModel):
