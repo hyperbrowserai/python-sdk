@@ -127,7 +127,7 @@ from .scrape import (
     StartBatchScrapeJobResponse,
     StartScrapeJobParams,
     StartScrapeJobResponse,
-    StorageState,
+    StorageStateOptions,
 )
 from .computer_action import (
     ClickActionParams,
@@ -294,7 +294,7 @@ __all__ = [
     "StartBatchScrapeJobResponse",
     "StartScrapeJobParams",
     "StartScrapeJobResponse",
-    "StorageState",
+    "StorageStateOptions",
     # session
     "BasicResponse",
     "CreateSessionParams",
