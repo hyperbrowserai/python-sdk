@@ -108,6 +108,7 @@ class Session(BaseModel):
     launch_state: Optional[SessionLaunchState] = Field(
         default=None, alias="launchState"
     )
+    credits_used: Optional[float] = Field(default=None, alias="creditsUsed")
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
