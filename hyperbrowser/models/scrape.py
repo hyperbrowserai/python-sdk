@@ -21,6 +21,9 @@ class ScreenshotOptions(BaseModel):
     format: Optional[ScrapeScreenshotFormat] = Field(
         default=None, serialization_alias="format"
     )
+    crop_to_content: Optional[bool] = Field(
+        default=None, serialization_alias="cropToContent"
+    )
 
 
 class StorageStateOptions(BaseModel):
