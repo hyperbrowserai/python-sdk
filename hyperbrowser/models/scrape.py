@@ -27,6 +27,10 @@ class ScreenshotOptions(BaseModel):
     crop_to_content_max_height: Optional[int] = Field(
         default=None, serialization_alias="cropToContentMaxHeight"
     )
+    crop_to_content_min_height: Optional[int] = Field(
+        default=None, serialization_alias="cropToContentMinHeight"
+    )
+    wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
 
 
 class StorageStateOptions(BaseModel):
