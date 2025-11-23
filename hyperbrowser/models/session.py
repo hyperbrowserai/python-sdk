@@ -279,6 +279,9 @@ class CreateSessionParams(BaseModel):
     enable_always_open_pdf_externally: Optional[bool] = Field(
         default=None, serialization_alias="enableAlwaysOpenPdfExternally"
     )
+    append_timestamp_to_downloads: Optional[bool] = Field(
+        default=None, serialization_alias="appendTimestampToDownloads"
+    )
 
 
 class SessionRecording(BaseModel):
