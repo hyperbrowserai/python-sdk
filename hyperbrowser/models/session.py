@@ -84,6 +84,9 @@ class SessionLaunchState(BaseModel):
     enable_always_open_pdf_externally: Optional[bool] = Field(
         default=None, alias="enableAlwaysOpenPdfExternally"
     )
+    append_timestamp_to_downloads: Optional[bool] = Field(
+        default=None, alias="appendTimestampToDownloads"
+    )
 
 
 class Session(BaseModel):
