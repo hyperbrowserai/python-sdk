@@ -47,4 +47,6 @@ class ExtensionManager:
                 f"Expected list in 'extensions' key but got {type(response.data['extensions'])}",
                 original_error=None,
             )
-        return [ExtensionResponse(**extension) for extension in response.data]
+        return [
+            ExtensionResponse(**extension) for extension in response.data["extensions"]
+        ]
