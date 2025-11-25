@@ -32,9 +32,19 @@ class ExtensionManager:
         response = await self._client.transport.get(
             self._client._build_url("/extensions/list"),
         )
-        if not isinstance(response.data, list):
+        if not isinstance(response.data, dict):
             raise HyperbrowserError(
-                f"Expected list response but got {type(response.data)}",
+                f"Expected dict response but got {type(response.data)}",
+                original_error=None,
+            )
+        if "extensions" not in response.data:
+            raise HyperbrowserError(
+                f"Expected 'extensions' key in response but got {response.data.keys()}",
+                original_error=None,
+            )
+        if not isinstance(response.data["extensions"], list):
+            raise HyperbrowserError(
+                f"Expected list in 'extensions' key but got {type(response.data['extensions'])}",
                 original_error=None,
             )
         return [ExtensionResponse(**extension) for extension in response.data]
