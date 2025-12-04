@@ -108,3 +108,10 @@ class SessionManager:
             )
 
         return UploadFileResponse(**response.data)
+
+    def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:
+        response = self._client.transport.put(
+            self._client._build_url(f"/session/{id}/extend-session"),
+            data={"durationMinutes": duration_minutes},
+        )
+        return BasicResponse(**response.data)

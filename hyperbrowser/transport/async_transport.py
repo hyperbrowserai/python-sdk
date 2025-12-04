@@ -95,9 +95,9 @@ class AsyncTransport(TransportStrategy):
         except Exception as e:
             raise HyperbrowserError("Get request failed", original_error=e)
 
-    async def put(self, url: str) -> APIResponse:
+    async def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
         try:
-            response = await self.client.put(url)
+            response = await self.client.put(url, json=data)
             return await self._handle_response(response)
         except HyperbrowserError:
             raise
