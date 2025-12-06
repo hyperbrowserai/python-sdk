@@ -13,6 +13,8 @@ from ....models.session import (
     SessionEventLogListParams,
     SessionEventLogListResponse,
     SessionEventLog,
+    SessionConsoleLogListParams,
+    SessionConsoleLogListResponse,
 )
 
 
@@ -32,10 +34,27 @@ class SessionEventLogsManager:
         return SessionEventLogListResponse(**response.data)
 
 
+class SessionConsoleLogsManager:
+    def __init__(self, client):
+        self._client = client
+
+    async def list(
+        self,
+        session_id: str,
+        params: SessionConsoleLogListParams = SessionConsoleLogListParams(),
+    ) -> SessionConsoleLogListResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{session_id}/console"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SessionConsoleLogListResponse(**response.data)
+
+
 class SessionManager:
     def __init__(self, client):
         self._client = client
         self.event_logs = SessionEventLogsManager(client)
+        self.console_logs = SessionConsoleLogsManager(client)
 
     async def create(self, params: CreateSessionParams = None) -> SessionDetail:
         response = await self._client.transport.post(

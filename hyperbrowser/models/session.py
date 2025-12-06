@@ -395,3 +395,64 @@ class SessionEventLogListResponse(BaseModel):
     total_count: int = Field(alias="totalCount")
     page: int = Field(alias="page")
     per_page: int = Field(alias="perPage")
+
+
+SessionConsoleLogLevel = Literal["log", "debug", "info", "error", "warning"]
+
+
+class SessionConsoleLog(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str = Field(alias="id")
+    session_id: str = Field(alias="sessionId")
+    team_id: str = Field(alias="teamId")
+    log: str = Field(alias="log")
+    page_id: str = Field(alias="pageId")
+    log_level: SessionConsoleLogLevel = Field(alias="logLevel")
+    timestamp: int = Field(alias="timestamp")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class SessionConsolePage(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str = Field(alias="id")
+    session_id: str = Field(alias="sessionId")
+    team_id: str = Field(alias="teamId")
+    url: str = Field(alias="url")
+    timestamp: int = Field(alias="timestamp")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class SessionConsoleLogListParams(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    log_levels: Optional[List[SessionConsoleLogLevel]] = Field(
+        default=None, serialization_alias="logLevels"
+    )
+    search: Optional[str] = Field(default=None, serialization_alias="search")
+    after_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="afterTimestamp"
+    )
+    before_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="beforeTimestamp"
+    )
+    order: Literal["asc", "desc"] = Field(default="desc", serialization_alias="order")
+    limit: int = Field(default=1000, serialization_alias="limit")
+
+
+class SessionConsoleLogListResponse(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    console_logs: List[SessionConsoleLog] = Field(alias="consoleLogs")
+    pages: List[SessionConsolePage] = Field(alias="pages")
