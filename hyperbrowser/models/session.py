@@ -285,6 +285,13 @@ class CreateSessionParams(BaseModel):
     append_timestamp_to_downloads: Optional[bool] = Field(
         default=None, serialization_alias="appendTimestampToDownloads"
     )
+    replace_native_elements: Optional[bool] = Field(
+        default=None,
+        serialization_alias="replaceNativeElements",
+    )
+    """This option replaces native elements (say for dropdowns) with a custom dropdown.
+    Use this option with caution, as this may cause unusual behavior in the browser.
+    """
 
 
 class SessionRecording(BaseModel):
