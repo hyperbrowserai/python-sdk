@@ -121,3 +121,12 @@ class SessionManager:
             data={"durationMinutes": duration_minutes},
         )
         return BasicResponse(**response.data)
+
+    async def update_profile_params(
+        self, id: str, persist_changes: bool
+    ) -> BasicResponse:
+        response = await self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={"type": "profile", "params": {"persistChanges": persist_changes}},
+        )
+        return BasicResponse(**response.data)
