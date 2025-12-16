@@ -65,6 +65,8 @@ from .agents.hyper_agent import (
     StartHyperAgentTaskParams,
     StartHyperAgentTaskResponse,
     HyperAgentApiKeys,
+    HyperAgentOutputV110,
+    HyperAgentStepV110,
 )
 from .consts import (
     ISO639_1,
@@ -85,6 +87,7 @@ from .consts import (
     State,
     SessionRegion,
     BrowserUseVersion,
+    HyperAgentVersion,
 )
 from .crawl import (
     CrawledPage,
@@ -193,6 +196,7 @@ __all__ = [
     "State",
     "SessionRegion",
     "BrowserUseVersion",
+    "HyperAgentVersion",
     # agents
     "HyperAgentTaskStatus",
     "HyperAgentActionOutput",
@@ -254,6 +258,8 @@ __all__ = [
     "GeminiComputerUseApiKeys",
     "CuaApiKeys",
     "HyperAgentApiKeys",
+    "HyperAgentOutputV110",
+    "HyperAgentStepV110",
     # crawl
     "CrawledPage",
     "CrawlJobResponse",

@@ -17,6 +17,7 @@ SessionEventLogType = Literal[
 POLLING_ATTEMPTS = 5
 
 BrowserUseVersion = Literal["0.1.40", "0.7.10", "latest"]
+HyperAgentVersion = Literal["0.8.0", "1.1.0"]
 
 BrowserUseLlm = Literal[
     "gpt-4o",
@@ -34,6 +35,7 @@ BrowserUseLlm = Literal[
     "gemini-2.5-flash",
 ]
 HyperAgentLlm = Literal[
+    "gpt-5.2",
     "gpt-5.1",
     "gpt-5",
     "gpt-5-mini",
@@ -42,6 +44,8 @@ HyperAgentLlm = Literal[
     "gpt-4.1",
     "gpt-4.1-mini",
     "gpt-4.1-nano",
+    "claude-sonnet-4-5",
+    "gemini-2.5-flash",
 ]
 ClaudeComputerUseLlm = Literal[
     "claude-opus-4-5",
