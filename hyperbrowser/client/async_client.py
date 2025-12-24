@@ -3,6 +3,7 @@ from typing import Optional
 from ..config import ClientConfig
 from ..transport.async_transport import AsyncTransport
 from .base import HyperbrowserBase
+from .managers.async_manager.web import WebManager
 from .managers.async_manager.agents import Agents
 from .managers.async_manager.crawl import CrawlManager
 from .managers.async_manager.extension import ExtensionManager
@@ -27,6 +28,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         super().__init__(AsyncTransport, config, api_key, base_url)
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
+        self.web = WebManager(self)
         self.scrape = ScrapeManager(self)
         self.crawl = CrawlManager(self)
         self.extract = ExtractManager(self)
