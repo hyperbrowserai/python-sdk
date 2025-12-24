@@ -67,12 +67,6 @@ class FetchSessionOptions(BaseModel):
         default=None, serialization_alias="imageCaptchaParams"
     )
     region: Optional[SessionRegion] = Field(default=None, serialization_alias="region")
-    view_only_live_view: Optional[bool] = Field(
-        default=None, serialization_alias="viewOnlyLiveView"
-    )
-    disable_password_manager: Optional[bool] = Field(
-        default=None, serialization_alias="disablePasswordManager"
-    )
 
 
 class FetchOutputScreenshotOptions(BaseModel):
