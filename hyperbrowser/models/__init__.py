@@ -1,3 +1,28 @@
+from .web.batch_fetch import (
+    StartBatchFetchJobParams,
+    StartBatchFetchJobResponse,
+    BatchFetchJobStatusResponse,
+    GetBatchFetchJobParams,
+    BatchFetchJobResponse,
+)
+from .web.fetch import (
+    FetchParams,
+    FetchResponse,
+    FetchResponseData,
+)
+from .web.common import (
+    FetchOptions,
+    FetchSessionOptions,
+    FetchOutputLike,
+    FetchStorageStateOptions,
+    FetchOutputJsonOptions,
+    FetchOutputScreenshotOptions,
+    FetchOutputJson,
+    FetchOutputMarkdown,
+    FetchOutputHtml,
+    FetchOutputLinks,
+    FetchOutputScreenshot,
+)
 from .agents.browser_use import (
     BrowserUseTaskData,
     BrowserUseTaskResponse,
@@ -25,6 +50,7 @@ from .agents.browser_use import (
     BrowserUseTaskMetadata,
     BrowserUseStep,
     cast_steps_for_version,
+    BrowserUseTaskStatus,
 )
 from .agents.claude_computer_use import (
     ClaudeComputerUseTaskStatus,
@@ -53,6 +79,7 @@ from .agents.cua import (
     StartCuaTaskParams,
     StartCuaTaskResponse,
     CuaApiKeys,
+    CuaTaskStatus,
 )
 from .agents.hyper_agent import (
     HyperAgentActionOutput,
@@ -76,8 +103,13 @@ from .consts import (
     ClaudeComputerUseLlm,
     Country,
     DownloadsStatus,
+    FetchScreenshotFormat,
+    FetchWaitUntil,
+    BatchFetchJobStatus,
+    FetchStatus,
     OperatingSystem,
     Platform,
+    PageStatus,
     RecordingStatus,
     ScrapeFormat,
     ScrapePageStatus,
@@ -185,8 +217,13 @@ __all__ = [
     "ClaudeComputerUseLlm",
     "Country",
     "DownloadsStatus",
+    "FetchScreenshotFormat",
+    "BatchFetchJobStatus",
+    "FetchStatus",
+    "FetchWaitUntil",
     "OperatingSystem",
     "Platform",
+    "PageStatus",
     "RecordingStatus",
     "ScrapeFormat",
     "ScrapePageStatus",
@@ -343,4 +380,24 @@ __all__ = [
     "GetClipboardTextActionParams",
     "ComputerActionResponseDataClipboardText",
     "ComputerActionResponseData",
+    # web
+    "StartBatchFetchJobParams",
+    "StartBatchFetchJobResponse",
+    "BatchFetchJobStatusResponse",
+    "GetBatchFetchJobParams",
+    "BatchFetchJobResponse",
+    "FetchParams",
+    "FetchResponseData",
+    "FetchResponse",
+    "FetchOptions",
+    "FetchSessionOptions",
+    "FetchOutputLike",
+    "FetchOutputJson",
+    "FetchOutputMarkdown",
+    "FetchOutputHtml",
+    "FetchOutputLinks",
+    "FetchOutputScreenshot",
+    "FetchStorageStateOptions",
+    "FetchOutputJsonOptions",
+    "FetchOutputScreenshotOptions",
 ]
