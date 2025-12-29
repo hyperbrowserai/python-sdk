@@ -3,6 +3,7 @@ from typing import Literal
 FetchStatus = Literal["completed", "failed", "pending", "running"]
 BatchFetchJobStatus = Literal["completed", "failed", "pending", "running"]
 PageStatus = Literal["completed", "failed", "pending", "running"]
+WebSearchStatus = Literal["completed", "failed", "pending", "running", "stopped"]
 FetchWaitUntil = Literal["load", "domcontentloaded", "networkidle"]
 FetchScreenshotFormat = Literal["jpeg", "png", "webp"]
 

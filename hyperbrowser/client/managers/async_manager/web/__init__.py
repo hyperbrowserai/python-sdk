@@ -1,6 +1,7 @@
 from .batch_fetch import BatchFetchManager
 from hyperbrowser.models import FetchParams, FetchResponse, FetchOutputJson
 import jsonref
+from hyperbrowser.models import WebSearchParams, WebSearchResponse
 
 
 class WebManager:
@@ -25,3 +26,15 @@ class WebManager:
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
         return FetchResponse(**response.data)
+
+    async def search(self, params: WebSearchParams) -> WebSearchResponse:
+        """
+        Web search (single call).
+
+        Server route: POST /api/web/search
+        """
+        response = await self._client.transport.post(
+            self._client._build_url("/web/search"),
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return WebSearchResponse(**response.data)
