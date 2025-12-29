@@ -23,6 +23,15 @@ from .web.common import (
     FetchOutputLinks,
     FetchOutputScreenshot,
 )
+from .web.search import (
+    WebSearchFilters,
+    WebSearchFiletype,
+    WebSearchParams,
+    WebSearchRegion,
+    WebSearchResponse,
+    WebSearchResponseData,
+    WebSearchResultItem,
+)
 from .agents.browser_use import (
     BrowserUseTaskData,
     BrowserUseTaskResponse,
@@ -110,6 +119,7 @@ from .consts import (
     OperatingSystem,
     Platform,
     PageStatus,
+    WebSearchStatus,
     RecordingStatus,
     ScrapeFormat,
     ScrapePageStatus,
@@ -224,6 +234,7 @@ __all__ = [
     "OperatingSystem",
     "Platform",
     "PageStatus",
+    "WebSearchStatus",
     "RecordingStatus",
     "ScrapeFormat",
     "ScrapePageStatus",
@@ -316,6 +327,14 @@ __all__ = [
     "StartExtractJobParams",
     "StartExtractJobResponse",
     "ExtractJobMetadata",
+    # web search
+    "WebSearchFilters",
+    "WebSearchFiletype",
+    "WebSearchParams",
+    "WebSearchRegion",
+    "WebSearchResponse",
+    "WebSearchResponseData",
+    "WebSearchResultItem",
     # profile
     "CreateProfileParams",
     "CreateProfileResponse",
