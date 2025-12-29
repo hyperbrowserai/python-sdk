@@ -1,7 +1,12 @@
 from .batch_fetch import BatchFetchManager
-from hyperbrowser.models import FetchParams, FetchResponse, FetchOutputJson
+from hyperbrowser.models import (
+    FetchParams,
+    FetchResponse,
+    FetchOutputJson,
+    WebSearchParams,
+    WebSearchResponse,
+)
 import jsonref
-from hyperbrowser.models import WebSearchParams, WebSearchResponse
 
 
 class WebManager:
