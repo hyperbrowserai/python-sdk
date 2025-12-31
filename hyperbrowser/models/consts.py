@@ -53,6 +53,7 @@ HyperAgentLlm = Literal[
     "gpt-4.1-nano",
     "claude-sonnet-4-5",
     "gemini-2.5-flash",
+    "gemini-3-flash-preview",
 ]
 ClaudeComputerUseLlm = Literal[
     "claude-opus-4-5",
