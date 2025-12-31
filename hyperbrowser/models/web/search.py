@@ -19,15 +19,21 @@ class WebSearchFilters(BaseModel):
         populate_by_alias=True,
     )
 
-    exact_phrase: Optional[bool] = Field(default=None, serialization_alias="exactPhrase")
+    exact_phrase: Optional[bool] = Field(
+        default=None, serialization_alias="exactPhrase"
+    )
     semantic_phrase: Optional[bool] = Field(
         default=None, serialization_alias="semanticPhrase"
     )
     exclude_terms: Optional[List[str]] = Field(
         default=None, serialization_alias="excludeTerms"
     )
-    boost_terms: Optional[List[str]] = Field(default=None, serialization_alias="boostTerms")
-    filetype: Optional[WebSearchFiletype] = Field(default=None, serialization_alias="filetype")
+    boost_terms: Optional[List[str]] = Field(
+        default=None, serialization_alias="boostTerms"
+    )
+    filetype: Optional[WebSearchFiletype] = Field(
+        default=None, serialization_alias="filetype"
+    )
     site: Optional[str] = Field(default=None, serialization_alias="site")
     exclude_site: Optional[str] = Field(default=None, serialization_alias="excludeSite")
     intitle: Optional[str] = Field(default=None, serialization_alias="intitle")
@@ -94,5 +100,3 @@ class WebSearchResponse(BaseModel):
     status: WebSearchStatus
     error: Optional[str] = None
     data: Optional[WebSearchResponseData] = None
-
-
