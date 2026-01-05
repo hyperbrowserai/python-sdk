@@ -121,10 +121,14 @@ class SessionManager:
         return BasicResponse(**response.data)
 
     @overload
-    def update_profile_params(self, id: str, params: UpdateSessionProfileParams) -> BasicResponse: ...
+    def update_profile_params(
+        self, id: str, params: UpdateSessionProfileParams
+    ) -> BasicResponse: ...
 
     @overload
-    def update_profile_params(self, id: str, persist_changes: bool) -> BasicResponse: ...
+    def update_profile_params(
+        self, id: str, persist_changes: bool
+    ) -> BasicResponse: ...
 
     def update_profile_params(
         self,

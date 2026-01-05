@@ -132,7 +132,9 @@ class SessionManager:
     ) -> BasicResponse: ...
 
     @overload
-    async def update_profile_params(self, id: str, persist_changes: bool) -> BasicResponse: ...
+    async def update_profile_params(
+        self, id: str, persist_changes: bool
+    ) -> BasicResponse: ...
 
     async def update_profile_params(
         self,

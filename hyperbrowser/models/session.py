@@ -46,7 +46,9 @@ class SessionProfile(BaseModel):
         default=None, alias="persistChanges", serialization_alias="persistChanges"
     )
     persist_network_cache: Optional[bool] = Field(
-        default=None, alias="persistNetworkCache", serialization_alias="persistNetworkCache"
+        default=None,
+        alias="persistNetworkCache",
+        serialization_alias="persistNetworkCache",
     )
 
 
