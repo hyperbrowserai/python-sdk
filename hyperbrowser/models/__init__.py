@@ -215,6 +215,7 @@ from .session import (
     SessionLaunchState,
     UploadFileResponse,
     ImageCaptchaParam,
+    UpdateProfileParams,
 )
 from .team import TeamCreditInfo
 
@@ -378,6 +379,7 @@ __all__ = [
     "SessionLaunchState",
     "UploadFileResponse",
     "ImageCaptchaParam",
+    "UpdateProfileParams",
     # team
     "TeamCreditInfo",
     # computer action

@@ -47,6 +47,24 @@ class SessionProfile(BaseModel):
     )
 
 
+class UpdateProfileParams(BaseModel):
+    """
+    Parameters for updating session profile persistence settings.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    persist_changes: Optional[bool] = Field(
+        default=None, serialization_alias="persistChanges"
+    )
+    persist_network_cache: Optional[bool] = Field(
+        default=None,
+        serialization_alias="persistNetworkCache",
+    )
+
+
 class SessionLaunchState(BaseModel):
     model_config = ConfigDict(
         populate_by_alias=True,
