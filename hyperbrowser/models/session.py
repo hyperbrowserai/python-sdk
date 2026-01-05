@@ -45,6 +45,9 @@ class SessionProfile(BaseModel):
     persist_changes: Optional[bool] = Field(
         default=None, alias="persistChanges", serialization_alias="persistChanges"
     )
+    persist_network_cache: Optional[bool] = Field(
+        default=None, alias="persistNetworkCache", serialization_alias="persistNetworkCache"
+    )
 
 
 class UpdateProfileParams(BaseModel):
@@ -207,6 +210,9 @@ class CreateSessionProfile(BaseModel):
     id: Optional[str] = Field(default=None, serialization_alias="id")
     persist_changes: Optional[bool] = Field(
         default=None, serialization_alias="persistChanges"
+    )
+    persist_network_cache: Optional[bool] = Field(
+        default=None, serialization_alias="persistNetworkCache"
     )
 
 
