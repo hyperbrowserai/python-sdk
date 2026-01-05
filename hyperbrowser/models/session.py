@@ -50,7 +50,7 @@ class SessionProfile(BaseModel):
     )
 
 
-class UpdateProfileParams(BaseModel):
+class UpdateSessionProfileParams(BaseModel):
     """
     Parameters for updating session profile persistence settings.
     """

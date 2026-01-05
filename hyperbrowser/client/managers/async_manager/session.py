@@ -14,7 +14,7 @@ from ....models.session import (
     SessionEventLogListParams,
     SessionEventLogListResponse,
     SessionEventLog,
-    UpdateProfileParams,
+    UpdateSessionProfileParams,
 )
 
 
@@ -128,7 +128,7 @@ class SessionManager:
 
     @overload
     async def update_profile_params(
-        self, id: str, params: UpdateProfileParams
+        self, id: str, params: UpdateSessionProfileParams
     ) -> BasicResponse: ...
 
     @overload
@@ -137,16 +137,16 @@ class SessionManager:
     async def update_profile_params(
         self,
         id: str,
-        params: Union[UpdateProfileParams, bool, None] = None,
+        params: Union[UpdateSessionProfileParams, bool, None] = None,
         *,
         persist_changes: Optional[bool] = None,
     ) -> BasicResponse:
-        params_obj: UpdateProfileParams
+        params_obj: UpdateSessionProfileParams
 
-        if isinstance(params, UpdateProfileParams):
+        if isinstance(params, UpdateSessionProfileParams):
             if persist_changes is not None:
                 raise TypeError(
-                    "Pass either UpdateProfileParams as the second argument or persist_changes=bool, not both."
+                    "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
                 )
             params_obj = params
         elif isinstance(params, bool):
@@ -155,17 +155,17 @@ class SessionManager:
                     "Pass either a boolean as the second argument or persist_changes=bool, not both."
                 )
             self._warn_update_profile_params_boolean_deprecated()
-            params_obj = UpdateProfileParams(persist_changes=params)
+            params_obj = UpdateSessionProfileParams(persist_changes=params)
         elif params is None:
             if persist_changes is None:
                 raise TypeError(
-                    "update_profile_params() requires either UpdateProfileParams or persist_changes=bool."
+                    "update_profile_params() requires either UpdateSessionProfileParams or persist_changes=bool."
                 )
             self._warn_update_profile_params_boolean_deprecated()
-            params_obj = UpdateProfileParams(persist_changes=persist_changes)
+            params_obj = UpdateSessionProfileParams(persist_changes=persist_changes)
         else:
             raise TypeError(
-                "update_profile_params() requires either UpdateProfileParams or a boolean persist_changes."
+                "update_profile_params() requires either UpdateSessionProfileParams or a boolean persist_changes."
             )
 
         response = await self._client.transport.put(
@@ -182,7 +182,7 @@ class SessionManager:
             return
         SessionManager._has_warned_update_profile_params_boolean_deprecated = True
         warnings.warn(
-            "[DEPRECATED] update_profile_params(id, bool) will be removed; pass an UpdateProfileParams object instead.",
+            "[DEPRECATED] update_profile_params(id, bool) will be removed; pass an UpdateSessionProfileParams object instead.",
             DeprecationWarning,
             stacklevel=3,
         )
