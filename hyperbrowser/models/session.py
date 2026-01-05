@@ -45,6 +45,29 @@ class SessionProfile(BaseModel):
     persist_changes: Optional[bool] = Field(
         default=None, alias="persistChanges", serialization_alias="persistChanges"
     )
+    persist_network_cache: Optional[bool] = Field(
+        default=None,
+        alias="persistNetworkCache",
+        serialization_alias="persistNetworkCache",
+    )
+
+
+class UpdateSessionProfileParams(BaseModel):
+    """
+    Parameters for updating session profile persistence settings.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    persist_changes: Optional[bool] = Field(
+        default=None, serialization_alias="persistChanges"
+    )
+    persist_network_cache: Optional[bool] = Field(
+        default=None,
+        serialization_alias="persistNetworkCache",
+    )
 
 
 class SessionLaunchState(BaseModel):
@@ -189,6 +212,9 @@ class CreateSessionProfile(BaseModel):
     id: Optional[str] = Field(default=None, serialization_alias="id")
     persist_changes: Optional[bool] = Field(
         default=None, serialization_alias="persistChanges"
+    )
+    persist_network_cache: Optional[bool] = Field(
+        default=None, serialization_alias="persistNetworkCache"
     )
 
 
