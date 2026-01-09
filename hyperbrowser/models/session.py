@@ -311,6 +311,9 @@ class CreateSessionParams(BaseModel):
     append_timestamp_to_downloads: Optional[bool] = Field(
         default=None, serialization_alias="appendTimestampToDownloads"
     )
+    show_scrollbars: Optional[bool] = Field(
+        default=None, serialization_alias="showScrollbars"
+    )
     replace_native_elements: Optional[bool] = Field(
         default=None,
         serialization_alias="replaceNativeElements",
