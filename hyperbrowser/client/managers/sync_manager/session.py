@@ -15,6 +15,7 @@ from ....models.session import (
     SessionEventLogListResponse,
     SessionEventLog,
     UpdateSessionProfileParams,
+    SessionGetParams,
 )
 
 
@@ -52,8 +53,13 @@ class SessionManager:
         )
         return SessionDetail(**response.data)
 
-    def get(self, id: str) -> SessionDetail:
-        response = self._client.transport.get(self._client._build_url(f"/session/{id}"))
+    def get(
+        self, id: str, params: SessionGetParams = SessionGetParams()
+    ) -> SessionDetail:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
         return SessionDetail(**response.data)
 
     def stop(self, id: str) -> BasicResponse:

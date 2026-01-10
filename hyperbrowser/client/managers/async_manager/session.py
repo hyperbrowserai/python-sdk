@@ -15,6 +15,7 @@ from ....models.session import (
     SessionEventLogListResponse,
     SessionEventLog,
     UpdateSessionProfileParams,
+    SessionGetParams,
 )
 
 
@@ -52,9 +53,12 @@ class SessionManager:
         )
         return SessionDetail(**response.data)
 
-    async def get(self, id: str) -> SessionDetail:
+    async def get(
+        self, id: str, params: SessionGetParams = SessionGetParams()
+    ) -> SessionDetail:
         response = await self._client.transport.get(
-            self._client._build_url(f"/session/{id}")
+            self._client._build_url(f"/session/{id}"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionDetail(**response.data)
 
