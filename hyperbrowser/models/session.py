@@ -165,6 +165,16 @@ class SessionDetail(Session):
     token: str = Field(alias="token")
 
 
+class SessionGetParams(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    live_view_ttl_seconds: Optional[int] = Field(
+        default=None, serialization_alias="liveViewTtlSeconds"
+    )
+
+
 class SessionListParams(BaseModel):
     """
     Parameters for listing sessions.
@@ -313,6 +323,9 @@ class CreateSessionParams(BaseModel):
     )
     show_scrollbars: Optional[bool] = Field(
         default=None, serialization_alias="showScrollbars"
+    )
+    live_view_ttl_seconds: Optional[int] = Field(
+        default=None, serialization_alias="liveViewTtlSeconds"
     )
     replace_native_elements: Optional[bool] = Field(
         default=None,
