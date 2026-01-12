@@ -120,6 +120,7 @@ class BrowserUseTool:
 
 __all__ = [
     "WebsiteScrapeTool",
+    "WebsiteScreenshotTool",
     "WebsiteCrawlTool",
     "WebsiteExtractTool",
     "BrowserUseTool",
