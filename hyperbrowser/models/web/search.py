@@ -93,6 +93,7 @@ class WebSearchResponse(BaseModel):
         extra="ignore",
     )
 
+    job_id: str = Field(alias="jobId")
     status: WebSearchStatus
     error: Optional[str] = None
     data: Optional[WebSearchResponseData] = None
