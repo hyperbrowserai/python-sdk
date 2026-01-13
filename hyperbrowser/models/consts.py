@@ -5,7 +5,7 @@ FetchSanitizeMode = Literal["none", "basic", "advanced"]
 FetchStatus = Literal["completed", "failed", "pending", "running"]
 BatchFetchJobStatus = Literal["completed", "failed", "pending", "running"]
 PageStatus = Literal["completed", "failed", "pending", "running"]
-WebSearchStatus = Literal["completed", "failed", "pending", "running", "stopped"]
+WebSearchStatus = Literal["completed", "failed", "pending", "running"]
 FetchWaitUntil = Literal["load", "domcontentloaded", "networkidle"]
 FetchScreenshotFormat = Literal["jpeg", "png", "webp"]
 
