@@ -1,6 +1,7 @@
 from typing import Literal
 
 FetchStealthMode = Literal["none", "auto", "ultra"]
+FetchSanitizeMode = Literal["none", "basic", "advanced"]
 FetchStatus = Literal["completed", "failed", "pending", "running"]
 BatchFetchJobStatus = Literal["completed", "failed", "pending", "running"]
 PageStatus = Literal["completed", "failed", "pending", "running"]

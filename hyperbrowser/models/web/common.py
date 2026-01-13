@@ -7,6 +7,7 @@ from hyperbrowser.models.consts import (
     PageStatus,
     Country,
     State,
+    FetchSanitizeMode,
 )
 from hyperbrowser.models.session import ScreenConfig
 
@@ -126,7 +127,9 @@ class FetchOutputOptions(BaseModel):
     formats: Optional[List[FetchOutputFormat]] = Field(
         default=None, serialization_alias="formats"
     )
-    sanitize: Optional[bool] = Field(default=None, serialization_alias="sanitize")
+    sanitize: Optional[FetchSanitizeMode] = Field(
+        default=None, serialization_alias="sanitize"
+    )
     include_selectors: Optional[List[str]] = Field(
         default=None, serialization_alias="includeSelectors"
     )
