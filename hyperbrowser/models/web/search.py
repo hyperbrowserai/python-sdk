@@ -40,18 +40,14 @@ class WebSearchFilters(BaseModel):
     inurl: Optional[str] = Field(default=None, serialization_alias="inurl")
 
 
-class WebSearchRegion(BaseModel):
-    """
-    Region proxy tuple accepted by `/api/web/search`.
-    """
-
+class WebSearchLocation(BaseModel):
     model_config = ConfigDict(
         populate_by_alias=True,
     )
 
-    country: Country
-    state: Optional[State] = None
-    city: Optional[str] = None
+    country: Optional[Country] = Field(default=None, serialization_alias="country")
+    state: Optional[State] = Field(default=None, serialization_alias="state")
+    city: Optional[str] = Field(default=None, serialization_alias="city")
 
 
 class WebSearchParams(BaseModel):
@@ -68,7 +64,7 @@ class WebSearchParams(BaseModel):
     max_age_seconds: Optional[int] = Field(
         default=None, serialization_alias="maxAgeSeconds"
     )
-    region: Optional[WebSearchRegion] = None
+    location: Optional[WebSearchLocation] = None
     filters: Optional[WebSearchFilters] = None
 
 

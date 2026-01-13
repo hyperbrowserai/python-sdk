@@ -18,8 +18,8 @@ class BatchFetchManager:
         self._client = client
 
     def start(self, params: StartBatchFetchJobParams) -> StartBatchFetchJobResponse:
-        if params.outputs:
-            for output in params.outputs:
+        if params.outputs and params.outputs.formats:
+            for output in params.outputs.formats:
                 if (
                     isinstance(output, FetchOutputJson)
                     and output.options

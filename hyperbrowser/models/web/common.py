@@ -7,66 +7,8 @@ from hyperbrowser.models.consts import (
     PageStatus,
     Country,
     State,
-    SessionRegion,
 )
-from hyperbrowser.models.session import (
-    ScreenConfig,
-    CreateSessionProfile,
-    ImageCaptchaParam,
-)
-
-
-class FetchSessionOptions(BaseModel):
-    model_config = ConfigDict(
-        populate_by_alias=True,
-    )
-
-    use_ultra_stealth: bool = Field(
-        default=False, serialization_alias="useUltraStealth"
-    )
-    use_stealth: bool = Field(default=False, serialization_alias="useStealth")
-    use_proxy: bool = Field(default=False, serialization_alias="useProxy")
-    proxy_server: Optional[str] = Field(default=None, serialization_alias="proxyServer")
-    proxy_server_password: Optional[str] = Field(
-        default=None, serialization_alias="proxyServerPassword"
-    )
-    proxy_server_username: Optional[str] = Field(
-        default=None, serialization_alias="proxyServerUsername"
-    )
-    proxy_country: Optional[Country] = Field(
-        default=None, serialization_alias="proxyCountry"
-    )
-    proxy_state: Optional[State] = Field(default=None, serialization_alias="proxyState")
-    proxy_city: Optional[str] = Field(default=None, serialization_alias="proxyCity")
-    screen: Optional[ScreenConfig] = Field(default=None)
-    solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
-    adblock: bool = Field(default=False, serialization_alias="adblock")
-    trackers: bool = Field(default=False, serialization_alias="trackers")
-    annoyances: bool = Field(default=False, serialization_alias="annoyances")
-    enable_web_recording: Optional[bool] = Field(
-        default=None, serialization_alias="enableWebRecording"
-    )
-    enable_video_web_recording: Optional[bool] = Field(
-        default=None, serialization_alias="enableVideoWebRecording"
-    )
-    enable_log_capture: Optional[bool] = Field(
-        default=None, serialization_alias="enableLogCapture"
-    )
-    profile: Optional[CreateSessionProfile] = Field(default=None)
-    extension_ids: Optional[List[str]] = Field(
-        default=None, serialization_alias="extensionIds"
-    )
-    static_ip_id: Optional[str] = Field(default=None, serialization_alias="staticIpId")
-    accept_cookies: Optional[bool] = Field(
-        default=None, serialization_alias="acceptCookies"
-    )
-    browser_args: Optional[List[str]] = Field(
-        default=None, serialization_alias="browserArgs"
-    )
-    image_captcha_params: Optional[List[ImageCaptchaParam]] = Field(
-        default=None, serialization_alias="imageCaptchaParams"
-    )
-    region: Optional[SessionRegion] = Field(default=None, serialization_alias="region")
+from hyperbrowser.models.session import ScreenConfig
 
 
 class FetchOutputScreenshotOptions(BaseModel):
@@ -91,7 +33,6 @@ class FetchOutputScreenshotOptions(BaseModel):
     crop_to_content_min_height: Optional[int] = Field(
         default=None, serialization_alias="cropToContentMinHeight"
     )
-    wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
 
 
 class FetchStorageStateOptions(BaseModel):
@@ -107,26 +48,14 @@ class FetchStorageStateOptions(BaseModel):
     )
 
 
-class FetchOptions(BaseModel):
-    """
-    Options for fetching a page.
-    """
+class FetchBrowserLocationOptions(BaseModel):
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
 
-    include_tags: Optional[list[str]] = Field(
-        default=None, serialization_alias="includeTags"
-    )
-    exclude_tags: Optional[list[str]] = Field(
-        default=None, serialization_alias="excludeTags"
-    )
-    sanitize: Optional[bool] = Field(default=None, serialization_alias="sanitize")
-    wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
-    timeout: Optional[int] = Field(default=None, serialization_alias="timeout")
-    wait_until: Optional[FetchWaitUntil] = Field(
-        default=None, serialization_alias="waitUntil"
-    )
-    storage_state: Optional[FetchStorageStateOptions] = Field(
-        default=None, serialization_alias="storageState"
-    )
+    country: Optional[Country] = Field(default=None, serialization_alias="country")
+    state: Optional[State] = Field(default=None, serialization_alias="state")
+    city: Optional[str] = Field(default=None, serialization_alias="city")
 
 
 class PageData(BaseModel):
@@ -151,29 +80,20 @@ class PageData(BaseModel):
     )
 
 
-class _FetchOutputBase(BaseModel):
-    """
-    Base class for output descriptors used when requesting outputs.
-    """
-
-    options: Optional[dict[str, Any]] = None
-
-
-class FetchOutputMarkdown(_FetchOutputBase):
+class FetchOutputMarkdown(BaseModel):
     type: Literal["markdown"]
 
 
-class FetchOutputHtml(_FetchOutputBase):
+class FetchOutputHtml(BaseModel):
     type: Literal["html"]
 
 
-class FetchOutputLinks(_FetchOutputBase):
+class FetchOutputLinks(BaseModel):
     type: Literal["links"]
 
 
-class FetchOutputScreenshot(BaseModel):
+class FetchOutputScreenshot(FetchOutputScreenshotOptions):
     type: Literal["screenshot"]
-    options: Optional[FetchOutputScreenshotOptions] = None
 
 
 class FetchOutputJsonOptions(BaseModel):
@@ -186,12 +106,11 @@ class FetchOutputJsonOptions(BaseModel):
     )
 
 
-class FetchOutputJson(BaseModel):
+class FetchOutputJson(FetchOutputJsonOptions):
     type: Literal["json"]
-    options: FetchOutputJsonOptions
 
 
-FetchOutputLike = Union[
+FetchOutputFormat = Union[
     FetchOutputMarkdown,
     FetchOutputHtml,
     FetchOutputLinks,
@@ -199,3 +118,52 @@ FetchOutputLike = Union[
     FetchOutputJson,
     Literal["markdown", "html", "links", "screenshot"],
 ]
+
+
+class FetchOutputOptions(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    formats: Optional[List[FetchOutputFormat]] = Field(
+        default=None, serialization_alias="formats"
+    )
+    sanitize: Optional[bool] = Field(default=None, serialization_alias="sanitize")
+    include_selectors: Optional[List[str]] = Field(
+        default=None, serialization_alias="includeSelectors"
+    )
+    exclude_selectors: Optional[List[str]] = Field(
+        default=None, serialization_alias="excludeSelectors"
+    )
+    storage_state: Optional[FetchStorageStateOptions] = Field(
+        default=None, serialization_alias="storageState"
+    )
+
+
+class FetchBrowserOptions(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    screen: Optional[ScreenConfig] = Field(default=None, serialization_alias="screen")
+    profile_id: Optional[str] = Field(default=None, serialization_alias="profileId")
+    solve_captchas: Optional[str] = Field(
+        default=None, serialization_alias="solveCaptchas"
+    )
+    location: Optional[FetchBrowserLocationOptions] = Field(
+        default=None, serialization_alias="location"
+    )
+
+
+class FetchNavigationOptions(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    wait_until: Optional[FetchWaitUntil] = Field(
+        default=None, serialization_alias="waitUntil"
+    )
+    timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
+    wait_for: Optional[int] = Field(default=None, serialization_alias="waitFor")
+
+
+class FetchCacheOptions(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    max_age_seconds: Optional[int] = Field(
+        default=None, serialization_alias="maxAgeSeconds"
+    )

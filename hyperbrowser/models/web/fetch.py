@@ -1,8 +1,13 @@
 from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Union
-from .common import FetchOutputLike, FetchOptions, FetchSessionOptions
-from hyperbrowser.models.consts import FetchStatus
+from .common import (
+    FetchOutputOptions,
+    FetchBrowserOptions,
+    FetchNavigationOptions,
+    FetchCacheOptions,
+)
+from hyperbrowser.models.consts import FetchStatus, FetchStealthMode
 
 
 class FetchParams(BaseModel):
@@ -11,14 +16,20 @@ class FetchParams(BaseModel):
     )
 
     url: str
-    outputs: Optional[List[FetchOutputLike]] = Field(
+    stealth: Optional[FetchStealthMode] = Field(
+        default=None, serialization_alias="stealth"
+    )
+    outputs: Optional[FetchOutputOptions] = Field(
         default=None, serialization_alias="outputs"
     )
-    fetch_options: Optional[FetchOptions] = Field(
-        default=None, serialization_alias="fetchOptions"
+    browser: Optional[FetchBrowserOptions] = Field(
+        default=None, serialization_alias="browser"
     )
-    session_options: Optional[FetchSessionOptions] = Field(
-        default=None, serialization_alias="sessionOptions"
+    navigation: Optional[FetchNavigationOptions] = Field(
+        default=None, serialization_alias="navigation"
+    )
+    cache: Optional[FetchCacheOptions] = Field(
+        default=None, serialization_alias="cache"
     )
 
 

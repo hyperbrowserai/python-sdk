@@ -15,8 +15,8 @@ class WebManager:
         self.batch_fetch = BatchFetchManager(client)
 
     async def fetch(self, params: FetchParams) -> FetchResponse:
-        if params.outputs:
-            for output in params.outputs:
+        if params.outputs and params.outputs.formats:
+            for output in params.outputs.formats:
                 if isinstance(output, FetchOutputJson):
                     if output.options and output.options.schema_:
                         if hasattr(output.options.schema_, "model_json_schema"):
@@ -33,11 +33,6 @@ class WebManager:
         return FetchResponse(**response.data)
 
     async def search(self, params: WebSearchParams) -> WebSearchResponse:
-        """
-        Web search (single call).
-
-        Server route: POST /api/web/search
-        """
         response = await self._client.transport.post(
             self._client._build_url("/web/search"),
             data=params.model_dump(exclude_none=True, by_alias=True),
