@@ -18,16 +18,12 @@ class BatchFetchManager:
         self._client = client
 
     def start(self, params: StartBatchFetchJobParams) -> StartBatchFetchJobResponse:
-        if params.outputs:
-            for output in params.outputs:
-                if (
-                    isinstance(output, FetchOutputJson)
-                    and output.options
-                    and output.options.schema_
-                ):
-                    if hasattr(output.options.schema_, "model_json_schema"):
-                        output.options.schema_ = jsonref.replace_refs(
-                            output.options.schema_.model_json_schema(),
+        if params.outputs and params.outputs.formats:
+            for output in params.outputs.formats:
+                if isinstance(output, FetchOutputJson) and output.schema_:
+                    if hasattr(output.schema_, "model_json_schema"):
+                        output.schema_ = jsonref.replace_refs(
+                            output.schema_.model_json_schema(),
                             proxies=False,
                             lazy_load=False,
                         )
