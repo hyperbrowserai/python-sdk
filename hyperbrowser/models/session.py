@@ -399,6 +399,9 @@ class UploadFileResponse(BaseModel):
     )
 
     message: str = Field(alias="message")
+    file_path: Optional[str] = Field(default=None, alias="filePath")
+    file_name: Optional[str] = Field(default=None, alias="fileName")
+    original_name: Optional[str] = Field(default=None, alias="originalName")
 
 
 class SessionEventLog(BaseModel):
