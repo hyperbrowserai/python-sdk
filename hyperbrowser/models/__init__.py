@@ -197,6 +197,7 @@ from .computer_action import (
     TypeTextActionParams,
     ComputerActionMouseButton,
     GetClipboardTextActionParams,
+    PutSelectionTextActionParams,
     ComputerActionResponseDataClipboardText,
     ComputerActionResponseData,
 )
