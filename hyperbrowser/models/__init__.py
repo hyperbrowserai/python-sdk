@@ -197,6 +197,7 @@ from .computer_action import (
     TypeTextActionParams,
     ComputerActionMouseButton,
     GetClipboardTextActionParams,
+    PutSelectionTextActionParams,
     ComputerActionResponseDataClipboardText,
     ComputerActionResponseData,
 )
@@ -409,6 +410,7 @@ __all__ = [
     "TypeTextActionParams",
     "ComputerActionMouseButton",
     "GetClipboardTextActionParams",
+    "PutSelectionTextActionParams",
     "ComputerActionResponseDataClipboardText",
     "ComputerActionResponseData",
     # web
