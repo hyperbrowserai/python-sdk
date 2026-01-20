@@ -17,6 +17,7 @@ from hyperbrowser.models import (
     MouseUpActionParams,
     ComputerActionMouseButton,
     GetClipboardTextActionParams,
+    PutSelectionTextActionParams,
 )
 
 
@@ -162,4 +163,15 @@ class ComputerActionManager:
         return_screenshot: bool = False,
     ) -> ComputerActionResponse:
         params = GetClipboardTextActionParams(return_screenshot=return_screenshot)
+        return await self._execute_request(session, params)
+
+    async def put_selection_text(
+        self,
+        session: Union[SessionDetail, str],
+        text: str,
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = PutSelectionTextActionParams(
+            text=text, return_screenshot=return_screenshot
+        )
         return await self._execute_request(session, params)

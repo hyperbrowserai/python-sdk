@@ -409,6 +409,7 @@ __all__ = [
     "TypeTextActionParams",
     "ComputerActionMouseButton",
     "GetClipboardTextActionParams",
+    "PutSelectionTextActionParams",
     "ComputerActionResponseDataClipboardText",
     "ComputerActionResponseData",
     # web

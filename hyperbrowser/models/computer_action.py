@@ -17,6 +17,7 @@ class ComputerAction(str, Enum):
     SCROLL = "scroll"
     TYPE_TEXT = "type_text"
     GET_CLIPBOARD_TEXT = "get_clipboard_text"
+    PUT_SELECTION_TEXT = "put_selection_text"
 
 
 ComputerActionMouseButton = Literal[
@@ -168,6 +169,20 @@ class GetClipboardTextActionParams(BaseModel):
     )
 
 
+class PutSelectionTextActionParams(BaseModel):
+    """Parameters for put selection text action."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.PUT_SELECTION_TEXT] = (
+        ComputerAction.PUT_SELECTION_TEXT
+    )
+    text: str
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
 ComputerActionParams = Union[
     ClickActionParams,
     DragActionParams,
@@ -180,6 +195,7 @@ ComputerActionParams = Union[
     MouseDownActionParams,
     MouseUpActionParams,
     GetClipboardTextActionParams,
+    PutSelectionTextActionParams,
 ]
 
 
