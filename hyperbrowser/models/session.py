@@ -110,6 +110,9 @@ class SessionLaunchState(BaseModel):
     append_timestamp_to_downloads: Optional[bool] = Field(
         default=None, alias="appendTimestampToDownloads"
     )
+    disable_post_quantum_key_agreement: Optional[bool] = Field(
+        default=None, alias="disablePostQuantumKeyAgreement"
+    )
 
 
 class Session(BaseModel):
