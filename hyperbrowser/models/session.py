@@ -334,6 +334,9 @@ class CreateSessionParams(BaseModel):
     """This option replaces native elements (say for dropdowns) with a custom dropdown.
     Use this option with caution, as this may cause unusual behavior in the browser.
     """
+    disable_post_quantum_key_agreement: Optional[bool] = Field(
+        default=None, serialization_alias="disablePostQuantumKeyAgreement"
+    )
 
 
 class SessionRecording(BaseModel):
