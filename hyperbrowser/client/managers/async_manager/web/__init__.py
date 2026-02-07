@@ -1,4 +1,5 @@
 from .batch_fetch import BatchFetchManager
+from .crawl import WebCrawlManager
 from hyperbrowser.models import (
     FetchParams,
     FetchResponse,
@@ -13,6 +14,7 @@ class WebManager:
     def __init__(self, client):
         self._client = client
         self.batch_fetch = BatchFetchManager(client)
+        self.crawl = WebCrawlManager(client)
 
     async def fetch(self, params: FetchParams) -> FetchResponse:
         if params.outputs and params.outputs.formats:
