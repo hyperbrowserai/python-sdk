@@ -5,6 +5,14 @@ from .web.batch_fetch import (
     GetBatchFetchJobParams,
     BatchFetchJobResponse,
 )
+from .web.crawl import (
+    WebCrawlOptions,
+    StartWebCrawlJobParams,
+    GetWebCrawlJobParams,
+    StartWebCrawlJobResponse,
+    WebCrawlJobStatusResponse,
+    WebCrawlJobResponse,
+)
 from .web.fetch import (
     FetchParams,
     FetchResponse,
@@ -121,6 +129,7 @@ from .consts import (
     FetchSanitizeMode,
     FetchWaitUntil,
     BatchFetchJobStatus,
+    WebCrawlJobStatus,
     FetchStatus,
     OperatingSystem,
     Platform,
@@ -240,6 +249,7 @@ __all__ = [
     "FetchStealthMode",
     "FetchSanitizeMode",
     "BatchFetchJobStatus",
+    "WebCrawlJobStatus",
     "FetchStatus",
     "FetchWaitUntil",
     "OperatingSystem",
@@ -437,4 +447,11 @@ __all__ = [
     "FetchStorageStateOptions",
     "FetchOutputJsonOptions",
     "FetchOutputScreenshotOptions",
+    # web crawl
+    "WebCrawlOptions",
+    "StartWebCrawlJobParams",
+    "GetWebCrawlJobParams",
+    "StartWebCrawlJobResponse",
+    "WebCrawlJobStatusResponse",
+    "WebCrawlJobResponse",
 ]
