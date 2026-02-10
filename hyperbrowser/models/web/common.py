@@ -102,6 +102,7 @@ class FetchOutputJsonOptions(BaseModel):
         populate_by_alias=True,
     )
 
+    prompt: Optional[str] = Field(default=None, serialization_alias="prompt")
     schema_: Optional[Any] = Field(
         default=None, alias="schema", serialization_alias="schema"
     )
