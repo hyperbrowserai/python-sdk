@@ -37,6 +37,16 @@ class _AsyncClient:
         self.scrape = _AsyncScrapeManager()
 
 
+class _AsyncExtractManager:
+    async def start_and_wait(self, params):
+        return _Response({"ok": True})
+
+
+class _AsyncExtractClient:
+    def __init__(self):
+        self.extract = _AsyncExtractManager()
+
+
 def test_tool_wrappers_accept_mapping_inputs():
     client = _Client()
     params = MappingProxyType({"url": "https://example.com"})
@@ -75,6 +85,13 @@ def test_async_tool_wrappers_reject_non_mapping_inputs():
             await WebsiteScrapeTool.async_runnable(
                 client,
                 ["https://example.com"],  # type: ignore[arg-type]
+            )
+
+        extract_client = _AsyncExtractClient()
+        with pytest.raises(HyperbrowserError, match="tool params must be a mapping"):
+            await WebsiteExtractTool.async_runnable(
+                extract_client,
+                "bad",  # type: ignore[arg-type]
             )
 
     asyncio.run(run())
