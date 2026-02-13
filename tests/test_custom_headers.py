@@ -48,7 +48,9 @@ def test_sync_client_config_headers_are_applied_to_transport():
 
 
 def test_sync_client_constructor_headers_are_applied_to_transport():
-    client = Hyperbrowser(api_key="test-key", headers={"X-Team-Trace": "team-2"})
+    headers = {"X-Team-Trace": "team-2"}
+    client = Hyperbrowser(api_key="test-key", headers=headers)
+    headers["X-Team-Trace"] = "mutated"
     try:
         assert client.transport.client.headers["X-Team-Trace"] == "team-2"
     finally:
@@ -70,7 +72,9 @@ def test_async_client_config_headers_are_applied_to_transport():
 
 def test_async_client_constructor_headers_are_applied_to_transport():
     async def run() -> None:
-        client = AsyncHyperbrowser(api_key="test-key", headers={"X-Team-Trace": "team-2"})
+        headers = {"X-Team-Trace": "team-2"}
+        client = AsyncHyperbrowser(api_key="test-key", headers=headers)
+        headers["X-Team-Trace"] = "mutated"
         try:
             assert client.transport.client.headers["X-Team-Trace"] == "team-2"
         finally:
