@@ -1,6 +1,20 @@
 # exceptions.py
 from typing import Optional, Any
 
+_MAX_EXCEPTION_DISPLAY_LENGTH = 2000
+_TRUNCATED_EXCEPTION_DISPLAY_SUFFIX = "... (truncated)"
+
+
+def _truncate_exception_text(text_value: str) -> str:
+    if len(text_value) <= _MAX_EXCEPTION_DISPLAY_LENGTH:
+        return text_value
+    available_length = _MAX_EXCEPTION_DISPLAY_LENGTH - len(
+        _TRUNCATED_EXCEPTION_DISPLAY_SUFFIX
+    )
+    if available_length <= 0:
+        return _TRUNCATED_EXCEPTION_DISPLAY_SUFFIX
+    return f"{text_value[:available_length]}{_TRUNCATED_EXCEPTION_DISPLAY_SUFFIX}"
+
 
 def _safe_exception_text(value: Any, *, fallback: str) -> str:
     try:
@@ -12,7 +26,7 @@ def _safe_exception_text(value: Any, *, fallback: str) -> str:
         for character in text_value
     )
     if sanitized_value.strip():
-        return sanitized_value
+        return _truncate_exception_text(sanitized_value)
     return fallback
 
 

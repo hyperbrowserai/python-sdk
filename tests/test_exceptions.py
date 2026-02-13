@@ -37,3 +37,19 @@ def test_hyperbrowser_error_str_uses_placeholder_for_blank_message():
     error = HyperbrowserError("   ")
 
     assert str(error) == "Hyperbrowser error"
+
+
+def test_hyperbrowser_error_str_truncates_oversized_message():
+    error = HyperbrowserError("x" * 2500)
+
+    assert str(error).endswith("... (truncated)")
+    assert len(str(error)) <= 2000
+
+
+def test_hyperbrowser_error_str_truncates_oversized_original_error_message():
+    root_cause = ValueError("y" * 2500)
+    error = HyperbrowserError("request failed", original_error=root_cause)
+
+    rendered_error = str(error)
+    assert "Caused by ValueError:" in rendered_error
+    assert rendered_error.endswith("... (truncated)")
