@@ -171,6 +171,32 @@ def test_parse_extension_list_response_data_missing_key_handles_unreadable_keys(
         parse_extension_list_response_data(_BrokenKeysMapping({"id": "ext_1"}))
 
 
+def test_parse_extension_list_response_data_wraps_unreadable_extensions_membership():
+    class _BrokenContainsMapping(dict):
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect contains")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to inspect response for 'extensions' key"
+    ) as exc_info:
+        parse_extension_list_response_data(_BrokenContainsMapping({"id": "ext_1"}))
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_extension_list_response_data_preserves_hyperbrowser_contains_errors():
+    class _BrokenContainsMapping(dict):
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom contains failure")
+
+    with pytest.raises(HyperbrowserError, match="custom contains failure") as exc_info:
+        parse_extension_list_response_data(_BrokenContainsMapping({"id": "ext_1"}))
+
+    assert exc_info.value.original_error is None
+
+
 def test_parse_extension_list_response_data_wraps_unreadable_extensions_value():
     class _BrokenExtensionsLookupMapping(dict):
         def __contains__(self, key: object) -> bool:

@@ -32,6 +32,8 @@ def _format_key_display(value: object) -> str:
 def _summarize_mapping_keys(mapping: Mapping[object, object]) -> str:
     try:
         mapping_keys = list(mapping.keys())
+    except HyperbrowserError:
+        raise
     except Exception:
         return "[<unavailable keys>]"
     key_names = sorted(_format_key_display(key) for key in mapping_keys)
@@ -50,7 +52,16 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
         raise HyperbrowserError(
             f"Expected mapping response but got {_get_type_name(response_data)}"
         )
-    if "extensions" not in response_data:
+    try:
+        has_extensions_key = "extensions" in response_data
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to inspect response for 'extensions' key",
+            original_error=exc,
+        ) from exc
+    if not has_extensions_key:
         raise HyperbrowserError(
             "Expected 'extensions' key in response but got "
             f"{_summarize_mapping_keys(response_data)} keys"
