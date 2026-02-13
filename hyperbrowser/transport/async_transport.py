@@ -33,11 +33,8 @@ class AsyncTransport(AsyncTransportStrategy):
     def __del__(self):
         if not self._closed:
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self.client.aclose())
-                else:
-                    loop.run_until_complete(self.client.aclose())
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.client.aclose())
             except Exception:
                 pass
 
