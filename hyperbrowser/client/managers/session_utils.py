@@ -57,8 +57,7 @@ def parse_session_recordings_response_data(
             if isinstance(key, str):
                 continue
             raise HyperbrowserError(
-                "Expected session recording object keys to be strings at index "
-                f"{index}"
+                f"Expected session recording object keys to be strings at index {index}"
             )
         try:
             parsed_recordings.append(SessionRecording(**recording_payload))
