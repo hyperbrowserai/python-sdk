@@ -153,6 +153,15 @@ def test_extract_error_message_uses_response_text_for_blank_string_payload():
     assert message == "raw error body"
 
 
+def test_extract_error_message_uses_fallback_error_when_response_text_is_blank():
+    message = extract_error_message(
+        _DummyResponse("   ", text="   "),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "fallback detail"
+
+
 def test_extract_error_message_extracts_errors_list_messages():
     message = extract_error_message(
         _DummyResponse({"errors": [{"msg": "first issue"}, {"msg": "second issue"}]}),

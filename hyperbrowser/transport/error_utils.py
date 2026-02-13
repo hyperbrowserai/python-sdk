@@ -42,7 +42,10 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
 
 def extract_error_message(response: httpx.Response, fallback_error: Exception) -> str:
     def _fallback_message() -> str:
-        return response.text or str(fallback_error)
+        response_text = response.text
+        if isinstance(response_text, str) and response_text.strip():
+            return response_text
+        return str(fallback_error)
 
     try:
         error_data: Any = response.json()
