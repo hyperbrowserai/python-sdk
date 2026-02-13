@@ -5,6 +5,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import ExtensionResponse
 
 _MAX_DISPLAYED_MISSING_KEYS = 20
+_MAX_DISPLAYED_MISSING_KEY_LENGTH = 120
 
 
 def _get_type_name(value: Any) -> str:
@@ -18,8 +19,18 @@ def _safe_stringify_key(value: object) -> str:
         return f"<unprintable {_get_type_name(value)}>"
 
 
+def _format_key_display(value: object) -> str:
+    normalized_key = _safe_stringify_key(value)
+    if len(normalized_key) <= _MAX_DISPLAYED_MISSING_KEY_LENGTH:
+        return normalized_key
+    return (
+        f"{normalized_key[:_MAX_DISPLAYED_MISSING_KEY_LENGTH]}"
+        "... (truncated)"
+    )
+
+
 def _summarize_mapping_keys(mapping: Mapping[object, object]) -> str:
-    key_names = sorted(_safe_stringify_key(key) for key in mapping.keys())
+    key_names = sorted(_format_key_display(key) for key in mapping.keys())
     if not key_names:
         return "[]"
     displayed_keys = key_names[:_MAX_DISPLAYED_MISSING_KEYS]

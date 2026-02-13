@@ -132,6 +132,18 @@ def test_parse_extension_list_response_data_missing_key_limits_key_list_size():
         parse_extension_list_response_data(payload)
 
 
+def test_parse_extension_list_response_data_missing_key_truncates_long_key_names():
+    long_key = "k" * 160
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            r"\[k{120}\.\.\. \(truncated\)\] keys"
+        ),
+    ):
+        parse_extension_list_response_data({long_key: "value"})
+
+
 def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys():
     class _BrokenStringKey:
         def __str__(self) -> str:
