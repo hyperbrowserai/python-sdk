@@ -52,6 +52,23 @@ def test_build_fetch_operation_name_falls_back_for_max_length_inputs():
     assert build_fetch_operation_name(operation_name) == operation_name
 
 
+def test_build_fetch_operation_name_sanitizes_non_string_and_control_input():
+    operation_name = build_fetch_operation_name(" \nabc\tdef ")
+    assert operation_name == "Fetching abc?def"
+
+    numeric_operation_name = build_fetch_operation_name(123)
+    assert numeric_operation_name == "Fetching 123"
+
+
+def test_build_fetch_operation_name_handles_unstringifiable_input():
+    class _BadOperationName:
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify")
+
+    operation_name = build_fetch_operation_name(_BadOperationName())
+    assert operation_name == "Fetching unknown"
+
+
 def test_build_operation_name_keeps_short_names_unchanged():
     assert build_operation_name("crawl job ", "123") == "crawl job 123"
 
