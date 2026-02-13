@@ -6576,7 +6576,9 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             retry_delay_seconds=0.0,
         )
 
-    with pytest.raises(HyperbrowserError, match="poll_interval_seconds must be finite"):
+    with pytest.raises(
+        HyperbrowserError, match="poll_interval_seconds must be finite"
+    ) as exc_info:
         poll_until_terminal_status(
             operation_name="invalid-poll-interval-overflowing-real",
             get_status=lambda: "completed",
@@ -6584,6 +6586,8 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             poll_interval_seconds=Fraction(10**1000, 1),  # type: ignore[arg-type]
             max_wait_seconds=1.0,
         )
+
+    assert exc_info.value.original_error is not None
 
     async def validate_async_operation_name() -> None:
         with pytest.raises(HyperbrowserError, match="operation_name must not be empty"):
