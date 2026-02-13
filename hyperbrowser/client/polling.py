@@ -180,7 +180,13 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
     if isinstance(status_code, int):
         return status_code
     status_text: Optional[str] = None
-    if isinstance(status_code, (bytes, bytearray)):
+    if isinstance(status_code, memoryview):
+        status_bytes = status_code.tobytes()
+        try:
+            status_text = status_bytes.decode("ascii")
+        except UnicodeDecodeError:
+            return None
+    elif isinstance(status_code, (bytes, bytearray)):
         try:
             status_text = bytes(status_code).decode("ascii")
         except UnicodeDecodeError:

@@ -145,6 +145,29 @@ def test_poll_until_terminal_status_does_not_retry_numeric_string_client_errors(
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_does_not_retry_memoryview_client_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise HyperbrowserError(
+            "client failure",
+            status_code=memoryview(b"400"),  # type: ignore[arg-type]
+        )
+
+    with pytest.raises(HyperbrowserError, match="client failure"):
+        poll_until_terminal_status(
+            operation_name="sync poll memoryview client error",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_retries_overlong_numeric_status_codes():
     attempts = {"count": 0}
 
@@ -732,6 +755,29 @@ def test_retry_operation_retries_numeric_string_rate_limit_errors():
     assert attempts["count"] == 3
 
 
+def test_retry_operation_retries_memoryview_rate_limit_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError(
+                "rate limited",
+                status_code=memoryview(b"429"),  # type: ignore[arg-type]
+            )
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry memoryview rate limit",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
 def test_retry_operation_does_not_retry_numeric_bytes_client_errors():
     attempts = {"count": 0}
 
@@ -1189,6 +1235,32 @@ def test_poll_until_terminal_status_async_does_not_retry_numeric_string_client_e
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_does_not_retry_memoryview_client_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise HyperbrowserError(
+                "client failure",
+                status_code=memoryview(b"404"),  # type: ignore[arg-type]
+            )
+
+        with pytest.raises(HyperbrowserError, match="client failure"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll memoryview client error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_async_retries_overlong_numeric_status_codes():
     async def run() -> None:
         attempts = {"count": 0}
@@ -1459,6 +1531,32 @@ def test_retry_operation_async_retries_numeric_string_rate_limit_errors():
 
         result = await retry_operation_async(
             operation_name="async retry numeric-string rate limit",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_retries_memoryview_rate_limit_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "rate limited",
+                    status_code=memoryview(b"429"),  # type: ignore[arg-type]
+                )
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry memoryview rate limit",
             operation=operation,
             max_attempts=5,
             retry_delay_seconds=0.0001,
