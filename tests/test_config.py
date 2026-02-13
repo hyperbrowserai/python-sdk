@@ -41,3 +41,11 @@ def test_client_config_rejects_non_string_values():
 
     with pytest.raises(HyperbrowserError, match="base_url must be a string"):
         ClientConfig(api_key="test-key", base_url=None)  # type: ignore[arg-type]
+
+
+def test_client_config_rejects_empty_or_invalid_base_url():
+    with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
+        ClientConfig(api_key="test-key", base_url="   ")
+
+    with pytest.raises(HyperbrowserError, match="base_url must start with"):
+        ClientConfig(api_key="test-key", base_url="api.hyperbrowser.ai")

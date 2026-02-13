@@ -20,6 +20,15 @@ class ClientConfig:
             raise HyperbrowserError("base_url must be a string")
         self.api_key = self.api_key.strip()
         self.base_url = self.base_url.strip().rstrip("/")
+        if not self.base_url:
+            raise HyperbrowserError("base_url must not be empty")
+        if not (
+            self.base_url.startswith("https://")
+            or self.base_url.startswith("http://")
+        ):
+            raise HyperbrowserError(
+                "base_url must start with 'https://' or 'http://'"
+            )
 
     @classmethod
     def from_env(cls) -> "ClientConfig":

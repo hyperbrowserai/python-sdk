@@ -49,4 +49,6 @@ class HyperbrowserBase:
 
     def _build_url(self, path: str) -> str:
         normalized_path = path if path.startswith("/") else f"/{path}"
+        if normalized_path == "/api" or normalized_path.startswith("/api/"):
+            return f"{self.config.base_url}{normalized_path}"
         return f"{self.config.base_url}/api{normalized_path}"
