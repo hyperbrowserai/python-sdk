@@ -166,6 +166,47 @@ def test_parse_response_model_rejects_non_mapping_payloads():
         )
 
 
+def test_parse_response_model_rejects_non_string_keys():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected basic operation response object keys to be strings",
+    ):
+        parse_response_model(
+            {1: True},  # type: ignore[dict-item]
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+
+def test_parse_response_model_sanitizes_operation_name_in_errors():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected basic\\?operation response to be an object",
+    ):
+        parse_response_model(
+            ["bad"],  # type: ignore[arg-type]
+            model=BasicResponse,
+            operation_name="basic\toperation",
+        )
+
+
+def test_parse_response_model_truncates_operation_name_in_errors():
+    long_operation_name = "basic operation " + ("x" * 200)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            r"Expected basic operation x+\.\.\. \(truncated\) "
+            r"response to be an object"
+        ),
+    ):
+        parse_response_model(
+            ["bad"],  # type: ignore[arg-type]
+            model=BasicResponse,
+            operation_name=long_operation_name,
+        )
+
+
 def test_parse_response_model_wraps_mapping_read_failures():
     with pytest.raises(
         HyperbrowserError,
