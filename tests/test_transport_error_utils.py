@@ -148,6 +148,20 @@ class _UnstringifiableErrorValue:
         raise RuntimeError("cannot stringify error value")
 
 
+class _UnstringifiableFallbackError(Exception):
+    def __str__(self) -> str:
+        raise RuntimeError("cannot stringify fallback error")
+
+
+class _BrokenFallbackResponse:
+    @property
+    def text(self) -> str:
+        raise RuntimeError("cannot read response text")
+
+    def json(self):
+        raise ValueError("invalid json")
+
+
 def test_extract_request_error_context_uses_unknown_when_request_unset():
     method, url = extract_request_error_context(httpx.RequestError("network down"))
 
@@ -669,6 +683,14 @@ def test_extract_error_message_uses_fallback_error_when_response_text_is_blank()
     )
 
     assert message == "fallback detail"
+
+
+def test_extract_error_message_handles_broken_fallback_response_text():
+    message = extract_error_message(
+        _BrokenFallbackResponse(), _UnstringifiableFallbackError()
+    )
+
+    assert message == "<unstringifiable _UnstringifiableFallbackError>"
 
 
 def test_extract_error_message_extracts_errors_list_messages():
