@@ -13,6 +13,9 @@ from hyperbrowser.exceptions import (
 
 T = TypeVar("T")
 _MAX_OPERATION_NAME_LENGTH = 200
+_CLIENT_ERROR_STATUS_MIN = 400
+_CLIENT_ERROR_STATUS_MAX = 500
+_RETRYABLE_CLIENT_ERROR_STATUS_CODES = {429}
 
 
 class _NonRetryablePollingError(HyperbrowserError):
@@ -105,6 +108,18 @@ def _invoke_non_retryable_callback(
         raise _NonRetryablePollingError(
             f"{callback_name} failed for {operation_name}: {exc}"
         ) from exc
+
+
+def _is_retryable_exception(exc: Exception) -> bool:
+    if isinstance(exc, _NonRetryablePollingError):
+        return False
+    if isinstance(exc, HyperbrowserError) and exc.status_code is not None:
+        if (
+            _CLIENT_ERROR_STATUS_MIN <= exc.status_code < _CLIENT_ERROR_STATUS_MAX
+            and exc.status_code not in _RETRYABLE_CLIENT_ERROR_STATUS_CODES
+        ):
+            return False
+    return True
 
 
 def _validate_retry_config(
@@ -203,6 +218,8 @@ def poll_until_terminal_status(
             status = get_status()
             failures = 0
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_status_failures:
                 raise HyperbrowserPollingError(
@@ -244,6 +261,8 @@ def retry_operation(
         try:
             operation_result = operation()
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
@@ -284,6 +303,8 @@ async def poll_until_terminal_status_async(
         try:
             status_result = get_status()
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_status_failures:
                 raise HyperbrowserPollingError(
@@ -303,6 +324,8 @@ async def poll_until_terminal_status_async(
             status = await status_awaitable
             failures = 0
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_status_failures:
                 raise HyperbrowserPollingError(
@@ -344,6 +367,8 @@ async def retry_operation_async(
         try:
             operation_result = operation()
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
@@ -361,6 +386,8 @@ async def retry_operation_async(
         try:
             return await operation_awaitable
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
@@ -460,6 +487,8 @@ def collect_paginated_results(
         except HyperbrowserPollingError:
             raise
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
@@ -565,6 +594,8 @@ async def collect_paginated_results_async(
         except HyperbrowserPollingError:
             raise
         except Exception as exc:
+            if not _is_retryable_exception(exc):
+                raise
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
