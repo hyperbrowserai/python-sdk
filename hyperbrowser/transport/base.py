@@ -8,6 +8,8 @@ T = TypeVar("T")
 _TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
 _MAX_MODEL_NAME_DISPLAY_LENGTH = 120
 _MAX_MAPPING_KEY_DISPLAY_LENGTH = 120
+_MIN_HTTP_STATUS_CODE = 100
+_MAX_HTTP_STATUS_CODE = 599
 
 
 def _sanitize_display_text(value: str, *, max_length: int) -> str:
@@ -57,6 +59,8 @@ class APIResponse(Generic[T]):
     def __init__(self, data: Optional[Union[dict, T]] = None, status_code: int = 200):
         if isinstance(status_code, bool) or not isinstance(status_code, int):
             raise HyperbrowserError("status_code must be an integer")
+        if not (_MIN_HTTP_STATUS_CODE <= status_code <= _MAX_HTTP_STATUS_CODE):
+            raise HyperbrowserError("status_code must be between 100 and 599")
         self.data = data
         self.status_code = status_code
 

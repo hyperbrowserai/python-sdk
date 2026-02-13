@@ -245,6 +245,22 @@ def test_api_response_constructor_rejects_boolean_status_code() -> None:
         APIResponse(status_code=True)
 
 
+@pytest.mark.parametrize("status_code", [99, 600])
+def test_api_response_constructor_rejects_out_of_range_status_code(
+    status_code: int,
+) -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be between 100 and 599"):
+        APIResponse(status_code=status_code)
+
+
 def test_api_response_from_status_rejects_boolean_status_code() -> None:
     with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
         APIResponse.from_status(True)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("status_code", [99, 600])
+def test_api_response_from_status_rejects_out_of_range_status_code(
+    status_code: int,
+) -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be between 100 and 599"):
+        APIResponse.from_status(status_code)
