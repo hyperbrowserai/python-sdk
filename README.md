@@ -25,7 +25,7 @@ export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
 export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON object
 ```
 
-`api_key` must be a non-empty string.
+`api_key` must be a non-empty string and must not contain control characters.
 
 `base_url` must start with `https://` (or `http://` for local testing), include a host,
 and not contain query parameters, URL fragments, backslashes, control characters,
