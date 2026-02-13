@@ -13,7 +13,10 @@ def test_client_build_url_normalizes_leading_slash():
             client._build_url("/api/session")
             == "https://api.hyperbrowser.ai/api/session"
         )
-        assert client._build_url("api/session") == "https://api.hyperbrowser.ai/api/session"
+        assert (
+            client._build_url("api/session")
+            == "https://api.hyperbrowser.ai/api/session"
+        )
     finally:
         client.close()
 
