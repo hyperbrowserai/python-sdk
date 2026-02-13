@@ -111,7 +111,7 @@ class SessionManager:
                     self._client._build_url(f"/session/{id}/uploads"),
                     files=files,
                 )
-        elif hasattr(file_input, "read"):
+        elif callable(getattr(file_input, "read", None)):
             files = {"file": file_input}
             response = self._client.transport.post(
                 self._client._build_url(f"/session/{id}/uploads"),
