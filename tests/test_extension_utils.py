@@ -1,5 +1,6 @@
 import pytest
 
+from hyperbrowser.client.managers import extension_utils
 from hyperbrowser.client.managers.extension_utils import (
     parse_extension_list_response_data,
 )
@@ -56,3 +57,23 @@ def test_parse_extension_list_response_data_wraps_invalid_extension_payloads():
                 ]
             }
         )
+
+
+def test_parse_extension_list_response_data_preserves_hyperbrowser_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _RaisingExtensionResponse:
+        def __init__(self, **kwargs):
+            _ = kwargs
+            raise HyperbrowserError("extension parse failed")
+
+    monkeypatch.setattr(
+        extension_utils,
+        "ExtensionResponse",
+        _RaisingExtensionResponse,
+    )
+
+    with pytest.raises(HyperbrowserError, match="extension parse failed") as exc_info:
+        parse_extension_list_response_data({"extensions": [{"id": "ext_1"}]})
+
+    assert exc_info.value.original_error is None
