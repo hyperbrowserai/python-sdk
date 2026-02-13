@@ -91,6 +91,10 @@ class HyperbrowserBase:
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
         decoded_path = unquote(normalized_path_only)
+        if "\\" in decoded_path:
+            raise HyperbrowserError("path must not contain backslashes")
+        if "\n" in decoded_path or "\r" in decoded_path:
+            raise HyperbrowserError("path must not contain newline characters")
         normalized_segments = [
             segment for segment in decoded_path.split("/") if segment
         ]
