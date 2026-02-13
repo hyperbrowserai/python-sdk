@@ -174,6 +174,13 @@ def _is_executor_shutdown_runtime_error(exc: Exception) -> bool:
     )
 
 
+def _decode_ascii_bytes_like(value: object) -> Optional[str]:
+    try:
+        return memoryview(value).tobytes().decode("ascii")
+    except (TypeError, ValueError, UnicodeDecodeError):
+        return None
+
+
 def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
     if isinstance(status_code, bool):
         return None
@@ -181,18 +188,13 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
         return status_code
     status_text: Optional[str] = None
     if isinstance(status_code, memoryview):
-        status_bytes = status_code.tobytes()
-        try:
-            status_text = status_bytes.decode("ascii")
-        except UnicodeDecodeError:
-            return None
+        status_text = _decode_ascii_bytes_like(status_code)
     elif isinstance(status_code, (bytes, bytearray)):
-        try:
-            status_text = bytes(status_code).decode("ascii")
-        except UnicodeDecodeError:
-            return None
+        status_text = _decode_ascii_bytes_like(status_code)
     elif isinstance(status_code, str):
         status_text = status_code
+    else:
+        status_text = _decode_ascii_bytes_like(status_code)
 
     if status_text is not None:
         normalized_status = status_text.strip()
