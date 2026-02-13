@@ -1,105 +1,128 @@
 # Hyperbrowser Python SDK
 
-Checkout the full documentation [here](https://hyperbrowser.ai/docs)
+Python SDK for the Hyperbrowser API.
+
+- Full docs: https://hyperbrowser.ai/docs
+- Package: https://pypi.org/project/hyperbrowser/
+
+## Requirements
+
+- Python `>=3.9`
 
 ## Installation
 
-Currently Hyperbrowser supports creating a browser session in two ways:
-
-- Async Client
-- Sync Client
-
-It can be installed from `pypi` by running :
-
-```shell
+```bash
 pip install hyperbrowser
 ```
 
 ## Configuration
 
-Both the sync and async client follow similar configuration params
+You can pass credentials directly, or use environment variables.
 
-### API Key
-The API key can be configured either from the constructor arguments or environment variables using `HYPERBROWSER_API_KEY`
+```bash
+export HYPERBROWSER_API_KEY="your_api_key"
+export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
+```
 
-## Usage
+## Clients
 
-### Async
+The SDK provides both sync and async clients with mirrored APIs:
+
+- `Hyperbrowser` (sync)
+- `AsyncHyperbrowser` (async)
+
+### Sync quickstart
+
+```python
+from hyperbrowser import Hyperbrowser
+
+with Hyperbrowser(api_key="your_api_key") as client:
+    session = client.sessions.create()
+    print(session.id, session.ws_endpoint)
+    client.sessions.stop(session.id)
+```
+
+### Async quickstart
 
 ```python
 import asyncio
-from pyppeteer import connect
 from hyperbrowser import AsyncHyperbrowser
 
-HYPERBROWSER_API_KEY = "test-key"
-
-async def main():
-    async with AsyncHyperbrowser(api_key=HYPERBROWSER_API_KEY) as client:
+async def main() -> None:
+    async with AsyncHyperbrowser(api_key="your_api_key") as client:
         session = await client.sessions.create()
-
-        ws_endpoint = session.ws_endpoint
-        browser = await connect(browserWSEndpoint=ws_endpoint, defaultViewport=None)
-
-        # Get pages
-        pages = await browser.pages()
-        if not pages:
-            raise Exception("No pages available")
-
-        page = pages[0]
-
-        # Navigate to a website
-        print("Navigating to Hacker News...")
-        await page.goto("https://news.ycombinator.com/")
-        page_title = await page.title()
-        print("Page title:", page_title)
-
-        await page.close()
-        await browser.disconnect()
+        print(session.id, session.ws_endpoint)
         await client.sessions.stop(session.id)
-        print("Session completed!")
 
-# Run the asyncio event loop
-asyncio.get_event_loop().run_until_complete(main())
+asyncio.run(main())
 ```
-### Sync
+
+## Main manager surface
+
+Both clients expose:
+
+- `client.sessions`
+- `client.scrape` (+ `client.scrape.batch`)
+- `client.crawl`
+- `client.extract`
+- `client.web` (+ `client.web.batch_fetch`, `client.web.crawl`)
+- `client.agents` (`browser_use`, `cua`, `claude_computer_use`, `gemini_computer_use`, `hyper_agent`)
+- `client.profiles`
+- `client.extensions`
+- `client.team`
+- `client.computer_action`
+
+## Job polling (`start_and_wait`)
+
+Long-running APIs expose `start_and_wait(...)`.
+
+These methods now support explicit polling controls:
+
+- `poll_interval_seconds` (default `2.0`)
+- `max_wait_seconds` (default `600.0`)
+
+Example:
 
 ```python
-from playwright.sync_api import sync_playwright
 from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import StartExtractJobParams
 
-HYPERBROWSER_API_KEY = "test-key"
-
-def main():
-    client = Hyperbrowser(api_key=HYPERBROWSER_API_KEY)
-    session = client.sessions.create()
-
-    ws_endpoint = session.ws_endpoint
-
-    # Launch Playwright and connect to the remote browser
-    with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp(ws_endpoint)
-        context = browser.new_context()
-        
-        # Get the first page or create a new one
-        if len(context.pages) == 0:
-            page = context.new_page()
-        else:
-            page = context.pages[0]
-        
-        # Navigate to a website
-        print("Navigating to Hacker News...")
-        page.goto("https://news.ycombinator.com/")
-        page_title = page.title()
-        print("Page title:", page_title)
-        
-        page.close()
-        browser.close()
-        print("Session completed!")
-    client.sessions.stop(session.id)
-
-# Run the asyncio event loop
-main()
+with Hyperbrowser(api_key="your_api_key") as client:
+    result = client.extract.start_and_wait(
+        StartExtractJobParams(
+            urls=["https://hyperbrowser.ai"],
+            prompt="Extract the main headline",
+        ),
+        poll_interval_seconds=1.5,
+        max_wait_seconds=300,
+    )
+    print(result.status, result.data)
 ```
+
+## Error handling
+
+SDK errors are raised as `HyperbrowserError`.
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.exceptions import HyperbrowserError
+
+try:
+    with Hyperbrowser(api_key="invalid") as client:
+        client.team.get_credit_info()
+except HyperbrowserError as exc:
+    print(exc)
+```
+
+## Development
+
+```bash
+pip install -e . pytest ruff build
+python -m ruff check .
+python -m pytest -q
+python -m build
+```
+
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).

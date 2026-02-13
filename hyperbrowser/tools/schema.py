@@ -32,12 +32,7 @@ def get_scrape_options(formats: Optional[List[scrape_types]] = None):
                 "description": "Whether to only return the main content of the page. If true, only the main content of the page will be returned, excluding any headers, navigation menus,footers, or other non-main content.",
             },
         },
-        "required": [
-            "include_tags",
-            "exclude_tags",
-            "only_main_content",
-            "formats",
-        ],
+        "required": [],
         "additionalProperties": False,
     }
 
@@ -51,7 +46,7 @@ SCRAPE_SCHEMA = {
         },
         "scrape_options": get_scrape_options(),
     },
-    "required": ["url", "scrape_options"],
+    "required": ["url"],
     "additionalProperties": False,
 }
 
@@ -103,15 +98,7 @@ CRAWL_SCHEMA = {
         },
         "scrape_options": get_scrape_options(),
     },
-    "required": [
-        "url",
-        "max_pages",
-        "follow_links",
-        "ignore_sitemap",
-        "exclude_patterns",
-        "include_patterns",
-        "scrape_options",
-    ],
+    "required": ["url"],
     "additionalProperties": False,
 }
 
@@ -130,15 +117,18 @@ EXTRACT_SCHEMA = {
             "description": "A prompt describing how you want the data structured, or what you want to extract from the urls provided. Can also be used to guide the extraction process. For multi-source queries, structure this prompt to request unified, comparative, or aggregated information across all provided URLs.",
         },
         "schema": {
-            "type": "string",
-            "description": "A strict json schema you want the returned data to be structured as. For multi-source extraction, design this schema to accommodate information from all URLs in a single structure. Ensure that this is a proper json schema, and the root level should be of type 'object'.",
+            "anyOf": [
+                {"type": "object"},
+                {"type": "string"},
+            ],
+            "description": "A strict JSON schema for the response shape. This can be either a JSON object schema or a JSON string that can be parsed into an object schema. For multi-source extraction, design this schema to accommodate information from all URLs in a single structure.",
         },
         "max_links": {
             "type": "number",
             "description": "The maximum number of links to look for if performing a crawl for any given url in the urls list.",
         },
     },
-    "required": ["urls", "prompt", "schema", "max_links"],
+    "required": ["urls"],
     "additionalProperties": False,
 }
 
@@ -147,12 +137,19 @@ BROWSER_USE_LLM_SCHEMA = {
     "enum": [
         "gpt-4o",
         "gpt-4o-mini",
+        "gpt-4.1",
+        "gpt-4.1-mini",
+        "gpt-5",
+        "gpt-5-mini",
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-20250514",
         "claude-3-7-sonnet-20250219",
         "claude-3-5-sonnet-20241022",
         "claude-3-5-haiku-20241022",
         "gemini-2.0-flash",
+        "gemini-2.5-flash",
     ],
-    "default": "gemini-2.0-flash",
+    "default": "gemini-2.5-flash",
 }
 
 BROWSER_USE_SCHEMA = {
@@ -164,27 +161,21 @@ BROWSER_USE_SCHEMA = {
         },
         "llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model (LLM) instance to use for generating actions. Default to gemini-2.0-flash.",
+            "description": "The language model (LLM) instance to use for generating actions. Defaults to gemini-2.5-flash.",
         },
         "planner_llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model to use specifically for planning future actions, can differ from the main LLM. Default to gemini-2.0-flash.",
+            "description": "The language model to use specifically for planning future actions, can differ from the main LLM. Defaults to gemini-2.5-flash.",
         },
         "page_extraction_llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model to use for extracting structured data from webpages. Default to gemini-2.0-flash.",
+            "description": "The language model to use for extracting structured data from webpages. Defaults to gemini-2.5-flash.",
         },
         "keep_browser_open": {
             "type": "boolean",
             "description": "When enabled, keeps the browser session open after task completion.",
         },
     },
-    "required": [
-        "task",
-        "llm",
-        "planner_llm",
-        "page_extraction_llm",
-        "keep_browser_open",
-    ],
+    "required": ["task"],
     "additionalProperties": False,
 }
