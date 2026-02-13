@@ -24,6 +24,20 @@ export HYPERBROWSER_API_KEY="your_api_key"
 export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
 ```
 
+You can also pass custom headers (for tracing/correlation) via `ClientConfig`:
+
+```python
+from hyperbrowser import ClientConfig, Hyperbrowser
+
+config = ClientConfig(
+    api_key="your_api_key",
+    headers={"X-Correlation-Id": "req-123"},
+)
+
+with Hyperbrowser(config=config) as client:
+    ...
+```
+
 ## Clients
 
 The SDK provides both sync and async clients with mirrored APIs:
