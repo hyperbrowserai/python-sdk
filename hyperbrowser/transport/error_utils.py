@@ -136,26 +136,36 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
         return value
     if isinstance(value, dict):
         for key in ("message", "error", "detail", "errors", "msg", "title", "reason"):
-            nested_value = value.get(key)
+            try:
+                nested_value = value.get(key)
+            except Exception:
+                continue
             if nested_value is not None:
                 return _stringify_error_value(nested_value, _depth=_depth + 1)
     if isinstance(value, (list, tuple)):
         max_list_items = 10
-        collected_messages = [
-            item_message
-            for item_message in (
-                _stringify_error_value(item, _depth=_depth + 1)
-                for item in value[:max_list_items]
-            )
-            if item_message
-        ]
+        try:
+            list_items = value[:max_list_items]
+        except Exception:
+            return _safe_to_string(value)
+        collected_messages = []
+        try:
+            for item in list_items:
+                item_message = _stringify_error_value(item, _depth=_depth + 1)
+                if item_message:
+                    collected_messages.append(item_message)
+        except Exception:
+            return _safe_to_string(value)
         if collected_messages:
             joined_messages = (
                 collected_messages[0]
                 if len(collected_messages) == 1
                 else "; ".join(collected_messages)
             )
-            remaining_items = len(value) - max_list_items
+            try:
+                remaining_items = len(value) - max_list_items
+            except Exception:
+                return joined_messages
             if remaining_items > 0:
                 return f"{joined_messages}; ... (+{remaining_items} more)"
             return joined_messages
@@ -183,7 +193,10 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
     extracted_message: str
     if isinstance(error_data, dict):
         for key in ("message", "error", "detail", "errors", "title", "reason"):
-            message = error_data.get(key)
+            try:
+                message = error_data.get(key)
+            except Exception:
+                continue
             if message is not None:
                 candidate_message = _stringify_error_value(message)
                 if candidate_message.strip():

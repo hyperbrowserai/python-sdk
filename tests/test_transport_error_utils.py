@@ -167,6 +167,26 @@ class _BrokenFallbackResponse:
         raise ValueError("invalid json")
 
 
+class _BrokenGetErrorDict(dict):
+    def get(self, key, default=None):
+        _ = key
+        _ = default
+        raise RuntimeError("broken dict get")
+
+    def __str__(self) -> str:
+        return "broken-get-error-dict"
+
+
+class _BrokenSliceErrorList(list):
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            raise RuntimeError("broken slice")
+        return super().__getitem__(key)
+
+    def __str__(self) -> str:
+        return "broken-slice-error-list"
+
+
 def test_extract_request_error_context_uses_unknown_when_request_unset():
     method, url = extract_request_error_context(httpx.RequestError("network down"))
 
@@ -662,6 +682,24 @@ def test_extract_error_message_handles_unstringifiable_message_values():
     )
 
     assert message == "<unstringifiable _UnstringifiableErrorValue>"
+
+
+def test_extract_error_message_handles_dict_get_failures():
+    message = extract_error_message(
+        _DummyResponse({"message": _BrokenGetErrorDict({"inner": object()})}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "broken-get-error-dict"
+
+
+def test_extract_error_message_handles_list_slice_failures():
+    message = extract_error_message(
+        _DummyResponse({"errors": _BrokenSliceErrorList([{"msg": "issue-1"}])}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "broken-slice-error-list"
 
 
 def test_extract_error_message_uses_fallback_for_blank_dict_message():
