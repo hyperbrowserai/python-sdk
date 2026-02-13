@@ -1,4 +1,5 @@
 import json
+from numbers import Real
 import re
 from typing import Any
 
@@ -29,10 +30,19 @@ _INVALID_URL_SENTINELS = {
 
 def _normalize_request_method(method: Any) -> str:
     raw_method = method
+    if isinstance(raw_method, bool):
+        return "UNKNOWN"
+    if isinstance(raw_method, Real):
+        return "UNKNOWN"
     if isinstance(raw_method, (bytes, bytearray, memoryview)):
         try:
             raw_method = memoryview(raw_method).tobytes().decode("ascii")
         except (TypeError, ValueError, UnicodeDecodeError):
+            return "UNKNOWN"
+    elif not isinstance(raw_method, str):
+        try:
+            raw_method = str(raw_method)
+        except Exception:
             return "UNKNOWN"
     if not isinstance(raw_method, str) or not raw_method.strip():
         return "UNKNOWN"

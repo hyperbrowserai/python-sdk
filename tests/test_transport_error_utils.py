@@ -44,6 +44,15 @@ class _InvalidMethodTokenRequest:
     url = "https://example.com/invalid-method"
 
 
+class _MethodLikeRequest:
+    class _MethodLike:
+        def __str__(self) -> str:
+            return "patch"
+
+    method = _MethodLike()
+    url = "https://example.com/method-like"
+
+
 class _WhitespaceInsideUrlRequest:
     method = "GET"
     url = "https://example.com/with space"
@@ -99,6 +108,12 @@ class _RequestErrorWithInvalidMethodToken(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _InvalidMethodTokenRequest()
+
+
+class _RequestErrorWithMethodLikeContext(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _MethodLikeRequest()
 
 
 class _RequestErrorWithWhitespaceInsideUrl(httpx.RequestError):
@@ -196,6 +211,15 @@ def test_extract_request_error_context_rejects_invalid_method_tokens():
 
     assert method == "UNKNOWN"
     assert url == "https://example.com/invalid-method"
+
+
+def test_extract_request_error_context_accepts_stringifiable_method_values():
+    method, url = extract_request_error_context(
+        _RequestErrorWithMethodLikeContext("network down")
+    )
+
+    assert method == "PATCH"
+    assert url == "https://example.com/method-like"
 
 
 def test_extract_request_error_context_rejects_urls_with_whitespace():
@@ -499,6 +523,19 @@ def test_format_generic_request_failure_message_normalizes_non_string_method_val
     )
 
     assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_supports_stringifiable_method_values():
+    class _MethodLike:
+        def __str__(self) -> str:
+            return "delete"
+
+    message = format_generic_request_failure_message(
+        method=_MethodLike(),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request DELETE https://example.com/path failed"
 
 
 def test_format_generic_request_failure_message_supports_memoryview_method_values():
