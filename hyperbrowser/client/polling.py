@@ -118,13 +118,7 @@ def build_operation_name(prefix: object, identifier: object) -> str:
 
 
 def build_fetch_operation_name(operation_name: object) -> str:
-    normalized_operation_name = build_operation_name("", operation_name)
-    prefixed_operation_name = (
-        f"{_FETCH_OPERATION_NAME_PREFIX}{normalized_operation_name}"
-    )
-    if len(prefixed_operation_name) <= _MAX_OPERATION_NAME_LENGTH:
-        return prefixed_operation_name
-    return normalized_operation_name
+    return build_operation_name(_FETCH_OPERATION_NAME_PREFIX, operation_name)
 
 
 def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> bool:

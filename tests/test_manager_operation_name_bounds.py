@@ -20,6 +20,7 @@ import hyperbrowser.client.managers.sync_manager.web.crawl as sync_web_crawl_mod
 import hyperbrowser.client.managers.sync_manager.crawl as sync_crawl_module
 import hyperbrowser.client.managers.sync_manager.extract as sync_extract_module
 import hyperbrowser.client.managers.sync_manager.scrape as sync_scrape_module
+from hyperbrowser.client.polling import build_fetch_operation_name
 import hyperbrowser.client.managers.async_manager.scrape as async_scrape_module
 
 
@@ -143,7 +144,9 @@ def test_sync_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypat
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+    assert captured["fetch_operation_name"] == build_fetch_operation_name(
+        captured["poll_operation_name"]
+    )
 
 
 def test_async_extract_manager_bounds_operation_name(monkeypatch):
@@ -263,7 +266,9 @@ def test_async_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypa
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+        assert captured["fetch_operation_name"] == build_fetch_operation_name(
+            captured["poll_operation_name"]
+        )
 
     asyncio.run(run())
 
@@ -307,7 +312,9 @@ def test_sync_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+    assert captured["fetch_operation_name"] == build_fetch_operation_name(
+        captured["poll_operation_name"]
+    )
 
 
 def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
@@ -351,7 +358,9 @@ def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+        assert captured["fetch_operation_name"] == build_fetch_operation_name(
+            captured["poll_operation_name"]
+        )
 
     asyncio.run(run())
 
@@ -393,7 +402,9 @@ def test_sync_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(monke
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+    assert captured["fetch_operation_name"] == build_fetch_operation_name(
+        captured["poll_operation_name"]
+    )
 
 
 def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
@@ -437,7 +448,9 @@ def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+        assert captured["fetch_operation_name"] == build_fetch_operation_name(
+            captured["poll_operation_name"]
+        )
 
     asyncio.run(run())
 
@@ -481,7 +494,9 @@ def test_sync_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+    assert captured["fetch_operation_name"] == build_fetch_operation_name(
+        captured["poll_operation_name"]
+    )
 
 
 def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
@@ -525,7 +540,9 @@ def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+        assert captured["fetch_operation_name"] == build_fetch_operation_name(
+            captured["poll_operation_name"]
+        )
 
     asyncio.run(run())
 

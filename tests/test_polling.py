@@ -47,9 +47,13 @@ def test_build_fetch_operation_name_prefixes_when_within_length_limit():
     assert build_fetch_operation_name("crawl job 123") == "Fetching crawl job 123"
 
 
-def test_build_fetch_operation_name_falls_back_for_max_length_inputs():
+def test_build_fetch_operation_name_truncates_to_preserve_fetch_prefix():
     operation_name = "x" * 200
-    assert build_fetch_operation_name(operation_name) == operation_name
+    fetch_operation_name = build_fetch_operation_name(operation_name)
+
+    assert fetch_operation_name.startswith("Fetching ")
+    assert fetch_operation_name.endswith("...")
+    assert len(fetch_operation_name) == 200
 
 
 def test_build_fetch_operation_name_sanitizes_non_string_and_control_input():
