@@ -218,6 +218,10 @@ def test_client_config_rejects_empty_or_invalid_base_url():
         HyperbrowserError, match="base_url must not contain whitespace characters"
     ):
         ClientConfig(api_key="test-key", base_url="https://example .local")
+    with pytest.raises(
+        HyperbrowserError, match="base_url must not contain backslashes"
+    ):
+        ClientConfig(api_key="test-key", base_url="https://example.local\\api")
 
 
 def test_client_config_normalizes_headers_to_internal_copy():
@@ -333,3 +337,7 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         HyperbrowserError, match="base_url must not contain whitespace characters"
     ):
         ClientConfig.normalize_base_url("https://example.local/\tapi")
+    with pytest.raises(
+        HyperbrowserError, match="base_url must not contain backslashes"
+    ):
+        ClientConfig.normalize_base_url("https://example.local\\api")

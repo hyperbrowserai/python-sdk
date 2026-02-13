@@ -38,6 +38,8 @@ class ClientConfig:
             raise HyperbrowserError("base_url must not contain newline characters")
         if any(character.isspace() for character in normalized_base_url):
             raise HyperbrowserError("base_url must not contain whitespace characters")
+        if "\\" in normalized_base_url:
+            raise HyperbrowserError("base_url must not contain backslashes")
 
         parsed_base_url = urlparse(normalized_base_url)
         if (
