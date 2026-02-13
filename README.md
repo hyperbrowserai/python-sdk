@@ -126,6 +126,7 @@ with Hyperbrowser(api_key="your_api_key") as client:
         ),
         poll_interval_seconds=1.5,
         max_wait_seconds=300,
+        max_status_failures=5,
     )
     print(result.status, result.data)
 ```
