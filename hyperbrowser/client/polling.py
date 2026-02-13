@@ -2,7 +2,11 @@ import asyncio
 import time
 from typing import Awaitable, Callable, Optional, TypeVar
 
-from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.exceptions import (
+    HyperbrowserError,
+    HyperbrowserPollingError,
+    HyperbrowserTimeoutError,
+)
 
 T = TypeVar("T")
 
@@ -27,7 +31,7 @@ def poll_until_terminal_status(
 
     while True:
         if has_exceeded_max_wait(start_time, max_wait_seconds):
-            raise HyperbrowserError(
+            raise HyperbrowserTimeoutError(
                 f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
             )
 
@@ -37,7 +41,7 @@ def poll_until_terminal_status(
         except Exception as exc:
             failures += 1
             if failures >= max_status_failures:
-                raise HyperbrowserError(
+                raise HyperbrowserPollingError(
                     f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
                 ) from exc
             time.sleep(poll_interval_seconds)
@@ -82,7 +86,7 @@ async def poll_until_terminal_status_async(
 
     while True:
         if has_exceeded_max_wait(start_time, max_wait_seconds):
-            raise HyperbrowserError(
+            raise HyperbrowserTimeoutError(
                 f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
             )
 
@@ -92,7 +96,7 @@ async def poll_until_terminal_status_async(
         except Exception as exc:
             failures += 1
             if failures >= max_status_failures:
-                raise HyperbrowserError(
+                raise HyperbrowserPollingError(
                     f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
                 ) from exc
             await asyncio.sleep(poll_interval_seconds)

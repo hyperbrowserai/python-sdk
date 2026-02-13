@@ -36,3 +36,11 @@ class HyperbrowserError(Exception):
 
     def __repr__(self) -> str:
         return self.__str__()
+
+
+class HyperbrowserTimeoutError(HyperbrowserError):
+    """Raised when a polling or wait operation exceeds configured timeout."""
+
+
+class HyperbrowserPollingError(HyperbrowserError):
+    """Raised when a polling operation repeatedly fails to retrieve status."""

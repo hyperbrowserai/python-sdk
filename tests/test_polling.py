@@ -8,7 +8,11 @@ from hyperbrowser.client.polling import (
     retry_operation,
     retry_operation_async,
 )
-from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.exceptions import (
+    HyperbrowserError,
+    HyperbrowserPollingError,
+    HyperbrowserTimeoutError,
+)
 
 
 def test_poll_until_terminal_status_returns_terminal_value():
@@ -26,7 +30,9 @@ def test_poll_until_terminal_status_returns_terminal_value():
 
 
 def test_poll_until_terminal_status_times_out():
-    with pytest.raises(HyperbrowserError, match="Timed out waiting for sync timeout"):
+    with pytest.raises(
+        HyperbrowserTimeoutError, match="Timed out waiting for sync timeout"
+    ):
         poll_until_terminal_status(
             operation_name="sync timeout",
             get_status=lambda: "running",
@@ -57,7 +63,9 @@ def test_poll_until_terminal_status_retries_transient_status_errors():
 
 
 def test_poll_until_terminal_status_raises_after_status_failures():
-    with pytest.raises(HyperbrowserError, match="Failed to poll sync poll failure"):
+    with pytest.raises(
+        HyperbrowserPollingError, match="Failed to poll sync poll failure"
+    ):
         poll_until_terminal_status(
             operation_name="sync poll failure",
             get_status=lambda: (_ for _ in ()).throw(ValueError("always")),
@@ -147,5 +155,22 @@ def test_async_poll_until_terminal_status_retries_transient_status_errors():
             max_wait_seconds=1.0,
         )
         assert status == "completed"
+
+    asyncio.run(run())
+
+
+def test_async_poll_until_terminal_status_raises_after_status_failures():
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserPollingError, match="Failed to poll async poll failure"
+        ):
+            await poll_until_terminal_status_async(
+                operation_name="async poll failure",
+                get_status=lambda: (_ for _ in ()).throw(ValueError("always")),
+                is_terminal_status=lambda value: value in {"completed", "failed"},
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=2,
+            )
 
     asyncio.run(run())
