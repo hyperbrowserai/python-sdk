@@ -719,6 +719,35 @@ def test_async_scrape_tool_supports_mapping_response_objects():
     asyncio.run(run())
 
 
+def test_async_scrape_tool_wraps_mapping_response_data_keyerrors():
+    class _InconsistentResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "data"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise KeyError("data")
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_InconsistentResponse())  # type: ignore[arg-type]
+        with pytest.raises(
+            HyperbrowserError, match="Failed to read scrape tool response data"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
 def test_async_crawl_tool_rejects_non_list_response_data():
     async def run() -> None:
         client = _AsyncCrawlClient(_Response(data={"invalid": "payload"}))
@@ -820,6 +849,37 @@ def test_async_scrape_tool_supports_mapping_response_data():
     asyncio.run(run())
 
 
+def test_async_scrape_tool_wraps_mapping_field_inspection_failures():
+    class _BrokenContainsMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect markdown key")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_Response(data=_BrokenContainsMapping()))
+        with pytest.raises(
+            HyperbrowserError,
+            match="Failed to inspect scrape tool response field 'markdown'",
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
 def test_async_scrape_tool_decodes_utf8_bytes_markdown_field():
     async def run() -> None:
         client = _AsyncScrapeClient(_Response(data=SimpleNamespace(markdown=b"async")))
@@ -842,6 +902,35 @@ def test_async_crawl_tool_supports_mapping_page_items():
         )
         assert "Url: https://example.com" in output
         assert "async body" in output
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_wraps_mapping_page_keyerrors_after_membership_check():
+    class _InconsistentPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "markdown"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise KeyError("markdown")
+
+    async def run() -> None:
+        client = _AsyncCrawlClient(_Response(data=[_InconsistentPage()]))
+        with pytest.raises(
+            HyperbrowserError,
+            match="Failed to read crawl tool page field 'markdown' at index 0",
+        ) as exc_info:
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
+        assert exc_info.value.original_error is not None
 
     asyncio.run(run())
 
