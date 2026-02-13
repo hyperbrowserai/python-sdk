@@ -9,6 +9,7 @@ from .base import APIResponse, SyncTransportStrategy
 from .error_utils import (
     extract_error_message,
     extract_request_error_context,
+    format_generic_request_failure_message,
     format_request_failure_message,
 )
 
@@ -90,7 +91,8 @@ class SyncTransport(SyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"Request POST {url} failed", original_error=e
+                format_generic_request_failure_message(method="POST", url=url),
+                original_error=e,
             ) from e
 
     def get(
@@ -114,7 +116,8 @@ class SyncTransport(SyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"Request GET {url} failed", original_error=e
+                format_generic_request_failure_message(method="GET", url=url),
+                original_error=e,
             ) from e
 
     def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
@@ -132,7 +135,8 @@ class SyncTransport(SyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"Request PUT {url} failed", original_error=e
+                format_generic_request_failure_message(method="PUT", url=url),
+                original_error=e,
             ) from e
 
     def delete(self, url: str) -> APIResponse:
@@ -150,5 +154,6 @@ class SyncTransport(SyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"Request DELETE {url} failed", original_error=e
+                format_generic_request_failure_message(method="DELETE", url=url),
+                original_error=e,
             ) from e

@@ -3,6 +3,7 @@ import httpx
 from hyperbrowser.transport.error_utils import (
     extract_error_message,
     extract_request_error_context,
+    format_generic_request_failure_message,
     format_request_failure_message,
 )
 
@@ -232,6 +233,24 @@ def test_format_request_failure_message_rejects_overlong_fallback_methods():
     )
 
     assert message == "Request UNKNOWN https://example.com/fallback failed"
+
+
+def test_format_generic_request_failure_message_normalizes_invalid_url_objects():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=object(),
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
+def test_format_generic_request_failure_message_normalizes_invalid_method_values():
+    message = format_generic_request_failure_message(
+        method="GET /invalid",
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
 
 
 def test_format_request_failure_message_truncates_very_long_fallback_urls():

@@ -146,3 +146,9 @@ def format_request_failure_message(
     effective_url = request_url if request_url != "unknown URL" else fallback_url
     effective_url = _normalize_request_url(effective_url)
     return f"Request {effective_method} {effective_url} failed"
+
+
+def format_generic_request_failure_message(*, method: str, url: object) -> str:
+    normalized_method = _normalize_request_method(method)
+    normalized_url = _normalize_request_url(url)
+    return f"Request {normalized_method} {normalized_url} failed"
