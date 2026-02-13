@@ -365,6 +365,92 @@ def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
     asyncio.run(run())
 
 
+def test_sync_batch_fetch_manager_bounds_operation_name_for_paginated_path(
+    monkeypatch,
+):
+    manager = sync_batch_fetch_module.BatchFetchManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_poll_until_terminal_status(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["poll_operation_name"] = operation_name
+        return "completed"
+
+    def fake_collect_paginated_results(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["collect_operation_name"] = operation_name
+
+    monkeypatch.setattr(
+        sync_batch_fetch_module,
+        "poll_until_terminal_status",
+        fake_poll_until_terminal_status,
+    )
+    monkeypatch.setattr(
+        sync_batch_fetch_module,
+        "collect_paginated_results",
+        fake_collect_paginated_results,
+    )
+
+    result = manager.start_and_wait(params=object(), return_all_pages=True)  # type: ignore[arg-type]
+
+    assert result.status == "completed"
+    assert captured["collect_operation_name"] == captured["poll_operation_name"]
+
+
+def test_async_batch_fetch_manager_bounds_operation_name_for_paginated_path(
+    monkeypatch,
+):
+    async def run() -> None:
+        manager = async_batch_fetch_module.BatchFetchManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_poll_until_terminal_status_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["poll_operation_name"] = operation_name
+            return "completed"
+
+        async def fake_collect_paginated_results_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["collect_operation_name"] = operation_name
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_batch_fetch_module,
+            "poll_until_terminal_status_async",
+            fake_poll_until_terminal_status_async,
+        )
+        monkeypatch.setattr(
+            async_batch_fetch_module,
+            "collect_paginated_results_async",
+            fake_collect_paginated_results_async,
+        )
+
+        result = await manager.start_and_wait(
+            params=object(),  # type: ignore[arg-type]
+            return_all_pages=True,
+        )
+
+        assert result.status == "completed"
+        assert captured["collect_operation_name"] == captured["poll_operation_name"]
+
+    asyncio.run(run())
+
+
 def test_sync_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypatch):
     manager = sync_web_crawl_module.WebCrawlManager(_DummyClient())
     long_job_id = " \n" + ("x" * 500) + "\t"
@@ -451,6 +537,88 @@ def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
         assert captured["fetch_operation_name"] == build_fetch_operation_name(
             captured["poll_operation_name"]
         )
+
+    asyncio.run(run())
+
+
+def test_sync_web_crawl_manager_bounds_operation_name_for_paginated_path(monkeypatch):
+    manager = sync_web_crawl_module.WebCrawlManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_poll_until_terminal_status(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["poll_operation_name"] = operation_name
+        return "completed"
+
+    def fake_collect_paginated_results(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["collect_operation_name"] = operation_name
+
+    monkeypatch.setattr(
+        sync_web_crawl_module,
+        "poll_until_terminal_status",
+        fake_poll_until_terminal_status,
+    )
+    monkeypatch.setattr(
+        sync_web_crawl_module,
+        "collect_paginated_results",
+        fake_collect_paginated_results,
+    )
+
+    result = manager.start_and_wait(params=object(), return_all_pages=True)  # type: ignore[arg-type]
+
+    assert result.status == "completed"
+    assert captured["collect_operation_name"] == captured["poll_operation_name"]
+
+
+def test_async_web_crawl_manager_bounds_operation_name_for_paginated_path(monkeypatch):
+    async def run() -> None:
+        manager = async_web_crawl_module.WebCrawlManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_poll_until_terminal_status_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["poll_operation_name"] = operation_name
+            return "completed"
+
+        async def fake_collect_paginated_results_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["collect_operation_name"] = operation_name
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_web_crawl_module,
+            "poll_until_terminal_status_async",
+            fake_poll_until_terminal_status_async,
+        )
+        monkeypatch.setattr(
+            async_web_crawl_module,
+            "collect_paginated_results_async",
+            fake_collect_paginated_results_async,
+        )
+
+        result = await manager.start_and_wait(
+            params=object(),  # type: ignore[arg-type]
+            return_all_pages=True,
+        )
+
+        assert result.status == "completed"
+        assert captured["collect_operation_name"] == captured["poll_operation_name"]
 
     asyncio.run(run())
 
@@ -543,6 +711,92 @@ def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
         assert captured["fetch_operation_name"] == build_fetch_operation_name(
             captured["poll_operation_name"]
         )
+
+    asyncio.run(run())
+
+
+def test_sync_batch_scrape_manager_bounds_operation_name_for_paginated_path(
+    monkeypatch,
+):
+    manager = sync_scrape_module.BatchScrapeManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_poll_until_terminal_status(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["poll_operation_name"] = operation_name
+        return "completed"
+
+    def fake_collect_paginated_results(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["collect_operation_name"] = operation_name
+
+    monkeypatch.setattr(
+        sync_scrape_module,
+        "poll_until_terminal_status",
+        fake_poll_until_terminal_status,
+    )
+    monkeypatch.setattr(
+        sync_scrape_module,
+        "collect_paginated_results",
+        fake_collect_paginated_results,
+    )
+
+    result = manager.start_and_wait(params=object(), return_all_pages=True)  # type: ignore[arg-type]
+
+    assert result.status == "completed"
+    assert captured["collect_operation_name"] == captured["poll_operation_name"]
+
+
+def test_async_batch_scrape_manager_bounds_operation_name_for_paginated_path(
+    monkeypatch,
+):
+    async def run() -> None:
+        manager = async_scrape_module.BatchScrapeManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_poll_until_terminal_status_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["poll_operation_name"] = operation_name
+            return "completed"
+
+        async def fake_collect_paginated_results_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["collect_operation_name"] = operation_name
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_scrape_module,
+            "poll_until_terminal_status_async",
+            fake_poll_until_terminal_status_async,
+        )
+        monkeypatch.setattr(
+            async_scrape_module,
+            "collect_paginated_results_async",
+            fake_collect_paginated_results_async,
+        )
+
+        result = await manager.start_and_wait(
+            params=object(),  # type: ignore[arg-type]
+            return_all_pages=True,
+        )
+
+        assert result.status == "completed"
+        assert captured["collect_operation_name"] == captured["poll_operation_name"]
 
     asyncio.run(run())
 
