@@ -135,7 +135,7 @@ def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
 
 
 def format_request_failure_message(
-    error: httpx.RequestError, *, fallback_method: str, fallback_url: str
+    error: httpx.RequestError, *, fallback_method: object, fallback_url: object
 ) -> str:
     request_method, request_url = extract_request_error_context(error)
     effective_method = (
