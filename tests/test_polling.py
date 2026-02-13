@@ -2,6 +2,7 @@ import asyncio
 
 import pytest
 
+import hyperbrowser.client.polling as polling_helpers
 from hyperbrowser.client.polling import (
     collect_paginated_results,
     collect_paginated_results_async,
@@ -223,6 +224,55 @@ def test_collect_paginated_results_async_collects_all_pages():
         assert collected == ["a", "b"]
 
     asyncio.run(run())
+
+
+def test_collect_paginated_results_does_not_sleep_after_last_page(monkeypatch):
+    sleep_calls = []
+
+    monkeypatch.setattr(
+        polling_helpers.time, "sleep", lambda delay: sleep_calls.append(delay)
+    )
+
+    collect_paginated_results(
+        operation_name="sync single-page",
+        get_next_page=lambda page: {"current": 1, "total": 1, "items": ["a"]},
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: None,
+        max_wait_seconds=1.0,
+        max_attempts=2,
+        retry_delay_seconds=0.5,
+    )
+
+    assert sleep_calls == []
+
+
+def test_collect_paginated_results_async_does_not_sleep_after_last_page(monkeypatch):
+    sleep_calls = []
+
+    async def fake_sleep(delay: float) -> None:
+        sleep_calls.append(delay)
+
+    monkeypatch.setattr(polling_helpers.asyncio, "sleep", fake_sleep)
+
+    async def run() -> None:
+        async def get_next_page(page: int) -> dict:
+            return {"current": 1, "total": 1, "items": ["a"]}
+
+        await collect_paginated_results_async(
+            operation_name="async single-page",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=2,
+            retry_delay_seconds=0.5,
+        )
+
+    asyncio.run(run())
+
+    assert sleep_calls == []
 
 
 def test_collect_paginated_results_raises_after_page_failures():

@@ -201,6 +201,7 @@ def collect_paginated_results(
             raise HyperbrowserTimeoutError(
                 f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
             )
+        should_sleep = True
         try:
             page_response = get_next_page(current_page_batch + 1)
             on_page_success(page_response)
@@ -208,13 +209,15 @@ def collect_paginated_results(
             total_page_batches = get_total_page_batches(page_response)
             failures = 0
             first_check = False
+            should_sleep = current_page_batch < total_page_batches
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
                     f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
                 ) from exc
-        time.sleep(retry_delay_seconds)
+        if should_sleep:
+            time.sleep(retry_delay_seconds)
 
 
 async def collect_paginated_results_async(
@@ -244,6 +247,7 @@ async def collect_paginated_results_async(
             raise HyperbrowserTimeoutError(
                 f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
             )
+        should_sleep = True
         try:
             page_response = await get_next_page(current_page_batch + 1)
             on_page_success(page_response)
@@ -251,13 +255,15 @@ async def collect_paginated_results_async(
             total_page_batches = get_total_page_batches(page_response)
             failures = 0
             first_check = False
+            should_sleep = current_page_batch < total_page_batches
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
                     f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
                 ) from exc
-        await asyncio.sleep(retry_delay_seconds)
+        if should_sleep:
+            await asyncio.sleep(retry_delay_seconds)
 
 
 def wait_for_job_result(
