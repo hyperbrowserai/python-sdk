@@ -211,6 +211,33 @@ def test_async_handle_response_with_detail_field_uses_detail_value():
     asyncio.run(run())
 
 
+def test_sync_handle_response_with_dict_without_message_keys_stringifies_payload():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        response = _build_response(500, '{"code":"UPSTREAM_FAILURE","retryable":false}')
+
+        with pytest.raises(HyperbrowserError, match='"code": "UPSTREAM_FAILURE"'):
+            transport._handle_response(response)
+    finally:
+        transport.close()
+
+
+def test_async_handle_response_with_non_dict_json_stringifies_payload():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            response = _build_response(500, '[{"code":"UPSTREAM_FAILURE"}]')
+
+            with pytest.raises(
+                HyperbrowserError, match='\\[\\{"code": "UPSTREAM_FAILURE"\\}\\]'
+            ):
+                await transport._handle_response(response)
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
 def test_sync_transport_post_wraps_request_errors_with_url_context():
     transport = SyncTransport(api_key="test-key")
     original_post = transport.client.post

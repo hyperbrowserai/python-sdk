@@ -29,10 +29,10 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
             message = error_data.get(key)
             if message is not None:
                 return _stringify_error_value(message)
-        return response.text or str(fallback_error)
+        return _stringify_error_value(error_data)
     if isinstance(error_data, str):
         return error_data
-    return _stringify_error_value(response.text or str(fallback_error))
+    return _stringify_error_value(error_data)
 
 
 def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
