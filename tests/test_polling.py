@@ -146,6 +146,29 @@ def test_poll_until_terminal_status_does_not_retry_numeric_string_client_errors(
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_does_not_retry_bytearray_client_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise HyperbrowserError(
+            "client failure",
+            status_code=bytearray(b"400"),  # type: ignore[arg-type]
+        )
+
+    with pytest.raises(HyperbrowserError, match="client failure"):
+        poll_until_terminal_status(
+            operation_name="sync poll bytearray client error",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_does_not_retry_memoryview_client_errors():
     attempts = {"count": 0}
 
@@ -832,6 +855,29 @@ def test_retry_operation_retries_numeric_string_rate_limit_errors():
     assert attempts["count"] == 3
 
 
+def test_retry_operation_retries_bytearray_rate_limit_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError(
+                "rate limited",
+                status_code=bytearray(b"429"),  # type: ignore[arg-type]
+            )
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry bytearray rate limit",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
 def test_retry_operation_retries_memoryview_rate_limit_errors():
     attempts = {"count": 0}
 
@@ -1381,6 +1427,32 @@ def test_poll_until_terminal_status_async_does_not_retry_numeric_string_client_e
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_does_not_retry_bytearray_client_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise HyperbrowserError(
+                "client failure",
+                status_code=bytearray(b"404"),  # type: ignore[arg-type]
+            )
+
+        with pytest.raises(HyperbrowserError, match="client failure"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll bytearray client error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_async_does_not_retry_memoryview_client_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -1731,6 +1803,32 @@ def test_retry_operation_async_retries_numeric_string_rate_limit_errors():
 
         result = await retry_operation_async(
             operation_name="async retry numeric-string rate limit",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_retries_bytearray_rate_limit_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "rate limited",
+                    status_code=bytearray(b"429"),  # type: ignore[arg-type]
+                )
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry bytearray rate limit",
             operation=operation,
             max_attempts=5,
             retry_delay_seconds=0.0001,
@@ -3845,6 +3943,38 @@ def test_wait_for_job_result_does_not_retry_numeric_string_status_errors():
     assert fetch_attempts["count"] == 0
 
 
+def test_wait_for_job_result_does_not_retry_bytearray_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        raise HyperbrowserError(
+            "client failure",
+            status_code=bytearray(b"400"),  # type: ignore[arg-type]
+        )
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(HyperbrowserError, match="client failure"):
+        wait_for_job_result(
+            operation_name="sync wait helper status bytearray client error",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
 def test_wait_for_job_result_does_not_retry_numeric_bytes_status_errors():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -4522,6 +4652,34 @@ def test_wait_for_job_result_retries_numeric_string_rate_limit_fetch_errors():
     assert fetch_attempts["count"] == 3
 
 
+def test_wait_for_job_result_retries_bytearray_rate_limit_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        if fetch_attempts["count"] < 3:
+            raise HyperbrowserError(
+                "rate limited",
+                status_code=bytearray(b"429"),  # type: ignore[arg-type]
+            )
+        return {"ok": True}
+
+    result = wait_for_job_result(
+        operation_name="sync wait helper fetch bytearray rate limit",
+        get_status=lambda: "completed",
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=fetch_result,
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=5,
+        fetch_max_attempts=5,
+        fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+    assert fetch_attempts["count"] == 3
+
+
 def test_wait_for_job_result_retries_numeric_bytes_rate_limit_fetch_errors():
     fetch_attempts = {"count": 0}
 
@@ -4767,6 +4925,41 @@ def test_wait_for_job_result_async_does_not_retry_numeric_string_status_errors()
         with pytest.raises(HyperbrowserError, match="client failure"):
             await wait_for_job_result_async(
                 operation_name="async wait helper status numeric-string client error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_bytearray_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            raise HyperbrowserError(
+                "client failure",
+                status_code=bytearray(b"404"),  # type: ignore[arg-type]
+            )
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(HyperbrowserError, match="client failure"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper status bytearray client error",
                 get_status=get_status,
                 is_terminal_status=lambda value: value == "completed",
                 fetch_result=fetch_result,
@@ -5507,6 +5700,37 @@ def test_wait_for_job_result_async_retries_numeric_string_rate_limit_fetch_error
 
         result = await wait_for_job_result_async(
             operation_name="async wait helper fetch numeric-string rate limit",
+            get_status=lambda: asyncio.sleep(0, result="completed"),
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+        assert result == {"ok": True}
+        assert fetch_attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_retries_bytearray_rate_limit_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            if fetch_attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "rate limited",
+                    status_code=bytearray(b"429"),  # type: ignore[arg-type]
+                )
+            return {"ok": True}
+
+        result = await wait_for_job_result_async(
+            operation_name="async wait helper fetch bytearray rate limit",
             get_status=lambda: asyncio.sleep(0, result="completed"),
             is_terminal_status=lambda value: value == "completed",
             fetch_result=fetch_result,
