@@ -134,6 +134,8 @@ def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
     normalized_message = str(exc).lower()
     if "event loop is closed" in normalized_message:
         return True
+    if "event loop other than the current one" in normalized_message:
+        return True
     if "different event loop" in normalized_message:
         return True
     return "different loop" in normalized_message and any(
