@@ -48,7 +48,9 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
     if isinstance(schema_value, str):
         try:
             normalized_params["schema"] = json.loads(schema_value)
-        except json.JSONDecodeError as exc:
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
             raise HyperbrowserError(
                 "Invalid JSON string provided for `schema` in extract tool params",
                 original_error=exc,
@@ -85,6 +87,20 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
                 original_error=exc,
             ) from exc
     return normalized_params
+
+
+def _serialize_extract_tool_data(data: Any) -> str:
+    if data is None:
+        return ""
+    try:
+        return json.dumps(data)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to serialize extract tool response data",
+            original_error=exc,
+        ) from exc
 
 
 class WebsiteScrapeTool:
@@ -168,7 +184,7 @@ class WebsiteExtractTool:
         resp = hb.extract.start_and_wait(
             params=StartExtractJobParams(**normalized_params)
         )
-        return json.dumps(resp.data) if resp.data else ""
+        return _serialize_extract_tool_data(resp.data)
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: Mapping[str, Any]) -> str:
@@ -176,7 +192,7 @@ class WebsiteExtractTool:
         resp = await hb.extract.start_and_wait(
             params=StartExtractJobParams(**normalized_params)
         )
-        return json.dumps(resp.data) if resp.data else ""
+        return _serialize_extract_tool_data(resp.data)
 
 
 class BrowserUseTool:
