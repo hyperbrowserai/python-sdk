@@ -111,6 +111,14 @@ def test_build_operation_name_handles_very_large_identifier_inputs():
     assert len(operation_name) == 200
 
 
+def test_build_operation_name_sanitizes_truncated_identifier_segment():
+    operation_name = build_operation_name("crawl job ", ("a" * 20) + "\n" + ("b" * 500))
+
+    assert operation_name.startswith("crawl job " + ("a" * 20) + "?")
+    assert operation_name.endswith("...")
+    assert len(operation_name) == 200
+
+
 def test_build_operation_name_truncates_overlong_prefixes():
     long_prefix = "p" * 250
     operation_name = build_operation_name(long_prefix, "identifier")

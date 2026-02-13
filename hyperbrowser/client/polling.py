@@ -38,6 +38,13 @@ def _coerce_operation_name_component(value: object, *, fallback: str) -> str:
         return fallback
 
 
+def _sanitize_operation_name_component(value: str) -> str:
+    return "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in value
+    )
+
+
 def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
     is_supported_numeric_type = isinstance(value, Real) or isinstance(value, Decimal)
     if isinstance(value, bool) or not is_supported_numeric_type:
@@ -78,10 +85,7 @@ def _validate_operation_name(operation_name: str) -> None:
 
 def build_operation_name(prefix: object, identifier: object) -> str:
     normalized_prefix = _coerce_operation_name_component(prefix, fallback="")
-    normalized_prefix = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in normalized_prefix
-    )
+    normalized_prefix = _sanitize_operation_name_component(normalized_prefix)
     normalized_prefix = normalized_prefix.lstrip()
     has_trailing_whitespace = (
         bool(normalized_prefix) and normalized_prefix[-1].isspace()
@@ -93,14 +97,11 @@ def build_operation_name(prefix: object, identifier: object) -> str:
     normalized_identifier = raw_identifier.strip()
     if not normalized_identifier:
         normalized_identifier = "unknown"
-    normalized_identifier = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in normalized_identifier
-    )
 
     combined_length = len(normalized_prefix) + len(normalized_identifier)
     if combined_length <= _MAX_OPERATION_NAME_LENGTH:
-        operation_name = f"{normalized_prefix}{normalized_identifier}".strip()
+        sanitized_identifier = _sanitize_operation_name_component(normalized_identifier)
+        operation_name = f"{normalized_prefix}{sanitized_identifier}".strip()
         if not operation_name:
             return "operation"
         return operation_name
@@ -111,8 +112,11 @@ def build_operation_name(prefix: object, identifier: object) -> str:
     )
     if available_identifier_length > 0:
         truncated_identifier = normalized_identifier[:available_identifier_length]
+        sanitized_truncated_identifier = _sanitize_operation_name_component(
+            truncated_identifier
+        )
         operation_name = (
-            f"{normalized_prefix}{truncated_identifier}"
+            f"{normalized_prefix}{sanitized_truncated_identifier}"
             f"{_TRUNCATED_OPERATION_NAME_SUFFIX}"
         )
     else:
