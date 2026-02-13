@@ -37,6 +37,9 @@ jobs:
       - name: Lint
         run: python -m ruff check .
 
+      - name: Compile sources
+        run: python -m compileall -q hyperbrowser examples tests
+
       - name: Test
         run: python -m pytest -q
 
