@@ -122,11 +122,6 @@ def poll_until_terminal_status(
     failures = 0
 
     while True:
-        if has_exceeded_max_wait(start_time, max_wait_seconds):
-            raise HyperbrowserTimeoutError(
-                f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
-            )
-
         try:
             status = get_status()
             failures = 0
@@ -136,11 +131,19 @@ def poll_until_terminal_status(
                 raise HyperbrowserPollingError(
                     f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
                 ) from exc
+            if has_exceeded_max_wait(start_time, max_wait_seconds):
+                raise HyperbrowserTimeoutError(
+                    f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
+                )
             time.sleep(poll_interval_seconds)
             continue
 
         if is_terminal_status(status):
             return status
+        if has_exceeded_max_wait(start_time, max_wait_seconds):
+            raise HyperbrowserTimeoutError(
+                f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
+            )
         time.sleep(poll_interval_seconds)
 
 
@@ -190,11 +193,6 @@ async def poll_until_terminal_status_async(
     failures = 0
 
     while True:
-        if has_exceeded_max_wait(start_time, max_wait_seconds):
-            raise HyperbrowserTimeoutError(
-                f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
-            )
-
         try:
             status = await get_status()
             failures = 0
@@ -204,11 +202,19 @@ async def poll_until_terminal_status_async(
                 raise HyperbrowserPollingError(
                     f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
                 ) from exc
+            if has_exceeded_max_wait(start_time, max_wait_seconds):
+                raise HyperbrowserTimeoutError(
+                    f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
+                )
             await asyncio.sleep(poll_interval_seconds)
             continue
 
         if is_terminal_status(status):
             return status
+        if has_exceeded_max_wait(start_time, max_wait_seconds):
+            raise HyperbrowserTimeoutError(
+                f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
+            )
         await asyncio.sleep(poll_interval_seconds)
 
 
@@ -262,10 +268,6 @@ def collect_paginated_results(
     stagnation_failures = 0
 
     while first_check or current_page_batch < total_page_batches:
-        if has_exceeded_max_wait(start_time, max_wait_seconds):
-            raise HyperbrowserTimeoutError(
-                f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
-            )
         should_sleep = True
         try:
             previous_page_batch = current_page_batch
@@ -301,6 +303,10 @@ def collect_paginated_results(
                     f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
                 ) from exc
         if should_sleep:
+            if has_exceeded_max_wait(start_time, max_wait_seconds):
+                raise HyperbrowserTimeoutError(
+                    f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
+                )
             time.sleep(retry_delay_seconds)
 
 
@@ -329,10 +335,6 @@ async def collect_paginated_results_async(
     stagnation_failures = 0
 
     while first_check or current_page_batch < total_page_batches:
-        if has_exceeded_max_wait(start_time, max_wait_seconds):
-            raise HyperbrowserTimeoutError(
-                f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
-            )
         should_sleep = True
         try:
             previous_page_batch = current_page_batch
@@ -368,6 +370,10 @@ async def collect_paginated_results_async(
                     f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
                 ) from exc
         if should_sleep:
+            if has_exceeded_max_wait(start_time, max_wait_seconds):
+                raise HyperbrowserTimeoutError(
+                    f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
+                )
             await asyncio.sleep(retry_delay_seconds)
 
 

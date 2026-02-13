@@ -34,6 +34,18 @@ def test_poll_until_terminal_status_returns_terminal_value():
     assert status == "completed"
 
 
+def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
+    status = poll_until_terminal_status(
+        operation_name="sync immediate zero wait",
+        get_status=lambda: "completed",
+        is_terminal_status=lambda value: value == "completed",
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=0,
+    )
+
+    assert status == "completed"
+
+
 def test_poll_until_terminal_status_times_out():
     with pytest.raises(
         HyperbrowserTimeoutError, match="Timed out waiting for sync timeout"
@@ -142,6 +154,20 @@ def test_async_polling_and_retry_helpers():
     asyncio.run(run())
 
 
+def test_async_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
+    async def run() -> None:
+        status = await poll_until_terminal_status_async(
+            operation_name="async immediate zero wait",
+            get_status=lambda: asyncio.sleep(0, result="completed"),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=0,
+        )
+        assert status == "completed"
+
+    asyncio.run(run())
+
+
 def test_async_poll_until_terminal_status_retries_transient_status_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -202,6 +228,23 @@ def test_collect_paginated_results_collects_all_pages():
     assert collected == ["a", "b"]
 
 
+def test_collect_paginated_results_allows_single_page_on_zero_max_wait():
+    collected = []
+
+    collect_paginated_results(
+        operation_name="sync paginated zero wait",
+        get_next_page=lambda page: {"current": 1, "total": 1, "items": ["a"]},
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: collected.extend(response["items"]),
+        max_wait_seconds=0,
+        max_attempts=2,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert collected == ["a"]
+
+
 def test_collect_paginated_results_async_collects_all_pages():
     async def run() -> None:
         page_map = {
@@ -222,6 +265,28 @@ def test_collect_paginated_results_async_collects_all_pages():
         )
 
         assert collected == ["a", "b"]
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_allows_single_page_on_zero_max_wait():
+    async def run() -> None:
+        collected = []
+
+        await collect_paginated_results_async(
+            operation_name="async paginated zero wait",
+            get_next_page=lambda page: asyncio.sleep(
+                0, result={"current": 1, "total": 1, "items": ["a"]}
+            ),
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: collected.extend(response["items"]),
+            max_wait_seconds=0,
+            max_attempts=2,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert collected == ["a"]
 
     asyncio.run(run())
 
