@@ -23,6 +23,11 @@ def test_sync_transport_accepts_custom_headers():
         transport.close()
 
 
+def test_sync_transport_rejects_non_string_header_pairs():
+    with pytest.raises(HyperbrowserError, match="headers must be a mapping"):
+        SyncTransport(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]
+
+
 def test_async_transport_accepts_custom_headers():
     async def run() -> None:
         transport = AsyncTransport(
@@ -37,6 +42,11 @@ def test_async_transport_accepts_custom_headers():
             await transport.close()
 
     asyncio.run(run())
+
+
+def test_async_transport_rejects_non_string_header_pairs():
+    with pytest.raises(HyperbrowserError, match="headers must be a mapping"):
+        AsyncTransport(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]
 
 
 def test_sync_client_config_headers_are_applied_to_transport():

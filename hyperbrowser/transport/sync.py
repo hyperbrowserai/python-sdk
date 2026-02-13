@@ -16,6 +16,11 @@ class SyncTransport(SyncTransportStrategy):
             "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
         }
         if headers:
+            if any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in headers.items()
+            ):
+                raise HyperbrowserError("headers must be a mapping of string pairs")
             merged_headers.update(headers)
         self.client = httpx.Client(headers=merged_headers)
 
