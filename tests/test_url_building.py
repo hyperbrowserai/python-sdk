@@ -30,6 +30,7 @@ def test_client_build_url_uses_normalized_base_url():
     )
     try:
         assert client._build_url("/session") == "https://example.local/api/session"
+        assert client._build_url("  session  ") == "https://example.local/api/session"
     finally:
         client.close()
 
