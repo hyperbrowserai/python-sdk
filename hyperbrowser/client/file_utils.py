@@ -13,11 +13,15 @@ def ensure_existing_file_path(
 ) -> str:
     try:
         normalized_path = os.fspath(file_path)
+    except HyperbrowserError:
+        raise
     except TypeError as exc:
         raise HyperbrowserError(
             "file_path must be a string or os.PathLike object",
             original_error=exc,
         ) from exc
+    except Exception as exc:
+        raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
     if not isinstance(normalized_path, str):
         raise HyperbrowserError("file_path must resolve to a string path")
     if not normalized_path.strip():

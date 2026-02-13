@@ -134,3 +134,33 @@ def test_ensure_existing_file_path_wraps_invalid_path_os_errors(monkeypatch):
             missing_file_message="missing",
             not_file_message="not-file",
         )
+
+
+def test_ensure_existing_file_path_wraps_fspath_runtime_errors():
+    class _BrokenPathLike:
+        def __fspath__(self) -> str:
+            raise RuntimeError("bad fspath")
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        ensure_existing_file_path(
+            _BrokenPathLike(),  # type: ignore[arg-type]
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_ensure_existing_file_path_preserves_hyperbrowser_fspath_errors():
+    class _BrokenPathLike:
+        def __fspath__(self) -> str:
+            raise HyperbrowserError("custom fspath failure")
+
+    with pytest.raises(HyperbrowserError, match="custom fspath failure") as exc_info:
+        ensure_existing_file_path(
+            _BrokenPathLike(),  # type: ignore[arg-type]
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is None
