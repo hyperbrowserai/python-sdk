@@ -2497,6 +2497,35 @@ def test_wait_for_job_result_does_not_retry_stop_iteration_status_errors():
     assert fetch_attempts["count"] == 0
 
 
+def test_wait_for_job_result_does_not_retry_concurrent_cancelled_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        raise ConcurrentCancelledError()
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(ConcurrentCancelledError):
+        wait_for_job_result(
+            operation_name="sync wait helper status concurrent-cancelled",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
 def test_wait_for_job_result_retries_rate_limit_status_errors():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -2607,6 +2636,29 @@ def test_wait_for_job_result_does_not_retry_concurrent_cancelled_fetch_errors():
     with pytest.raises(ConcurrentCancelledError):
         wait_for_job_result(
             operation_name="sync wait helper fetch concurrent-cancelled",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_does_not_retry_loop_runtime_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise RuntimeError("Task is bound to a different event loop")
+
+    with pytest.raises(RuntimeError, match="different event loop"):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch loop-runtime",
             get_status=lambda: "completed",
             is_terminal_status=lambda value: value == "completed",
             fetch_result=fetch_result,
@@ -2787,6 +2839,38 @@ def test_wait_for_job_result_async_does_not_retry_stop_async_iteration_status_er
     asyncio.run(run())
 
 
+def test_wait_for_job_result_async_does_not_retry_concurrent_cancelled_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            raise ConcurrentCancelledError()
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(ConcurrentCancelledError):
+            await wait_for_job_result_async(
+                operation_name="async wait helper status concurrent-cancelled",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
 def test_wait_for_job_result_async_retries_rate_limit_status_errors():
     async def run() -> None:
         status_attempts = {"count": 0}
@@ -2910,6 +2994,32 @@ def test_wait_for_job_result_async_does_not_retry_concurrent_cancelled_fetch_err
         with pytest.raises(ConcurrentCancelledError):
             await wait_for_job_result_async(
                 operation_name="async wait helper fetch concurrent-cancelled",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_loop_runtime_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise RuntimeError("Event loop is closed")
+
+        with pytest.raises(RuntimeError, match="Event loop is closed"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch loop-runtime",
                 get_status=lambda: asyncio.sleep(0, result="completed"),
                 is_terminal_status=lambda value: value == "completed",
                 fetch_result=fetch_result,
