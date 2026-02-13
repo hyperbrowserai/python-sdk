@@ -112,6 +112,8 @@ Both clients expose:
 - `client.team`
 - `client.computer_action`
 
+For file uploads (session uploads, extension uploads), provided paths must reference existing files (not directories).
+
 ## Job polling (`start_and_wait`)
 
 Long-running APIs expose `start_and_wait(...)`.
