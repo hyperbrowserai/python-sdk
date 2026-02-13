@@ -35,6 +35,18 @@ class ClientConfig:
         )
 
     @staticmethod
+    def _decode_url_component_with_limit(value: str, *, component_label: str) -> str:
+        decoded_value = value
+        for _ in range(10):
+            next_decoded_value = unquote(decoded_value)
+            if next_decoded_value == decoded_value:
+                return decoded_value
+            decoded_value = next_decoded_value
+        raise HyperbrowserError(
+            f"{component_label} contains excessively nested URL encoding"
+        )
+
+    @staticmethod
     def normalize_base_url(base_url: str) -> str:
         if not isinstance(base_url, str):
             raise HyperbrowserError("base_url must be a string")
@@ -78,16 +90,9 @@ class ClientConfig:
                 "base_url must contain a valid port number"
             ) from exc
 
-        decoded_base_path = parsed_base_url.path
-        for _ in range(10):
-            next_decoded_base_path = unquote(decoded_base_path)
-            if next_decoded_base_path == decoded_base_path:
-                break
-            decoded_base_path = next_decoded_base_path
-        else:
-            raise HyperbrowserError(
-                "base_url path contains excessively nested URL encoding"
-            )
+        decoded_base_path = ClientConfig._decode_url_component_with_limit(
+            parsed_base_url.path, component_label="base_url path"
+        )
         if "\\" in decoded_base_path:
             raise HyperbrowserError("base_url must not contain backslashes")
         if any(character.isspace() for character in decoded_base_path):

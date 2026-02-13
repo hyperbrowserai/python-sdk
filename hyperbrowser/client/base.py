@@ -1,5 +1,5 @@
 import os
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
 from typing import Mapping, Optional, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -101,14 +101,9 @@ class HyperbrowserBase:
         normalized_query_suffix = (
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
-        decoded_path = normalized_path_only
-        for _ in range(10):
-            next_decoded_path = unquote(decoded_path)
-            if next_decoded_path == decoded_path:
-                break
-            decoded_path = next_decoded_path
-        else:
-            raise HyperbrowserError("path contains excessively nested URL encoding")
+        decoded_path = ClientConfig._decode_url_component_with_limit(
+            normalized_path_only, component_label="path"
+        )
         if "\\" in decoded_path:
             raise HyperbrowserError("path must not contain backslashes")
         if "\n" in decoded_path or "\r" in decoded_path:
