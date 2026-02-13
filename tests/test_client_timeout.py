@@ -119,10 +119,14 @@ def test_async_client_rejects_non_finite_timeout(invalid_timeout: float):
 
 
 def test_sync_client_rejects_overflowing_real_timeout():
-    with pytest.raises(HyperbrowserError, match="timeout must be finite"):
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
         Hyperbrowser(api_key="test-key", timeout=Fraction(10**1000, 1))
+
+    assert exc_info.value.original_error is not None
 
 
 def test_async_client_rejects_overflowing_real_timeout():
-    with pytest.raises(HyperbrowserError, match="timeout must be finite"):
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
         AsyncHyperbrowser(api_key="test-key", timeout=Fraction(10**1000, 1))
+
+    assert exc_info.value.original_error is not None
