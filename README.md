@@ -22,6 +22,7 @@ You can pass credentials directly, or use environment variables.
 ```bash
 export HYPERBROWSER_API_KEY="your_api_key"
 export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
+export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON object
 ```
 
 `base_url` must start with `https://` (or `http://` for local testing).  
