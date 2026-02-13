@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Literal, Optional, Type, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ...exceptions import HyperbrowserError
 from ..consts import BrowserUseLlm, BrowserUseVersion
 from ..session import CreateSessionParams
 
@@ -296,4 +297,4 @@ def cast_steps_for_version(
     elif version == "latest":
         return steps
     else:
-        raise ValueError(f"Invalid version: {version}")
+        raise HyperbrowserError(f"Invalid browser-use version: {version}")
