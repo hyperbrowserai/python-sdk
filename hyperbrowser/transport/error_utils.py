@@ -39,6 +39,8 @@ def _normalize_request_method(method: Any) -> str:
 def _normalize_request_url(url: Any) -> str:
     if url is None:
         return "unknown URL"
+    if isinstance(url, bool):
+        return "unknown URL"
     raw_url = url
     if not isinstance(raw_url, str):
         try:

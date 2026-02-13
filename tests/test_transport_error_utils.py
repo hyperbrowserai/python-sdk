@@ -256,6 +256,16 @@ def test_format_request_failure_message_normalizes_numeric_fallback_url_values()
     assert message == "Request GET unknown URL failed"
 
 
+def test_format_request_failure_message_normalizes_boolean_fallback_url_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="GET",
+        fallback_url=True,
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
 @pytest.mark.parametrize(
     "sentinel_url",
     [
@@ -319,6 +329,15 @@ def test_format_generic_request_failure_message_normalizes_numeric_url_values():
     message = format_generic_request_failure_message(
         method="GET",
         url=123,
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
+def test_format_generic_request_failure_message_normalizes_boolean_url_values():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=False,
     )
 
     assert message == "Request GET unknown URL failed"
