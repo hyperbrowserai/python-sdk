@@ -18,6 +18,24 @@ class _MalformedHeaderItemsMapping(dict):
         return [("X-Trace-Id", "trace-1", "extra-item")]
 
 
+class _BrokenLenTuple(tuple):
+    def __len__(self):
+        raise RuntimeError("broken tuple length")
+
+
+class _BrokenIndexTuple(tuple):
+    def __getitem__(self, index):
+        raise RuntimeError("broken tuple indexing")
+
+
+class _BrokenTupleItemMapping(dict):
+    def __init__(self, broken_item):
+        self._broken_item = broken_item
+
+    def items(self):
+        return [self._broken_item]
+
+
 def test_normalize_headers_trims_header_names():
     headers = normalize_headers(
         {"  X-Correlation-Id  ": "abc123"},
@@ -231,3 +249,28 @@ def test_merge_headers_rejects_malformed_override_mapping_items():
             _MalformedHeaderItemsMapping(),
             mapping_error_message="headers must be a mapping of string pairs",
         )
+
+
+def test_normalize_headers_wraps_broken_tuple_length_errors():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ) as exc_info:
+        normalize_headers(
+            _BrokenTupleItemMapping(_BrokenLenTuple(("X-Trace-Id", "trace-1"))),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_merge_headers_wraps_broken_tuple_index_errors():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ) as exc_info:
+        merge_headers(
+            {"X-Trace-Id": "trace-1"},
+            _BrokenTupleItemMapping(_BrokenIndexTuple(("X-Trace-Id", "trace-2"))),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert exc_info.value.original_error is not None

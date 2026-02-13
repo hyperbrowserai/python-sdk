@@ -19,9 +19,16 @@ def _read_header_items(
         raise HyperbrowserError(mapping_error_message, original_error=exc) from exc
     normalized_items: list[tuple[object, object]] = []
     for item in raw_items:
-        if not isinstance(item, tuple) or len(item) != 2:
-            raise HyperbrowserError(mapping_error_message)
-        normalized_items.append((item[0], item[1]))
+        try:
+            if not isinstance(item, tuple):
+                raise HyperbrowserError(mapping_error_message)
+            if len(item) != 2:
+                raise HyperbrowserError(mapping_error_message)
+            normalized_items.append((item[0], item[1]))
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(mapping_error_message, original_error=exc) from exc
     return normalized_items
 
 
