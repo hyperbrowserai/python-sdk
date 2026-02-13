@@ -57,7 +57,7 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
     schema_value = normalized_params.get("schema")
     if isinstance(schema_value, str):
         try:
-            normalized_params["schema"] = json.loads(schema_value)
+            parsed_schema = json.loads(schema_value)
         except HyperbrowserError:
             raise
         except Exception as exc:
@@ -65,6 +65,11 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
                 "Invalid JSON string provided for `schema` in extract tool params",
                 original_error=exc,
             ) from exc
+        if parsed_schema is not None and not isinstance(parsed_schema, MappingABC):
+            raise HyperbrowserError(
+                "Extract tool `schema` must decode to a JSON object"
+            )
+        normalized_params["schema"] = parsed_schema
     return normalized_params
 
 
