@@ -23,6 +23,15 @@ def test_client_config_from_env_raises_hyperbrowser_error_for_blank_api_key(
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_rejects_control_character_api_key(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "bad\nkey")
+
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_reads_api_key_and_base_url(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_BASE_URL", "https://example.local")

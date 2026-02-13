@@ -90,3 +90,21 @@ def test_async_client_rejects_control_character_api_key():
         HyperbrowserError, match="api_key must not contain control characters"
     ):
         AsyncHyperbrowser(api_key="bad\nkey")
+
+
+def test_sync_client_rejects_control_character_env_api_key(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "bad\nkey")
+
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        Hyperbrowser()
+
+
+def test_async_client_rejects_control_character_env_api_key(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "bad\nkey")
+
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        AsyncHyperbrowser()
