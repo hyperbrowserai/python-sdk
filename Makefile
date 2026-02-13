@@ -1,4 +1,4 @@
-.PHONY: install lint format-check format test build check
+.PHONY: install lint format-check format compile test build check ci
 
 install:
 	python -m pip install -e . pytest ruff build
@@ -15,7 +15,12 @@ format:
 test:
 	python -m pytest -q
 
+compile:
+	python -m compileall -q hyperbrowser examples tests
+
 build:
 	python -m build
 
-check: lint format-check test build
+check: lint format-check compile test build
+
+ci: check

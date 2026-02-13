@@ -177,6 +177,7 @@ Or use Make targets:
 ```bash
 make install
 make check
+make ci
 ```
 
 ## Examples
