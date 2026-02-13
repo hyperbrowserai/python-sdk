@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 from typing import Mapping, Optional, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -71,7 +72,8 @@ class HyperbrowserBase:
         stripped_path = path.strip()
         if not stripped_path:
             raise HyperbrowserError("path must not be empty")
-        if "://" in stripped_path:
+        parsed_path = urlparse(stripped_path)
+        if parsed_path.scheme and parsed_path.netloc:
             raise HyperbrowserError("path must be a relative API path")
         normalized_path = f"/{stripped_path.lstrip('/')}"
         if normalized_path == "/api" or normalized_path.startswith("/api/"):

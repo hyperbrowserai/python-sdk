@@ -53,3 +53,14 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             client._build_url("https://api.hyperbrowser.ai/session")
     finally:
         client.close()
+
+
+def test_client_build_url_allows_query_values_containing_absolute_urls():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        assert (
+            client._build_url("/web/fetch?target=https://example.com")
+            == "https://api.hyperbrowser.ai/api/web/fetch?target=https://example.com"
+        )
+    finally:
+        client.close()
