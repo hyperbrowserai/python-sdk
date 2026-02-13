@@ -137,6 +137,10 @@ These methods now support explicit polling controls:
 - `max_status_failures` (default `5`)
 
 Timing values must be finite, non-negative numbers.
+Polling callback contracts are also validated:
+
+- Sync polling helpers require non-awaitable callback return values.
+- Async polling helpers require awaitable status/page/retry callbacks.
 
 Example:
 
