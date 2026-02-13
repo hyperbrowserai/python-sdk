@@ -73,6 +73,24 @@ def test_client_config_from_env_rejects_non_string_header_values(monkeypatch):
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_rejects_empty_header_name(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"   ":"value"}')
+
+    with pytest.raises(HyperbrowserError, match="header names must not be empty"):
+        ClientConfig.from_env()
+
+
+def test_client_config_from_env_rejects_newline_header_values(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Correlation-Id":"bad\\nvalue"}')
+
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain newline characters"
+    ):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_ignores_blank_headers(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_HEADERS", "   ")
