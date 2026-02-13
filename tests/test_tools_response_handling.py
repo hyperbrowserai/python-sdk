@@ -416,6 +416,32 @@ def test_scrape_tool_wraps_mapping_field_inspection_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_scrape_tool_preserves_hyperbrowser_mapping_field_inspection_failures():
+    class _BrokenContainsMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom markdown inspect failure")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    client = _SyncScrapeClient(_Response(data=_BrokenContainsMapping()))
+
+    with pytest.raises(
+        HyperbrowserError, match="custom markdown inspect failure"
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is None
+
+
 def test_screenshot_tool_rejects_non_string_screenshot_field():
     client = _SyncScrapeClient(_Response(data=SimpleNamespace(screenshot=123)))
 
@@ -581,6 +607,30 @@ def test_crawl_tool_wraps_mapping_page_inspection_failures():
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
     assert exc_info.value.original_error is not None
+
+
+def test_crawl_tool_preserves_hyperbrowser_mapping_page_inspection_failures():
+    class _BrokenContainsPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom page inspect failure")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    client = _SyncCrawlClient(_Response(data=[_BrokenContainsPage()]))
+
+    with pytest.raises(HyperbrowserError, match="custom page inspect failure") as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is None
 
 
 def test_crawl_tool_rejects_non_string_page_urls():
@@ -880,6 +930,36 @@ def test_async_scrape_tool_wraps_mapping_field_inspection_failures():
     asyncio.run(run())
 
 
+def test_async_scrape_tool_preserves_hyperbrowser_mapping_field_inspection_failures():
+    class _BrokenContainsMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom markdown inspect failure")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_Response(data=_BrokenContainsMapping()))
+        with pytest.raises(
+            HyperbrowserError, match="custom markdown inspect failure"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
 def test_async_scrape_tool_decodes_utf8_bytes_markdown_field():
     async def run() -> None:
         client = _AsyncScrapeClient(_Response(data=SimpleNamespace(markdown=b"async")))
@@ -961,6 +1041,35 @@ def test_async_crawl_tool_wraps_mapping_page_inspection_failures():
                 client, {"url": "https://example.com"}
             )
         assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_preserves_hyperbrowser_mapping_page_inspection_failures():
+    class _BrokenContainsPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom page inspect failure")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    async def run() -> None:
+        client = _AsyncCrawlClient(_Response(data=[_BrokenContainsPage()]))
+        with pytest.raises(
+            HyperbrowserError, match="custom page inspect failure"
+        ) as exc_info:
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
+        assert exc_info.value.original_error is None
 
     asyncio.run(run())
 
