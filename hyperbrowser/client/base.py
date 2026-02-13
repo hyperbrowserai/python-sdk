@@ -1,9 +1,9 @@
-from typing import Optional, Type, Union
+import os
+from typing import Dict, Optional, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ..config import ClientConfig
 from ..transport.base import AsyncTransportStrategy, SyncTransportStrategy
-import os
 
 
 class HyperbrowserBase:
@@ -15,7 +15,15 @@ class HyperbrowserBase:
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
     ):
+        if config is not None and any(
+            value is not None for value in (api_key, base_url, headers)
+        ):
+            raise TypeError(
+                "Pass either `config` or `api_key`/`base_url`/`headers`, not both."
+            )
+
         if config is None:
             config = ClientConfig(
                 api_key=(
@@ -30,6 +38,7 @@ class HyperbrowserBase:
                         "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
                     )
                 ),
+                headers=headers,
             )
 
         if not config.api_key:

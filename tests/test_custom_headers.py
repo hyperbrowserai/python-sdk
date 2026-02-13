@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.config import ClientConfig
 from hyperbrowser.transport.async_transport import AsyncTransport
@@ -45,6 +47,14 @@ def test_sync_client_config_headers_are_applied_to_transport():
         client.close()
 
 
+def test_sync_client_constructor_headers_are_applied_to_transport():
+    client = Hyperbrowser(api_key="test-key", headers={"X-Team-Trace": "team-2"})
+    try:
+        assert client.transport.client.headers["X-Team-Trace"] == "team-2"
+    finally:
+        client.close()
+
+
 def test_async_client_config_headers_are_applied_to_transport():
     async def run() -> None:
         client = AsyncHyperbrowser(
@@ -56,3 +66,22 @@ def test_async_client_config_headers_are_applied_to_transport():
             await client.close()
 
     asyncio.run(run())
+
+
+def test_async_client_constructor_headers_are_applied_to_transport():
+    async def run() -> None:
+        client = AsyncHyperbrowser(api_key="test-key", headers={"X-Team-Trace": "team-2"})
+        try:
+            assert client.transport.client.headers["X-Team-Trace"] == "team-2"
+        finally:
+            await client.close()
+
+    asyncio.run(run())
+
+
+def test_client_constructor_rejects_mixed_config_and_direct_args():
+    with pytest.raises(TypeError, match="Pass either `config`"):
+        Hyperbrowser(
+            config=ClientConfig(api_key="test-key"),
+            headers={"X-Team-Trace": "team-1"},
+        )

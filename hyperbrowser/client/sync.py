@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 
 from ..config import ClientConfig
 from ..transport.sync import SyncTransport
@@ -23,9 +23,10 @@ class Hyperbrowser(HyperbrowserBase):
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = 30,
     ):
-        super().__init__(SyncTransport, config, api_key, base_url)
+        super().__init__(SyncTransport, config, api_key, base_url, headers)
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
         self.web = WebManager(self)
