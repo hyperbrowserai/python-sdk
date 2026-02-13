@@ -59,6 +59,9 @@ def test_client_config_rejects_non_string_values():
     with pytest.raises(HyperbrowserError, match="base_url must be a string"):
         ClientConfig(api_key="test-key", base_url=None)  # type: ignore[arg-type]
 
+    with pytest.raises(HyperbrowserError, match="headers must be a dictionary"):
+        ClientConfig(api_key="test-key", headers="x=1")  # type: ignore[arg-type]
+
 
 def test_client_config_rejects_empty_or_invalid_base_url():
     with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
@@ -66,3 +69,17 @@ def test_client_config_rejects_empty_or_invalid_base_url():
 
     with pytest.raises(HyperbrowserError, match="base_url must start with"):
         ClientConfig(api_key="test-key", base_url="api.hyperbrowser.ai")
+
+
+def test_client_config_normalizes_headers_to_internal_copy():
+    headers = {"X-Correlation-Id": "abc123"}
+    config = ClientConfig(api_key="test-key", headers=headers)
+
+    headers["X-Correlation-Id"] = "changed"
+
+    assert config.headers == {"X-Correlation-Id": "abc123"}
+
+
+def test_client_config_rejects_non_string_header_pairs():
+    with pytest.raises(HyperbrowserError, match="headers must be a dictionary"):
+        ClientConfig(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]

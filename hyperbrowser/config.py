@@ -18,6 +18,8 @@ class ClientConfig:
             raise HyperbrowserError("api_key must be a string")
         if not isinstance(self.base_url, str):
             raise HyperbrowserError("base_url must be a string")
+        if self.headers is not None and not isinstance(self.headers, dict):
+            raise HyperbrowserError("headers must be a dictionary of string pairs")
         self.api_key = self.api_key.strip()
         self.base_url = self.base_url.strip().rstrip("/")
         if not self.base_url:
@@ -29,6 +31,15 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://'"
             )
+        if self.headers is not None:
+            normalized_headers: Dict[str, str] = {}
+            for key, value in self.headers.items():
+                if not isinstance(key, str) or not isinstance(value, str):
+                    raise HyperbrowserError(
+                        "headers must be a dictionary of string pairs"
+                    )
+                normalized_headers[key] = value
+            self.headers = normalized_headers
 
     @classmethod
     def from_env(cls) -> "ClientConfig":
