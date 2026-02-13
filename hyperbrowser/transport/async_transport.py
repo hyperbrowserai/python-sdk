@@ -1,3 +1,4 @@
+import json
 import httpx
 from typing import Optional
 
@@ -37,7 +38,7 @@ class AsyncTransport(AsyncTransportStrategy):
                 if not response.content:
                     return APIResponse.from_status(response.status_code)
                 return APIResponse(response.json())
-            except httpx.DecodingError as e:
+            except (httpx.DecodingError, json.JSONDecodeError, ValueError) as e:
                 if response.status_code >= 400:
                     raise HyperbrowserError(
                         response.text or "Unknown error occurred",
