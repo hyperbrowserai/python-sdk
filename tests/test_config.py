@@ -467,7 +467,9 @@ def test_client_config_normalize_base_url_wraps_path_decode_runtime_errors(
 
     monkeypatch.setattr(config_module, "unquote", _raise_runtime_error)
 
-    with pytest.raises(HyperbrowserError, match="Failed to decode base_url path") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="Failed to decode base_url path"
+    ) as exc_info:
         ClientConfig.normalize_base_url("https://example.local/api")
 
     assert exc_info.value.original_error is not None
@@ -483,7 +485,9 @@ def test_client_config_normalize_base_url_wraps_host_decode_runtime_errors(
 
     monkeypatch.setattr(config_module, "unquote", _conditional_unquote)
 
-    with pytest.raises(HyperbrowserError, match="Failed to decode base_url host") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="Failed to decode base_url host"
+    ) as exc_info:
         ClientConfig.normalize_base_url("https://example.local/api")
 
     assert exc_info.value.original_error is not None
@@ -511,7 +515,9 @@ def test_client_config_normalize_base_url_wraps_non_string_decode_results(
 
     monkeypatch.setattr(config_module, "unquote", _return_bytes)
 
-    with pytest.raises(HyperbrowserError, match="Failed to decode base_url path") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="Failed to decode base_url path"
+    ) as exc_info:
         ClientConfig.normalize_base_url("https://example.local/api")
 
     assert exc_info.value.original_error is not None
