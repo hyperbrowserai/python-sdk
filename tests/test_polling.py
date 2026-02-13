@@ -71,6 +71,18 @@ def test_build_operation_name_truncates_overlong_prefixes():
     assert operation_name == long_prefix[:200]
 
 
+def test_build_operation_name_sanitizes_identifier_whitespace_and_control_chars():
+    operation_name = build_operation_name("crawl job ", " \nabc\tdef\x7f ")
+
+    assert operation_name == "crawl job abc?def?"
+
+
+def test_build_operation_name_uses_unknown_for_blank_identifier():
+    operation_name = build_operation_name("crawl job ", " \n\t ")
+
+    assert operation_name == "crawl job unknown"
+
+
 def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
     status = poll_until_terminal_status(
         operation_name="sync immediate zero wait",

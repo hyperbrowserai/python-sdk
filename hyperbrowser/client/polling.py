@@ -68,7 +68,15 @@ def _validate_operation_name(operation_name: str) -> None:
 
 
 def build_operation_name(prefix: str, identifier: str) -> str:
-    operation_name = f"{prefix}{identifier}"
+    normalized_identifier = identifier.strip()
+    if not normalized_identifier:
+        normalized_identifier = "unknown"
+    normalized_identifier = "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in normalized_identifier
+    )
+
+    operation_name = f"{prefix}{normalized_identifier}"
     if len(operation_name) <= _MAX_OPERATION_NAME_LENGTH:
         return operation_name
     available_identifier_length = (
