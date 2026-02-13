@@ -36,7 +36,7 @@ class HyperbrowserBase:
             raise HyperbrowserError("API key must be provided")
 
         self.config = config
-        self.transport = transport(config.api_key)
+        self.transport = transport(config.api_key, headers=config.headers)
 
     def _build_url(self, path: str) -> str:
         return f"{self.config.base_url}/api{path}"

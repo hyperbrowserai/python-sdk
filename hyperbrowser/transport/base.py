@@ -37,7 +37,7 @@ class SyncTransportStrategy(ABC):
     """Abstract base class for synchronous transport implementations"""
 
     @abstractmethod
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, headers: Optional[dict] = None):
         ...
 
     @abstractmethod
@@ -69,7 +69,7 @@ class AsyncTransportStrategy(ABC):
     """Abstract base class for asynchronous transport implementations"""
 
     @abstractmethod
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, headers: Optional[dict] = None):
         ...
 
     @abstractmethod

@@ -10,13 +10,14 @@ from .base import APIResponse, AsyncTransportStrategy
 class AsyncTransport(AsyncTransportStrategy):
     """Asynchronous transport implementation using httpx"""
 
-    def __init__(self, api_key: str):
-        self.client = httpx.AsyncClient(
-            headers={
-                "x-api-key": api_key,
-                "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
-            }
-        )
+    def __init__(self, api_key: str, headers: Optional[dict] = None):
+        merged_headers = {
+            "x-api-key": api_key,
+            "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
+        }
+        if headers:
+            merged_headers.update(headers)
+        self.client = httpx.AsyncClient(headers=merged_headers)
         self._closed = False
 
     async def close(self) -> None:

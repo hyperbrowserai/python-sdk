@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Dict, Optional
 import os
 
 from .exceptions import HyperbrowserError
@@ -10,6 +11,7 @@ class ClientConfig:
 
     api_key: str
     base_url: str = "https://api.hyperbrowser.ai"
+    headers: Optional[Dict[str, str]] = None
 
     @classmethod
     def from_env(cls) -> "ClientConfig":

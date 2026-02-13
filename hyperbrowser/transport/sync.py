@@ -9,13 +9,14 @@ from .base import APIResponse, SyncTransportStrategy
 class SyncTransport(SyncTransportStrategy):
     """Synchronous transport implementation using httpx"""
 
-    def __init__(self, api_key: str):
-        self.client = httpx.Client(
-            headers={
-                "x-api-key": api_key,
-                "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
-            }
-        )
+    def __init__(self, api_key: str, headers: Optional[dict] = None):
+        merged_headers = {
+            "x-api-key": api_key,
+            "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
+        }
+        if headers:
+            merged_headers.update(headers)
+        self.client = httpx.Client(headers=merged_headers)
 
     def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:
