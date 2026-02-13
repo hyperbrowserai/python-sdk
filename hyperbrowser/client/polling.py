@@ -122,6 +122,10 @@ def _invoke_non_retryable_callback(
 
 
 def _is_retryable_exception(exc: Exception) -> bool:
+    if isinstance(
+        exc, RuntimeError
+    ) and "cannot reuse already awaited coroutine" in str(exc):
+        return False
     if isinstance(exc, ConcurrentCancelledError):
         return False
     if isinstance(exc, _NonRetryablePollingError):
