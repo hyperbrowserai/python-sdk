@@ -11,6 +11,7 @@ from hyperbrowser.exceptions import (
 )
 
 T = TypeVar("T")
+_MAX_OPERATION_NAME_LENGTH = 200
 
 
 def _validate_non_negative_real(value: float, *, field_name: str) -> None:
@@ -34,6 +35,10 @@ def _validate_operation_name(operation_name: str) -> None:
     if operation_name != operation_name.strip():
         raise HyperbrowserError(
             "operation_name must not contain leading or trailing whitespace"
+        )
+    if len(operation_name) > _MAX_OPERATION_NAME_LENGTH:
+        raise HyperbrowserError(
+            f"operation_name must be {_MAX_OPERATION_NAME_LENGTH} characters or fewer"
         )
     if any(
         ord(character) < 32 or ord(character) == 127 for character in operation_name

@@ -688,6 +688,16 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             retry_delay_seconds=0,
         )
 
+    with pytest.raises(
+        HyperbrowserError, match="operation_name must be 200 characters or fewer"
+    ):
+        retry_operation(
+            operation_name="x" * 201,
+            operation=lambda: "ok",
+            max_attempts=1,
+            retry_delay_seconds=0,
+        )
+
     with pytest.raises(HyperbrowserError, match="max_attempts must be an integer"):
         retry_operation(
             operation_name="invalid-retry-type",
@@ -842,6 +852,16 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
         ):
             await poll_until_terminal_status_async(
                 operation_name="invalid\tasync",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.1,
+                max_wait_seconds=1.0,
+            )
+        with pytest.raises(
+            HyperbrowserError, match="operation_name must be 200 characters or fewer"
+        ):
+            await poll_until_terminal_status_async(
+                operation_name="x" * 201,
                 get_status=lambda: asyncio.sleep(0, result="completed"),
                 is_terminal_status=lambda value: value == "completed",
                 poll_interval_seconds=0.1,
