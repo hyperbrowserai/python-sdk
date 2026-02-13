@@ -2762,6 +2762,37 @@ def test_wait_for_job_result_does_not_retry_concurrent_cancelled_fetch_errors():
     assert fetch_attempts["count"] == 1
 
 
+def test_wait_for_job_result_cancels_awaitable_fetch_results():
+    loop = asyncio.new_event_loop()
+    try:
+        fetch_attempts = {"count": 0}
+        fetch_future = loop.create_future()
+
+        def fetch_result() -> object:
+            fetch_attempts["count"] += 1
+            return fetch_future
+
+        with pytest.raises(
+            HyperbrowserError, match="operation must return a non-awaitable result"
+        ):
+            wait_for_job_result(
+                operation_name="sync wait helper fetch future",
+                get_status=lambda: "completed",
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,  # type: ignore[arg-type]
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+        assert fetch_future.cancelled()
+    finally:
+        loop.close()
+
+
 def test_wait_for_job_result_does_not_retry_loop_runtime_fetch_errors():
     fetch_attempts = {"count": 0}
 
@@ -3181,6 +3212,34 @@ def test_wait_for_job_result_async_does_not_retry_concurrent_cancelled_fetch_err
                 get_status=lambda: asyncio.sleep(0, result="completed"),
                 is_terminal_status=lambda value: value == "completed",
                 fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_rejects_non_awaitable_fetch_results():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        def fetch_result() -> object:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(
+            HyperbrowserError, match="operation must return an awaitable"
+        ):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch non-awaitable",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,  # type: ignore[arg-type]
                 poll_interval_seconds=0.0001,
                 max_wait_seconds=1.0,
                 max_status_failures=5,
