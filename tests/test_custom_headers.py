@@ -141,6 +141,18 @@ def test_client_constructor_rejects_invalid_env_headers(monkeypatch):
         Hyperbrowser(api_key="test-key")
 
 
+def test_client_constructor_headers_override_environment_headers(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Team-Trace":"env-value"}')
+    client = Hyperbrowser(
+        api_key="test-key",
+        headers={"X-Team-Trace": "constructor-value"},
+    )
+    try:
+        assert client.transport.client.headers["X-Team-Trace"] == "constructor-value"
+    finally:
+        client.close()
+
+
 def test_client_constructor_rejects_mixed_config_and_direct_args():
     with pytest.raises(TypeError, match="Pass either `config`"):
         Hyperbrowser(
