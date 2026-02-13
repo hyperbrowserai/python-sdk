@@ -91,6 +91,22 @@ def test_client_config_from_env_rejects_newline_header_values(monkeypatch):
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_rejects_duplicate_header_names_after_normalization(
+    monkeypatch,
+):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv(
+        "HYPERBROWSER_HEADERS",
+        '{"X-Correlation-Id":"one","  X-Correlation-Id  ":"two"}',
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="duplicate header names are not allowed after normalization",
+    ):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_ignores_blank_headers(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_HEADERS", "   ")
@@ -216,3 +232,10 @@ def test_client_config_accepts_mapping_header_inputs():
     config = ClientConfig(api_key="test-key", headers=headers)
 
     assert config.headers == {"X-Correlation-Id": "abc123"}
+
+
+def test_client_config_parse_headers_from_env_rejects_non_string_input():
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be a string"
+    ):
+        ClientConfig.parse_headers_from_env(123)  # type: ignore[arg-type]
