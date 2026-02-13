@@ -36,6 +36,10 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://' and include a host"
             )
+        if parsed_base_url.query or parsed_base_url.fragment:
+            raise HyperbrowserError(
+                "base_url must not include query parameters or fragments"
+            )
         self.headers = normalize_headers(
             self.headers,
             mapping_error_message="headers must be a mapping of string pairs",
