@@ -292,6 +292,15 @@ def test_client_config_rejects_invalid_header_name_characters():
         ClientConfig(api_key="test-key", headers={"X Trace": "value"})
 
 
+def test_client_config_rejects_overly_long_header_names():
+    long_header_name = "X-" + ("a" * 255)
+
+    with pytest.raises(
+        HyperbrowserError, match="header names must be 256 characters or fewer"
+    ):
+        ClientConfig(api_key="test-key", headers={long_header_name: "value"})
+
+
 def test_client_config_rejects_newline_header_values():
     with pytest.raises(
         HyperbrowserError, match="headers must not contain newline characters"

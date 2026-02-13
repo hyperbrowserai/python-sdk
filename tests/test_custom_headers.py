@@ -52,6 +52,15 @@ def test_sync_transport_rejects_invalid_header_name_characters():
         SyncTransport(api_key="test-key", headers={"X Trace": "value"})
 
 
+def test_sync_transport_rejects_overly_long_header_names():
+    long_header_name = "X-" + ("a" * 255)
+
+    with pytest.raises(
+        HyperbrowserError, match="header names must be 256 characters or fewer"
+    ):
+        SyncTransport(api_key="test-key", headers={long_header_name: "value"})
+
+
 def test_sync_transport_rejects_header_newline_values():
     with pytest.raises(
         HyperbrowserError, match="headers must not contain newline characters"
@@ -109,6 +118,15 @@ def test_async_transport_rejects_invalid_header_name_characters():
         match="header names must contain only valid HTTP token characters",
     ):
         AsyncTransport(api_key="test-key", headers={"X Trace": "value"})
+
+
+def test_async_transport_rejects_overly_long_header_names():
+    long_header_name = "X-" + ("a" * 255)
+
+    with pytest.raises(
+        HyperbrowserError, match="header names must be 256 characters or fewer"
+    ):
+        AsyncTransport(api_key="test-key", headers={long_header_name: "value"})
 
 
 def test_async_transport_rejects_header_newline_values():

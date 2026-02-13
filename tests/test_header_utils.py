@@ -25,6 +25,17 @@ def test_normalize_headers_rejects_empty_header_name():
         )
 
 
+def test_normalize_headers_rejects_overly_long_header_names():
+    long_header_name = "X-" + ("a" * 255)
+    with pytest.raises(
+        HyperbrowserError, match="header names must be 256 characters or fewer"
+    ):
+        normalize_headers(
+            {long_header_name: "value"},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
 def test_normalize_headers_rejects_invalid_header_name_characters():
     with pytest.raises(
         HyperbrowserError,

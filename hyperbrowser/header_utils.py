@@ -5,6 +5,7 @@ from typing import Dict, Mapping, Optional, cast
 from .exceptions import HyperbrowserError
 
 _INVALID_HEADER_NAME_CHARACTER_PATTERN = re.compile(r"[^!#$%&'*+\-.^_`|~0-9A-Za-z]")
+_MAX_HEADER_NAME_LENGTH = 256
 
 
 def normalize_headers(
@@ -27,6 +28,10 @@ def normalize_headers(
         normalized_key = key.strip()
         if not normalized_key:
             raise HyperbrowserError("header names must not be empty")
+        if len(normalized_key) > _MAX_HEADER_NAME_LENGTH:
+            raise HyperbrowserError(
+                f"header names must be {_MAX_HEADER_NAME_LENGTH} characters or fewer"
+            )
         if _INVALID_HEADER_NAME_CHARACTER_PATTERN.search(normalized_key):
             raise HyperbrowserError(
                 "header names must contain only valid HTTP token characters"
