@@ -63,8 +63,9 @@ class BrowserUseManager:
         return wait_for_job_result(
             operation_name=f"browser-use task job {job_id}",
             get_status=lambda: self.get_status(job_id).status,
-            is_terminal_status=lambda status: status
-            in {"completed", "failed", "stopped"},
+            is_terminal_status=lambda status: (
+                status in {"completed", "failed", "stopped"}
+            ),
             fetch_result=lambda: self.get(job_id),
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,

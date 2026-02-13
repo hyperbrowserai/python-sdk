@@ -167,6 +167,7 @@ except HyperbrowserTimeoutError:
 ```bash
 pip install -e . pytest ruff build
 python -m ruff check .
+python -m ruff format --check .
 python -m pytest -q
 python -m build
 ```

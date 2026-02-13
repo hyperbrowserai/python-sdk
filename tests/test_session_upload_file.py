@@ -74,7 +74,9 @@ def test_sync_session_upload_file_accepts_pathlike(tmp_path):
     response = manager.upload_file("session_123", file_path)
 
     assert response.file_name == "file.txt"
-    assert transport.received_file is not None and transport.received_file.closed is True
+    assert (
+        transport.received_file is not None and transport.received_file.closed is True
+    )
 
 
 def test_async_session_upload_file_accepts_pathlike(tmp_path):
@@ -88,4 +90,6 @@ def test_async_session_upload_file_accepts_pathlike(tmp_path):
     response = asyncio.run(run())
 
     assert response.file_name == "file.txt"
-    assert transport.received_file is not None and transport.received_file.closed is True
+    assert (
+        transport.received_file is not None and transport.received_file.closed is True
+    )

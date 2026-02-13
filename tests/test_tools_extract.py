@@ -52,7 +52,9 @@ def test_extract_tool_runnable_does_not_mutate_input_params():
     assert output == '{"ok": true}'
     assert isinstance(client.extract.last_params, StartExtractJobParams)
     assert isinstance(client.extract.last_params.schema_, dict)
-    assert params["schema"] == '{"type":"object","properties":{"name":{"type":"string"}}}'
+    assert (
+        params["schema"] == '{"type":"object","properties":{"name":{"type":"string"}}}'
+    )
 
 
 def test_extract_tool_async_runnable_does_not_mutate_input_params():
@@ -70,7 +72,9 @@ def test_extract_tool_async_runnable_does_not_mutate_input_params():
     assert output == '{"ok": true}'
     assert isinstance(client.extract.last_params, StartExtractJobParams)
     assert isinstance(client.extract.last_params.schema_, dict)
-    assert params["schema"] == '{"type":"object","properties":{"name":{"type":"string"}}}'
+    assert (
+        params["schema"] == '{"type":"object","properties":{"name":{"type":"string"}}}'
+    )
 
 
 def test_extract_tool_runnable_raises_for_invalid_schema_json():
@@ -80,5 +84,7 @@ def test_extract_tool_runnable_raises_for_invalid_schema_json():
         "schema": "{invalid-json}",
     }
 
-    with pytest.raises(HyperbrowserError, match="Invalid JSON string provided for `schema`"):
+    with pytest.raises(
+        HyperbrowserError, match="Invalid JSON string provided for `schema`"
+    ):
         WebsiteExtractTool.runnable(client, params)

@@ -80,7 +80,7 @@ class WebsiteCrawlTool:
             for page in resp.data:
                 if page.markdown:
                     markdown += (
-                        f"\n{'-'*50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
+                        f"\n{'-' * 50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
                     )
         return markdown
 
@@ -92,7 +92,7 @@ class WebsiteCrawlTool:
             for page in resp.data:
                 if page.markdown:
                     markdown += (
-                        f"\n{'-'*50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
+                        f"\n{'-' * 50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
                     )
         return markdown
 

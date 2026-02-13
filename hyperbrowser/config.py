@@ -25,12 +25,9 @@ class ClientConfig:
         if not self.base_url:
             raise HyperbrowserError("base_url must not be empty")
         if not (
-            self.base_url.startswith("https://")
-            or self.base_url.startswith("http://")
+            self.base_url.startswith("https://") or self.base_url.startswith("http://")
         ):
-            raise HyperbrowserError(
-                "base_url must start with 'https://' or 'http://'"
-            )
+            raise HyperbrowserError("base_url must start with 'https://' or 'http://'")
         if self.headers is not None:
             normalized_headers: Dict[str, str] = {}
             for key, value in self.headers.items():

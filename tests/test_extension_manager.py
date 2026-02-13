@@ -81,7 +81,9 @@ def test_sync_extension_create_does_not_mutate_params_and_closes_file(tmp_path):
 
     assert response.id == "ext_123"
     assert params.file_path == file_path
-    assert transport.received_file is not None and transport.received_file.closed is True
+    assert (
+        transport.received_file is not None and transport.received_file.closed is True
+    )
     assert transport.received_data == {"name": "my-extension"}
 
 
@@ -98,5 +100,7 @@ def test_async_extension_create_does_not_mutate_params_and_closes_file(tmp_path)
 
     assert response.id == "ext_456"
     assert params.file_path == file_path
-    assert transport.received_file is not None and transport.received_file.closed is True
+    assert (
+        transport.received_file is not None and transport.received_file.closed is True
+    )
     assert transport.received_data == {"name": "my-extension"}

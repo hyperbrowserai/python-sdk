@@ -29,7 +29,9 @@ def main() -> None:
         if result.data and result.data.markdown:
             print(result.data.markdown[:500])
         else:
-            print(f"Scrape finished with status={result.status} and no markdown payload.")
+            print(
+                f"Scrape finished with status={result.status} and no markdown payload."
+            )
 
 
 if __name__ == "__main__":

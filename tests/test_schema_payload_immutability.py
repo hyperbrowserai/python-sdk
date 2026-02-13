@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 
-from hyperbrowser.client.managers.sync_manager.agents.browser_use import BrowserUseManager
+from hyperbrowser.client.managers.sync_manager.agents.browser_use import (
+    BrowserUseManager,
+)
 from hyperbrowser.client.managers.sync_manager.extract import ExtractManager
 from hyperbrowser.client.managers.sync_manager.web import WebManager
 from hyperbrowser.models import FetchOutputJson, FetchOutputOptions, FetchParams
@@ -56,7 +58,9 @@ def test_extract_start_does_not_mutate_schema_param():
 def test_browser_use_start_does_not_mutate_output_model_schema():
     transport = _RoutingTransport()
     manager = BrowserUseManager(_FakeClient(transport))
-    params = StartBrowserUseTaskParams(task="open page", output_model_schema=_OutputSchema)
+    params = StartBrowserUseTaskParams(
+        task="open page", output_model_schema=_OutputSchema
+    )
 
     manager.start(params)
 

@@ -1,7 +1,11 @@
 from .client.sync import Hyperbrowser
 from .client.async_client import AsyncHyperbrowser
 from .config import ClientConfig
-from .exceptions import HyperbrowserError, HyperbrowserPollingError, HyperbrowserTimeoutError
+from .exceptions import (
+    HyperbrowserError,
+    HyperbrowserPollingError,
+    HyperbrowserTimeoutError,
+)
 from .version import __version__
 
 __all__ = [

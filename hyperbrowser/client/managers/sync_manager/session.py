@@ -55,9 +55,7 @@ class SessionManager:
         )
         return SessionDetail(**response.data)
 
-    def get(
-        self, id: str, params: Optional[SessionGetParams] = None
-    ) -> SessionDetail:
+    def get(self, id: str, params: Optional[SessionGetParams] = None) -> SessionDetail:
         params_obj = params or SessionGetParams()
         response = self._client.transport.get(
             self._client._build_url(f"/session/{id}"),

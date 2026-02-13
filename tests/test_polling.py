@@ -247,7 +247,9 @@ def test_collect_paginated_results_async_times_out():
         ):
             await collect_paginated_results_async(
                 operation_name="async paginated timeout",
-                get_next_page=lambda page: asyncio.sleep(0, result={"current": 0, "total": 1, "items": []}),
+                get_next_page=lambda page: asyncio.sleep(
+                    0, result={"current": 0, "total": 1, "items": []}
+                ),
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],
                 on_page_success=lambda response: None,

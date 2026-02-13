@@ -12,9 +12,10 @@ T = TypeVar("T")
 
 
 def has_exceeded_max_wait(start_time: float, max_wait_seconds: Optional[float]) -> bool:
-    return max_wait_seconds is not None and (
-        time.monotonic() - start_time
-    ) > max_wait_seconds
+    return (
+        max_wait_seconds is not None
+        and (time.monotonic() - start_time) > max_wait_seconds
+    )
 
 
 def poll_until_terminal_status(

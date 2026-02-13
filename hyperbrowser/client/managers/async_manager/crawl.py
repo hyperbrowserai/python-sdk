@@ -98,8 +98,12 @@ class CrawlManager:
                 job_start_resp.job_id,
                 GetCrawlJobParams(page=page, batch_size=100),
             ),
-            get_current_page_batch=lambda page_response: page_response.current_page_batch,
-            get_total_page_batches=lambda page_response: page_response.total_page_batches,
+            get_current_page_batch=lambda page_response: (
+                page_response.current_page_batch
+            ),
+            get_total_page_batches=lambda page_response: (
+                page_response.total_page_batches
+            ),
             on_page_success=merge_page_response,
             max_wait_seconds=max_wait_seconds,
             max_attempts=POLLING_ATTEMPTS,

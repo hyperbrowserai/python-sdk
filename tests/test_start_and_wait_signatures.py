@@ -15,7 +15,9 @@ from hyperbrowser.client.managers.async_manager.agents.gemini_computer_use impor
 from hyperbrowser.client.managers.async_manager.agents.hyper_agent import (
     HyperAgentManager as AsyncHyperAgentManager,
 )
-from hyperbrowser.client.managers.async_manager.crawl import CrawlManager as AsyncCrawlManager
+from hyperbrowser.client.managers.async_manager.crawl import (
+    CrawlManager as AsyncCrawlManager,
+)
 from hyperbrowser.client.managers.async_manager.extract import (
     ExtractManager as AsyncExtractManager,
 )
@@ -35,14 +37,18 @@ from hyperbrowser.client.managers.sync_manager.agents.browser_use import (
 from hyperbrowser.client.managers.sync_manager.agents.claude_computer_use import (
     ClaudeComputerUseManager as SyncClaudeComputerUseManager,
 )
-from hyperbrowser.client.managers.sync_manager.agents.cua import CuaManager as SyncCuaManager
+from hyperbrowser.client.managers.sync_manager.agents.cua import (
+    CuaManager as SyncCuaManager,
+)
 from hyperbrowser.client.managers.sync_manager.agents.gemini_computer_use import (
     GeminiComputerUseManager as SyncGeminiComputerUseManager,
 )
 from hyperbrowser.client.managers.sync_manager.agents.hyper_agent import (
     HyperAgentManager as SyncHyperAgentManager,
 )
-from hyperbrowser.client.managers.sync_manager.crawl import CrawlManager as SyncCrawlManager
+from hyperbrowser.client.managers.sync_manager.crawl import (
+    CrawlManager as SyncCrawlManager,
+)
 from hyperbrowser.client.managers.sync_manager.extract import (
     ExtractManager as SyncExtractManager,
 )
