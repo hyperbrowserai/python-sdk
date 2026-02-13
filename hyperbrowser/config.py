@@ -38,15 +38,36 @@ class ClientConfig:
     def _decode_url_component_with_limit(value: str, *, component_label: str) -> str:
         decoded_value = value
         for _ in range(10):
-            next_decoded_value = unquote(decoded_value)
+            next_decoded_value = ClientConfig._safe_unquote(
+                decoded_value,
+                component_label=component_label,
+            )
             if next_decoded_value == decoded_value:
                 return decoded_value
             decoded_value = next_decoded_value
-        if unquote(decoded_value) == decoded_value:
+        if (
+            ClientConfig._safe_unquote(
+                decoded_value,
+                component_label=component_label,
+            )
+            == decoded_value
+        ):
             return decoded_value
         raise HyperbrowserError(
             f"{component_label} contains excessively nested URL encoding"
         )
+
+    @staticmethod
+    def _safe_unquote(value: str, *, component_label: str) -> str:
+        try:
+            return unquote(value)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to decode {component_label}",
+                original_error=exc,
+            ) from exc
 
     @staticmethod
     def normalize_base_url(base_url: str) -> str:
@@ -136,7 +157,10 @@ class ClientConfig:
                 raise HyperbrowserError(
                     "base_url host must not contain encoded delimiter characters"
                 )
-            next_decoded_base_netloc = unquote(decoded_base_netloc)
+            next_decoded_base_netloc = ClientConfig._safe_unquote(
+                decoded_base_netloc,
+                component_label="base_url host",
+            )
             if next_decoded_base_netloc == decoded_base_netloc:
                 break
             decoded_base_netloc = next_decoded_base_netloc
@@ -145,7 +169,13 @@ class ClientConfig:
                 raise HyperbrowserError(
                     "base_url host must not contain encoded delimiter characters"
                 )
-            if unquote(decoded_base_netloc) != decoded_base_netloc:
+            if (
+                ClientConfig._safe_unquote(
+                    decoded_base_netloc,
+                    component_label="base_url host",
+                )
+                != decoded_base_netloc
+            ):
                 raise HyperbrowserError(
                     "base_url host contains excessively nested URL encoding"
                 )

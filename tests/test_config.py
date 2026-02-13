@@ -459,6 +459,50 @@ def test_client_config_normalize_base_url_preserves_hyperbrowser_urlparse_errors
     assert exc_info.value.original_error is None
 
 
+def test_client_config_normalize_base_url_wraps_path_decode_runtime_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_runtime_error(_value: str) -> str:
+        raise RuntimeError("path decode exploded")
+
+    monkeypatch.setattr(config_module, "unquote", _raise_runtime_error)
+
+    with pytest.raises(HyperbrowserError, match="Failed to decode base_url path") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local/api")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_wraps_host_decode_runtime_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _conditional_unquote(value: str) -> str:
+        if value == "example.local":
+            raise RuntimeError("host decode exploded")
+        return value
+
+    monkeypatch.setattr(config_module, "unquote", _conditional_unquote)
+
+    with pytest.raises(HyperbrowserError, match="Failed to decode base_url host") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local/api")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_preserves_hyperbrowser_decode_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_hyperbrowser_error(_value: str) -> str:
+        raise HyperbrowserError("custom decode failure")
+
+    monkeypatch.setattr(config_module, "unquote", _raise_hyperbrowser_error)
+
+    with pytest.raises(HyperbrowserError, match="custom decode failure") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local/api")
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_normalize_base_url_preserves_invalid_port_original_error():
     with pytest.raises(
         HyperbrowserError, match="base_url must contain a valid port number"
