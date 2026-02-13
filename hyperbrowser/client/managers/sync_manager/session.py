@@ -4,6 +4,7 @@ from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
 from ...file_utils import ensure_existing_file_path
+from ..session_utils import parse_session_recordings_response_data
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
@@ -83,7 +84,7 @@ class SessionManager:
         response = self._client.transport.get(
             self._client._build_url(f"/session/{id}/recording"), None, True
         )
-        return [SessionRecording(**recording) for recording in response.data]
+        return parse_session_recordings_response_data(response.data)
 
     def get_recording_url(self, id: str) -> GetSessionRecordingUrlResponse:
         response = self._client.transport.get(
