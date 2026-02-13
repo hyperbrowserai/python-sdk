@@ -81,6 +81,10 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url path must not contain relative path segments"
             )
+        if "?" in decoded_base_path or "#" in decoded_base_path:
+            raise HyperbrowserError(
+                "base_url path must not contain encoded query or fragment delimiters"
+            )
 
         decoded_base_netloc = parsed_base_url.netloc
         for _ in range(10):

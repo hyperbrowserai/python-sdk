@@ -234,6 +234,11 @@ def test_client_config_rejects_empty_or_invalid_base_url():
         HyperbrowserError, match="base_url path must not contain relative path segments"
     ):
         ClientConfig(api_key="test-key", base_url="https://example.local/%2e%2e/api")
+    with pytest.raises(
+        HyperbrowserError,
+        match="base_url path must not contain encoded query or fragment delimiters",
+    ):
+        ClientConfig(api_key="test-key", base_url="https://example.local/%3Fapi")
 
 
 def test_client_config_normalizes_headers_to_internal_copy():
@@ -400,3 +405,8 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         HyperbrowserError, match="base_url host must not contain control characters"
     ):
         ClientConfig.normalize_base_url("https://example.local%2500")
+    with pytest.raises(
+        HyperbrowserError,
+        match="base_url path must not contain encoded query or fragment delimiters",
+    ):
+        ClientConfig.normalize_base_url("https://example.local/%253Fapi")

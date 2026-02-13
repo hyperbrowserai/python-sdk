@@ -129,6 +129,13 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
         ):
             client._build_url("/session")
 
+        client.config.base_url = "https://example.local/%3Fapi"
+        with pytest.raises(
+            HyperbrowserError,
+            match="base_url path must not contain encoded query or fragment delimiters",
+        ):
+            client._build_url("/session")
+
         client.config.base_url = "https://user:pass@example.local"
         with pytest.raises(
             HyperbrowserError, match="base_url must not include user credentials"
