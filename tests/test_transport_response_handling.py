@@ -90,3 +90,28 @@ def test_async_handle_response_with_json_string_error_body_uses_string_message()
             await transport.close()
 
     asyncio.run(run())
+
+
+def test_sync_handle_response_with_non_string_message_field_coerces_to_string():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        response = _build_response(500, '{"message":{"detail":"failed"}}')
+
+        with pytest.raises(HyperbrowserError, match="detail"):
+            transport._handle_response(response)
+    finally:
+        transport.close()
+
+
+def test_async_handle_response_with_non_string_message_field_coerces_to_string():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            response = _build_response(500, '{"message":{"detail":"failed"}}')
+
+            with pytest.raises(HyperbrowserError, match="detail"):
+                await transport._handle_response(response)
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
