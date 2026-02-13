@@ -36,6 +36,15 @@ def test_normalize_headers_rejects_invalid_header_name_characters():
         )
 
 
+def test_normalize_headers_accepts_valid_http_token_characters():
+    headers = normalize_headers(
+        {"X-Test_!#$%&'*+-.^`|~": "value"},
+        mapping_error_message="headers must be a mapping of string pairs",
+    )
+
+    assert headers == {"X-Test_!#$%&'*+-.^`|~": "value"}
+
+
 def test_normalize_headers_rejects_duplicate_names_after_normalization():
     with pytest.raises(
         HyperbrowserError,
