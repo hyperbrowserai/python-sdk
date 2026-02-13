@@ -2,6 +2,7 @@ from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import build_operation_name, wait_for_job_result
+from ...response_utils import parse_response_model
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -24,25 +25,41 @@ class ClaudeComputerUseManager:
             self._client._build_url("/task/claude-computer-use"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartClaudeComputerUseTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartClaudeComputerUseTaskResponse,
+            operation_name="claude computer use start",
+        )
 
     def get(self, job_id: str) -> ClaudeComputerUseTaskResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/task/claude-computer-use/{job_id}")
         )
-        return ClaudeComputerUseTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ClaudeComputerUseTaskResponse,
+            operation_name="claude computer use task",
+        )
 
     def get_status(self, job_id: str) -> ClaudeComputerUseTaskStatusResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/task/claude-computer-use/{job_id}/status")
         )
-        return ClaudeComputerUseTaskStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ClaudeComputerUseTaskStatusResponse,
+            operation_name="claude computer use task status",
+        )
 
     def stop(self, job_id: str) -> BasicResponse:
         response = self._client.transport.put(
             self._client._build_url(f"/task/claude-computer-use/{job_id}/stop")
         )
-        return BasicResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="claude computer use task stop",
+        )
 
     def start_and_wait(
         self,

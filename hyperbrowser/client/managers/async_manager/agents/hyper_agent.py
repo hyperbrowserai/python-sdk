@@ -2,6 +2,7 @@ from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import build_operation_name, wait_for_job_result_async
+from ...response_utils import parse_response_model
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -24,25 +25,41 @@ class HyperAgentManager:
             self._client._build_url("/task/hyper-agent"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartHyperAgentTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartHyperAgentTaskResponse,
+            operation_name="hyper agent start",
+        )
 
     async def get(self, job_id: str) -> HyperAgentTaskResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/task/hyper-agent/{job_id}")
         )
-        return HyperAgentTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=HyperAgentTaskResponse,
+            operation_name="hyper agent task",
+        )
 
     async def get_status(self, job_id: str) -> HyperAgentTaskStatusResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/task/hyper-agent/{job_id}/status")
         )
-        return HyperAgentTaskStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=HyperAgentTaskStatusResponse,
+            operation_name="hyper agent task status",
+        )
 
     async def stop(self, job_id: str) -> BasicResponse:
         response = await self._client.transport.put(
             self._client._build_url(f"/task/hyper-agent/{job_id}/stop")
         )
-        return BasicResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="hyper agent task stop",
+        )
 
     async def start_and_wait(
         self,

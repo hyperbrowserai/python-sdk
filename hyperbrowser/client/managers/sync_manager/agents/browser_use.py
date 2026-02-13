@@ -3,6 +3,7 @@ from typing import Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import build_operation_name, wait_for_job_result
 from ....schema_utils import resolve_schema_input
+from ...response_utils import parse_response_model
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -28,25 +29,41 @@ class BrowserUseManager:
             self._client._build_url("/task/browser-use"),
             data=payload,
         )
-        return StartBrowserUseTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartBrowserUseTaskResponse,
+            operation_name="browser-use start",
+        )
 
     def get(self, job_id: str) -> BrowserUseTaskResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/task/browser-use/{job_id}")
         )
-        return BrowserUseTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BrowserUseTaskResponse,
+            operation_name="browser-use task",
+        )
 
     def get_status(self, job_id: str) -> BrowserUseTaskStatusResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/task/browser-use/{job_id}/status")
         )
-        return BrowserUseTaskStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BrowserUseTaskStatusResponse,
+            operation_name="browser-use task status",
+        )
 
     def stop(self, job_id: str) -> BasicResponse:
         response = self._client.transport.put(
             self._client._build_url(f"/task/browser-use/{job_id}/stop")
         )
-        return BasicResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="browser-use task stop",
+        )
 
     def start_and_wait(
         self,

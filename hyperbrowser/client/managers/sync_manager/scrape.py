@@ -9,6 +9,7 @@ from ...polling import (
     retry_operation,
     wait_for_job_result,
 )
+from ..response_utils import parse_response_model
 from ....models.scrape import (
     BatchScrapeJobResponse,
     BatchScrapeJobStatusResponse,
@@ -32,13 +33,21 @@ class BatchScrapeManager:
             self._client._build_url("/scrape/batch"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartBatchScrapeJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartBatchScrapeJobResponse,
+            operation_name="batch scrape start",
+        )
 
     def get_status(self, job_id: str) -> BatchScrapeJobStatusResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/scrape/batch/{job_id}/status")
         )
-        return BatchScrapeJobStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BatchScrapeJobStatusResponse,
+            operation_name="batch scrape status",
+        )
 
     def get(
         self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
@@ -48,7 +57,11 @@ class BatchScrapeManager:
             self._client._build_url(f"/scrape/batch/{job_id}"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return BatchScrapeJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BatchScrapeJobResponse,
+            operation_name="batch scrape job",
+        )
 
     def start_and_wait(
         self,
@@ -131,19 +144,31 @@ class ScrapeManager:
             self._client._build_url("/scrape"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartScrapeJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartScrapeJobResponse,
+            operation_name="scrape start",
+        )
 
     def get_status(self, job_id: str) -> ScrapeJobStatusResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/scrape/{job_id}/status")
         )
-        return ScrapeJobStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ScrapeJobStatusResponse,
+            operation_name="scrape status",
+        )
 
     def get(self, job_id: str) -> ScrapeJobResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/scrape/{job_id}")
         )
-        return ScrapeJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ScrapeJobResponse,
+            operation_name="scrape job",
+        )
 
     def start_and_wait(
         self,

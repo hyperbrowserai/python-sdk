@@ -8,6 +8,7 @@ from ...polling import (
     poll_until_terminal_status,
     retry_operation,
 )
+from ..response_utils import parse_response_model
 from ....models.crawl import (
     CrawlJobResponse,
     CrawlJobStatusResponse,
@@ -27,13 +28,21 @@ class CrawlManager:
             self._client._build_url("/crawl"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartCrawlJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartCrawlJobResponse,
+            operation_name="crawl start",
+        )
 
     def get_status(self, job_id: str) -> CrawlJobStatusResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}/status")
         )
-        return CrawlJobStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=CrawlJobStatusResponse,
+            operation_name="crawl status",
+        )
 
     def get(
         self, job_id: str, params: Optional[GetCrawlJobParams] = None
@@ -43,7 +52,11 @@ class CrawlManager:
             self._client._build_url(f"/crawl/{job_id}"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return CrawlJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=CrawlJobResponse,
+            operation_name="crawl job",
+        )
 
     def start_and_wait(
         self,

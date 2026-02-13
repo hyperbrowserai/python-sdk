@@ -10,6 +10,7 @@ from hyperbrowser.models.extract import (
 )
 from ...polling import build_operation_name, wait_for_job_result_async
 from ...schema_utils import resolve_schema_input
+from ..response_utils import parse_response_model
 
 
 class ExtractManager:
@@ -28,19 +29,31 @@ class ExtractManager:
             self._client._build_url("/extract"),
             data=payload,
         )
-        return StartExtractJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartExtractJobResponse,
+            operation_name="extract start",
+        )
 
     async def get_status(self, job_id: str) -> ExtractJobStatusResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/extract/{job_id}/status")
         )
-        return ExtractJobStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ExtractJobStatusResponse,
+            operation_name="extract status",
+        )
 
     async def get(self, job_id: str) -> ExtractJobResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/extract/{job_id}")
         )
-        return ExtractJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ExtractJobResponse,
+            operation_name="extract job",
+        )
 
     async def start_and_wait(
         self,

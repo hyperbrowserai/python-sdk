@@ -3,6 +3,7 @@ from typing import List
 from hyperbrowser.exceptions import HyperbrowserError
 from ...file_utils import ensure_existing_file_path
 from ..extension_utils import parse_extension_list_response_data
+from ..response_utils import parse_response_model
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
 
 
@@ -35,7 +36,11 @@ class ExtensionManager:
                 f"Failed to open extension file at path: {file_path}",
                 original_error=exc,
             ) from exc
-        return ExtensionResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ExtensionResponse,
+            operation_name="create extension",
+        )
 
     def list(self) -> List[ExtensionResponse]:
         response = self._client.transport.get(

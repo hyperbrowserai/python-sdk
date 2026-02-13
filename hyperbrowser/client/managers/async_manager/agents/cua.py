@@ -2,6 +2,7 @@ from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import build_operation_name, wait_for_job_result_async
+from ...response_utils import parse_response_model
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -22,25 +23,41 @@ class CuaManager:
             self._client._build_url("/task/cua"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return StartCuaTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartCuaTaskResponse,
+            operation_name="cua start",
+        )
 
     async def get(self, job_id: str) -> CuaTaskResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/task/cua/{job_id}")
         )
-        return CuaTaskResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=CuaTaskResponse,
+            operation_name="cua task",
+        )
 
     async def get_status(self, job_id: str) -> CuaTaskStatusResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/task/cua/{job_id}/status")
         )
-        return CuaTaskStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=CuaTaskStatusResponse,
+            operation_name="cua task status",
+        )
 
     async def stop(self, job_id: str) -> BasicResponse:
         response = await self._client.transport.put(
             self._client._build_url(f"/task/cua/{job_id}/stop")
         )
-        return BasicResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="cua task stop",
+        )
 
     async def start_and_wait(
         self,

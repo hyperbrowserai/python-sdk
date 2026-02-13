@@ -16,6 +16,7 @@ from ....polling import (
     poll_until_terminal_status_async,
     retry_operation_async,
 )
+from ...response_utils import parse_response_model
 from ....schema_utils import inject_web_output_schemas
 
 
@@ -35,13 +36,21 @@ class BatchFetchManager:
             self._client._build_url("/web/batch-fetch"),
             data=payload,
         )
-        return StartBatchFetchJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartBatchFetchJobResponse,
+            operation_name="batch fetch start",
+        )
 
     async def get_status(self, job_id: str) -> BatchFetchJobStatusResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/web/batch-fetch/{job_id}/status")
         )
-        return BatchFetchJobStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BatchFetchJobStatusResponse,
+            operation_name="batch fetch status",
+        )
 
     async def get(
         self, job_id: str, params: Optional[GetBatchFetchJobParams] = None
@@ -51,7 +60,11 @@ class BatchFetchManager:
             self._client._build_url(f"/web/batch-fetch/{job_id}"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return BatchFetchJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=BatchFetchJobResponse,
+            operation_name="batch fetch job",
+        )
 
     async def start_and_wait(
         self,

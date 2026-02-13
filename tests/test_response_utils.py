@@ -7,27 +7,100 @@ import pytest
 from hyperbrowser.client.managers.async_manager.computer_action import (
     ComputerActionManager as AsyncComputerActionManager,
 )
+from hyperbrowser.client.managers.async_manager.crawl import (
+    CrawlManager as AsyncCrawlManager,
+)
+from hyperbrowser.client.managers.async_manager.extract import (
+    ExtractManager as AsyncExtractManager,
+)
+from hyperbrowser.client.managers.async_manager.extension import (
+    ExtensionManager as AsyncExtensionManager,
+)
 from hyperbrowser.client.managers.async_manager.profile import (
     ProfileManager as AsyncProfileManager,
+)
+from hyperbrowser.client.managers.async_manager.scrape import (
+    BatchScrapeManager as AsyncBatchScrapeManager,
+)
+from hyperbrowser.client.managers.async_manager.scrape import (
+    ScrapeManager as AsyncScrapeManager,
 )
 from hyperbrowser.client.managers.async_manager.team import (
     TeamManager as AsyncTeamManager,
 )
+from hyperbrowser.client.managers.async_manager.web.batch_fetch import (
+    BatchFetchManager as AsyncBatchFetchManager,
+)
+from hyperbrowser.client.managers.async_manager.web.crawl import (
+    WebCrawlManager as AsyncWebCrawlManager,
+)
 from hyperbrowser.client.managers.async_manager.web import (
     WebManager as AsyncWebManager,
+)
+from hyperbrowser.client.managers.async_manager.agents.browser_use import (
+    BrowserUseManager as AsyncBrowserUseManager,
+)
+from hyperbrowser.client.managers.async_manager.agents.claude_computer_use import (
+    ClaudeComputerUseManager as AsyncClaudeComputerUseManager,
+)
+from hyperbrowser.client.managers.async_manager.agents.cua import (
+    CuaManager as AsyncCuaManager,
+)
+from hyperbrowser.client.managers.async_manager.agents.gemini_computer_use import (
+    GeminiComputerUseManager as AsyncGeminiComputerUseManager,
+)
+from hyperbrowser.client.managers.async_manager.agents.hyper_agent import (
+    HyperAgentManager as AsyncHyperAgentManager,
 )
 from hyperbrowser.client.managers.response_utils import parse_response_model
 from hyperbrowser.client.managers.sync_manager.computer_action import (
     ComputerActionManager as SyncComputerActionManager,
 )
+from hyperbrowser.client.managers.sync_manager.crawl import (
+    CrawlManager as SyncCrawlManager,
+)
+from hyperbrowser.client.managers.sync_manager.extract import (
+    ExtractManager as SyncExtractManager,
+)
+from hyperbrowser.client.managers.sync_manager.extension import (
+    ExtensionManager as SyncExtensionManager,
+)
 from hyperbrowser.client.managers.sync_manager.profile import (
     ProfileManager as SyncProfileManager,
+)
+from hyperbrowser.client.managers.sync_manager.scrape import (
+    BatchScrapeManager as SyncBatchScrapeManager,
+)
+from hyperbrowser.client.managers.sync_manager.scrape import (
+    ScrapeManager as SyncScrapeManager,
 )
 from hyperbrowser.client.managers.sync_manager.team import (
     TeamManager as SyncTeamManager,
 )
+from hyperbrowser.client.managers.sync_manager.web.batch_fetch import (
+    BatchFetchManager as SyncBatchFetchManager,
+)
+from hyperbrowser.client.managers.sync_manager.web.crawl import (
+    WebCrawlManager as SyncWebCrawlManager,
+)
 from hyperbrowser.client.managers.sync_manager.web import WebManager as SyncWebManager
+from hyperbrowser.client.managers.sync_manager.agents.browser_use import (
+    BrowserUseManager as SyncBrowserUseManager,
+)
+from hyperbrowser.client.managers.sync_manager.agents.claude_computer_use import (
+    ClaudeComputerUseManager as SyncClaudeComputerUseManager,
+)
+from hyperbrowser.client.managers.sync_manager.agents.cua import (
+    CuaManager as SyncCuaManager,
+)
+from hyperbrowser.client.managers.sync_manager.agents.gemini_computer_use import (
+    GeminiComputerUseManager as SyncGeminiComputerUseManager,
+)
+from hyperbrowser.client.managers.sync_manager.agents.hyper_agent import (
+    HyperAgentManager as SyncHyperAgentManager,
+)
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.models.extension import CreateExtensionParams
 from hyperbrowser.models.session import BasicResponse
 from hyperbrowser.models.web.search import WebSearchParams
 
@@ -247,5 +320,202 @@ def test_async_computer_action_manager_rejects_invalid_response_shape():
             match="Expected computer action response to be an object",
         ):
             await manager.screenshot(session)
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    ("manager_class", "url_suffix", "expected_message"),
+    [
+        (
+            SyncBrowserUseManager,
+            "/task/browser-use/job_123/status",
+            "Expected browser-use task status response to be an object",
+        ),
+        (
+            SyncCuaManager,
+            "/task/cua/job_123/status",
+            "Expected cua task status response to be an object",
+        ),
+        (
+            SyncClaudeComputerUseManager,
+            "/task/claude-computer-use/job_123/status",
+            "Expected claude computer use task status response to be an object",
+        ),
+        (
+            SyncGeminiComputerUseManager,
+            "/task/gemini-computer-use/job_123/status",
+            "Expected gemini computer use task status response to be an object",
+        ),
+        (
+            SyncHyperAgentManager,
+            "/task/hyper-agent/job_123/status",
+            "Expected hyper agent task status response to be an object",
+        ),
+        (
+            SyncExtractManager,
+            "/extract/job_123/status",
+            "Expected extract status response to be an object",
+        ),
+        (
+            SyncCrawlManager,
+            "/crawl/job_123/status",
+            "Expected crawl status response to be an object",
+        ),
+        (
+            SyncBatchScrapeManager,
+            "/scrape/batch/job_123/status",
+            "Expected batch scrape status response to be an object",
+        ),
+        (
+            SyncScrapeManager,
+            "/scrape/job_123/status",
+            "Expected scrape status response to be an object",
+        ),
+        (
+            SyncBatchFetchManager,
+            "/web/batch-fetch/job_123/status",
+            "Expected batch fetch status response to be an object",
+        ),
+        (
+            SyncWebCrawlManager,
+            "/web/crawl/job_123/status",
+            "Expected web crawl status response to be an object",
+        ),
+    ],
+)
+def test_sync_status_managers_reject_invalid_response_shape(
+    manager_class, url_suffix: str, expected_message: str
+):
+    class _SyncTransport:
+        def get(self, url, params=None, follow_redirects=False):
+            _ = params
+            _ = follow_redirects
+            assert url.endswith(url_suffix)
+            return _FakeResponse(["invalid"])
+
+    manager = manager_class(_FakeClient(_SyncTransport()))
+
+    with pytest.raises(HyperbrowserError, match=expected_message):
+        manager.get_status("job_123")
+
+
+@pytest.mark.parametrize(
+    ("manager_class", "url_suffix", "expected_message"),
+    [
+        (
+            AsyncBrowserUseManager,
+            "/task/browser-use/job_123/status",
+            "Expected browser-use task status response to be an object",
+        ),
+        (
+            AsyncCuaManager,
+            "/task/cua/job_123/status",
+            "Expected cua task status response to be an object",
+        ),
+        (
+            AsyncClaudeComputerUseManager,
+            "/task/claude-computer-use/job_123/status",
+            "Expected claude computer use task status response to be an object",
+        ),
+        (
+            AsyncGeminiComputerUseManager,
+            "/task/gemini-computer-use/job_123/status",
+            "Expected gemini computer use task status response to be an object",
+        ),
+        (
+            AsyncHyperAgentManager,
+            "/task/hyper-agent/job_123/status",
+            "Expected hyper agent task status response to be an object",
+        ),
+        (
+            AsyncExtractManager,
+            "/extract/job_123/status",
+            "Expected extract status response to be an object",
+        ),
+        (
+            AsyncCrawlManager,
+            "/crawl/job_123/status",
+            "Expected crawl status response to be an object",
+        ),
+        (
+            AsyncBatchScrapeManager,
+            "/scrape/batch/job_123/status",
+            "Expected batch scrape status response to be an object",
+        ),
+        (
+            AsyncScrapeManager,
+            "/scrape/job_123/status",
+            "Expected scrape status response to be an object",
+        ),
+        (
+            AsyncBatchFetchManager,
+            "/web/batch-fetch/job_123/status",
+            "Expected batch fetch status response to be an object",
+        ),
+        (
+            AsyncWebCrawlManager,
+            "/web/crawl/job_123/status",
+            "Expected web crawl status response to be an object",
+        ),
+    ],
+)
+def test_async_status_managers_reject_invalid_response_shape(
+    manager_class, url_suffix: str, expected_message: str
+):
+    class _AsyncTransport:
+        async def get(self, url, params=None, follow_redirects=False):
+            _ = params
+            _ = follow_redirects
+            assert url.endswith(url_suffix)
+            return _FakeResponse(["invalid"])
+
+    manager = manager_class(_FakeClient(_AsyncTransport()))
+
+    async def run() -> None:
+        with pytest.raises(HyperbrowserError, match=expected_message):
+            await manager.get_status("job_123")
+
+    asyncio.run(run())
+
+
+def test_sync_extension_manager_create_rejects_invalid_response_shape(tmp_path):
+    class _SyncTransport:
+        def post(self, url, data=None, files=None):
+            _ = data
+            _ = files
+            assert url.endswith("/extensions/add")
+            return _FakeResponse(["invalid"])
+
+    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
+    file_path = tmp_path / "extension.zip"
+    file_path.write_bytes(b"extension-data")
+
+    with pytest.raises(
+        HyperbrowserError, match="Expected create extension response to be an object"
+    ):
+        manager.create(CreateExtensionParams(name="my-extension", file_path=file_path))
+
+
+def test_async_extension_manager_create_rejects_invalid_response_shape(tmp_path):
+    class _AsyncTransport:
+        async def post(self, url, data=None, files=None):
+            _ = data
+            _ = files
+            assert url.endswith("/extensions/add")
+            return _FakeResponse(["invalid"])
+
+    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
+    file_path = tmp_path / "extension.zip"
+    file_path.write_bytes(b"extension-data")
+
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError,
+            match="Expected create extension response to be an object",
+        ):
+            await manager.create(
+                CreateExtensionParams(name="my-extension", file_path=file_path)
+            )
 
     asyncio.run(run())

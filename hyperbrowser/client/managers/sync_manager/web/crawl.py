@@ -16,6 +16,7 @@ from ....polling import (
     poll_until_terminal_status,
     retry_operation,
 )
+from ...response_utils import parse_response_model
 from ....schema_utils import inject_web_output_schemas
 
 
@@ -33,13 +34,21 @@ class WebCrawlManager:
             self._client._build_url("/web/crawl"),
             data=payload,
         )
-        return StartWebCrawlJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=StartWebCrawlJobResponse,
+            operation_name="web crawl start",
+        )
 
     def get_status(self, job_id: str) -> WebCrawlJobStatusResponse:
         response = self._client.transport.get(
             self._client._build_url(f"/web/crawl/{job_id}/status")
         )
-        return WebCrawlJobStatusResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=WebCrawlJobStatusResponse,
+            operation_name="web crawl status",
+        )
 
     def get(
         self, job_id: str, params: Optional[GetWebCrawlJobParams] = None
@@ -49,7 +58,11 @@ class WebCrawlManager:
             self._client._build_url(f"/web/crawl/{job_id}"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return WebCrawlJobResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=WebCrawlJobResponse,
+            operation_name="web crawl job",
+        )
 
     def start_and_wait(
         self,
