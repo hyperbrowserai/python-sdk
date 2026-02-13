@@ -38,11 +38,24 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
 def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
     try:
         request = error.request
-    except RuntimeError:
+    except Exception:
         request = None
     if request is None:
         return "UNKNOWN", "unknown URL"
-    return request.method, str(request.url)
+    try:
+        request_method = request.method
+    except Exception:
+        request_method = "UNKNOWN"
+    if not isinstance(request_method, str) or not request_method.strip():
+        request_method = "UNKNOWN"
+
+    try:
+        request_url = str(request.url)
+    except Exception:
+        request_url = "unknown URL"
+    if not request_url.strip():
+        request_url = "unknown URL"
+    return request_method, request_url
 
 
 def format_request_failure_message(
