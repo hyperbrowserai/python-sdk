@@ -65,3 +65,28 @@ def test_async_handle_response_with_error_and_non_json_body_raises_hyperbrowser_
             await transport.close()
 
     asyncio.run(run())
+
+
+def test_sync_handle_response_with_json_string_error_body_uses_string_message():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        response = _build_response(500, '"upstream failed"')
+
+        with pytest.raises(HyperbrowserError, match="upstream failed"):
+            transport._handle_response(response)
+    finally:
+        transport.close()
+
+
+def test_async_handle_response_with_json_string_error_body_uses_string_message():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            response = _build_response(500, '"upstream failed"')
+
+            with pytest.raises(HyperbrowserError, match="upstream failed"):
+                await transport._handle_response(response)
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
