@@ -91,6 +91,10 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain backslashes"
         ):
             client._build_url(r"\\session")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain newline characters"
+        ):
+            client._build_url("/session\nnext")
         with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
             client._build_url("https://api.hyperbrowser.ai/session")
         with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
