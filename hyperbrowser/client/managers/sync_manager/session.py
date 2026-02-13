@@ -125,18 +125,33 @@ class SessionManager:
                     f"Failed to open upload file at path: {file_path}",
                     original_error=exc,
                 ) from exc
-        elif callable(getattr(file_input, "read", None)):
-            if getattr(file_input, "closed", False):
-                raise HyperbrowserError("file_input file-like object must be open")
-            files = {"file": file_input}
-            response = self._client.transport.post(
-                self._client._build_url(f"/session/{id}/uploads"),
-                files=files,
-            )
         else:
-            raise HyperbrowserError(
-                "file_input must be a file path or file-like object"
-            )
+            try:
+                read_method = getattr(file_input, "read", None)
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "file_input file-like object state is invalid",
+                    original_error=exc,
+                ) from exc
+            if callable(read_method):
+                try:
+                    is_closed = bool(getattr(file_input, "closed", False))
+                except Exception as exc:
+                    raise HyperbrowserError(
+                        "file_input file-like object state is invalid",
+                        original_error=exc,
+                    ) from exc
+                if is_closed:
+                    raise HyperbrowserError("file_input file-like object must be open")
+                files = {"file": file_input}
+                response = self._client.transport.post(
+                    self._client._build_url(f"/session/{id}/uploads"),
+                    files=files,
+                )
+            else:
+                raise HyperbrowserError(
+                    "file_input must be a file path or file-like object"
+                )
 
         return UploadFileResponse(**response.data)
 

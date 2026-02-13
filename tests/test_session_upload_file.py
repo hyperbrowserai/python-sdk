@@ -157,6 +157,18 @@ def test_sync_session_upload_file_rejects_closed_file_like_object():
         manager.upload_file("session_123", closed_file_obj)
 
 
+def test_sync_session_upload_file_wraps_invalid_file_like_state_errors():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    class _BrokenFileLike:
+        @property
+        def read(self):
+            raise RuntimeError("broken read")
+
+    with pytest.raises(HyperbrowserError, match="file-like object state is invalid"):
+        manager.upload_file("session_123", _BrokenFileLike())
+
+
 def test_async_session_upload_file_rejects_non_callable_read_attribute():
     manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
     fake_file = type("FakeFile", (), {"read": "not-callable"})()
@@ -176,6 +188,23 @@ def test_async_session_upload_file_rejects_closed_file_like_object():
     async def run():
         with pytest.raises(HyperbrowserError, match="file-like object must be open"):
             await manager.upload_file("session_123", closed_file_obj)
+
+    asyncio.run(run())
+
+
+def test_async_session_upload_file_wraps_invalid_file_like_state_errors():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    class _BrokenFileLike:
+        @property
+        def read(self):
+            raise RuntimeError("broken read")
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="file-like object state is invalid"
+        ):
+            await manager.upload_file("session_123", _BrokenFileLike())
 
     asyncio.run(run())
 
