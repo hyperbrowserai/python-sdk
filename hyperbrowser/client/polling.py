@@ -200,7 +200,10 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
             digits = normalized_status
         if not digits or not digits.isdigit():
             return None
-        return int(normalized_status, 10)
+        try:
+            return int(normalized_status, 10)
+        except ValueError:
+            return None
     return None
 
 

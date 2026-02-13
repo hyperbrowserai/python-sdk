@@ -452,6 +452,34 @@ def test_poll_until_terminal_status_async_handles_non_integer_status_codes_as_re
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_handles_unicode_digit_like_status_codes_as_retryable():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "unicode digit-like status code",
+                    status_code="²",  # type: ignore[arg-type]
+                )
+            return "completed"
+
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll unicode digit-like status retries",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+        assert status == "completed"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_retries_server_errors():
     attempts = {"count": 0}
 
@@ -867,6 +895,29 @@ def test_retry_operation_handles_non_integer_status_codes_as_retryable():
 
     result = retry_operation(
         operation_name="sync retry malformed status code",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
+def test_retry_operation_handles_unicode_digit_like_status_codes_as_retryable():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError(
+                "unicode digit-like status code",
+                status_code="²",  # type: ignore[arg-type]
+            )
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry unicode digit-like status code",
         operation=operation,
         max_attempts=5,
         retry_delay_seconds=0.0001,
