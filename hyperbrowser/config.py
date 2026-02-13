@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Mapping, Optional
 import os
 
 from .exceptions import HyperbrowserError
@@ -18,8 +18,8 @@ class ClientConfig:
             raise HyperbrowserError("api_key must be a string")
         if not isinstance(self.base_url, str):
             raise HyperbrowserError("base_url must be a string")
-        if self.headers is not None and not isinstance(self.headers, dict):
-            raise HyperbrowserError("headers must be a dictionary of string pairs")
+        if self.headers is not None and not isinstance(self.headers, Mapping):
+            raise HyperbrowserError("headers must be a mapping of string pairs")
         self.api_key = self.api_key.strip()
         if not self.api_key:
             raise HyperbrowserError("api_key must not be empty")
@@ -34,9 +34,7 @@ class ClientConfig:
             normalized_headers: Dict[str, str] = {}
             for key, value in self.headers.items():
                 if not isinstance(key, str) or not isinstance(value, str):
-                    raise HyperbrowserError(
-                        "headers must be a dictionary of string pairs"
-                    )
+                    raise HyperbrowserError("headers must be a mapping of string pairs")
                 normalized_headers[key] = value
             self.headers = normalized_headers
 

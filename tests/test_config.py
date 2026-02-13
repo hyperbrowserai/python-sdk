@@ -1,3 +1,5 @@
+from types import MappingProxyType
+
 import pytest
 
 from hyperbrowser.config import ClientConfig
@@ -61,7 +63,7 @@ def test_client_config_rejects_non_string_values():
     with pytest.raises(HyperbrowserError, match="base_url must be a string"):
         ClientConfig(api_key="test-key", base_url=None)  # type: ignore[arg-type]
 
-    with pytest.raises(HyperbrowserError, match="headers must be a dictionary"):
+    with pytest.raises(HyperbrowserError, match="headers must be a mapping"):
         ClientConfig(api_key="test-key", headers="x=1")  # type: ignore[arg-type]
 
     with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
@@ -86,5 +88,12 @@ def test_client_config_normalizes_headers_to_internal_copy():
 
 
 def test_client_config_rejects_non_string_header_pairs():
-    with pytest.raises(HyperbrowserError, match="headers must be a dictionary"):
+    with pytest.raises(HyperbrowserError, match="headers must be a mapping"):
         ClientConfig(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]
+
+
+def test_client_config_accepts_mapping_header_inputs():
+    headers = MappingProxyType({"X-Correlation-Id": "abc123"})
+    config = ClientConfig(api_key="test-key", headers=headers)
+
+    assert config.headers == {"X-Correlation-Id": "abc123"}
