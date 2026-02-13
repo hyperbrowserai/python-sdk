@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import cast
 
 import pytest
@@ -16,6 +17,18 @@ class _RaisesHyperbrowserModel:
     def __init__(self, **kwargs):
         _ = kwargs
         raise HyperbrowserError("model validation failed")
+
+
+class _BrokenKeysMapping(Mapping[str, object]):
+    def __iter__(self):
+        raise RuntimeError("cannot iterate mapping keys")
+
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, key: str) -> object:
+        _ = key
+        return "value"
 
 
 def test_api_response_from_json_parses_model_data() -> None:
@@ -63,6 +76,19 @@ def test_api_response_from_json_wraps_non_hyperbrowser_errors() -> None:
         match="Failed to parse response data for _SampleResponseModel",
     ) as exc_info:
         APIResponse.from_json({"retries": 1}, _SampleResponseModel)
+
+    assert exc_info.value.original_error is not None
+
+
+def test_api_response_from_json_wraps_unreadable_mapping_keys() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to parse response data for _SampleResponseModel: "
+            "unable to read mapping keys"
+        ),
+    ) as exc_info:
+        APIResponse.from_json(_BrokenKeysMapping(), _SampleResponseModel)
 
     assert exc_info.value.original_error is not None
 
