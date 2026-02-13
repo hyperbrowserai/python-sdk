@@ -94,7 +94,7 @@ class AsyncTransport(AsyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"POST request to {url} failed", original_error=e
+                f"Request POST {url} failed", original_error=e
             ) from e
 
     async def get(
@@ -118,7 +118,7 @@ class AsyncTransport(AsyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"GET request to {url} failed", original_error=e
+                f"Request GET {url} failed", original_error=e
             ) from e
 
     async def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
@@ -136,7 +136,7 @@ class AsyncTransport(AsyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"PUT request to {url} failed", original_error=e
+                f"Request PUT {url} failed", original_error=e
             ) from e
 
     async def delete(self, url: str) -> APIResponse:
@@ -154,5 +154,5 @@ class AsyncTransport(AsyncTransportStrategy):
             raise
         except Exception as e:
             raise HyperbrowserError(
-                f"DELETE request to {url} failed", original_error=e
+                f"Request DELETE {url} failed", original_error=e
             ) from e

@@ -267,7 +267,7 @@ def test_sync_transport_post_wraps_unexpected_errors_with_url_context():
     transport.client.post = failing_post  # type: ignore[assignment]
     try:
         with pytest.raises(
-            HyperbrowserError, match="POST request to https://example.com/post failed"
+            HyperbrowserError, match="Request POST https://example.com/post failed"
         ):
             transport.post("https://example.com/post", data={"ok": True})
     finally:
@@ -309,7 +309,7 @@ def test_sync_transport_delete_wraps_unexpected_errors_with_url_context():
     try:
         with pytest.raises(
             HyperbrowserError,
-            match="DELETE request to https://example.com/delete failed",
+            match="Request DELETE https://example.com/delete failed",
         ):
             transport.delete("https://example.com/delete")
     finally:
@@ -329,7 +329,7 @@ def test_async_transport_put_wraps_unexpected_errors_with_url_context():
         try:
             with pytest.raises(
                 HyperbrowserError,
-                match="PUT request to https://example.com/put failed",
+                match="Request PUT https://example.com/put failed",
             ):
                 await transport.put("https://example.com/put", data={"ok": True})
         finally:
