@@ -3,6 +3,7 @@ from typing import Optional
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
+    build_operation_name,
     collect_paginated_results,
     poll_until_terminal_status,
     retry_operation,
@@ -61,9 +62,10 @@ class BatchScrapeManager:
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start batch scrape job")
+        operation_name = build_operation_name("batch scrape job ", job_id)
 
         job_status = poll_until_terminal_status(
-            operation_name=f"batch scrape job {job_id}",
+            operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=lambda status: status in {"completed", "failed"},
             poll_interval_seconds=poll_interval_seconds,
@@ -73,7 +75,7 @@ class BatchScrapeManager:
 
         if not return_all_pages:
             return retry_operation(
-                operation_name=build_fetch_operation_name(f"batch scrape job {job_id}"),
+                operation_name=build_fetch_operation_name(operation_name),
                 operation=lambda: self.get(job_id),
                 max_attempts=POLLING_ATTEMPTS,
                 retry_delay_seconds=0.5,
@@ -99,7 +101,7 @@ class BatchScrapeManager:
             job_response.error = page_response.error
 
         collect_paginated_results(
-            operation_name=f"batch scrape job {job_id}",
+            operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_id,
                 params=GetBatchScrapeJobParams(page=page, batch_size=100),
@@ -154,9 +156,10 @@ class ScrapeManager:
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start scrape job")
+        operation_name = build_operation_name("scrape job ", job_id)
 
         return wait_for_job_result(
-            operation_name=f"scrape job {job_id}",
+            operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=lambda status: status in {"completed", "failed"},
             fetch_result=lambda: self.get(job_id),

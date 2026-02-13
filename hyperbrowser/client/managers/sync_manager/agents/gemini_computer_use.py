@@ -1,7 +1,7 @@
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
-from ....polling import wait_for_job_result
+from ....polling import build_operation_name, wait_for_job_result
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -55,9 +55,10 @@ class GeminiComputerUseManager:
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start Gemini Computer Use task job")
+        operation_name = build_operation_name("Gemini Computer Use task job ", job_id)
 
         return wait_for_job_result(
-            operation_name=f"Gemini Computer Use task job {job_id}",
+            operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=lambda status: (
                 status in {"completed", "failed", "stopped"}

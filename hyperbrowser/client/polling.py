@@ -18,6 +18,7 @@ from hyperbrowser.exceptions import (
 T = TypeVar("T")
 _MAX_OPERATION_NAME_LENGTH = 200
 _FETCH_OPERATION_NAME_PREFIX = "Fetching "
+_TRUNCATED_OPERATION_NAME_SUFFIX = "..."
 _CLIENT_ERROR_STATUS_MIN = 400
 _CLIENT_ERROR_STATUS_MAX = 500
 _RETRYABLE_CLIENT_ERROR_STATUS_CODES = {408, 429}
@@ -64,6 +65,19 @@ def _validate_operation_name(operation_name: str) -> None:
         ord(character) < 32 or ord(character) == 127 for character in operation_name
     ):
         raise HyperbrowserError("operation_name must not contain control characters")
+
+
+def build_operation_name(prefix: str, identifier: str) -> str:
+    operation_name = f"{prefix}{identifier}"
+    if len(operation_name) <= _MAX_OPERATION_NAME_LENGTH:
+        return operation_name
+    available_identifier_length = (
+        _MAX_OPERATION_NAME_LENGTH - len(prefix) - len(_TRUNCATED_OPERATION_NAME_SUFFIX)
+    )
+    if available_identifier_length > 0:
+        truncated_identifier = identifier[:available_identifier_length]
+        return f"{prefix}{truncated_identifier}{_TRUNCATED_OPERATION_NAME_SUFFIX}"
+    return prefix[:_MAX_OPERATION_NAME_LENGTH]
 
 
 def build_fetch_operation_name(operation_name: str) -> str:

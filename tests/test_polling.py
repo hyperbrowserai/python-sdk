@@ -12,6 +12,7 @@ import pytest
 import hyperbrowser.client.polling as polling_helpers
 from hyperbrowser.client.polling import (
     build_fetch_operation_name,
+    build_operation_name,
     collect_paginated_results,
     collect_paginated_results_async,
     poll_until_terminal_status,
@@ -49,6 +50,25 @@ def test_build_fetch_operation_name_prefixes_when_within_length_limit():
 def test_build_fetch_operation_name_falls_back_for_max_length_inputs():
     operation_name = "x" * 200
     assert build_fetch_operation_name(operation_name) == operation_name
+
+
+def test_build_operation_name_keeps_short_names_unchanged():
+    assert build_operation_name("crawl job ", "123") == "crawl job 123"
+
+
+def test_build_operation_name_truncates_long_identifiers():
+    operation_name = build_operation_name("crawl job ", "x" * 500)
+
+    assert operation_name.startswith("crawl job ")
+    assert operation_name.endswith("...")
+    assert len(operation_name) == 200
+
+
+def test_build_operation_name_truncates_overlong_prefixes():
+    long_prefix = "p" * 250
+    operation_name = build_operation_name(long_prefix, "identifier")
+
+    assert operation_name == long_prefix[:200]
 
 
 def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():

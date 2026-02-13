@@ -3,6 +3,7 @@ from typing import Optional
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
+    build_operation_name,
     collect_paginated_results,
     poll_until_terminal_status,
     retry_operation,
@@ -56,9 +57,10 @@ class CrawlManager:
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start crawl job")
+        operation_name = build_operation_name("crawl job ", job_id)
 
         job_status = poll_until_terminal_status(
-            operation_name=f"crawl job {job_id}",
+            operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=lambda status: status in {"completed", "failed"},
             poll_interval_seconds=poll_interval_seconds,
@@ -68,7 +70,7 @@ class CrawlManager:
 
         if not return_all_pages:
             return retry_operation(
-                operation_name=build_fetch_operation_name(f"crawl job {job_id}"),
+                operation_name=build_fetch_operation_name(operation_name),
                 operation=lambda: self.get(job_id),
                 max_attempts=POLLING_ATTEMPTS,
                 retry_delay_seconds=0.5,
@@ -94,7 +96,7 @@ class CrawlManager:
             job_response.error = page_response.error
 
         collect_paginated_results(
-            operation_name=f"crawl job {job_id}",
+            operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_start_resp.job_id,
                 GetCrawlJobParams(page=page, batch_size=100),
