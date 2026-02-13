@@ -1031,6 +1031,31 @@ def test_collect_paginated_results_rejects_awaitable_on_page_success_result():
     assert callback_attempts["count"] == 1
 
 
+def test_collect_paginated_results_cancels_future_on_page_success_results():
+    loop = asyncio.new_event_loop()
+    try:
+        callback_future = loop.create_future()
+
+        with pytest.raises(
+            HyperbrowserError,
+            match="on_page_success must return a non-awaitable result",
+        ):
+            collect_paginated_results(
+                operation_name="sync paginated on-page-success future",
+                get_next_page=lambda page: {"current": 1, "total": 1, "items": []},
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: callback_future,  # type: ignore[return-value]
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert callback_future.cancelled()
+    finally:
+        loop.close()
+
+
 def test_collect_paginated_results_fails_fast_when_on_page_success_raises():
     page_attempts = {"count": 0}
 
@@ -1201,6 +1226,32 @@ def test_collect_paginated_results_async_rejects_awaitable_on_page_success_resul
                 retry_delay_seconds=0.0001,
             )
         assert callback_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_cancels_future_on_page_success_results():
+    async def run() -> None:
+        callback_future = asyncio.get_running_loop().create_future()
+
+        with pytest.raises(
+            HyperbrowserError,
+            match="on_page_success must return a non-awaitable result",
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated on-page-success future",
+                get_next_page=lambda page: asyncio.sleep(
+                    0, result={"current": 1, "total": 1, "items": []}
+                ),
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: callback_future,  # type: ignore[return-value]
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert callback_future.cancelled()
 
     asyncio.run(run())
 
