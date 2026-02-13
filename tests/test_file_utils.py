@@ -46,6 +46,23 @@ def test_ensure_existing_file_path_rejects_blank_missing_message(tmp_path: Path)
         )
 
 
+def test_ensure_existing_file_path_rejects_control_chars_in_missing_message(
+    tmp_path: Path,
+):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="missing_file_message must not contain control characters",
+    ):
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing\tmessage",
+            not_file_message="not-file",
+        )
+
+
 def test_ensure_existing_file_path_rejects_non_string_not_file_message(tmp_path: Path):
     file_path = tmp_path / "file.txt"
     file_path.write_text("content")
@@ -67,6 +84,23 @@ def test_ensure_existing_file_path_rejects_blank_not_file_message(tmp_path: Path
             str(file_path),
             missing_file_message="missing",
             not_file_message="  ",
+        )
+
+
+def test_ensure_existing_file_path_rejects_control_chars_in_not_file_message(
+    tmp_path: Path,
+):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="not_file_message must not contain control characters",
+    ):
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message="not-file\nmessage",
         )
 
 
