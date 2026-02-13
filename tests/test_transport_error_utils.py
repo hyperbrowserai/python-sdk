@@ -253,6 +253,15 @@ def test_format_generic_request_failure_message_normalizes_invalid_method_values
     assert message == "Request UNKNOWN https://example.com/path failed"
 
 
+def test_format_generic_request_failure_message_normalizes_non_string_method_values():
+    message = format_generic_request_failure_message(
+        method=123,
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
 def test_format_request_failure_message_truncates_very_long_fallback_urls():
     very_long_url = "https://example.com/" + ("a" * 1200)
     message = format_request_failure_message(
