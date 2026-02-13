@@ -28,6 +28,23 @@ def test_client_config_from_env_reads_api_key_and_base_url(monkeypatch):
     assert config.base_url == "https://example.local"
 
 
+def test_client_config_from_env_normalizes_base_url(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", " https://example.local/ ")
+
+    config = ClientConfig.from_env()
+
+    assert config.base_url == "https://example.local"
+
+
+def test_client_config_from_env_rejects_invalid_base_url(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", "example.local")
+
+    with pytest.raises(HyperbrowserError, match="base_url must start with"):
+        ClientConfig.from_env()
+
+
 def test_client_config_normalizes_whitespace_and_trailing_slash():
     config = ClientConfig(api_key="  test-key  ", base_url=" https://example.local/ ")
 
