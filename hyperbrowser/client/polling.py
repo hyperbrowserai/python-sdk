@@ -78,6 +78,10 @@ def _validate_operation_name(operation_name: str) -> None:
 
 def build_operation_name(prefix: object, identifier: object) -> str:
     normalized_prefix = _coerce_operation_name_component(prefix, fallback="")
+    normalized_prefix = "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in normalized_prefix
+    )
     raw_identifier = _coerce_operation_name_component(identifier, fallback="unknown")
     normalized_identifier = raw_identifier.strip()
     if not normalized_identifier:

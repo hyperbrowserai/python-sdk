@@ -118,6 +118,15 @@ def test_build_operation_name_falls_back_for_unstringifiable_prefixes():
     assert operation_name == "identifier"
 
 
+def test_build_operation_name_sanitizes_control_characters_in_prefix():
+    operation_name = build_operation_name(
+        "crawl\njob\t ",
+        "identifier",
+    )
+
+    assert operation_name == "crawl?job? identifier"
+
+
 def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
     status = poll_until_terminal_status(
         operation_name="sync immediate zero wait",
