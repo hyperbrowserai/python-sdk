@@ -198,6 +198,8 @@ def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
             raise HyperbrowserError(f"{tool_name} response must include 'data'")
         try:
             return response["data"]
+        except KeyError:
+            raise HyperbrowserError(f"{tool_name} response must include 'data'")
         except HyperbrowserError:
             raise
         except Exception as exc:

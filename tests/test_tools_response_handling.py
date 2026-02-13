@@ -169,6 +169,29 @@ def test_scrape_tool_wraps_mapping_response_data_read_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_scrape_tool_rejects_mapping_responses_missing_data_on_lookup():
+    class _InconsistentResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "data"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise KeyError("data")
+
+    client = _SyncScrapeClient(_InconsistentResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="scrape tool response must include 'data'"
+    ):
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+
 def test_scrape_tool_wraps_mapping_response_data_inspection_failures():
     class _BrokenContainsResponse(Mapping[str, object]):
         def __iter__(self):
