@@ -2,6 +2,7 @@ import httpx
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.version import __version__
 from .base import APIResponse, SyncTransportStrategy
 
 
@@ -9,7 +10,12 @@ class SyncTransport(SyncTransportStrategy):
     """Synchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str):
-        self.client = httpx.Client(headers={"x-api-key": api_key})
+        self.client = httpx.Client(
+            headers={
+                "x-api-key": api_key,
+                "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
+            }
+        )
 
     def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:

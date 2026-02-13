@@ -3,6 +3,7 @@ import httpx
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.version import __version__
 from .base import APIResponse, AsyncTransportStrategy
 
 
@@ -10,7 +11,12 @@ class AsyncTransport(AsyncTransportStrategy):
     """Asynchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str):
-        self.client = httpx.AsyncClient(headers={"x-api-key": api_key})
+        self.client = httpx.AsyncClient(
+            headers={
+                "x-api-key": api_key,
+                "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
+            }
+        )
         self._closed = False
 
     async def close(self) -> None:
