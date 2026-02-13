@@ -13,6 +13,11 @@ class _BrokenHeadersMapping(dict):
         raise RuntimeError("broken header iteration")
 
 
+class _MalformedHeaderItemsMapping(dict):
+    def items(self):
+        return [("X-Trace-Id", "trace-1", "extra-item")]
+
+
 def test_normalize_headers_trims_header_names():
     headers = normalize_headers(
         {"  X-Correlation-Id  ": "abc123"},
@@ -205,3 +210,24 @@ def test_merge_headers_wraps_override_mapping_iteration_failures():
         )
 
     assert exc_info.value.original_error is not None
+
+
+def test_normalize_headers_rejects_malformed_mapping_items():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ):
+        normalize_headers(
+            _MalformedHeaderItemsMapping(),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
+def test_merge_headers_rejects_malformed_override_mapping_items():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ):
+        merge_headers(
+            {"X-Trace-Id": "abc123"},
+            _MalformedHeaderItemsMapping(),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
