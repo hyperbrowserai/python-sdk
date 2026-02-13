@@ -25,7 +25,7 @@ export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
 export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON object
 ```
 
-`base_url` must start with `https://` (or `http://` for local testing).  
+`base_url` must start with `https://` (or `http://` for local testing) and include a host.  
 The SDK normalizes trailing slashes automatically.
 When `config` is not provided, client constructors also read `HYPERBROWSER_HEADERS`
 automatically (same as API key and base URL).
