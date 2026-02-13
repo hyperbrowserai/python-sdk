@@ -114,6 +114,8 @@ def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, _NonRetryablePollingError):
         return False
     if isinstance(exc, HyperbrowserError) and exc.status_code is not None:
+        if isinstance(exc.status_code, bool) or not isinstance(exc.status_code, int):
+            return True
         if (
             _CLIENT_ERROR_STATUS_MIN <= exc.status_code < _CLIENT_ERROR_STATUS_MAX
             and exc.status_code not in _RETRYABLE_CLIENT_ERROR_STATUS_CODES
