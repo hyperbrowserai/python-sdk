@@ -106,7 +106,16 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
                 f"{index} but got {_get_type_name(extension)}"
             )
         try:
-            parsed_extensions.append(ExtensionResponse(**dict(extension)))
+            extension_payload = dict(extension)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read extension object at index {index}",
+                original_error=exc,
+            ) from exc
+        try:
+            parsed_extensions.append(ExtensionResponse(**extension_payload))
         except HyperbrowserError:
             raise
         except Exception as exc:

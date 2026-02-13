@@ -1,5 +1,7 @@
-import pytest
+from collections.abc import Iterator, Mapping
 from types import MappingProxyType
+
+import pytest
 
 from hyperbrowser.client.managers import extension_utils
 from hyperbrowser.client.managers.extension_utils import (
@@ -244,3 +246,47 @@ def test_parse_extension_list_response_data_wraps_unreadable_extensions_iteratio
         parse_extension_list_response_data({"extensions": _BrokenExtensionsList([{}])})
 
     assert exc_info.value.original_error is not None
+
+
+def test_parse_extension_list_response_data_wraps_unreadable_extension_object():
+    class _BrokenExtensionMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            raise RuntimeError("cannot iterate extension object")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read extension object at index 0"
+    ) as exc_info:
+        parse_extension_list_response_data(
+            {"extensions": [_BrokenExtensionMapping()]}
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_extension_list_response_data_preserves_hyperbrowser_extension_read_errors():
+    class _BrokenExtensionMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            raise HyperbrowserError("custom extension read failure")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    with pytest.raises(
+        HyperbrowserError, match="custom extension read failure"
+    ) as exc_info:
+        parse_extension_list_response_data(
+            {"extensions": [_BrokenExtensionMapping()]}
+        )
+
+    assert exc_info.value.original_error is None
