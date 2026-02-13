@@ -50,7 +50,7 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
-        for key in ("message", "error", "detail", "errors", "msg"):
+        for key in ("message", "error", "detail", "errors", "msg", "title", "reason"):
             nested_value = value.get(key)
             if nested_value is not None:
                 return _stringify_error_value(nested_value, _depth=_depth + 1)
@@ -94,7 +94,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
 
     extracted_message: str
     if isinstance(error_data, dict):
-        for key in ("message", "error", "detail", "errors"):
+        for key in ("message", "error", "detail", "errors", "title", "reason"):
             message = error_data.get(key)
             if message is not None:
                 candidate_message = _stringify_error_value(message)

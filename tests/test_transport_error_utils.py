@@ -303,6 +303,24 @@ def test_extract_error_message_extracts_errors_list_messages():
     assert message == "first issue; second issue"
 
 
+def test_extract_error_message_uses_title_field_when_present():
+    message = extract_error_message(
+        _DummyResponse({"title": "Request validation failed"}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "Request validation failed"
+
+
+def test_extract_error_message_uses_reason_field_when_present():
+    message = extract_error_message(
+        _DummyResponse({"reason": "service temporarily unavailable"}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "service temporarily unavailable"
+
+
 def test_extract_error_message_truncates_long_errors_lists():
     errors_payload = {"errors": [{"msg": f"issue-{index}"} for index in range(12)]}
     message = extract_error_message(
