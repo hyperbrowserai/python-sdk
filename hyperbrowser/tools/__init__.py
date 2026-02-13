@@ -52,6 +52,33 @@ def _format_tool_param_key_for_error(key: str) -> str:
     return f"{normalized_key[:available_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
 
 
+def _normalize_extract_schema_mapping(schema_value: MappingABC[object, Any]) -> Dict[str, Any]:
+    try:
+        schema_keys = list(schema_value.keys())
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to read extract tool `schema` object keys",
+            original_error=exc,
+        ) from exc
+    normalized_schema: Dict[str, Any] = {}
+    for key in schema_keys:
+        if not isinstance(key, str):
+            raise HyperbrowserError("Extract tool `schema` object keys must be strings")
+        try:
+            normalized_schema[key] = schema_value[key]
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            key_display = _format_tool_param_key_for_error(key)
+            raise HyperbrowserError(
+                f"Failed to read extract tool `schema` value for key '{key_display}'",
+                original_error=exc,
+            ) from exc
+    return normalized_schema
+
+
 def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
     normalized_params = _to_param_dict(params)
     schema_value = normalized_params.get("schema")
@@ -69,11 +96,13 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
                 "Invalid JSON string provided for `schema` in extract tool params",
                 original_error=exc,
             ) from exc
-        if parsed_schema is not None and not isinstance(parsed_schema, MappingABC):
+        if not isinstance(parsed_schema, MappingABC):
             raise HyperbrowserError(
                 "Extract tool `schema` must decode to a JSON object"
             )
-        normalized_params["schema"] = parsed_schema
+        normalized_params["schema"] = _normalize_extract_schema_mapping(parsed_schema)
+    elif isinstance(schema_value, MappingABC):
+        normalized_params["schema"] = _normalize_extract_schema_mapping(schema_value)
     return normalized_params
 
 

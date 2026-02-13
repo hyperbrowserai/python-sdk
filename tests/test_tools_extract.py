@@ -1,4 +1,6 @@
 import asyncio
+from collections.abc import Mapping
+from types import MappingProxyType
 
 import pytest
 
@@ -169,6 +171,135 @@ def test_extract_tool_async_runnable_rejects_non_mapping_non_string_schema():
         match="Extract tool `schema` must be an object or JSON string",
     ):
         asyncio.run(run())
+
+
+def test_extract_tool_runnable_rejects_null_schema_json():
+    client = _SyncClient()
+    params = {
+        "urls": ["https://example.com"],
+        "schema": "null",
+    }
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` must decode to a JSON object"
+    ):
+        WebsiteExtractTool.runnable(client, params)
+
+
+def test_extract_tool_runnable_normalizes_mapping_schema_values():
+    client = _SyncClient()
+    schema_mapping = MappingProxyType({"type": "object", "properties": {}})
+
+    WebsiteExtractTool.runnable(
+        client,
+        {
+            "urls": ["https://example.com"],
+            "schema": schema_mapping,
+        },
+    )
+
+    assert isinstance(client.extract.last_params, StartExtractJobParams)
+    assert isinstance(client.extract.last_params.schema_, dict)
+    assert client.extract.last_params.schema_ == {"type": "object", "properties": {}}
+
+
+def test_extract_tool_runnable_rejects_non_string_schema_keys():
+    client = _SyncClient()
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` object keys must be strings"
+    ):
+        WebsiteExtractTool.runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": {1: "invalid-key"},  # type: ignore[dict-item]
+            },
+        )
+
+
+def test_extract_tool_runnable_wraps_schema_key_read_failures():
+    class _BrokenSchemaMapping(Mapping[object, object]):
+        def __iter__(self):
+            raise RuntimeError("cannot iterate schema keys")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: object) -> object:
+            return key
+
+    client = _SyncClient()
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read extract tool `schema` object keys"
+    ) as exc_info:
+        WebsiteExtractTool.runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": _BrokenSchemaMapping(),
+            },
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_extract_tool_runnable_wraps_schema_value_read_failures():
+    class _BrokenSchemaMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "type"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read schema value")
+
+    client = _SyncClient()
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read extract tool `schema` value for key 'type'",
+    ) as exc_info:
+        WebsiteExtractTool.runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": _BrokenSchemaMapping(),
+            },
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_extract_tool_runnable_preserves_hyperbrowser_schema_value_read_failures():
+    class _BrokenSchemaMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "type"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise HyperbrowserError("custom schema value failure")
+
+    client = _SyncClient()
+
+    with pytest.raises(
+        HyperbrowserError, match="custom schema value failure"
+    ) as exc_info:
+        WebsiteExtractTool.runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": _BrokenSchemaMapping(),
+            },
+        )
+
+    assert exc_info.value.original_error is None
 
 
 def test_extract_tool_runnable_serializes_empty_object_data():
