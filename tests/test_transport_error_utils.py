@@ -1,6 +1,7 @@
 import httpx
 
 from hyperbrowser.transport.error_utils import (
+    extract_error_message,
     extract_request_error_context,
     format_request_failure_message,
 )
@@ -37,6 +38,15 @@ class _RequestErrorWithBlankContext(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _BlankContextRequest()
+
+
+class _DummyResponse:
+    def __init__(self, json_value, text: str = "") -> None:
+        self._json_value = json_value
+        self.text = text
+
+    def json(self):
+        return self._json_value
 
 
 def test_extract_request_error_context_uses_unknown_when_request_unset():
@@ -102,3 +112,25 @@ def test_format_request_failure_message_normalizes_blank_fallback_values():
     )
 
     assert message == "Request UNKNOWN unknown URL failed"
+
+
+def test_extract_error_message_handles_recursive_list_payloads():
+    recursive_payload = []
+    recursive_payload.append(recursive_payload)
+    message = extract_error_message(
+        _DummyResponse(recursive_payload), RuntimeError("fallback")
+    )
+
+    assert isinstance(message, str)
+    assert message
+
+
+def test_extract_error_message_handles_recursive_dict_payloads():
+    recursive_payload = {}
+    recursive_payload["message"] = recursive_payload
+    message = extract_error_message(
+        _DummyResponse(recursive_payload), RuntimeError("fallback")
+    )
+
+    assert isinstance(message, str)
+    assert message

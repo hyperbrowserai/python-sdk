@@ -4,18 +4,22 @@ from typing import Any
 import httpx
 
 
-def _stringify_error_value(value: Any) -> str:
+def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
+    if _depth > 10:
+        return str(value)
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
         for key in ("message", "error", "detail", "msg"):
             nested_value = value.get(key)
             if nested_value is not None:
-                return _stringify_error_value(nested_value)
+                return _stringify_error_value(nested_value, _depth=_depth + 1)
     if isinstance(value, (list, tuple)):
         collected_messages = [
             item_message
-            for item_message in (_stringify_error_value(item) for item in value)
+            for item_message in (
+                _stringify_error_value(item, _depth=_depth + 1) for item in value
+            )
             if item_message
         ]
         if collected_messages:
@@ -26,7 +30,7 @@ def _stringify_error_value(value: Any) -> str:
             )
     try:
         return json.dumps(value, sort_keys=True)
-    except TypeError:
+    except (TypeError, ValueError, RecursionError):
         return str(value)
 
 
