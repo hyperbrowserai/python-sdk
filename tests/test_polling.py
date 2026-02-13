@@ -221,3 +221,37 @@ def test_collect_paginated_results_async_collects_all_pages():
         assert collected == ["a", "b"]
 
     asyncio.run(run())
+
+
+def test_collect_paginated_results_raises_after_page_failures():
+    with pytest.raises(HyperbrowserError, match="Failed to fetch page batch 1"):
+        collect_paginated_results(
+            operation_name="sync paginated failure",
+            get_next_page=lambda page: (_ for _ in ()).throw(ValueError("boom")),
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=2,
+            retry_delay_seconds=0.0001,
+        )
+
+
+def test_collect_paginated_results_async_times_out():
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserTimeoutError,
+            match="Timed out fetching paginated results for async paginated timeout",
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated timeout",
+                get_next_page=lambda page: asyncio.sleep(0, result={"current": 0, "total": 1, "items": []}),
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=0.001,
+                max_attempts=2,
+                retry_delay_seconds=0.01,
+            )
+
+    asyncio.run(run())
