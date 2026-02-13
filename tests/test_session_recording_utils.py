@@ -8,11 +8,13 @@ from hyperbrowser.client.managers.async_manager.session import (
 )
 from hyperbrowser.client.managers.session_utils import (
     parse_session_recordings_response_data,
+    parse_session_response_model,
 )
 from hyperbrowser.client.managers.sync_manager.session import (
     SessionManager as SyncSessionManager,
 )
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.models.session import BasicResponse
 
 
 class _FakeResponse:
@@ -30,6 +32,11 @@ class _SyncTransport:
         assert url.endswith("/session/session_123/recording")
         return _FakeResponse(self._response_data)
 
+    def put(self, url, data=None):
+        _ = data
+        assert url.endswith("/session/session_123/stop")
+        return _FakeResponse(self._response_data)
+
 
 class _AsyncTransport:
     def __init__(self, response_data):
@@ -39,6 +46,11 @@ class _AsyncTransport:
         _ = params
         _ = follow_redirects
         assert url.endswith("/session/session_123/recording")
+        return _FakeResponse(self._response_data)
+
+    async def put(self, url, data=None):
+        _ = data
+        assert url.endswith("/session/session_123/stop")
         return _FakeResponse(self._response_data)
 
 
@@ -64,6 +76,62 @@ def test_parse_session_recordings_response_data_parses_list_payloads():
     assert len(recordings) == 1
     assert recordings[0].type == 1
     assert recordings[0].timestamp == 123
+
+
+def test_parse_session_response_model_parses_mapping_payloads():
+    result = parse_session_response_model(
+        {"success": True},
+        model=BasicResponse,
+        operation_name="session stop",
+    )
+
+    assert isinstance(result, BasicResponse)
+    assert result.success is True
+
+
+def test_parse_session_response_model_accepts_mapping_proxy_payloads():
+    result = parse_session_response_model(
+        MappingProxyType({"success": True}),
+        model=BasicResponse,
+        operation_name="session stop",
+    )
+
+    assert result.success is True
+
+
+def test_parse_session_response_model_rejects_non_mapping_payloads():
+    with pytest.raises(
+        HyperbrowserError, match="Expected session stop response to be an object"
+    ):
+        parse_session_response_model(
+            ["invalid"],  # type: ignore[arg-type]
+            model=BasicResponse,
+            operation_name="session stop",
+        )
+
+
+def test_parse_session_response_model_rejects_blank_operation_name():
+    with pytest.raises(
+        HyperbrowserError, match="operation_name must be a non-empty string"
+    ):
+        parse_session_response_model(
+            {"success": True},
+            model=BasicResponse,
+            operation_name="   ",
+        )
+
+
+def test_parse_session_response_model_wraps_invalid_payloads():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to parse session stop response"
+    ) as exc_info:
+        parse_session_response_model(
+            {},
+            model=BasicResponse,
+            operation_name="session stop",
+        )
+
+    assert exc_info.value.original_error is not None
 
 
 def test_parse_session_recordings_response_data_accepts_mapping_proxy_items():
@@ -196,6 +264,15 @@ def test_sync_session_manager_get_recording_rejects_invalid_payload_shapes():
         manager.get_recording("session_123")
 
 
+def test_sync_session_manager_stop_rejects_invalid_payload_shapes():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport(["invalid"])))
+
+    with pytest.raises(
+        HyperbrowserError, match="Expected session stop response to be an object"
+    ):
+        manager.stop("session_123")
+
+
 def test_async_session_manager_get_recording_rejects_invalid_payload_shapes():
     manager = AsyncSessionManager(_FakeClient(_AsyncTransport({"bad": "payload"})))
 
@@ -205,5 +282,17 @@ def test_async_session_manager_get_recording_rejects_invalid_payload_shapes():
             match="Expected session recording response to be a list of objects",
         ):
             await manager.get_recording("session_123")
+
+    asyncio.run(run())
+
+
+def test_async_session_manager_stop_rejects_invalid_payload_shapes():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport(["invalid"])))
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="Expected session stop response to be an object"
+        ):
+            await manager.stop("session_123")
 
     asyncio.run(run())

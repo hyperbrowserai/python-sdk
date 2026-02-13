@@ -4,7 +4,10 @@ from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
 from ...file_utils import ensure_existing_file_path
-from ..session_utils import parse_session_recordings_response_data
+from ..session_utils import (
+    parse_session_recordings_response_data,
+    parse_session_response_model,
+)
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
@@ -37,7 +40,11 @@ class SessionEventLogsManager:
             self._client._build_url(f"/session/{session_id}/event-logs"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return SessionEventLogListResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=SessionEventLogListResponse,
+            operation_name="session event logs",
+        )
 
 
 class SessionManager:
@@ -58,7 +65,11 @@ class SessionManager:
                 else params.model_dump(exclude_none=True, by_alias=True)
             ),
         )
-        return SessionDetail(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=SessionDetail,
+            operation_name="session detail",
+        )
 
     async def get(
         self, id: str, params: Optional[SessionGetParams] = None
@@ -68,13 +79,21 @@ class SessionManager:
             self._client._build_url(f"/session/{id}"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return SessionDetail(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=SessionDetail,
+            operation_name="session detail",
+        )
 
     async def stop(self, id: str) -> BasicResponse:
         response = await self._client.transport.put(
             self._client._build_url(f"/session/{id}/stop")
         )
-        return BasicResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="session stop",
+        )
 
     async def list(
         self, params: Optional[SessionListParams] = None
@@ -84,7 +103,11 @@ class SessionManager:
             self._client._build_url("/sessions"),
             params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
-        return SessionListResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=SessionListResponse,
+            operation_name="session list",
+        )
 
     async def get_recording(self, id: str) -> List[SessionRecording]:
         response = await self._client.transport.get(
@@ -96,7 +119,11 @@ class SessionManager:
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{id}/recording-url")
         )
-        return GetSessionRecordingUrlResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=GetSessionRecordingUrlResponse,
+            operation_name="session recording url",
+        )
 
     async def get_video_recording_url(
         self, id: str
@@ -104,13 +131,21 @@ class SessionManager:
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{id}/video-recording-url")
         )
-        return GetSessionVideoRecordingUrlResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=GetSessionVideoRecordingUrlResponse,
+            operation_name="session video recording url",
+        )
 
     async def get_downloads_url(self, id: str) -> GetSessionDownloadsUrlResponse:
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{id}/downloads-url")
         )
-        return GetSessionDownloadsUrlResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=GetSessionDownloadsUrlResponse,
+            operation_name="session downloads url",
+        )
 
     async def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
@@ -166,14 +201,22 @@ class SessionManager:
                     "file_input must be a file path or file-like object"
                 )
 
-        return UploadFileResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=UploadFileResponse,
+            operation_name="session upload file",
+        )
 
     async def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:
         response = await self._client.transport.put(
             self._client._build_url(f"/session/{id}/extend-session"),
             data={"durationMinutes": duration_minutes},
         )
-        return BasicResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="session extend",
+        )
 
     @overload
     async def update_profile_params(
@@ -226,7 +269,11 @@ class SessionManager:
                 "params": params_obj.model_dump(exclude_none=True, by_alias=True),
             },
         )
-        return BasicResponse(**response.data)
+        return parse_session_response_model(
+            response.data,
+            model=BasicResponse,
+            operation_name="session update profile",
+        )
 
     def _warn_update_profile_params_boolean_deprecated(self) -> None:
         if SessionManager._has_warned_update_profile_params_boolean_deprecated:
