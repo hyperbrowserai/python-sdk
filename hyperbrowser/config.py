@@ -87,7 +87,14 @@ class ClientConfig:
             raise HyperbrowserError("base_url must not include user credentials")
         try:
             parsed_base_url.port
+        except HyperbrowserError:
+            raise
         except ValueError as exc:
+            raise HyperbrowserError(
+                "base_url must contain a valid port number",
+                original_error=exc,
+            ) from exc
+        except Exception as exc:
             raise HyperbrowserError(
                 "base_url must contain a valid port number",
                 original_error=exc,

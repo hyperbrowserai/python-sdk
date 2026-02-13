@@ -3,6 +3,7 @@ from urllib.parse import quote
 
 import pytest
 
+import hyperbrowser.config as config_module
 from hyperbrowser.config import ClientConfig
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -437,6 +438,63 @@ def test_client_config_normalize_base_url_preserves_invalid_port_original_error(
         ClientConfig.normalize_base_url("https://example.local:bad")
 
     assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_wraps_unexpected_port_runtime_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = ""
+
+        @property
+        def port(self) -> int:
+            raise RuntimeError("unexpected port parser failure")
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="base_url must contain a valid port number"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_preserves_hyperbrowser_port_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = ""
+
+        @property
+        def port(self) -> int:
+            raise HyperbrowserError("custom port parser failure")
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="custom port parser failure"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is None
+
+
+def test_client_config_normalize_base_url_rejects_encoded_paths_and_hosts():
     with pytest.raises(
         HyperbrowserError, match="base_url path must not contain relative path segments"
     ):
