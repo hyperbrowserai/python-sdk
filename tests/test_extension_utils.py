@@ -115,3 +115,18 @@ def test_parse_extension_list_response_data_missing_key_lists_available_keys():
                 "updatedAt": "2026-01-01T00:00:00Z",
             }
         )
+
+
+def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys():
+    class _BrokenStringKey:
+        def __str__(self) -> str:
+            raise RuntimeError("bad key stringification")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            "\\[<unprintable _BrokenStringKey>\\] keys"
+        ),
+    ):
+        parse_extension_list_response_data({_BrokenStringKey(): "value"})

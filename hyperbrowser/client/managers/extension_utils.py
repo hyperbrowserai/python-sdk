@@ -9,13 +9,22 @@ def _get_type_name(value: Any) -> str:
     return type(value).__name__
 
 
+def _safe_stringify_key(value: object) -> str:
+    try:
+        return str(value)
+    except Exception:
+        return f"<unprintable {_get_type_name(value)}>"
+
+
 def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResponse]:
     if not isinstance(response_data, Mapping):
         raise HyperbrowserError(
             f"Expected mapping response but got {_get_type_name(response_data)}"
         )
     if "extensions" not in response_data:
-        available_keys = ", ".join(sorted(str(key) for key in response_data.keys()))
+        available_keys = ", ".join(
+            sorted(_safe_stringify_key(key) for key in response_data.keys())
+        )
         if available_keys:
             available_keys = f"[{available_keys}]"
         else:
