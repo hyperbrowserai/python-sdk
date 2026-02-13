@@ -5,10 +5,24 @@ from typing import Any
 import httpx
 
 _HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
+_NUMERIC_LIKE_URL_PATTERN = re.compile(
+    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$"
+)
 _MAX_ERROR_MESSAGE_LENGTH = 2000
 _MAX_REQUEST_URL_DISPLAY_LENGTH = 1000
 _MAX_REQUEST_METHOD_LENGTH = 50
-_INVALID_URL_SENTINELS = {"none", "null", "undefined", "nan"}
+_INVALID_URL_SENTINELS = {
+    "none",
+    "null",
+    "undefined",
+    "nan",
+    "inf",
+    "+inf",
+    "-inf",
+    "infinity",
+    "+infinity",
+    "-infinity",
+}
 
 
 def _normalize_request_method(method: Any) -> str:
@@ -36,7 +50,9 @@ def _normalize_request_url(url: Any) -> str:
     if not normalized_url:
         return "unknown URL"
     lowered_url = normalized_url.lower()
-    if lowered_url in _INVALID_URL_SENTINELS or normalized_url.isdigit():
+    if lowered_url in _INVALID_URL_SENTINELS or _NUMERIC_LIKE_URL_PATTERN.fullmatch(
+        normalized_url
+    ):
         return "unknown URL"
     if any(character.isspace() for character in normalized_url):
         return "unknown URL"

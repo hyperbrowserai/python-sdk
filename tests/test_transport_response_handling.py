@@ -410,6 +410,22 @@ def test_sync_transport_wraps_unexpected_errors_with_sentinel_url_fallback():
         transport.close()
 
 
+def test_sync_transport_wraps_unexpected_errors_with_numeric_like_string_url_fallback():
+    transport = SyncTransport(api_key="test-key")
+    original_get = transport.client.get
+
+    def failing_get(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    transport.client.get = failing_get  # type: ignore[assignment]
+    try:
+        with pytest.raises(HyperbrowserError, match="Request GET unknown URL failed"):
+            transport.get("1.5")
+    finally:
+        transport.client.get = original_get  # type: ignore[assignment]
+        transport.close()
+
+
 def test_async_transport_put_wraps_unexpected_errors_with_url_context():
     async def run() -> None:
         transport = AsyncTransport(api_key="test-key")
@@ -488,6 +504,27 @@ def test_async_transport_wraps_unexpected_errors_with_sentinel_url_fallback():
                 HyperbrowserError, match="Request PUT unknown URL failed"
             ):
                 await transport.put("none")
+        finally:
+            transport.client.put = original_put  # type: ignore[assignment]
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_transport_wraps_unexpected_errors_with_numeric_like_string_url_fallback():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        original_put = transport.client.put
+
+        async def failing_put(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        transport.client.put = failing_put  # type: ignore[assignment]
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Request PUT unknown URL failed"
+            ):
+                await transport.put("1e6")
         finally:
             transport.client.put = original_put  # type: ignore[assignment]
             await transport.close()
@@ -574,6 +611,22 @@ def test_sync_transport_request_error_without_request_uses_unknown_url_for_senti
     try:
         with pytest.raises(HyperbrowserError, match="Request GET unknown URL failed"):
             transport.get("undefined")
+    finally:
+        transport.client.get = original_get  # type: ignore[assignment]
+        transport.close()
+
+
+def test_sync_transport_request_error_without_request_uses_unknown_url_for_numeric_like_string_input():
+    transport = SyncTransport(api_key="test-key")
+    original_get = transport.client.get
+
+    def failing_get(*args, **kwargs):
+        raise httpx.RequestError("network down")
+
+    transport.client.get = failing_get  # type: ignore[assignment]
+    try:
+        with pytest.raises(HyperbrowserError, match="Request GET unknown URL failed"):
+            transport.get("1.5")
     finally:
         transport.client.get = original_get  # type: ignore[assignment]
         transport.close()
@@ -679,6 +732,27 @@ def test_async_transport_request_error_without_request_uses_unknown_url_for_sent
                 HyperbrowserError, match="Request DELETE unknown URL failed"
             ):
                 await transport.delete("nan")
+        finally:
+            transport.client.delete = original_delete  # type: ignore[assignment]
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_transport_request_error_without_request_uses_unknown_url_for_numeric_like_string_input():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        original_delete = transport.client.delete
+
+        async def failing_delete(*args, **kwargs):
+            raise httpx.RequestError("network down")
+
+        transport.client.delete = failing_delete  # type: ignore[assignment]
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Request DELETE unknown URL failed"
+            ):
+                await transport.delete("1e6")
         finally:
             transport.client.delete = original_delete  # type: ignore[assignment]
             await transport.close()
