@@ -136,6 +136,10 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain newline characters"
         ):
             client._build_url("/session\nnext")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain whitespace characters"
+        ):
+            client._build_url("/session name")
         with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
             client._build_url("https://api.hyperbrowser.ai/session")
         with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
@@ -182,6 +186,14 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain newline characters"
         ):
             client._build_url("/api/%250Asegment")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain whitespace characters"
+        ):
+            client._build_url("/api/%20segment")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain whitespace characters"
+        ):
+            client._build_url("/api/%09segment")
     finally:
         client.close()
 
