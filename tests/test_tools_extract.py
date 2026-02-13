@@ -342,6 +342,35 @@ def test_extract_tool_runnable_wraps_serialization_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_extract_tool_async_runnable_returns_empty_string_for_none_data():
+    client = _AsyncClient(response_data=None)
+
+    async def run():
+        return await WebsiteExtractTool.async_runnable(
+            client, {"urls": ["https://example.com"]}
+        )
+
+    output = asyncio.run(run())
+
+    assert output == ""
+
+
+def test_extract_tool_async_runnable_wraps_serialization_failures():
+    client = _AsyncClient(response_data={1, 2})
+
+    async def run():
+        return await WebsiteExtractTool.async_runnable(
+            client, {"urls": ["https://example.com"]}
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize extract tool response data"
+    ) as exc_info:
+        asyncio.run(run())
+
+    assert exc_info.value.original_error is not None
+
+
 def test_extract_tool_runnable_wraps_unexpected_schema_parse_failures(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -364,6 +393,31 @@ def test_extract_tool_runnable_wraps_unexpected_schema_parse_failures(
     assert exc_info.value.original_error is not None
 
 
+def test_extract_tool_async_runnable_wraps_unexpected_schema_parse_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_recursion_error(_: str):
+        raise RecursionError("schema parsing recursion overflow")
+
+    monkeypatch.setattr(tools_module.json, "loads", _raise_recursion_error)
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            _AsyncClient(),
+            {
+                "urls": ["https://example.com"],
+                "schema": '{"type":"object"}',
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Invalid JSON string provided for `schema`"
+    ) as exc_info:
+        asyncio.run(run())
+
+    assert exc_info.value.original_error is not None
+
+
 def test_extract_tool_runnable_preserves_hyperbrowser_schema_parse_errors(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -382,5 +436,30 @@ def test_extract_tool_runnable_preserves_hyperbrowser_schema_parse_errors(
                 "schema": '{"type":"object"}',
             },
         )
+
+    assert exc_info.value.original_error is None
+
+
+def test_extract_tool_async_runnable_preserves_hyperbrowser_schema_parse_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_hyperbrowser_error(_: str):
+        raise HyperbrowserError("custom schema parse failure")
+
+    monkeypatch.setattr(tools_module.json, "loads", _raise_hyperbrowser_error)
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            _AsyncClient(),
+            {
+                "urls": ["https://example.com"],
+                "schema": '{"type":"object"}',
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="custom schema parse failure"
+    ) as exc_info:
+        asyncio.run(run())
 
     assert exc_info.value.original_error is None
