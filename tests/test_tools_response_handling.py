@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Mapping
 from types import SimpleNamespace
 from typing import Any, Optional
 
@@ -149,6 +150,45 @@ def test_scrape_tool_rejects_non_string_markdown_field():
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
 
+def test_scrape_tool_supports_mapping_response_data():
+    client = _SyncScrapeClient(_Response(data={"markdown": "from mapping"}))
+
+    output = WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert output == "from mapping"
+
+
+def test_scrape_tool_returns_empty_for_missing_mapping_markdown_field():
+    client = _SyncScrapeClient(_Response(data={"other": "value"}))
+
+    output = WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert output == ""
+
+
+def test_scrape_tool_wraps_mapping_field_read_failures():
+    class _BrokenMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read mapping field")
+
+    client = _SyncScrapeClient(_Response(data=_BrokenMapping()))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read scrape tool response field 'markdown'",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
 def test_screenshot_tool_rejects_non_string_screenshot_field():
     client = _SyncScrapeClient(_Response(data=SimpleNamespace(screenshot=123)))
 
@@ -173,6 +213,48 @@ def test_crawl_tool_wraps_page_field_read_failures():
         @property
         def markdown(self) -> str:
             raise RuntimeError("cannot read markdown")
+
+    client = _SyncCrawlClient(_Response(data=[_BrokenPage()]))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read crawl tool page field 'markdown' at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_crawl_tool_supports_mapping_page_items():
+    client = _SyncCrawlClient(
+        _Response(data=[{"url": "https://example.com", "markdown": "mapping body"}])
+    )
+
+    output = WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert "Url: https://example.com" in output
+    assert "mapping body" in output
+
+
+def test_crawl_tool_skips_mapping_pages_without_markdown_key():
+    client = _SyncCrawlClient(_Response(data=[{"url": "https://example.com"}]))
+
+    output = WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert output == ""
+
+
+def test_crawl_tool_wraps_mapping_page_value_read_failures():
+    class _BrokenPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read page field")
 
     client = _SyncCrawlClient(_Response(data=[_BrokenPage()]))
 
@@ -231,6 +313,14 @@ def test_browser_use_tool_rejects_non_string_final_result():
         match="browser-use tool response field 'final_result' must be a string",
     ):
         BrowserUseTool.runnable(client, {"task": "search docs"})
+
+
+def test_browser_use_tool_supports_mapping_response_data():
+    client = _SyncBrowserUseClient(_Response(data={"final_result": "mapping output"}))
+
+    output = BrowserUseTool.runnable(client, {"task": "search docs"})
+
+    assert output == "mapping output"
 
 
 def test_async_scrape_tool_wraps_response_data_read_failures():

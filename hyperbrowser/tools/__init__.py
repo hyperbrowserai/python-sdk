@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping as MappingABC
 from typing import Any, Dict, Mapping
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -133,15 +134,30 @@ def _read_optional_tool_response_field(
 ) -> str:
     if response_data is None:
         return ""
-    try:
-        field_value = getattr(response_data, field_name)
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            f"Failed to read {tool_name} response field '{field_name}'",
-            original_error=exc,
-        ) from exc
+    if isinstance(response_data, MappingABC):
+        try:
+            field_value = response_data[field_name]
+        except KeyError:
+            return ""
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read {tool_name} response field '{field_name}'",
+                original_error=exc,
+            ) from exc
+    else:
+        try:
+            field_value = getattr(response_data, field_name)
+        except AttributeError:
+            return ""
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read {tool_name} response field '{field_name}'",
+                original_error=exc,
+            ) from exc
     if field_value is None:
         return ""
     if not isinstance(field_value, str):
@@ -152,8 +168,22 @@ def _read_optional_tool_response_field(
 
 
 def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> Any:
+    if isinstance(page, MappingABC):
+        try:
+            return page[field_name]
+        except KeyError:
+            return None
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read crawl tool page field '{field_name}' at index {page_index}",
+                original_error=exc,
+            ) from exc
     try:
         return getattr(page, field_name)
+    except AttributeError:
+        return None
     except HyperbrowserError:
         raise
     except Exception as exc:
