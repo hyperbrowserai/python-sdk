@@ -22,8 +22,18 @@ def ensure_existing_file_path(
         raise HyperbrowserError("file_path must resolve to a string path")
     if not normalized_path:
         raise HyperbrowserError("file_path must not be empty")
-    if not os.path.exists(normalized_path):
+    if "\x00" in normalized_path:
+        raise HyperbrowserError("file_path must not contain null bytes")
+    try:
+        path_exists = os.path.exists(normalized_path)
+    except (OSError, ValueError) as exc:
+        raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
+    if not path_exists:
         raise HyperbrowserError(missing_file_message)
-    if not os.path.isfile(normalized_path):
+    try:
+        is_file = os.path.isfile(normalized_path)
+    except (OSError, ValueError) as exc:
+        raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
+    if not is_file:
         raise HyperbrowserError(not_file_message)
     return normalized_path
