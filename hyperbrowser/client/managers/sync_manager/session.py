@@ -128,6 +128,8 @@ class SessionManager:
         else:
             try:
                 read_method = getattr(file_input, "read", None)
+            except HyperbrowserError:
+                raise
             except Exception as exc:
                 raise HyperbrowserError(
                     "file_input file-like object state is invalid",
@@ -136,6 +138,8 @@ class SessionManager:
             if callable(read_method):
                 try:
                     is_closed = bool(getattr(file_input, "closed", False))
+                except HyperbrowserError:
+                    raise
                 except Exception as exc:
                     raise HyperbrowserError(
                         "file_input file-like object state is invalid",

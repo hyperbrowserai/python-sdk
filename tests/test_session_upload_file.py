@@ -169,6 +169,39 @@ def test_sync_session_upload_file_wraps_invalid_file_like_state_errors():
         manager.upload_file("session_123", _BrokenFileLike())
 
 
+def test_sync_session_upload_file_preserves_hyperbrowser_read_state_errors():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    class _BrokenFileLike:
+        @property
+        def read(self):
+            raise HyperbrowserError("custom read state error")
+
+    with pytest.raises(HyperbrowserError, match="custom read state error") as exc_info:
+        manager.upload_file("session_123", _BrokenFileLike())
+
+    assert exc_info.value.original_error is None
+
+
+def test_sync_session_upload_file_preserves_hyperbrowser_closed_state_errors():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    class _BrokenFileLike:
+        def read(self):
+            return b"content"
+
+        @property
+        def closed(self):
+            raise HyperbrowserError("custom closed-state error")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom closed-state error"
+    ) as exc_info:
+        manager.upload_file("session_123", _BrokenFileLike())
+
+    assert exc_info.value.original_error is None
+
+
 def test_async_session_upload_file_rejects_non_callable_read_attribute():
     manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
     fake_file = type("FakeFile", (), {"read": "not-callable"})()
@@ -205,6 +238,45 @@ def test_async_session_upload_file_wraps_invalid_file_like_state_errors():
             HyperbrowserError, match="file-like object state is invalid"
         ):
             await manager.upload_file("session_123", _BrokenFileLike())
+
+    asyncio.run(run())
+
+
+def test_async_session_upload_file_preserves_hyperbrowser_read_state_errors():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    class _BrokenFileLike:
+        @property
+        def read(self):
+            raise HyperbrowserError("custom read state error")
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="custom read state error"
+        ) as exc_info:
+            await manager.upload_file("session_123", _BrokenFileLike())
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
+def test_async_session_upload_file_preserves_hyperbrowser_closed_state_errors():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    class _BrokenFileLike:
+        def read(self):
+            return b"content"
+
+        @property
+        def closed(self):
+            raise HyperbrowserError("custom closed-state error")
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="custom closed-state error"
+        ) as exc_info:
+            await manager.upload_file("session_123", _BrokenFileLike())
+        assert exc_info.value.original_error is None
 
     asyncio.run(run())
 
