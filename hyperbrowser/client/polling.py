@@ -30,6 +30,17 @@ class _NonRetryablePollingError(HyperbrowserError):
     pass
 
 
+def _safe_exception_text(exc: Exception) -> str:
+    try:
+        return str(exc)
+    except Exception:
+        return f"<unstringifiable {type(exc).__name__}>"
+
+
+def _normalized_exception_text(exc: Exception) -> str:
+    return _safe_exception_text(exc).lower()
+
+
 def _coerce_operation_name_component(value: object, *, fallback: str) -> str:
     if isinstance(value, str):
         return value
@@ -206,21 +217,21 @@ def _invoke_non_retryable_callback(
         raise
     except Exception as exc:
         raise _NonRetryablePollingError(
-            f"{callback_name} failed for {operation_name}: {exc}"
+            f"{callback_name} failed for {operation_name}: {_safe_exception_text(exc)}"
         ) from exc
 
 
 def _is_reused_coroutine_runtime_error(exc: Exception) -> bool:
     if not isinstance(exc, RuntimeError):
         return False
-    normalized_message = str(exc).lower()
+    normalized_message = _normalized_exception_text(exc)
     return "coroutine" in normalized_message and "already awaited" in normalized_message
 
 
 def _is_async_generator_reuse_runtime_error(exc: Exception) -> bool:
     if not isinstance(exc, RuntimeError):
         return False
-    normalized_message = str(exc).lower()
+    normalized_message = _normalized_exception_text(exc)
     return (
         "asynchronous generator" in normalized_message
         and "already running" in normalized_message
@@ -230,13 +241,13 @@ def _is_async_generator_reuse_runtime_error(exc: Exception) -> bool:
 def _is_generator_reentrancy_error(exc: Exception) -> bool:
     if not isinstance(exc, ValueError):
         return False
-    return "generator already executing" in str(exc).lower()
+    return "generator already executing" in _normalized_exception_text(exc)
 
 
 def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
     if not isinstance(exc, RuntimeError):
         return False
-    normalized_message = str(exc).lower()
+    normalized_message = _normalized_exception_text(exc)
     if "event loop is closed" in normalized_message:
         return True
     if "event loop other than the current one" in normalized_message:
@@ -253,7 +264,7 @@ def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
 def _is_executor_shutdown_runtime_error(exc: Exception) -> bool:
     if not isinstance(exc, RuntimeError):
         return False
-    normalized_message = str(exc).lower()
+    normalized_message = _normalized_exception_text(exc)
     return (
         "cannot schedule new futures after" in normalized_message
         and "shutdown" in normalized_message
@@ -445,7 +456,9 @@ def poll_until_terminal_status(
             failures += 1
             if failures >= max_status_failures:
                 raise HyperbrowserPollingError(
-                    f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
+                    "Failed to poll "
+                    f"{operation_name} after {max_status_failures} attempts: "
+                    f"{_safe_exception_text(exc)}"
                 ) from exc
             if has_exceeded_max_wait(start_time, max_wait_seconds):
                 raise HyperbrowserTimeoutError(
@@ -494,7 +507,8 @@ def retry_operation(
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
-                    f"{operation_name} failed after {max_attempts} attempts: {exc}"
+                    f"{operation_name} failed after {max_attempts} attempts: "
+                    f"{_safe_exception_text(exc)}"
                 ) from exc
             time.sleep(retry_delay_seconds)
             continue
@@ -536,7 +550,9 @@ async def poll_until_terminal_status_async(
             failures += 1
             if failures >= max_status_failures:
                 raise HyperbrowserPollingError(
-                    f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
+                    "Failed to poll "
+                    f"{operation_name} after {max_status_failures} attempts: "
+                    f"{_safe_exception_text(exc)}"
                 ) from exc
             if has_exceeded_max_wait(start_time, max_wait_seconds):
                 raise HyperbrowserTimeoutError(
@@ -557,7 +573,9 @@ async def poll_until_terminal_status_async(
             failures += 1
             if failures >= max_status_failures:
                 raise HyperbrowserPollingError(
-                    f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
+                    "Failed to poll "
+                    f"{operation_name} after {max_status_failures} attempts: "
+                    f"{_safe_exception_text(exc)}"
                 ) from exc
             if has_exceeded_max_wait(start_time, max_wait_seconds):
                 raise HyperbrowserTimeoutError(
@@ -606,7 +624,8 @@ async def retry_operation_async(
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
-                    f"{operation_name} failed after {max_attempts} attempts: {exc}"
+                    f"{operation_name} failed after {max_attempts} attempts: "
+                    f"{_safe_exception_text(exc)}"
                 ) from exc
             await asyncio.sleep(retry_delay_seconds)
             continue
@@ -625,7 +644,8 @@ async def retry_operation_async(
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
-                    f"{operation_name} failed after {max_attempts} attempts: {exc}"
+                    f"{operation_name} failed after {max_attempts} attempts: "
+                    f"{_safe_exception_text(exc)}"
                 ) from exc
             await asyncio.sleep(retry_delay_seconds)
 
@@ -726,7 +746,9 @@ def collect_paginated_results(
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
-                    f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
+                    "Failed to fetch page batch "
+                    f"{current_page_batch + 1} for {operation_name} after "
+                    f"{max_attempts} attempts: {_safe_exception_text(exc)}"
                 ) from exc
         if should_sleep:
             if has_exceeded_max_wait(start_time, max_wait_seconds):
@@ -833,7 +855,9 @@ async def collect_paginated_results_async(
             failures += 1
             if failures >= max_attempts:
                 raise HyperbrowserError(
-                    f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
+                    "Failed to fetch page batch "
+                    f"{current_page_batch + 1} for {operation_name} after "
+                    f"{max_attempts} attempts: {_safe_exception_text(exc)}"
                 ) from exc
         if should_sleep:
             if has_exceeded_max_wait(start_time, max_wait_seconds):

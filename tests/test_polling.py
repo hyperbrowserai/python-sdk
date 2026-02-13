@@ -6656,3 +6656,69 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             )
 
     asyncio.run(validate_async_operation_name())
+
+
+def test_poll_until_terminal_status_handles_unstringifiable_runtime_errors():
+    class _UnstringifiableRuntimeError(RuntimeError):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify runtime error")
+
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match=(
+            r"Failed to poll sync poll after 1 attempts: "
+            r"<unstringifiable _UnstringifiableRuntimeError>"
+        ),
+    ):
+        poll_until_terminal_status(
+            operation_name="sync poll",
+            get_status=lambda: (_ for _ in ()).throw(_UnstringifiableRuntimeError()),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
+def test_retry_operation_handles_unstringifiable_value_errors():
+    class _UnstringifiableValueError(ValueError):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify value error")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            r"sync retry failed after 1 attempts: "
+            r"<unstringifiable _UnstringifiableValueError>"
+        ),
+    ):
+        retry_operation(
+            operation_name="sync retry",
+            operation=lambda: (_ for _ in ()).throw(_UnstringifiableValueError()),
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
+
+
+def test_poll_until_terminal_status_handles_unstringifiable_callback_errors():
+    class _UnstringifiableCallbackError(RuntimeError):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify callback error")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            r"is_terminal_status failed for callback poll: "
+            r"<unstringifiable _UnstringifiableCallbackError>"
+        ),
+    ):
+        poll_until_terminal_status(
+            operation_name="callback poll",
+            get_status=lambda: "running",
+            is_terminal_status=lambda value: (_ for _ in ()).throw(
+                _UnstringifiableCallbackError()
+            ),
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
