@@ -412,6 +412,11 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         ClientConfig.normalize_base_url("https://example.local%252Fapi")
     with pytest.raises(
         HyperbrowserError,
+        match="base_url host must not contain encoded delimiter characters",
+    ):
+        ClientConfig.normalize_base_url("https://example.local%2540attacker.com")
+    with pytest.raises(
+        HyperbrowserError,
         match="base_url path must not contain encoded query or fragment delimiters",
     ):
         ClientConfig.normalize_base_url("https://example.local/%253Fapi")

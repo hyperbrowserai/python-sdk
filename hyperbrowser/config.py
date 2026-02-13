@@ -103,7 +103,7 @@ class ClientConfig:
             for character in decoded_base_netloc
         ):
             raise HyperbrowserError("base_url host must not contain control characters")
-        if any(character in {"?", "#", "/"} for character in decoded_base_netloc):
+        if any(character in {"?", "#", "/", "@"} for character in decoded_base_netloc):
             raise HyperbrowserError(
                 "base_url host must not contain encoded delimiter characters"
             )
