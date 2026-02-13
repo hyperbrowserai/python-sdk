@@ -12,6 +12,13 @@ from hyperbrowser.exceptions import (
 T = TypeVar("T")
 
 
+def _validate_operation_name(operation_name: str) -> None:
+    if not isinstance(operation_name, str):
+        raise HyperbrowserError("operation_name must be a string")
+    if not operation_name.strip():
+        raise HyperbrowserError("operation_name must not be empty")
+
+
 def _validate_retry_config(
     *,
     max_attempts: int,
@@ -71,6 +78,7 @@ def poll_until_terminal_status(
     max_wait_seconds: Optional[float],
     max_status_failures: int = 5,
 ) -> str:
+    _validate_operation_name(operation_name)
     _validate_poll_interval(poll_interval_seconds)
     _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
@@ -111,6 +119,7 @@ def retry_operation(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> T:
+    _validate_operation_name(operation_name)
     _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
@@ -137,6 +146,7 @@ async def poll_until_terminal_status_async(
     max_wait_seconds: Optional[float],
     max_status_failures: int = 5,
 ) -> str:
+    _validate_operation_name(operation_name)
     _validate_poll_interval(poll_interval_seconds)
     _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
@@ -177,6 +187,7 @@ async def retry_operation_async(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> T:
+    _validate_operation_name(operation_name)
     _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
@@ -205,6 +216,7 @@ def collect_paginated_results(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> None:
+    _validate_operation_name(operation_name)
     _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
         max_attempts=max_attempts,
@@ -251,6 +263,7 @@ async def collect_paginated_results_async(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> None:
+    _validate_operation_name(operation_name)
     _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
         max_attempts=max_attempts,
@@ -298,6 +311,7 @@ def wait_for_job_result(
     fetch_max_attempts: int,
     fetch_retry_delay_seconds: float,
 ) -> T:
+    _validate_operation_name(operation_name)
     _validate_retry_config(
         max_attempts=fetch_max_attempts,
         retry_delay_seconds=fetch_retry_delay_seconds,
@@ -333,6 +347,7 @@ async def wait_for_job_result_async(
     fetch_max_attempts: int,
     fetch_retry_delay_seconds: float,
 ) -> T:
+    _validate_operation_name(operation_name)
     _validate_retry_config(
         max_attempts=fetch_max_attempts,
         retry_delay_seconds=fetch_retry_delay_seconds,
