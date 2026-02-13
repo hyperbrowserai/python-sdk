@@ -235,6 +235,14 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain control characters"
         ):
             client._build_url("/api/%00segment")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain encoded query delimiters"
+        ):
+            client._build_url("/api/%3Fsegment")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain encoded fragment delimiters"
+        ):
+            client._build_url("/api/%23segment")
     finally:
         client.close()
 

@@ -106,6 +106,10 @@ class HyperbrowserBase:
             ord(character) < 32 or ord(character) == 127 for character in decoded_path
         ):
             raise HyperbrowserError("path must not contain control characters")
+        if "?" in decoded_path:
+            raise HyperbrowserError("path must not contain encoded query delimiters")
+        if "#" in decoded_path:
+            raise HyperbrowserError("path must not contain encoded fragment delimiters")
         normalized_segments = [
             segment for segment in decoded_path.split("/") if segment
         ]
