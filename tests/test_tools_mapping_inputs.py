@@ -1,6 +1,7 @@
+import asyncio
+from collections.abc import Iterator, Mapping
 from types import MappingProxyType
 
-import asyncio
 import pytest
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -95,3 +96,75 @@ def test_async_tool_wrappers_reject_non_mapping_inputs():
             )
 
     asyncio.run(run())
+
+
+def test_tool_wrappers_reject_non_string_param_keys():
+    client = _Client()
+
+    with pytest.raises(HyperbrowserError, match="tool params keys must be strings"):
+        WebsiteScrapeTool.runnable(
+            client,
+            {1: "https://example.com"},  # type: ignore[dict-item]
+        )
+
+
+def test_tool_wrappers_wrap_param_key_read_failures():
+    class _BrokenKeyMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            raise RuntimeError("cannot iterate keys")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    client = _Client()
+
+    with pytest.raises(HyperbrowserError, match="Failed to read tool params keys") as exc_info:
+        WebsiteScrapeTool.runnable(client, _BrokenKeyMapping())
+
+    assert exc_info.value.original_error is not None
+
+
+def test_tool_wrappers_wrap_param_value_read_failures():
+    class _BrokenValueMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield "url"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read value")
+
+    client = _Client()
+
+    with pytest.raises(HyperbrowserError, match="Failed to read tool param 'url'") as exc_info:
+        WebsiteScrapeTool.runnable(client, _BrokenValueMapping())
+
+    assert exc_info.value.original_error is not None
+
+
+def test_tool_wrappers_preserve_hyperbrowser_param_value_read_failures():
+    class _BrokenValueMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield "url"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise HyperbrowserError("custom param value read failure")
+
+    client = _Client()
+
+    with pytest.raises(
+        HyperbrowserError, match="custom param value read failure"
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, _BrokenValueMapping())
+
+    assert exc_info.value.original_error is None
