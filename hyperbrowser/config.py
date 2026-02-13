@@ -13,6 +13,14 @@ class ClientConfig:
     base_url: str = "https://api.hyperbrowser.ai"
     headers: Optional[Dict[str, str]] = None
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.api_key, str):
+            raise HyperbrowserError("api_key must be a string")
+        if not isinstance(self.base_url, str):
+            raise HyperbrowserError("base_url must be a string")
+        self.api_key = self.api_key.strip()
+        self.base_url = self.base_url.strip().rstrip("/")
+
     @classmethod
     def from_env(cls) -> "ClientConfig":
         api_key = os.environ.get("HYPERBROWSER_API_KEY")
