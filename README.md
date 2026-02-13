@@ -28,7 +28,7 @@ export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON obj
 `api_key` must be a non-empty string.
 
 `base_url` must start with `https://` (or `http://` for local testing), include a host,
-and not contain query parameters, URL fragments, or newline characters.
+and not contain query parameters, URL fragments, or whitespace/newline characters.
 The SDK normalizes trailing slashes automatically.
 If `base_url` already ends with `/api`, the SDK avoids adding a duplicate `/api` prefix.
 If `HYPERBROWSER_BASE_URL` is set, it must be non-empty.
