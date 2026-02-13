@@ -102,6 +102,10 @@ class HyperbrowserBase:
             raise HyperbrowserError("path must not contain newline characters")
         if any(character.isspace() for character in decoded_path):
             raise HyperbrowserError("path must not contain whitespace characters")
+        if any(
+            ord(character) < 32 or ord(character) == 127 for character in decoded_path
+        ):
+            raise HyperbrowserError("path must not contain control characters")
         normalized_segments = [
             segment for segment in decoded_path.split("/") if segment
         ]
