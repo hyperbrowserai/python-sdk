@@ -142,6 +142,7 @@ Polling callback contracts are also validated:
 - Sync polling helpers require non-awaitable callback return values.
 - Async polling helpers require awaitable status/page/retry callbacks.
 - Polling retries skip non-retryable API client errors (HTTP `4xx`, except `429` rate-limit responses).
+- Callback contract violations and callback execution failures fail fast with explicit callback-specific errors.
 
 Example:
 
