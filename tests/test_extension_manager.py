@@ -37,6 +37,21 @@ class _SyncTransport:
             }
         )
 
+    def get(self, url, params=None, follow_redirects=False):
+        assert url.endswith("/extensions/list")
+        return _FakeResponse(
+            {
+                "extensions": [
+                    {
+                        "id": "ext_list_sync",
+                        "name": "list-extension",
+                        "createdAt": "2026-01-01T00:00:00Z",
+                        "updatedAt": "2026-01-01T00:00:00Z",
+                    }
+                ]
+            }
+        )
+
 
 class _AsyncTransport:
     def __init__(self):
@@ -55,6 +70,21 @@ class _AsyncTransport:
                 "name": "my-extension",
                 "createdAt": "2026-01-01T00:00:00Z",
                 "updatedAt": "2026-01-01T00:00:00Z",
+            }
+        )
+
+    async def get(self, url, params=None, follow_redirects=False):
+        assert url.endswith("/extensions/list")
+        return _FakeResponse(
+            {
+                "extensions": [
+                    {
+                        "id": "ext_list_async",
+                        "name": "list-extension",
+                        "createdAt": "2026-01-01T00:00:00Z",
+                        "updatedAt": "2026-01-01T00:00:00Z",
+                    }
+                ]
             }
         )
 
@@ -148,5 +178,53 @@ def test_async_extension_create_rejects_directory_path(tmp_path):
     async def run():
         with pytest.raises(HyperbrowserError, match="must point to a file"):
             await manager.create(params)
+
+    asyncio.run(run())
+
+
+def test_sync_extension_list_returns_parsed_extensions():
+    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
+
+    extensions = manager.list()
+
+    assert len(extensions) == 1
+    assert extensions[0].id == "ext_list_sync"
+
+
+def test_async_extension_list_returns_parsed_extensions():
+    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
+
+    async def run():
+        return await manager.list()
+
+    extensions = asyncio.run(run())
+
+    assert len(extensions) == 1
+    assert extensions[0].id == "ext_list_async"
+
+
+def test_sync_extension_list_raises_for_invalid_payload_shape():
+    class _InvalidSyncTransport:
+        def get(self, url, params=None, follow_redirects=False):
+            return _FakeResponse({"extensions": "not-a-list"})
+
+    manager = SyncExtensionManager(_FakeClient(_InvalidSyncTransport()))
+
+    with pytest.raises(HyperbrowserError, match="Expected list in 'extensions' key"):
+        manager.list()
+
+
+def test_async_extension_list_raises_for_invalid_payload_shape():
+    class _InvalidAsyncTransport:
+        async def get(self, url, params=None, follow_redirects=False):
+            return _FakeResponse({"extensions": "not-a-list"})
+
+    manager = AsyncExtensionManager(_FakeClient(_InvalidAsyncTransport()))
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="Expected list in 'extensions' key"
+        ):
+            await manager.list()
 
     asyncio.run(run())
