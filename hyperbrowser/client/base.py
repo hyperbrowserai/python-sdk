@@ -87,7 +87,13 @@ class HyperbrowserBase:
         normalized_query_suffix = (
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
-        parsed_base_url = urlparse(self.config.base_url)
+        if not isinstance(self.config.base_url, str):
+            raise HyperbrowserError("base_url must be a string")
+        normalized_base_url = self.config.base_url.strip().rstrip("/")
+        if not normalized_base_url:
+            raise HyperbrowserError("base_url must not be empty")
+
+        parsed_base_url = urlparse(normalized_base_url)
         if (
             parsed_base_url.scheme not in {"https", "http"}
             or not parsed_base_url.netloc
@@ -104,15 +110,15 @@ class HyperbrowserBase:
         if normalized_path_only == "/api" or normalized_path_only.startswith("/api/"):
             if base_has_api_suffix:
                 deduped_path = normalized_path_only[len("/api") :]
-                return f"{self.config.base_url}{deduped_path}{normalized_query_suffix}"
+                return f"{normalized_base_url}{deduped_path}{normalized_query_suffix}"
             return (
-                f"{self.config.base_url}{normalized_path_only}{normalized_query_suffix}"
+                f"{normalized_base_url}{normalized_path_only}{normalized_query_suffix}"
             )
 
         if base_has_api_suffix:
             return (
-                f"{self.config.base_url}{normalized_path_only}{normalized_query_suffix}"
+                f"{normalized_base_url}{normalized_path_only}{normalized_query_suffix}"
             )
         return (
-            f"{self.config.base_url}/api{normalized_path_only}{normalized_query_suffix}"
+            f"{normalized_base_url}/api{normalized_path_only}{normalized_query_suffix}"
         )

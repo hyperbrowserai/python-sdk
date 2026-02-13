@@ -97,6 +97,14 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
             HyperbrowserError, match="must not include query parameters"
         ):
             client._build_url("/session")
+
+        client.config.base_url = "   "
+        with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
+            client._build_url("/session")
+
+        client.config.base_url = 123  # type: ignore[assignment]
+        with pytest.raises(HyperbrowserError, match="base_url must be a string"):
+            client._build_url("/session")
     finally:
         client.close()
 
@@ -141,5 +149,17 @@ def test_client_build_url_allows_query_values_containing_absolute_urls():
             client._build_url("/session?foo=bar")
             == "https://api.hyperbrowser.ai/api/session?foo=bar"
         )
+    finally:
+        client.close()
+
+
+def test_client_build_url_normalizes_runtime_trailing_slashes():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        client.config.base_url = "https://example.local/"
+        assert client._build_url("/session") == "https://example.local/api/session"
+
+        client.config.base_url = "https://example.local/api/"
+        assert client._build_url("/session") == "https://example.local/api/session"
     finally:
         client.close()
