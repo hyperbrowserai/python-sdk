@@ -242,6 +242,28 @@ def test_poll_until_terminal_status_does_not_retry_broken_executor_errors():
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_does_not_retry_executor_shutdown_runtime_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise RuntimeError("cannot schedule new futures after shutdown")
+
+    with pytest.raises(
+        RuntimeError, match="cannot schedule new futures after shutdown"
+    ):
+        poll_until_terminal_status(
+            operation_name="sync poll executor-shutdown passthrough",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_retries_rate_limit_errors():
     attempts = {"count": 0}
 
@@ -1175,6 +1197,29 @@ def test_retry_operation_async_does_not_retry_broken_executor_errors():
         with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
             await retry_operation_async(
                 operation_name="async retry broken-executor passthrough",
+                operation=operation,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_does_not_retry_executor_shutdown_runtime_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+        with pytest.raises(
+            RuntimeError, match="cannot schedule new futures after shutdown"
+        ):
+            await retry_operation_async(
+                operation_name="async retry executor-shutdown passthrough",
                 operation=operation,
                 max_attempts=5,
                 retry_delay_seconds=0.0001,
@@ -2279,6 +2324,30 @@ def test_collect_paginated_results_does_not_retry_broken_executor_errors():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_does_not_retry_executor_shutdown_runtime_errors():
+    attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        raise RuntimeError("cannot schedule new futures after shutdown")
+
+    with pytest.raises(
+        RuntimeError, match="cannot schedule new futures after shutdown"
+    ):
+        collect_paginated_results(
+            operation_name="sync paginated executor-shutdown passthrough",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_collect_paginated_results_retries_server_errors():
     attempts = {"count": 0}
     collected = []
@@ -2670,6 +2739,33 @@ def test_collect_paginated_results_async_does_not_retry_broken_executor_errors()
     asyncio.run(run())
 
 
+def test_collect_paginated_results_async_does_not_retry_executor_shutdown_runtime_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+        with pytest.raises(
+            RuntimeError, match="cannot schedule new futures after shutdown"
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated executor-shutdown passthrough",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_collect_paginated_results_async_retries_server_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -2889,6 +2985,35 @@ def test_wait_for_job_result_does_not_retry_non_retryable_status_errors():
     assert fetch_attempts["count"] == 0
 
 
+def test_wait_for_job_result_does_not_retry_broken_executor_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        raise ConcurrentBrokenExecutor("executor is broken")
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+        wait_for_job_result(
+            operation_name="sync wait helper status broken-executor",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
 def test_wait_for_job_result_does_not_retry_timeout_status_errors():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -3091,6 +3216,29 @@ def test_wait_for_job_result_does_not_retry_non_retryable_fetch_errors():
             poll_interval_seconds=0.0001,
             max_wait_seconds=1.0,
             max_status_failures=2,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_does_not_retry_broken_executor_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise ConcurrentBrokenExecutor("executor is broken")
+
+    with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch broken-executor",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
             fetch_max_attempts=5,
             fetch_retry_delay_seconds=0.0001,
         )
@@ -3388,6 +3536,38 @@ def test_wait_for_job_result_async_does_not_retry_non_retryable_status_errors():
     asyncio.run(run())
 
 
+def test_wait_for_job_result_async_does_not_retry_broken_executor_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            raise ConcurrentBrokenExecutor("executor is broken")
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper status broken-executor",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
 def test_wait_for_job_result_async_does_not_retry_timeout_status_errors():
     async def run() -> None:
         status_attempts = {"count": 0}
@@ -3606,6 +3786,32 @@ def test_wait_for_job_result_async_does_not_retry_non_retryable_fetch_errors():
                 poll_interval_seconds=0.0001,
                 max_wait_seconds=1.0,
                 max_status_failures=2,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_broken_executor_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise ConcurrentBrokenExecutor("executor is broken")
+
+        with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch broken-executor",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
                 fetch_max_attempts=5,
                 fetch_retry_delay_seconds=0.0001,
             )
