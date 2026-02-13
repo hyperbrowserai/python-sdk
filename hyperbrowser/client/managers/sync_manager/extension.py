@@ -11,14 +11,14 @@ class ExtensionManager:
         self._client = client
 
     def create(self, params: CreateExtensionParams) -> ExtensionResponse:
-        file_path = params.file_path
+        raw_file_path = params.file_path
         payload = params.model_dump(exclude_none=True, by_alias=True)
         payload.pop("filePath", None)
 
-        ensure_existing_file_path(
-            file_path,
-            missing_file_message=f"Extension file not found at path: {file_path}",
-            not_file_message=f"Extension file path must point to a file: {file_path}",
+        file_path = ensure_existing_file_path(
+            raw_file_path,
+            missing_file_message=f"Extension file not found at path: {raw_file_path}",
+            not_file_message=f"Extension file path must point to a file: {raw_file_path}",
         )
 
         try:
