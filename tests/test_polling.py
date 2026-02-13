@@ -6750,3 +6750,39 @@ def test_retry_operation_uses_placeholder_for_blank_error_messages():
             max_attempts=1,
             retry_delay_seconds=0.0,
         )
+
+
+def test_poll_until_terminal_status_truncates_oversized_error_messages():
+    very_long_message = "x" * 2000
+
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match=r"Failed to poll long-error poll after 1 attempts: .+\.\.\. \(truncated\)",
+    ) as exc_info:
+        poll_until_terminal_status(
+            operation_name="long-error poll",
+            get_status=lambda: (_ for _ in ()).throw(RuntimeError(very_long_message)),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+    assert "... (truncated)" in str(exc_info.value)
+
+
+def test_retry_operation_truncates_oversized_error_messages():
+    very_long_message = "y" * 2000
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=r"long-error retry failed after 1 attempts: .+\.\.\. \(truncated\)",
+    ) as exc_info:
+        retry_operation(
+            operation_name="long-error retry",
+            operation=lambda: (_ for _ in ()).throw(ValueError(very_long_message)),
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
+
+    assert "... (truncated)" in str(exc_info.value)

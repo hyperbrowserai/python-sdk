@@ -20,10 +20,12 @@ _MAX_OPERATION_NAME_LENGTH = 200
 _FETCH_OPERATION_NAME_PREFIX = "Fetching "
 _FETCH_PREFIX_KEYWORD = "fetching"
 _TRUNCATED_OPERATION_NAME_SUFFIX = "..."
+_TRUNCATED_EXCEPTION_TEXT_SUFFIX = "... (truncated)"
 _CLIENT_ERROR_STATUS_MIN = 400
 _CLIENT_ERROR_STATUS_MAX = 500
 _RETRYABLE_CLIENT_ERROR_STATUS_CODES = {408, 429}
 _MAX_STATUS_CODE_TEXT_LENGTH = 6
+_MAX_EXCEPTION_TEXT_LENGTH = 500
 
 
 class _NonRetryablePollingError(HyperbrowserError):
@@ -36,7 +38,17 @@ def _safe_exception_text(exc: Exception) -> str:
     except Exception:
         return f"<unstringifiable {type(exc).__name__}>"
     if exception_message.strip():
-        return exception_message
+        if len(exception_message) <= _MAX_EXCEPTION_TEXT_LENGTH:
+            return exception_message
+        available_message_length = (
+            _MAX_EXCEPTION_TEXT_LENGTH - len(_TRUNCATED_EXCEPTION_TEXT_SUFFIX)
+        )
+        if available_message_length <= 0:
+            return _TRUNCATED_EXCEPTION_TEXT_SUFFIX
+        return (
+            f"{exception_message[:available_message_length]}"
+            f"{_TRUNCATED_EXCEPTION_TEXT_SUFFIX}"
+        )
     return f"<{type(exc).__name__}>"
 
 
