@@ -55,7 +55,14 @@ class HyperbrowserBase:
         self.transport = transport(config.api_key, headers=config.headers)
 
     def _build_url(self, path: str) -> str:
-        normalized_path = path if path.startswith("/") else f"/{path}"
+        if not isinstance(path, str):
+            raise HyperbrowserError("path must be a string")
+        stripped_path = path.strip()
+        if not stripped_path:
+            raise HyperbrowserError("path must not be empty")
+        normalized_path = (
+            stripped_path if stripped_path.startswith("/") else f"/{stripped_path}"
+        )
         if normalized_path == "/api" or normalized_path.startswith("/api/"):
             return f"{self.config.base_url}{normalized_path}"
         return f"{self.config.base_url}/api{normalized_path}"
