@@ -144,6 +144,28 @@ def test_poll_until_terminal_status_retries_rate_limit_errors():
     assert attempts["count"] == 3
 
 
+def test_poll_until_terminal_status_retries_server_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("server failure", status_code=503)
+        return "completed"
+
+    status = poll_until_terminal_status(
+        operation_name="sync poll server error retries",
+        get_status=get_status,
+        is_terminal_status=lambda value: value == "completed",
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=5,
+    )
+
+    assert status == "completed"
+    assert attempts["count"] == 3
+
+
 def test_poll_until_terminal_status_raises_after_status_failures():
     with pytest.raises(
         HyperbrowserPollingError, match="Failed to poll sync poll failure"
@@ -175,6 +197,26 @@ def test_poll_until_terminal_status_rejects_awaitable_status_callback_result():
             operation_name="sync poll awaitable callback",
             get_status=get_status,  # type: ignore[arg-type]
             is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
+def test_poll_until_terminal_status_fails_fast_when_terminal_callback_raises():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        return "completed"
+
+    with pytest.raises(HyperbrowserError, match="is_terminal_status failed"):
+        poll_until_terminal_status(
+            operation_name="sync terminal callback exception",
+            get_status=get_status,
+            is_terminal_status=lambda value: (_ for _ in ()).throw(ValueError("boom")),
             poll_interval_seconds=0.0001,
             max_wait_seconds=1.0,
             max_status_failures=5,
@@ -228,6 +270,26 @@ def test_retry_operation_does_not_retry_non_retryable_client_errors():
         )
 
     assert attempts["count"] == 1
+
+
+def test_retry_operation_retries_server_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("server failure", status_code=502)
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry server error",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
 
 
 def test_retry_operation_rejects_awaitable_operation_result():
@@ -323,6 +385,56 @@ def test_poll_until_terminal_status_async_does_not_retry_non_retryable_client_er
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_retries_server_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("server failure", status_code=503)
+            return "completed"
+
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll server error retries",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+        assert status == "completed"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_poll_until_terminal_status_async_fails_fast_when_terminal_callback_raises():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            return "completed"
+
+        with pytest.raises(HyperbrowserError, match="is_terminal_status failed"):
+            await poll_until_terminal_status_async(
+                operation_name="async terminal callback exception",
+                get_status=get_status,
+                is_terminal_status=lambda value: (_ for _ in ()).throw(
+                    ValueError("boom")
+                ),
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_retry_operation_async_does_not_retry_non_retryable_client_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -340,6 +452,29 @@ def test_retry_operation_async_does_not_retry_non_retryable_client_errors():
             )
 
         assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_retries_server_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("server failure", status_code=503)
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry server error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
 
     asyncio.run(run())
 
@@ -871,6 +1006,31 @@ def test_collect_paginated_results_does_not_retry_non_retryable_client_errors():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_retries_server_errors():
+    attempts = {"count": 0}
+    collected = []
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("server failure", status_code=502)
+        return {"current": 1, "total": 1, "items": ["a"]}
+
+    collect_paginated_results(
+        operation_name="sync paginated server error retries",
+        get_next_page=get_next_page,
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: collected.extend(response["items"]),
+        max_wait_seconds=1.0,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert collected == ["a"]
+    assert attempts["count"] == 3
+
+
 def test_collect_paginated_results_raises_when_page_batch_stagnates():
     with pytest.raises(HyperbrowserPollingError, match="No pagination progress"):
         collect_paginated_results(
@@ -1058,6 +1218,34 @@ def test_collect_paginated_results_async_does_not_retry_non_retryable_client_err
             )
 
         assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_retries_server_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+        collected = []
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("server failure", status_code=503)
+            return {"current": 1, "total": 1, "items": ["a"]}
+
+        await collect_paginated_results_async(
+            operation_name="async paginated server error retries",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: collected.extend(response["items"]),
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert collected == ["a"]
+        assert attempts["count"] == 3
 
     asyncio.run(run())
 

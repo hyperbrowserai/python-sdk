@@ -233,8 +233,14 @@ def poll_until_terminal_status(
             continue
 
         status = _ensure_status_string(status, operation_name=operation_name)
+        terminal_status_result = _invoke_non_retryable_callback(
+            is_terminal_status,
+            status,
+            callback_name="is_terminal_status",
+            operation_name=operation_name,
+        )
         if _ensure_boolean_terminal_result(
-            is_terminal_status(status), operation_name=operation_name
+            terminal_status_result, operation_name=operation_name
         ):
             return status
         if has_exceeded_max_wait(start_time, max_wait_seconds):
@@ -339,8 +345,14 @@ async def poll_until_terminal_status_async(
             continue
 
         status = _ensure_status_string(status, operation_name=operation_name)
+        terminal_status_result = _invoke_non_retryable_callback(
+            is_terminal_status,
+            status,
+            callback_name="is_terminal_status",
+            operation_name=operation_name,
+        )
         if _ensure_boolean_terminal_result(
-            is_terminal_status(status), operation_name=operation_name
+            terminal_status_result, operation_name=operation_name
         ):
             return status
         if has_exceeded_max_wait(start_time, max_wait_seconds):
