@@ -11,6 +11,14 @@ def ensure_existing_file_path(
     missing_file_message: str,
     not_file_message: str,
 ) -> str:
+    if not isinstance(missing_file_message, str):
+        raise HyperbrowserError("missing_file_message must be a string")
+    if not missing_file_message.strip():
+        raise HyperbrowserError("missing_file_message must not be empty")
+    if not isinstance(not_file_message, str):
+        raise HyperbrowserError("not_file_message must be a string")
+    if not not_file_message.strip():
+        raise HyperbrowserError("not_file_message must not be empty")
     try:
         normalized_path = os.fspath(file_path)
     except HyperbrowserError:

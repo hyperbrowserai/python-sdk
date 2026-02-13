@@ -20,6 +20,56 @@ def test_ensure_existing_file_path_accepts_existing_file(tmp_path: Path):
     assert normalized_path == str(file_path)
 
 
+def test_ensure_existing_file_path_rejects_non_string_missing_message(tmp_path: Path):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(HyperbrowserError, match="missing_file_message must be a string"):
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message=123,  # type: ignore[arg-type]
+            not_file_message="not-file",
+        )
+
+
+def test_ensure_existing_file_path_rejects_blank_missing_message(tmp_path: Path):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError, match="missing_file_message must not be empty"
+    ):
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="   ",
+            not_file_message="not-file",
+        )
+
+
+def test_ensure_existing_file_path_rejects_non_string_not_file_message(tmp_path: Path):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(HyperbrowserError, match="not_file_message must be a string"):
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message=123,  # type: ignore[arg-type]
+        )
+
+
+def test_ensure_existing_file_path_rejects_blank_not_file_message(tmp_path: Path):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(HyperbrowserError, match="not_file_message must not be empty"):
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message="  ",
+        )
+
+
 def test_ensure_existing_file_path_accepts_pathlike_inputs(tmp_path: Path):
     file_path = tmp_path / "pathlike-file.txt"
     file_path.write_text("content")
