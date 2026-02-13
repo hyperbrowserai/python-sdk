@@ -112,7 +112,7 @@ def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str
         return None
     try:
         parsed_headers = json.loads(raw_headers)
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, ValueError, RecursionError, TypeError) as exc:
         raise HyperbrowserError(
             "HYPERBROWSER_HEADERS must be valid JSON object"
         ) from exc
