@@ -1,5 +1,5 @@
 import os
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from typing import Mapping, Optional, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -90,8 +90,9 @@ class HyperbrowserBase:
         normalized_query_suffix = (
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
+        decoded_path = unquote(normalized_path_only)
         normalized_segments = [
-            segment for segment in normalized_path_only.split("/") if segment
+            segment for segment in decoded_path.split("/") if segment
         ]
         if any(segment in {".", ".."} for segment in normalized_segments):
             raise HyperbrowserError("path must not contain relative path segments")

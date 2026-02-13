@@ -148,6 +148,14 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain relative path segments"
         ):
             client._build_url("/api/./session")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain relative path segments"
+        ):
+            client._build_url("/%2e%2e/session")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain relative path segments"
+        ):
+            client._build_url("/api/%2E/session")
     finally:
         client.close()
 
