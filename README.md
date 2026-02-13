@@ -41,7 +41,8 @@ When `config` is not provided, client constructors also read `HYPERBROWSER_HEADE
 automatically (same as API key and base URL).
 Internal request paths are validated as relative API paths and reject fragments,
 unsafe traversal segments, encoded query/fragment delimiters, backslashes, and
-whitespace/control characters.
+whitespace/control characters. Unencoded whitespace/control characters in query
+strings are also rejected.
 
 You can also pass custom headers (for tracing/correlation) either via
 `ClientConfig` or directly to the client constructor.
