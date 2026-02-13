@@ -49,6 +49,16 @@ class _WhitespaceInsideUrlRequest:
     url = "https://example.com/with space"
 
 
+class _BytesUrlContextRequest:
+    method = "GET"
+    url = b"https://example.com/from-bytes"
+
+
+class _InvalidBytesUrlContextRequest:
+    method = "GET"
+    url = b"\xff\xfe"
+
+
 class _RequestErrorWithFailingRequestProperty(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
@@ -95,6 +105,18 @@ class _RequestErrorWithWhitespaceInsideUrl(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _WhitespaceInsideUrlRequest()
+
+
+class _RequestErrorWithBytesUrlContext(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _BytesUrlContextRequest()
+
+
+class _RequestErrorWithInvalidBytesUrlContext(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _InvalidBytesUrlContextRequest()
 
 
 class _DummyResponse:
@@ -179,6 +201,24 @@ def test_extract_request_error_context_rejects_invalid_method_tokens():
 def test_extract_request_error_context_rejects_urls_with_whitespace():
     method, url = extract_request_error_context(
         _RequestErrorWithWhitespaceInsideUrl("network down")
+    )
+
+    assert method == "GET"
+    assert url == "unknown URL"
+
+
+def test_extract_request_error_context_supports_bytes_url_values():
+    method, url = extract_request_error_context(
+        _RequestErrorWithBytesUrlContext("network down")
+    )
+
+    assert method == "GET"
+    assert url == "https://example.com/from-bytes"
+
+
+def test_extract_request_error_context_rejects_invalid_bytes_url_values():
+    method, url = extract_request_error_context(
+        _RequestErrorWithInvalidBytesUrlContext("network down")
     )
 
     assert method == "GET"

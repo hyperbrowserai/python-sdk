@@ -167,7 +167,7 @@ def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
     request_method = _normalize_request_method(request_method)
 
     try:
-        request_url = str(request.url)
+        request_url = request.url
     except Exception:
         request_url = "unknown URL"
     request_url = _normalize_request_url(request_url)
