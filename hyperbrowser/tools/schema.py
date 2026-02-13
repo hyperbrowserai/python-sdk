@@ -51,6 +51,7 @@ SCRAPE_SCHEMA = {
     "properties": {
         "url": {
             "type": "string",
+            "format": "uri",
             "description": "The URL of the website to scrape",
         },
         "scrape_options": get_scrape_options(),
@@ -64,6 +65,7 @@ SCREENSHOT_SCHEMA = {
     "properties": {
         "url": {
             "type": "string",
+            "format": "uri",
             "description": "The URL of the website to scrape",
         },
         "scrape_options": get_scrape_options(["screenshot"]),
@@ -77,10 +79,12 @@ CRAWL_SCHEMA = {
     "properties": {
         "url": {
             "type": "string",
+            "format": "uri",
             "description": "The URL of the website to crawl",
         },
         "max_pages": {
-            "type": "number",
+            "type": "integer",
+            "minimum": 1,
             "description": "The maximum number of pages to crawl",
         },
         "follow_links": {
@@ -116,8 +120,11 @@ EXTRACT_SCHEMA = {
     "properties": {
         "urls": {
             "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
             "items": {
                 "type": "string",
+                "format": "uri",
             },
             "description": "A required list of up to 10 urls you want to process IN A SINGLE EXTRACTION. When answering questions that involve multiple sources or topics, ALWAYS include ALL relevant URLs in this single array rather than making separate function calls. This enables cross-referencing information across multiple sources to provide comprehensive answers. To allow crawling for any of the urls provided in the list, simply add /* to the end of the url (https://hyperbrowser.ai/*). This will crawl other pages on the site with the same origin and find relevant pages to use for the extraction context.",
         },
@@ -133,7 +140,8 @@ EXTRACT_SCHEMA = {
             "description": "A strict JSON schema for the response shape. This can be either a JSON object schema or a JSON string that can be parsed into an object schema. For multi-source extraction, design this schema to accommodate information from all URLs in a single structure.",
         },
         "max_links": {
-            "type": "number",
+            "type": "integer",
+            "minimum": 1,
             "description": "The maximum number of links to look for if performing a crawl for any given url in the urls list.",
         },
     },

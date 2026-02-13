@@ -27,3 +27,18 @@ def test_scrape_related_tool_schemas_require_only_url():
     assert SCRAPE_SCHEMA["required"] == ["url"]
     assert SCREENSHOT_SCHEMA["required"] == ["url"]
     assert CRAWL_SCHEMA["required"] == ["url"]
+
+
+def test_tool_schemas_include_url_and_range_constraints():
+    assert SCRAPE_SCHEMA["properties"]["url"]["format"] == "uri"
+    assert SCREENSHOT_SCHEMA["properties"]["url"]["format"] == "uri"
+    assert CRAWL_SCHEMA["properties"]["url"]["format"] == "uri"
+
+    assert CRAWL_SCHEMA["properties"]["max_pages"]["type"] == "integer"
+    assert CRAWL_SCHEMA["properties"]["max_pages"]["minimum"] == 1
+
+    assert EXTRACT_SCHEMA["properties"]["urls"]["minItems"] == 1
+    assert EXTRACT_SCHEMA["properties"]["urls"]["maxItems"] == 10
+    assert EXTRACT_SCHEMA["properties"]["urls"]["items"]["format"] == "uri"
+    assert EXTRACT_SCHEMA["properties"]["max_links"]["type"] == "integer"
+    assert EXTRACT_SCHEMA["properties"]["max_links"]["minimum"] == 1
