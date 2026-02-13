@@ -21,7 +21,7 @@ class HyperbrowserBase:
         if config is not None and any(
             value is not None for value in (api_key, base_url, headers)
         ):
-            raise TypeError(
+            raise HyperbrowserError(
                 "Pass either `config` or `api_key`/`base_url`/`headers`, not both."
             )
 

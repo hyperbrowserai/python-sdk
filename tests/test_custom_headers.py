@@ -314,7 +314,7 @@ def test_client_constructor_headers_override_environment_headers(monkeypatch):
 
 
 def test_client_constructor_rejects_mixed_config_and_direct_args():
-    with pytest.raises(TypeError, match="Pass either `config`"):
+    with pytest.raises(HyperbrowserError, match="Pass either `config`"):
         Hyperbrowser(
             config=ClientConfig(api_key="test-key"),
             headers={"X-Team-Trace": "team-1"},
@@ -322,7 +322,7 @@ def test_client_constructor_rejects_mixed_config_and_direct_args():
 
 
 def test_async_client_constructor_rejects_mixed_config_and_direct_args():
-    with pytest.raises(TypeError, match="Pass either `config`"):
+    with pytest.raises(HyperbrowserError, match="Pass either `config`"):
         AsyncHyperbrowser(
             config=ClientConfig(api_key="test-key"),
             headers={"X-Team-Trace": "team-1"},
