@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import os
 
+from .exceptions import HyperbrowserError
+
 
 @dataclass
 class ClientConfig:
@@ -13,7 +15,9 @@ class ClientConfig:
     def from_env(cls) -> "ClientConfig":
         api_key = os.environ.get("HYPERBROWSER_API_KEY")
         if api_key is None:
-            raise ValueError("HYPERBROWSER_API_KEY environment variable is required")
+            raise HyperbrowserError(
+                "HYPERBROWSER_API_KEY environment variable is required"
+            )
 
         base_url = os.environ.get(
             "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
