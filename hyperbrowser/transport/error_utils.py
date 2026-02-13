@@ -85,7 +85,7 @@ def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
     if not isinstance(request_method, str) or not request_method.strip():
         request_method = "UNKNOWN"
     else:
-        request_method = request_method.strip()
+        request_method = request_method.strip().upper()
 
     try:
         request_url = str(request.url)

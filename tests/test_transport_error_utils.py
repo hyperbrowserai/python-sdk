@@ -27,6 +27,11 @@ class _WhitespaceContextRequest:
     url = "  https://example.com/trim  "
 
 
+class _LowercaseMethodRequest:
+    method = "get"
+    url = "https://example.com/lowercase"
+
+
 class _RequestErrorWithFailingRequestProperty(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
@@ -49,6 +54,12 @@ class _RequestErrorWithWhitespaceContext(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _WhitespaceContextRequest()
+
+
+class _RequestErrorWithLowercaseMethod(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _LowercaseMethodRequest()
 
 
 class _DummyResponse:
@@ -101,6 +112,15 @@ def test_extract_request_error_context_strips_method_and_url_whitespace():
 
     assert method == "POST"
     assert url == "https://example.com/trim"
+
+
+def test_extract_request_error_context_normalizes_method_to_uppercase():
+    method, url = extract_request_error_context(
+        _RequestErrorWithLowercaseMethod("network down")
+    )
+
+    assert method == "GET"
+    assert url == "https://example.com/lowercase"
 
 
 def test_format_request_failure_message_uses_fallback_values():
