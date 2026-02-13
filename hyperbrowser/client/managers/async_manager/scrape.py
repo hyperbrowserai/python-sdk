@@ -5,6 +5,7 @@ from ...polling import (
     collect_paginated_results_async,
     poll_until_terminal_status_async,
     retry_operation_async,
+    wait_for_job_result_async,
 )
 from ....models.scrape import (
     BatchScrapeJobResponse,
@@ -151,17 +152,14 @@ class ScrapeManager:
         if not job_id:
             raise HyperbrowserError("Failed to start scrape job")
 
-        await poll_until_terminal_status_async(
+        return await wait_for_job_result_async(
             operation_name=f"scrape job {job_id}",
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=lambda status: status in {"completed", "failed"},
+            fetch_result=lambda: self.get(job_id),
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
-        )
-        return await retry_operation_async(
-            operation_name=f"Fetching scrape job {job_id}",
-            operation=lambda: self.get(job_id),
-            max_attempts=POLLING_ATTEMPTS,
-            retry_delay_seconds=0.5,
+            fetch_max_attempts=POLLING_ATTEMPTS,
+            fetch_retry_delay_seconds=0.5,
         )

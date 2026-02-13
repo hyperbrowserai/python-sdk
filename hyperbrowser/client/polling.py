@@ -201,3 +201,59 @@ async def collect_paginated_results_async(
                     f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
                 ) from exc
         await asyncio.sleep(retry_delay_seconds)
+
+
+def wait_for_job_result(
+    *,
+    operation_name: str,
+    get_status: Callable[[], str],
+    is_terminal_status: Callable[[str], bool],
+    fetch_result: Callable[[], T],
+    poll_interval_seconds: float,
+    max_wait_seconds: Optional[float],
+    max_status_failures: int,
+    fetch_max_attempts: int,
+    fetch_retry_delay_seconds: float,
+) -> T:
+    poll_until_terminal_status(
+        operation_name=operation_name,
+        get_status=get_status,
+        is_terminal_status=is_terminal_status,
+        poll_interval_seconds=poll_interval_seconds,
+        max_wait_seconds=max_wait_seconds,
+        max_status_failures=max_status_failures,
+    )
+    return retry_operation(
+        operation_name=f"Fetching {operation_name}",
+        operation=fetch_result,
+        max_attempts=fetch_max_attempts,
+        retry_delay_seconds=fetch_retry_delay_seconds,
+    )
+
+
+async def wait_for_job_result_async(
+    *,
+    operation_name: str,
+    get_status: Callable[[], Awaitable[str]],
+    is_terminal_status: Callable[[str], bool],
+    fetch_result: Callable[[], Awaitable[T]],
+    poll_interval_seconds: float,
+    max_wait_seconds: Optional[float],
+    max_status_failures: int,
+    fetch_max_attempts: int,
+    fetch_retry_delay_seconds: float,
+) -> T:
+    await poll_until_terminal_status_async(
+        operation_name=operation_name,
+        get_status=get_status,
+        is_terminal_status=is_terminal_status,
+        poll_interval_seconds=poll_interval_seconds,
+        max_wait_seconds=max_wait_seconds,
+        max_status_failures=max_status_failures,
+    )
+    return await retry_operation_async(
+        operation_name=f"Fetching {operation_name}",
+        operation=fetch_result,
+        max_attempts=fetch_max_attempts,
+        retry_delay_seconds=fetch_retry_delay_seconds,
+    )

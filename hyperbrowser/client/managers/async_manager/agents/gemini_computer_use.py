@@ -1,7 +1,7 @@
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
-from ....polling import poll_until_terminal_status_async, retry_operation_async
+from ....polling import wait_for_job_result_async
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -56,18 +56,15 @@ class GeminiComputerUseManager:
         if not job_id:
             raise HyperbrowserError("Failed to start Gemini Computer Use task job")
 
-        await poll_until_terminal_status_async(
+        return await wait_for_job_result_async(
             operation_name=f"Gemini Computer Use task job {job_id}",
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=lambda status: status
             in {"completed", "failed", "stopped"},
+            fetch_result=lambda: self.get(job_id),
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
-        )
-        return await retry_operation_async(
-            operation_name=f"Fetching Gemini Computer Use task job {job_id}",
-            operation=lambda: self.get(job_id),
-            max_attempts=POLLING_ATTEMPTS,
-            retry_delay_seconds=0.5,
+            fetch_max_attempts=POLLING_ATTEMPTS,
+            fetch_retry_delay_seconds=0.5,
         )
