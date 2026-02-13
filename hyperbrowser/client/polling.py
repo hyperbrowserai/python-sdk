@@ -15,6 +15,10 @@ T = TypeVar("T")
 _MAX_OPERATION_NAME_LENGTH = 200
 
 
+class _NonRetryablePollingError(HyperbrowserError):
+    pass
+
+
 def _validate_non_negative_real(value: float, *, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise HyperbrowserError(f"{field_name} must be a number")
@@ -52,7 +56,7 @@ def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> b
         result, callback_name="is_terminal_status", operation_name=operation_name
     )
     if not isinstance(result, bool):
-        raise HyperbrowserError(
+        raise _NonRetryablePollingError(
             f"is_terminal_status must return a boolean for {operation_name}"
         )
     return result
@@ -63,7 +67,9 @@ def _ensure_status_string(status: object, *, operation_name: str) -> str:
         status, callback_name="get_status", operation_name=operation_name
     )
     if not isinstance(status, str):
-        raise HyperbrowserError(f"get_status must return a string for {operation_name}")
+        raise _NonRetryablePollingError(
+            f"get_status must return a string for {operation_name}"
+        )
     return status
 
 
@@ -71,7 +77,7 @@ def _ensure_awaitable(
     result: object, *, callback_name: str, operation_name: str
 ) -> Awaitable[object]:
     if not inspect.isawaitable(result):
-        raise HyperbrowserError(
+        raise _NonRetryablePollingError(
             f"{callback_name} must return an awaitable for {operation_name}"
         )
     return result
@@ -83,7 +89,7 @@ def _ensure_non_awaitable(
     if inspect.isawaitable(result):
         if inspect.iscoroutine(result):
             result.close()
-        raise HyperbrowserError(
+        raise _NonRetryablePollingError(
             f"{callback_name} must return a non-awaitable result for {operation_name}"
         )
 
@@ -182,9 +188,6 @@ def poll_until_terminal_status(
     while True:
         try:
             status = get_status()
-            _ensure_non_awaitable(
-                status, callback_name="get_status", operation_name=operation_name
-            )
             failures = 0
         except Exception as exc:
             failures += 1
@@ -227,12 +230,6 @@ def retry_operation(
     while True:
         try:
             operation_result = operation()
-            _ensure_non_awaitable(
-                operation_result,
-                callback_name="operation",
-                operation_name=operation_name,
-            )
-            return operation_result
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:
@@ -240,6 +237,14 @@ def retry_operation(
                     f"{operation_name} failed after {max_attempts} attempts: {exc}"
                 ) from exc
             time.sleep(retry_delay_seconds)
+            continue
+
+        _ensure_non_awaitable(
+            operation_result,
+            callback_name="operation",
+            operation_name=operation_name,
+        )
+        return operation_result
 
 
 async def poll_until_terminal_status_async(
@@ -412,6 +417,8 @@ def collect_paginated_results(
             else:
                 stagnation_failures = 0
             should_sleep = current_page_batch < total_page_batches
+        except _NonRetryablePollingError:
+            raise
         except HyperbrowserPollingError:
             raise
         except Exception as exc:
@@ -490,6 +497,8 @@ async def collect_paginated_results_async(
             else:
                 stagnation_failures = 0
             should_sleep = current_page_batch < total_page_batches
+        except _NonRetryablePollingError:
+            raise
         except HyperbrowserPollingError:
             raise
         except Exception as exc:
