@@ -25,6 +25,15 @@ class HyperbrowserBase:
             )
 
         if config is None:
+            resolved_api_key = (
+                api_key
+                if api_key is not None
+                else os.environ.get("HYPERBROWSER_API_KEY")
+            )
+            if resolved_api_key is None or not resolved_api_key.strip():
+                raise HyperbrowserError(
+                    "API key must be provided via `api_key` or HYPERBROWSER_API_KEY"
+                )
             resolved_headers = (
                 headers
                 if headers is not None
@@ -33,11 +42,7 @@ class HyperbrowserBase:
                 )
             )
             config = ClientConfig(
-                api_key=(
-                    api_key
-                    if api_key is not None
-                    else os.environ.get("HYPERBROWSER_API_KEY", "")
-                ),
+                api_key=resolved_api_key,
                 base_url=(
                     base_url
                     if base_url is not None
