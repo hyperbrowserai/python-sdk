@@ -60,6 +60,12 @@ class ClientConfig:
             )
         if parsed_base_url.username is not None or parsed_base_url.password is not None:
             raise HyperbrowserError("base_url must not include user credentials")
+        try:
+            parsed_base_url.port
+        except ValueError as exc:
+            raise HyperbrowserError(
+                "base_url must contain a valid port number"
+            ) from exc
 
         decoded_base_path = parsed_base_url.path
         for _ in range(10):

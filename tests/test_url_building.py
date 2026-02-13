@@ -98,6 +98,12 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
         ):
             client._build_url("/session")
 
+        client.config.base_url = "https://example.local:99999"
+        with pytest.raises(
+            HyperbrowserError, match="base_url must contain a valid port number"
+        ):
+            client._build_url("/session")
+
         client.config.base_url = "https://example.local/\napi"
         with pytest.raises(
             HyperbrowserError, match="base_url must not contain newline characters"
