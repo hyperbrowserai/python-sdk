@@ -74,7 +74,7 @@ with Hyperbrowser(
 ```
 
 > If you pass `config=...`, do not also pass `api_key`, `base_url`, or `headers`.
-> `timeout` may be provided to client constructors and must be finite and non-negative (`None` disables request timeouts). Numeric timeout inputs are normalized to float values before being applied to the underlying HTTP client.
+> `timeout` may be provided to client constructors and must be finite and non-negative (`None` disables request timeouts). Numeric timeout inputs (including `Decimal`/`Fraction`) are normalized to float values before being applied to the underlying HTTP client.
 
 ## Clients
 
@@ -136,7 +136,7 @@ These methods now support explicit polling controls:
 - `max_wait_seconds` (default `600.0`)
 - `max_status_failures` (default `5`)
 
-Timing values must be finite, non-negative numbers.
+Timing values must be finite, non-negative numbers (including `Decimal`/`Fraction` inputs).
 Polling callback contracts are also validated:
 
 - Sync polling helpers require non-awaitable callback return values.
