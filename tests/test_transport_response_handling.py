@@ -222,20 +222,34 @@ def test_sync_handle_response_with_dict_without_message_keys_stringifies_payload
         transport.close()
 
 
-def test_async_handle_response_with_non_dict_json_stringifies_payload():
+def test_async_handle_response_with_non_dict_json_uses_first_item_payload():
     async def run() -> None:
         transport = AsyncTransport(api_key="test-key")
         try:
             response = _build_response(500, '[{"code":"UPSTREAM_FAILURE"}]')
 
-            with pytest.raises(
-                HyperbrowserError, match='\\[\\{"code": "UPSTREAM_FAILURE"\\}\\]'
-            ):
+            with pytest.raises(HyperbrowserError, match='"code": "UPSTREAM_FAILURE"'):
                 await transport._handle_response(response)
         finally:
             await transport.close()
 
     asyncio.run(run())
+
+
+def test_sync_handle_response_with_validation_error_detail_list_uses_msg_values():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        response = _build_response(
+            422,
+            '{"detail":[{"msg":"field required"},{"msg":"invalid email address"}]}',
+        )
+
+        with pytest.raises(
+            HyperbrowserError, match="field required; invalid email address"
+        ):
+            transport._handle_response(response)
+    finally:
+        transport.close()
 
 
 def test_sync_transport_post_wraps_request_errors_with_url_context():

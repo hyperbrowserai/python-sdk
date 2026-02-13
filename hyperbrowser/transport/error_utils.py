@@ -8,10 +8,22 @@ def _stringify_error_value(value: Any) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
-        for key in ("message", "error", "detail"):
+        for key in ("message", "error", "detail", "msg"):
             nested_value = value.get(key)
             if nested_value is not None:
                 return _stringify_error_value(nested_value)
+    if isinstance(value, (list, tuple)):
+        collected_messages = [
+            item_message
+            for item_message in (_stringify_error_value(item) for item in value)
+            if item_message
+        ]
+        if collected_messages:
+            return (
+                collected_messages[0]
+                if len(collected_messages) == 1
+                else "; ".join(collected_messages)
+            )
     try:
         return json.dumps(value, sort_keys=True)
     except TypeError:
