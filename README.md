@@ -47,7 +47,7 @@ strings are also rejected.
 You can also pass custom headers (for tracing/correlation) either via
 `ClientConfig` or directly to the client constructor.
 Header keys/values must be strings; header names are trimmed, must use valid HTTP
-token characters, and control characters are rejected.
+token characters, must be 256 characters or fewer, and control characters are rejected.
 Duplicate header names are rejected after normalization (case-insensitive), e.g.
 `"X-Trace"` with `"  X-Trace  "` or `"x-trace"`.
 
