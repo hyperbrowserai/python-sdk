@@ -177,6 +177,21 @@ with Hyperbrowser(api_key="your_api_key") as client:
     print(result.status, result.data)
 ```
 
+## Prebuilt tool wrappers
+
+`hyperbrowser.tools` exposes prebuilt wrappers for common tool-calling flows (`WebsiteScrapeTool`, `WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`, `BrowserUseTool`).
+
+Input and output normalization guarantees:
+
+- Tool params must be a mapping with **string keys** (no blank keys, no leading/trailing whitespace keys, no control characters in keys).
+- Extract tool `schema` accepts:
+  - a JSON object mapping, or
+  - a JSON string that decodes to a JSON object.
+- Extract `schema` mapping keys must be strings.
+- Tool response objects must expose a `data` field (attribute-based or mapping-based response wrappers are supported).
+- Text output fields support UTF-8 bytes-like values (`bytes`, `bytearray`, `memoryview`) and decode them to strings.
+- Invalid UTF-8 text payloads raise deterministic `HyperbrowserError` diagnostics.
+
 ## Error handling
 
 SDK errors are raised as `HyperbrowserError`.
