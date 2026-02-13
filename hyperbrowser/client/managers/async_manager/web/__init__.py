@@ -3,11 +3,10 @@ from .crawl import WebCrawlManager
 from hyperbrowser.models import (
     FetchParams,
     FetchResponse,
-    FetchOutputJson,
     WebSearchParams,
     WebSearchResponse,
 )
-import jsonref
+from ....schema_utils import inject_web_output_schemas
 
 
 class WebManager:
@@ -18,15 +17,9 @@ class WebManager:
 
     async def fetch(self, params: FetchParams) -> FetchResponse:
         payload = params.model_dump(exclude_none=True, by_alias=True)
-        if params.outputs and params.outputs.formats:
-            for index, output in enumerate(params.outputs.formats):
-                if isinstance(output, FetchOutputJson) and output.schema_:
-                    if hasattr(output.schema_, "model_json_schema"):
-                        payload["outputs"]["formats"][index]["schema"] = jsonref.replace_refs(
-                            output.schema_.model_json_schema(),
-                            proxies=False,
-                            lazy_load=False,
-                        )
+        inject_web_output_schemas(
+            payload, params.outputs.formats if params.outputs else None
+        )
 
         response = await self._client.transport.post(
             self._client._build_url("/web/fetch"),

@@ -1,8 +1,8 @@
-import jsonref
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import poll_until_terminal_status_async, retry_operation_async
+from ....schema_utils import resolve_schema_input
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -22,13 +22,9 @@ class BrowserUseManager:
         self, params: StartBrowserUseTaskParams
     ) -> StartBrowserUseTaskResponse:
         payload = params.model_dump(exclude_none=True, by_alias=True)
-        if params.output_model_schema and hasattr(
-            params.output_model_schema, "model_json_schema"
-        ):
-            payload["outputModelSchema"] = jsonref.replace_refs(
-                params.output_model_schema.model_json_schema(),
-                proxies=False,
-                lazy_load=False,
+        if params.output_model_schema:
+            payload["outputModelSchema"] = resolve_schema_input(
+                params.output_model_schema
             )
         response = await self._client.transport.post(
             self._client._build_url("/task/browser-use"),

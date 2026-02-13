@@ -8,8 +8,8 @@ from hyperbrowser.models.extract import (
     StartExtractJobParams,
     StartExtractJobResponse,
 )
-import jsonref
 from ...polling import poll_until_terminal_status, retry_operation
+from ...schema_utils import resolve_schema_input
 
 
 class ExtractManager:
@@ -21,10 +21,8 @@ class ExtractManager:
             raise HyperbrowserError("Either schema or prompt must be provided")
 
         payload = params.model_dump(exclude_none=True, by_alias=True)
-        if params.schema_ and hasattr(params.schema_, "model_json_schema"):
-            payload["schema"] = jsonref.replace_refs(
-                params.schema_.model_json_schema(), proxies=False, lazy_load=False
-            )
+        if params.schema_:
+            payload["schema"] = resolve_schema_input(params.schema_)
 
         response = self._client.transport.post(
             self._client._build_url("/extract"),
