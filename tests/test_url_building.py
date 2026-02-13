@@ -1,4 +1,5 @@
 import pytest
+from urllib.parse import quote
 
 from hyperbrowser import Hyperbrowser
 from hyperbrowser.config import ClientConfig
@@ -142,6 +143,16 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
         ):
             client._build_url("/session")
 
+        deeply_encoded_dot = "%2e"
+        for _ in range(11):
+            deeply_encoded_dot = quote(deeply_encoded_dot, safe="")
+        client.config.base_url = f"https://example.local/{deeply_encoded_dot}/api"
+        with pytest.raises(
+            HyperbrowserError,
+            match="base_url path contains excessively nested URL encoding",
+        ):
+            client._build_url("/session")
+
         client.config.base_url = "https://example.local%2Fapi"
         with pytest.raises(
             HyperbrowserError,
@@ -270,6 +281,13 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain encoded fragment delimiters"
         ):
             client._build_url("/api/%23segment")
+        nested_encoded_segment = "%2e"
+        for _ in range(11):
+            nested_encoded_segment = quote(nested_encoded_segment, safe="")
+        with pytest.raises(
+            HyperbrowserError, match="path contains excessively nested URL encoding"
+        ):
+            client._build_url(f"/{nested_encoded_segment}/session")
     finally:
         client.close()
 

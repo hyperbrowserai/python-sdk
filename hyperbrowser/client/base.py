@@ -96,6 +96,8 @@ class HyperbrowserBase:
             if next_decoded_path == decoded_path:
                 break
             decoded_path = next_decoded_path
+        else:
+            raise HyperbrowserError("path contains excessively nested URL encoding")
         if "\\" in decoded_path:
             raise HyperbrowserError("path must not contain backslashes")
         if "\n" in decoded_path or "\r" in decoded_path:

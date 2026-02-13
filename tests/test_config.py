@@ -1,4 +1,5 @@
 from types import MappingProxyType
+from urllib.parse import quote
 
 import pytest
 
@@ -436,3 +437,13 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         match="base_url path must not contain encoded query or fragment delimiters",
     ):
         ClientConfig.normalize_base_url("https://example.local/%253Fapi")
+    deeply_encoded_dot = "%2e"
+    for _ in range(11):
+        deeply_encoded_dot = quote(deeply_encoded_dot, safe="")
+    with pytest.raises(
+        HyperbrowserError,
+        match="base_url path contains excessively nested URL encoding",
+    ):
+        ClientConfig.normalize_base_url(
+            f"https://example.local/{deeply_encoded_dot}/api"
+        )

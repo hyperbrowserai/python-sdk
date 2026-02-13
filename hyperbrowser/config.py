@@ -73,6 +73,8 @@ class ClientConfig:
             if next_decoded_base_path == decoded_base_path:
                 break
             decoded_base_path = next_decoded_base_path
+        else:
+            raise HyperbrowserError("base_url path contains excessively nested URL encoding")
         if "\\" in decoded_base_path:
             raise HyperbrowserError("base_url must not contain backslashes")
         if any(character.isspace() for character in decoded_base_path):
@@ -98,6 +100,8 @@ class ClientConfig:
             if next_decoded_base_netloc == decoded_base_netloc:
                 break
             decoded_base_netloc = next_decoded_base_netloc
+        else:
+            raise HyperbrowserError("base_url host contains excessively nested URL encoding")
         if "\\" in decoded_base_netloc:
             raise HyperbrowserError("base_url host must not contain backslashes")
         if any(character.isspace() for character in decoded_base_netloc):
