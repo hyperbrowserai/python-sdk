@@ -83,7 +83,7 @@ def build_operation_name(prefix: str, identifier: str) -> str:
         _MAX_OPERATION_NAME_LENGTH - len(prefix) - len(_TRUNCATED_OPERATION_NAME_SUFFIX)
     )
     if available_identifier_length > 0:
-        truncated_identifier = identifier[:available_identifier_length]
+        truncated_identifier = normalized_identifier[:available_identifier_length]
         return f"{prefix}{truncated_identifier}{_TRUNCATED_OPERATION_NAME_SUFFIX}"
     return prefix[:_MAX_OPERATION_NAME_LENGTH]
 
