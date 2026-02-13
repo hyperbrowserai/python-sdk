@@ -115,6 +115,32 @@ def test_parse_session_recordings_response_data_wraps_invalid_items():
     assert exc_info.value.original_error is not None
 
 
+def test_parse_session_recordings_response_data_wraps_unreadable_list_iteration():
+    class _BrokenRecordingList(list):
+        def __iter__(self):
+            raise RuntimeError("cannot iterate recordings")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to iterate session recording response list"
+    ) as exc_info:
+        parse_session_recordings_response_data(_BrokenRecordingList([{}]))
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_session_recordings_response_data_preserves_hyperbrowser_iteration_errors():
+    class _BrokenRecordingList(list):
+        def __iter__(self):
+            raise HyperbrowserError("custom recording iteration failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom recording iteration failure"
+    ) as exc_info:
+        parse_session_recordings_response_data(_BrokenRecordingList([{}]))
+
+    assert exc_info.value.original_error is None
+
+
 def test_sync_session_manager_get_recording_uses_recording_parser():
     manager = SyncSessionManager(
         _FakeClient(

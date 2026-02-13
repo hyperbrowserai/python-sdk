@@ -10,8 +10,17 @@ def parse_session_recordings_response_data(response_data: Any) -> List[SessionRe
         raise HyperbrowserError(
             "Expected session recording response to be a list of objects"
         )
+    try:
+        recording_items = list(response_data)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to iterate session recording response list",
+            original_error=exc,
+        ) from exc
     parsed_recordings: List[SessionRecording] = []
-    for index, recording in enumerate(response_data):
+    for index, recording in enumerate(recording_items):
         if not isinstance(recording, Mapping):
             raise HyperbrowserError(
                 "Expected session recording object at index "
