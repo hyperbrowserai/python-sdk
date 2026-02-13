@@ -20,7 +20,7 @@ def ensure_existing_file_path(
         ) from exc
     if not isinstance(normalized_path, str):
         raise HyperbrowserError("file_path must resolve to a string path")
-    if not normalized_path:
+    if not normalized_path.strip():
         raise HyperbrowserError("file_path must not be empty")
     if "\x00" in normalized_path:
         raise HyperbrowserError("file_path must not contain null bytes")

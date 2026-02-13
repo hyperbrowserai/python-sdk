@@ -80,6 +80,12 @@ def test_ensure_existing_file_path_rejects_empty_string_paths():
             missing_file_message="missing",
             not_file_message="not-file",
         )
+    with pytest.raises(HyperbrowserError, match="file_path must not be empty"):
+        ensure_existing_file_path(
+            "   ",
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
 
 
 def test_ensure_existing_file_path_rejects_null_byte_paths():
