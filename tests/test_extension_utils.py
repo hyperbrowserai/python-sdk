@@ -169,3 +169,23 @@ def test_parse_extension_list_response_data_missing_key_handles_unreadable_keys(
         match="Expected 'extensions' key in response but got \\[<unavailable keys>\\] keys",
     ):
         parse_extension_list_response_data(_BrokenKeysMapping({"id": "ext_1"}))
+
+
+def test_parse_extension_list_response_data_wraps_unreadable_extensions_value():
+    class _BrokenExtensionsLookupMapping(dict):
+        def __contains__(self, key: object) -> bool:
+            return key == "extensions"
+
+        def __getitem__(self, key: object):
+            if key == "extensions":
+                raise RuntimeError("cannot read extensions value")
+            return super().__getitem__(key)
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read 'extensions' value from response"
+    ) as exc_info:
+        parse_extension_list_response_data(
+            _BrokenExtensionsLookupMapping({"extensions": []})
+        )
+
+    assert exc_info.value.original_error is not None

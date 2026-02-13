@@ -55,13 +55,22 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
             "Expected 'extensions' key in response but got "
             f"{_summarize_mapping_keys(response_data)} keys"
         )
-    if not isinstance(response_data["extensions"], list):
+    try:
+        extensions_value = response_data["extensions"]
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to read 'extensions' value from response",
+            original_error=exc,
+        ) from exc
+    if not isinstance(extensions_value, list):
         raise HyperbrowserError(
             "Expected list in 'extensions' key but got "
-            f"{_get_type_name(response_data['extensions'])}"
+            f"{_get_type_name(extensions_value)}"
         )
     parsed_extensions: List[ExtensionResponse] = []
-    for index, extension in enumerate(response_data["extensions"]):
+    for index, extension in enumerate(extensions_value):
         if not isinstance(extension, Mapping):
             raise HyperbrowserError(
                 "Expected extension object at index "
