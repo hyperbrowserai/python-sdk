@@ -195,6 +195,62 @@ def test_scrape_tool_wraps_mapping_response_data_inspection_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_scrape_tool_preserves_hyperbrowser_mapping_inspection_failures():
+    class _BrokenContainsResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom contains failure")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return {"markdown": "ok"}
+
+    client = _SyncScrapeClient(_BrokenContainsResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(HyperbrowserError, match="custom contains failure") as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is None
+
+
+def test_scrape_tool_preserves_hyperbrowser_mapping_data_read_failures():
+    class _BrokenResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "data"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise HyperbrowserError("custom data read failure")
+
+    client = _SyncScrapeClient(_BrokenResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(HyperbrowserError, match="custom data read failure") as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is None
+
+
+def test_scrape_tool_rejects_object_responses_without_data_attribute():
+    client = _SyncScrapeClient(object())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="scrape tool response must include 'data'"
+    ):
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+
 def test_scrape_tool_preserves_hyperbrowser_response_data_read_failures():
     client = _SyncScrapeClient(
         _Response(data_error=HyperbrowserError("custom scrape data failure"))
