@@ -77,6 +77,8 @@ class HyperbrowserBase:
         parsed_path = urlparse(stripped_path)
         if parsed_path.scheme:
             raise HyperbrowserError("path must be a relative API path")
+        if parsed_path.fragment:
+            raise HyperbrowserError("path must not include URL fragments")
         normalized_path = f"/{stripped_path.lstrip('/')}"
         base_has_api_suffix = (
             urlparse(self.config.base_url).path.rstrip("/").endswith("/api")
