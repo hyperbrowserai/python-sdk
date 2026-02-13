@@ -3,6 +3,7 @@ from array import array
 from concurrent.futures import BrokenExecutor as ConcurrentBrokenExecutor
 from concurrent.futures import CancelledError as ConcurrentCancelledError
 from concurrent.futures import InvalidStateError as ConcurrentInvalidStateError
+from decimal import Decimal
 import math
 from fractions import Fraction
 
@@ -115,6 +116,20 @@ def test_poll_until_terminal_status_accepts_fraction_timing_values():
         is_terminal_status=lambda value: value == "completed",
         poll_interval_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
         max_wait_seconds=Fraction(1, 1),  # type: ignore[arg-type]
+    )
+
+    assert status == "completed"
+
+
+def test_poll_until_terminal_status_accepts_decimal_timing_values():
+    status_values = iter(["running", "completed"])
+
+    status = poll_until_terminal_status(
+        operation_name="sync poll decimal timings",
+        get_status=lambda: next(status_values),
+        is_terminal_status=lambda value: value == "completed",
+        poll_interval_seconds=Decimal("0.0001"),  # type: ignore[arg-type]
+        max_wait_seconds=Decimal("1"),  # type: ignore[arg-type]
     )
 
     assert status == "completed"
@@ -838,6 +853,26 @@ def test_retry_operation_accepts_fraction_retry_delay():
     assert attempts["count"] == 3
 
 
+def test_retry_operation_accepts_decimal_retry_delay():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise ValueError("transient")
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry decimal delay",
+        operation=operation,
+        max_attempts=3,
+        retry_delay_seconds=Decimal("0.0001"),  # type: ignore[arg-type]
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
 def test_retry_operation_raises_after_max_attempts():
     with pytest.raises(HyperbrowserError, match="sync retry failure"):
         retry_operation(
@@ -1460,6 +1495,38 @@ def test_async_helpers_accept_fraction_timing_values():
             fetch_retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
         )
         assert wait_result == {"ok": True}
+
+    asyncio.run(run())
+
+
+def test_async_helpers_accept_decimal_timing_values():
+    async def run() -> None:
+        status_values = iter(["pending", "completed"])
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll decimal timings",
+            get_status=lambda: asyncio.sleep(0, result=next(status_values)),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=Decimal("0.0001"),  # type: ignore[arg-type]
+            max_wait_seconds=Decimal("1"),  # type: ignore[arg-type]
+        )
+        assert status == "completed"
+
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 2:
+                raise ValueError("temporary")
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry decimal delay",
+            operation=operation,
+            max_attempts=2,
+            retry_delay_seconds=Decimal("0.0001"),  # type: ignore[arg-type]
+        )
+        assert result == "ok"
+        assert attempts["count"] == 2
 
     asyncio.run(run())
 

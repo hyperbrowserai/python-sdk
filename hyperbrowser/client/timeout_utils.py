@@ -1,3 +1,4 @@
+from decimal import Decimal
 import math
 from numbers import Real
 from typing import Optional
@@ -8,7 +9,10 @@ from ..exceptions import HyperbrowserError
 def validate_timeout_seconds(timeout: Optional[float]) -> Optional[float]:
     if timeout is None:
         return None
-    if isinstance(timeout, bool) or not isinstance(timeout, Real):
+    is_supported_numeric_type = isinstance(timeout, Real) or isinstance(
+        timeout, Decimal
+    )
+    if isinstance(timeout, bool) or not is_supported_numeric_type:
         raise HyperbrowserError("timeout must be a number")
     try:
         normalized_timeout = float(timeout)

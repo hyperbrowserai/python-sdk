@@ -2,6 +2,7 @@ import asyncio
 from concurrent.futures import BrokenExecutor as ConcurrentBrokenExecutor
 from concurrent.futures import CancelledError as ConcurrentCancelledError
 from concurrent.futures import InvalidStateError as ConcurrentInvalidStateError
+from decimal import Decimal
 import inspect
 import math
 from numbers import Real
@@ -27,7 +28,8 @@ class _NonRetryablePollingError(HyperbrowserError):
 
 
 def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    is_supported_numeric_type = isinstance(value, Real) or isinstance(value, Decimal)
+    if isinstance(value, bool) or not is_supported_numeric_type:
         raise HyperbrowserError(f"{field_name} must be a number")
     try:
         normalized_value = float(value)
