@@ -6,6 +6,7 @@ import httpx
 
 _HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
 _MAX_ERROR_MESSAGE_LENGTH = 2000
+_MAX_REQUEST_URL_DISPLAY_LENGTH = 1000
 
 
 def _normalize_request_method(method: Any) -> str:
@@ -29,6 +30,8 @@ def _normalize_request_url(url: Any) -> str:
         ord(character) < 32 or ord(character) == 127 for character in normalized_url
     ):
         return "unknown URL"
+    if len(normalized_url) > _MAX_REQUEST_URL_DISPLAY_LENGTH:
+        return f"{normalized_url[:_MAX_REQUEST_URL_DISPLAY_LENGTH]}... (truncated)"
     return normalized_url
 
 

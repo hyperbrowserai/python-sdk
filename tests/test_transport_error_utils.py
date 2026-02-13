@@ -204,6 +204,18 @@ def test_format_request_failure_message_normalizes_lowercase_fallback_method():
     assert message == "Request POST https://example.com/fallback failed"
 
 
+def test_format_request_failure_message_truncates_very_long_fallback_urls():
+    very_long_url = "https://example.com/" + ("a" * 1200)
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="GET",
+        fallback_url=very_long_url,
+    )
+
+    assert "Request GET https://example.com/" in message
+    assert "... (truncated) failed" in message
+
+
 def test_extract_error_message_handles_recursive_list_payloads():
     recursive_payload = []
     recursive_payload.append(recursive_payload)
