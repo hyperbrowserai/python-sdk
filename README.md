@@ -142,7 +142,7 @@ Polling callback contracts are also validated:
 - Sync polling helpers require non-awaitable callback return values.
 - Async polling helpers require awaitable status/page/retry callbacks.
 - Polling retries skip non-retryable API client errors (HTTP `4xx`, except retryable `408` request-timeout and `429` rate-limit responses).
-- Retry classification accepts integer, numeric-string, and numeric byte-string HTTP status metadata when evaluating retryability (malformed/oversized values safely fall back to retryable unknown behavior).
+- Retry classification accepts integer, numeric-string, and numeric byte-string HTTP status metadata when evaluating retryability (including wait-helper status/fetch paths); malformed/oversized values safely fall back to retryable unknown behavior.
 - SDK timeout/polling exceptions (`HyperbrowserTimeoutError`, `HyperbrowserPollingError`) are treated as non-retryable and are surfaced immediately.
 - Cancellation exceptions are treated as non-retryable and are surfaced immediately.
 - Broken executor errors are treated as non-retryable and are surfaced immediately.
