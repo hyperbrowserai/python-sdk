@@ -72,6 +72,16 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
         ) from exc
     for key in param_keys:
         if isinstance(key, str):
+            if not key.strip():
+                raise HyperbrowserError("tool params keys must not be empty")
+            if key != key.strip():
+                raise HyperbrowserError(
+                    "tool params keys must not contain leading or trailing whitespace"
+                )
+            if any(ord(character) < 32 or ord(character) == 127 for character in key):
+                raise HyperbrowserError(
+                    "tool params keys must not contain control characters"
+                )
             continue
         raise HyperbrowserError("tool params keys must be strings")
     normalized_params: Dict[str, Any] = {}

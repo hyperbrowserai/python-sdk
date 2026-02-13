@@ -108,6 +108,41 @@ def test_tool_wrappers_reject_non_string_param_keys():
         )
 
 
+def test_tool_wrappers_reject_blank_param_keys():
+    client = _Client()
+
+    with pytest.raises(HyperbrowserError, match="tool params keys must not be empty"):
+        WebsiteScrapeTool.runnable(
+            client,
+            {"   ": "https://example.com"},
+        )
+
+
+def test_tool_wrappers_reject_param_keys_with_surrounding_whitespace():
+    client = _Client()
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="tool params keys must not contain leading or trailing whitespace",
+    ):
+        WebsiteScrapeTool.runnable(
+            client,
+            {" url ": "https://example.com"},
+        )
+
+
+def test_tool_wrappers_reject_param_keys_with_control_characters():
+    client = _Client()
+
+    with pytest.raises(
+        HyperbrowserError, match="tool params keys must not contain control characters"
+    ):
+        WebsiteScrapeTool.runnable(
+            client,
+            {"u\trl": "https://example.com"},
+        )
+
+
 def test_tool_wrappers_wrap_param_key_read_failures():
     class _BrokenKeyMapping(Mapping[str, object]):
         def __iter__(self) -> Iterator[str]:
