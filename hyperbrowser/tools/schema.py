@@ -59,7 +59,7 @@ SCREENSHOT_SCHEMA = {
         },
         "scrape_options": get_scrape_options(["screenshot"]),
     },
-    "required": ["url", "scrape_options"],
+    "required": ["url"],
     "additionalProperties": False,
 }
 
