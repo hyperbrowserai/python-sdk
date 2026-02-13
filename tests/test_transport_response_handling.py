@@ -52,6 +52,20 @@ class _BrokenJsonErrorResponse:
         raise RuntimeError("broken json")
 
 
+class _BrokenStatusCodeJsonResponse:
+    content = b"{broken-json}"
+
+    def raise_for_status(self) -> None:
+        return None
+
+    @property
+    def status_code(self) -> int:
+        raise RuntimeError("broken status code")
+
+    def json(self):
+        raise RuntimeError("broken json")
+
+
 def test_sync_handle_response_with_non_json_success_body_returns_status_only():
     transport = SyncTransport(api_key="test-key")
     try:
@@ -85,6 +99,20 @@ def test_sync_handle_response_with_broken_json_error_payload_uses_default_messag
             transport._handle_response(
                 _BrokenJsonErrorResponse()  # type: ignore[arg-type]
             )
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_broken_status_code_raises_hyperbrowser_error():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to process response status code"
+        ) as exc_info:
+            transport._handle_response(
+                _BrokenStatusCodeJsonResponse()  # type: ignore[arg-type]
+            )
+        assert exc_info.value.original_error is not None
     finally:
         transport.close()
 
@@ -185,6 +213,23 @@ def test_async_handle_response_with_broken_json_error_payload_uses_default_messa
                 await transport._handle_response(
                     _BrokenJsonErrorResponse()  # type: ignore[arg-type]
                 )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_broken_status_code_raises_hyperbrowser_error():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Failed to process response status code"
+            ) as exc_info:
+                await transport._handle_response(
+                    _BrokenStatusCodeJsonResponse()  # type: ignore[arg-type]
+                )
+            assert exc_info.value.original_error is not None
         finally:
             await transport.close()
 

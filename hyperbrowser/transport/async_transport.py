@@ -56,18 +56,28 @@ class AsyncTransport(AsyncTransportStrategy):
                     return APIResponse.from_status(response.status_code)
                 return APIResponse(response.json())
             except Exception as e:
-                if response.status_code >= 400:
+                try:
+                    status_code = response.status_code
+                    if isinstance(status_code, bool):
+                        raise TypeError("boolean status code is invalid")
+                    normalized_status_code = int(status_code)
+                except Exception as status_exc:
+                    raise HyperbrowserError(
+                        "Failed to process response status code",
+                        original_error=status_exc,
+                    ) from status_exc
+                if normalized_status_code >= 400:
                     try:
                         response_text = response.text
                     except Exception:
                         response_text = ""
                     raise HyperbrowserError(
                         response_text or "Unknown error occurred",
-                        status_code=response.status_code,
+                        status_code=normalized_status_code,
                         response=response,
                         original_error=e,
                     )
-                return APIResponse.from_status(response.status_code)
+                return APIResponse.from_status(normalized_status_code)
         except httpx.HTTPStatusError as e:
             message = extract_error_message(response, fallback_error=e)
             raise HyperbrowserError(
