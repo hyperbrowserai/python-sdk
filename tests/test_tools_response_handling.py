@@ -506,7 +506,9 @@ def test_async_crawl_tool_rejects_non_object_page_items():
         with pytest.raises(
             HyperbrowserError, match="crawl tool page must be an object at index 0"
         ):
-            await WebsiteCrawlTool.async_runnable(client, {"url": "https://example.com"})
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
 
     asyncio.run(run())
 
