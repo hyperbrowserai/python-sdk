@@ -51,16 +51,20 @@ class ClientConfig:
                 "HYPERBROWSER_API_KEY environment variable is required"
             )
 
-        raw_base_url = os.environ.get("HYPERBROWSER_BASE_URL")
-        if raw_base_url is None:
-            base_url = "https://api.hyperbrowser.ai"
-        elif not raw_base_url.strip():
-            raise HyperbrowserError("HYPERBROWSER_BASE_URL must not be empty when set")
-        else:
-            base_url = raw_base_url
+        base_url = cls.resolve_base_url_from_env(
+            os.environ.get("HYPERBROWSER_BASE_URL")
+        )
         headers = cls.parse_headers_from_env(os.environ.get("HYPERBROWSER_HEADERS"))
         return cls(api_key=api_key, base_url=base_url, headers=headers)
 
     @staticmethod
     def parse_headers_from_env(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
         return parse_headers_env_json(raw_headers)
+
+    @staticmethod
+    def resolve_base_url_from_env(raw_base_url: Optional[str]) -> str:
+        if raw_base_url is None:
+            return "https://api.hyperbrowser.ai"
+        if not raw_base_url.strip():
+            raise HyperbrowserError("HYPERBROWSER_BASE_URL must not be empty when set")
+        return raw_base_url

@@ -276,3 +276,15 @@ def test_client_config_parse_headers_from_env_rejects_non_string_input():
         HyperbrowserError, match="HYPERBROWSER_HEADERS must be a string"
     ):
         ClientConfig.parse_headers_from_env(123)  # type: ignore[arg-type]
+
+
+def test_client_config_resolve_base_url_from_env_defaults_and_rejects_blank():
+    assert ClientConfig.resolve_base_url_from_env(None) == "https://api.hyperbrowser.ai"
+    assert (
+        ClientConfig.resolve_base_url_from_env("https://example.local")
+        == "https://example.local"
+    )
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_BASE_URL must not be empty"
+    ):
+        ClientConfig.resolve_base_url_from_env("   ")

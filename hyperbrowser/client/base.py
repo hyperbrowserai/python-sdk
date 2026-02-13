@@ -48,16 +48,10 @@ class HyperbrowserBase:
                     os.environ.get("HYPERBROWSER_HEADERS")
                 )
             )
-            env_base_url = os.environ.get("HYPERBROWSER_BASE_URL")
             if base_url is None:
-                if env_base_url is None:
-                    resolved_base_url = "https://api.hyperbrowser.ai"
-                elif not env_base_url.strip():
-                    raise HyperbrowserError(
-                        "HYPERBROWSER_BASE_URL must not be empty when set"
-                    )
-                else:
-                    resolved_base_url = env_base_url
+                resolved_base_url = ClientConfig.resolve_base_url_from_env(
+                    os.environ.get("HYPERBROWSER_BASE_URL")
+                )
             else:
                 resolved_base_url = base_url
             config = ClientConfig(
