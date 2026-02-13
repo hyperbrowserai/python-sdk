@@ -13,6 +13,14 @@ def _build_response(status_code: int, body: str) -> httpx.Response:
     return httpx.Response(status_code, request=request, text=body)
 
 
+class _RequestErrorResponse:
+    def __init__(self, method: str, url: str) -> None:
+        self._request = httpx.Request(method, url)
+
+    def raise_for_status(self) -> None:
+        raise httpx.RequestError("network down", request=self._request)
+
+
 def test_sync_handle_response_with_non_json_success_body_returns_status_only():
     transport = SyncTransport(api_key="test-key")
     try:
@@ -22,6 +30,20 @@ def test_sync_handle_response_with_non_json_success_body_returns_status_only():
 
         assert api_response.status_code == 200
         assert api_response.data is None
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_request_error_includes_method_and_url():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError,
+            match="Request GET https://example.com/network failed",
+        ):
+            transport._handle_response(
+                _RequestErrorResponse("GET", "https://example.com/network")
+            )
     finally:
         transport.close()
 
@@ -36,6 +58,23 @@ def test_async_handle_response_with_non_json_success_body_returns_status_only():
 
             assert api_response.status_code == 200
             assert api_response.data is None
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_request_error_includes_method_and_url():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="Request POST https://example.com/network failed",
+            ):
+                await transport._handle_response(
+                    _RequestErrorResponse("POST", "https://example.com/network")
+                )
         finally:
             await transport.close()
 

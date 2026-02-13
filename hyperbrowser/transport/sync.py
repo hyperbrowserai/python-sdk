@@ -55,9 +55,10 @@ class SyncTransport(SyncTransportStrategy):
                 original_error=e,
             )
         except httpx.RequestError as e:
-            request_url = str(e.request.url) if e.request else "unknown URL"
+            request_method = e.request.method if e.request is not None else "UNKNOWN"
+            request_url = str(e.request.url) if e.request is not None else "unknown URL"
             raise HyperbrowserError(
-                f"Request failed for {request_url}", original_error=e
+                f"Request {request_method} {request_url} failed", original_error=e
             )
 
     def close(self) -> None:
