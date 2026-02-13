@@ -1,7 +1,8 @@
-import time
 import jsonref
+from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
+from ....polling import poll_until_terminal_status, retry_operation
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -18,16 +19,18 @@ class BrowserUseManager:
         self._client = client
 
     def start(self, params: StartBrowserUseTaskParams) -> StartBrowserUseTaskResponse:
-        if params.output_model_schema:
-            if hasattr(params.output_model_schema, "model_json_schema"):
-                params.output_model_schema = jsonref.replace_refs(
-                    params.output_model_schema.model_json_schema(),
-                    proxies=False,
-                    lazy_load=False,
-                )
+        payload = params.model_dump(exclude_none=True, by_alias=True)
+        if params.output_model_schema and hasattr(
+            params.output_model_schema, "model_json_schema"
+        ):
+            payload["outputModelSchema"] = jsonref.replace_refs(
+                params.output_model_schema.model_json_schema(),
+                proxies=False,
+                lazy_load=False,
+            )
         response = self._client.transport.post(
             self._client._build_url("/task/browser-use"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return StartBrowserUseTaskResponse(**response.data)
 
@@ -50,28 +53,27 @@ class BrowserUseManager:
         return BasicResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartBrowserUseTaskParams
+        self,
+        params: StartBrowserUseTaskParams,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
     ) -> BrowserUseTaskResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start browser-use task job")
 
-        failures = 0
-        while True:
-            try:
-                job_response = self.get_status(job_id)
-                if (
-                    job_response.status == "completed"
-                    or job_response.status == "failed"
-                    or job_response.status == "stopped"
-                ):
-                    return self.get(job_id)
-                failures = 0
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll browser-use task job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            time.sleep(2)
+        poll_until_terminal_status(
+            operation_name=f"browser-use task job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status
+            in {"completed", "failed", "stopped"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
+        return retry_operation(
+            operation_name=f"Fetching browser-use task job {job_id}",
+            operation=lambda: self.get(job_id),
+            max_attempts=POLLING_ATTEMPTS,
+            retry_delay_seconds=0.5,
+        )

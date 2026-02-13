@@ -6,12 +6,17 @@ from hyperbrowser.models import (
     WebCrawlJobStatusResponse,
     GetWebCrawlJobParams,
     WebCrawlJobResponse,
-    WebCrawlJobStatus,
     POLLING_ATTEMPTS,
     FetchOutputJson,
 )
 from hyperbrowser.exceptions import HyperbrowserError
+from ....polling import (
+    has_exceeded_max_wait,
+    poll_until_terminal_status_async,
+    retry_operation_async,
+)
 import asyncio
+import time
 import jsonref
 
 
@@ -20,11 +25,12 @@ class WebCrawlManager:
         self._client = client
 
     async def start(self, params: StartWebCrawlJobParams) -> StartWebCrawlJobResponse:
+        payload = params.model_dump(exclude_none=True, by_alias=True)
         if params.outputs and params.outputs.formats:
-            for output in params.outputs.formats:
+            for index, output in enumerate(params.outputs.formats):
                 if isinstance(output, FetchOutputJson) and output.schema_:
                     if hasattr(output.schema_, "model_json_schema"):
-                        output.schema_ = jsonref.replace_refs(
+                        payload["outputs"]["formats"][index]["schema"] = jsonref.replace_refs(
                             output.schema_.model_json_schema(),
                             proxies=False,
                             lazy_load=False,
@@ -32,7 +38,7 @@ class WebCrawlManager:
 
         response = await self._client.transport.post(
             self._client._build_url("/web/crawl"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return StartWebCrawlJobResponse(**response.data)
 
@@ -53,43 +59,35 @@ class WebCrawlManager:
         return WebCrawlJobResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartWebCrawlJobParams, return_all_pages: bool = True
+        self,
+        params: StartWebCrawlJobParams,
+        return_all_pages: bool = True,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
     ) -> WebCrawlJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start web crawl job")
 
-        job_status: WebCrawlJobStatus = "pending"
-        failures = 0
-        while True:
-            try:
-                job_status_resp = await self.get_status(job_id)
-                job_status = job_status_resp.status
-                if job_status == "completed" or job_status == "failed":
-                    break
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll web crawl job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            await asyncio.sleep(2)
+        job_status = await poll_until_terminal_status_async(
+            operation_name=f"web crawl job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status in {"completed", "failed"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
 
-        failures = 0
         if not return_all_pages:
-            while True:
-                try:
-                    return await self.get(job_id)
-                except Exception as e:
-                    failures += 1
-                    if failures >= POLLING_ATTEMPTS:
-                        raise HyperbrowserError(
-                            f"Failed to get web crawl job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                        )
-                await asyncio.sleep(0.5)
+            return await retry_operation_async(
+                operation_name=f"Fetching web crawl job {job_id}",
+                operation=lambda: self.get(job_id),
+                max_attempts=POLLING_ATTEMPTS,
+                retry_delay_seconds=0.5,
+            )
 
         failures = 0
+        page_fetch_start_time = time.monotonic()
         job_response = WebCrawlJobResponse(
             jobId=job_id,
             status=job_status,
@@ -105,6 +103,10 @@ class WebCrawlManager:
             first_check
             or job_response.current_page_batch < job_response.total_page_batches
         ):
+            if has_exceeded_max_wait(page_fetch_start_time, max_wait_seconds):
+                raise HyperbrowserError(
+                    f"Timed out fetching all pages for web crawl job {job_id} after {max_wait_seconds} seconds"
+                )
             try:
                 tmp_job_response = await self.get(
                     job_id,

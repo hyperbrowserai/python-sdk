@@ -17,11 +17,12 @@ class WebManager:
         self.crawl = WebCrawlManager(client)
 
     async def fetch(self, params: FetchParams) -> FetchResponse:
+        payload = params.model_dump(exclude_none=True, by_alias=True)
         if params.outputs and params.outputs.formats:
-            for output in params.outputs.formats:
+            for index, output in enumerate(params.outputs.formats):
                 if isinstance(output, FetchOutputJson) and output.schema_:
                     if hasattr(output.schema_, "model_json_schema"):
-                        output.schema_ = jsonref.replace_refs(
+                        payload["outputs"]["formats"][index]["schema"] = jsonref.replace_refs(
                             output.schema_.model_json_schema(),
                             proxies=False,
                             lazy_load=False,
@@ -29,7 +30,7 @@ class WebManager:
 
         response = await self._client.transport.post(
             self._client._build_url("/web/fetch"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return FetchResponse(**response.data)
 

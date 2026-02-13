@@ -1,6 +1,7 @@
-import asyncio
+from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
+from ....polling import poll_until_terminal_status_async, retry_operation_async
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -44,28 +45,27 @@ class ClaudeComputerUseManager:
         return BasicResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartClaudeComputerUseTaskParams
+        self,
+        params: StartClaudeComputerUseTaskParams,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
     ) -> ClaudeComputerUseTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start Claude Computer Use task job")
 
-        failures = 0
-        while True:
-            try:
-                job_response = await self.get_status(job_id)
-                if (
-                    job_response.status == "completed"
-                    or job_response.status == "failed"
-                    or job_response.status == "stopped"
-                ):
-                    return await self.get(job_id)
-                failures = 0
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll Claude Computer Use task job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            await asyncio.sleep(2)
+        await poll_until_terminal_status_async(
+            operation_name=f"Claude Computer Use task job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status
+            in {"completed", "failed", "stopped"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
+        return await retry_operation_async(
+            operation_name=f"Fetching Claude Computer Use task job {job_id}",
+            operation=lambda: self.get(job_id),
+            max_attempts=POLLING_ATTEMPTS,
+            retry_delay_seconds=0.5,
+        )

@@ -2,12 +2,16 @@ import time
 from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
+from ...polling import (
+    has_exceeded_max_wait,
+    poll_until_terminal_status,
+    retry_operation,
+)
 from ....models.scrape import (
     BatchScrapeJobResponse,
     BatchScrapeJobStatusResponse,
     GetBatchScrapeJobParams,
     ScrapeJobResponse,
-    ScrapeJobStatus,
     ScrapeJobStatusResponse,
     StartBatchScrapeJobParams,
     StartBatchScrapeJobResponse,
@@ -45,43 +49,35 @@ class BatchScrapeManager:
         return BatchScrapeJobResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartBatchScrapeJobParams, return_all_pages: bool = True
+        self,
+        params: StartBatchScrapeJobParams,
+        return_all_pages: bool = True,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
     ) -> BatchScrapeJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start batch scrape job")
 
-        job_status: ScrapeJobStatus = "pending"
-        failures = 0
-        while True:
-            try:
-                job_status_resp = self.get_status(job_id)
-                job_status = job_status_resp.status
-                if job_status == "completed" or job_status == "failed":
-                    break
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll batch scrape job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            time.sleep(2)
+        job_status = poll_until_terminal_status(
+            operation_name=f"batch scrape job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status in {"completed", "failed"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
 
-        failures = 0
         if not return_all_pages:
-            while True:
-                try:
-                    return self.get(job_id)
-                except Exception as e:
-                    failures += 1
-                    if failures >= POLLING_ATTEMPTS:
-                        raise HyperbrowserError(
-                            f"Failed to get batch scrape job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                        )
-                time.sleep(0.5)
+            return retry_operation(
+                operation_name=f"Fetching batch scrape job {job_id}",
+                operation=lambda: self.get(job_id),
+                max_attempts=POLLING_ATTEMPTS,
+                retry_delay_seconds=0.5,
+            )
 
         failures = 0
+        page_fetch_start_time = time.monotonic()
         job_response = BatchScrapeJobResponse(
             jobId=job_id,
             status=job_status,
@@ -97,6 +93,10 @@ class BatchScrapeManager:
             first_check
             or job_response.current_page_batch < job_response.total_page_batches
         ):
+            if has_exceeded_max_wait(page_fetch_start_time, max_wait_seconds):
+                raise HyperbrowserError(
+                    f"Timed out fetching all pages for batch scrape job {job_id} after {max_wait_seconds} seconds"
+                )
             try:
                 tmp_job_response = self.get(
                     job_id,
@@ -148,24 +148,27 @@ class ScrapeManager:
         )
         return ScrapeJobResponse(**response.data)
 
-    def start_and_wait(self, params: StartScrapeJobParams) -> ScrapeJobResponse:
+    def start_and_wait(
+        self,
+        params: StartScrapeJobParams,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
+    ) -> ScrapeJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start scrape job")
 
-        failures = 0
-        while True:
-            try:
-                job_status_resp = self.get_status(job_id)
-                job_status = job_status_resp.status
-                if job_status == "completed" or job_status == "failed":
-                    return self.get(job_id)
-                failures = 0
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll scrape job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            time.sleep(2)
+        poll_until_terminal_status(
+            operation_name=f"scrape job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status in {"completed", "failed"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
+        return retry_operation(
+            operation_name=f"Fetching scrape job {job_id}",
+            operation=lambda: self.get(job_id),
+            max_attempts=POLLING_ATTEMPTS,
+            retry_delay_seconds=0.5,
+        )

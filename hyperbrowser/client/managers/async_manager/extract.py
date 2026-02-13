@@ -1,4 +1,5 @@
-import asyncio
+from typing import Optional
+
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from hyperbrowser.models.extract import (
@@ -8,6 +9,7 @@ from hyperbrowser.models.extract import (
     StartExtractJobResponse,
 )
 import jsonref
+from ...polling import poll_until_terminal_status_async, retry_operation_async
 
 
 class ExtractManager:
@@ -17,15 +19,16 @@ class ExtractManager:
     async def start(self, params: StartExtractJobParams) -> StartExtractJobResponse:
         if not params.schema_ and not params.prompt:
             raise HyperbrowserError("Either schema or prompt must be provided")
-        if params.schema_:
-            if hasattr(params.schema_, "model_json_schema"):
-                params.schema_ = jsonref.replace_refs(
-                    params.schema_.model_json_schema(), proxies=False, lazy_load=False
-                )
+
+        payload = params.model_dump(exclude_none=True, by_alias=True)
+        if params.schema_ and hasattr(params.schema_, "model_json_schema"):
+            payload["schema"] = jsonref.replace_refs(
+                params.schema_.model_json_schema(), proxies=False, lazy_load=False
+            )
 
         response = await self._client.transport.post(
             self._client._build_url("/extract"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return StartExtractJobResponse(**response.data)
 
@@ -41,24 +44,27 @@ class ExtractManager:
         )
         return ExtractJobResponse(**response.data)
 
-    async def start_and_wait(self, params: StartExtractJobParams) -> ExtractJobResponse:
+    async def start_and_wait(
+        self,
+        params: StartExtractJobParams,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
+    ) -> ExtractJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start extract job")
 
-        failures = 0
-        while True:
-            try:
-                job_status_resp = await self.get_status(job_id)
-                job_status = job_status_resp.status
-                if job_status == "completed" or job_status == "failed":
-                    return await self.get(job_id)
-                failures = 0
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll extract job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            await asyncio.sleep(2)
+        await poll_until_terminal_status_async(
+            operation_name=f"extract job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status in {"completed", "failed"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
+        return await retry_operation_async(
+            operation_name=f"Fetching extract job {job_id}",
+            operation=lambda: self.get(job_id),
+            max_attempts=POLLING_ATTEMPTS,
+            retry_delay_seconds=0.5,
+        )

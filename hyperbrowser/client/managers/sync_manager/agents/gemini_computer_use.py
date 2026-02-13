@@ -1,6 +1,7 @@
-import time
+from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
+from ....polling import poll_until_terminal_status, retry_operation
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -44,28 +45,27 @@ class GeminiComputerUseManager:
         return BasicResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartGeminiComputerUseTaskParams
+        self,
+        params: StartGeminiComputerUseTaskParams,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
     ) -> GeminiComputerUseTaskResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start Gemini Computer Use task job")
 
-        failures = 0
-        while True:
-            try:
-                job_response = self.get_status(job_id)
-                if (
-                    job_response.status == "completed"
-                    or job_response.status == "failed"
-                    or job_response.status == "stopped"
-                ):
-                    return self.get(job_id)
-                failures = 0
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll Gemini Computer Use task job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            time.sleep(2)
+        poll_until_terminal_status(
+            operation_name=f"Gemini Computer Use task job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status
+            in {"completed", "failed", "stopped"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
+        return retry_operation(
+            operation_name=f"Fetching Gemini Computer Use task job {job_id}",
+            operation=lambda: self.get(job_id),
+            max_attempts=POLLING_ATTEMPTS,
+            retry_delay_seconds=0.5,
+        )

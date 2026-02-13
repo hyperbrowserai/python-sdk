@@ -6,11 +6,15 @@ from hyperbrowser.models import (
     BatchFetchJobStatusResponse,
     GetBatchFetchJobParams,
     BatchFetchJobResponse,
-    BatchFetchJobStatus,
     POLLING_ATTEMPTS,
     FetchOutputJson,
 )
 from hyperbrowser.exceptions import HyperbrowserError
+from ....polling import (
+    has_exceeded_max_wait,
+    poll_until_terminal_status,
+    retry_operation,
+)
 import time
 import jsonref
 
@@ -20,11 +24,12 @@ class BatchFetchManager:
         self._client = client
 
     def start(self, params: StartBatchFetchJobParams) -> StartBatchFetchJobResponse:
+        payload = params.model_dump(exclude_none=True, by_alias=True)
         if params.outputs and params.outputs.formats:
-            for output in params.outputs.formats:
+            for index, output in enumerate(params.outputs.formats):
                 if isinstance(output, FetchOutputJson) and output.schema_:
                     if hasattr(output.schema_, "model_json_schema"):
-                        output.schema_ = jsonref.replace_refs(
+                        payload["outputs"]["formats"][index]["schema"] = jsonref.replace_refs(
                             output.schema_.model_json_schema(),
                             proxies=False,
                             lazy_load=False,
@@ -32,7 +37,7 @@ class BatchFetchManager:
 
         response = self._client.transport.post(
             self._client._build_url("/web/batch-fetch"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return StartBatchFetchJobResponse(**response.data)
 
@@ -53,43 +58,35 @@ class BatchFetchManager:
         return BatchFetchJobResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartBatchFetchJobParams, return_all_pages: bool = True
+        self,
+        params: StartBatchFetchJobParams,
+        return_all_pages: bool = True,
+        poll_interval_seconds: float = 2.0,
+        max_wait_seconds: Optional[float] = 600.0,
     ) -> BatchFetchJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
             raise HyperbrowserError("Failed to start batch fetch job")
 
-        job_status: BatchFetchJobStatus = "pending"
-        failures = 0
-        while True:
-            try:
-                job_status_resp = self.get_status(job_id)
-                job_status = job_status_resp.status
-                if job_status == "completed" or job_status == "failed":
-                    break
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to poll batch fetch job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            time.sleep(2)
+        job_status = poll_until_terminal_status(
+            operation_name=f"batch fetch job {job_id}",
+            get_status=lambda: self.get_status(job_id).status,
+            is_terminal_status=lambda status: status in {"completed", "failed"},
+            poll_interval_seconds=poll_interval_seconds,
+            max_wait_seconds=max_wait_seconds,
+        )
 
-        failures = 0
         if not return_all_pages:
-            while True:
-                try:
-                    return self.get(job_id)
-                except Exception as e:
-                    failures += 1
-                    if failures >= POLLING_ATTEMPTS:
-                        raise HyperbrowserError(
-                            f"Failed to get batch fetch job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                        )
-                time.sleep(0.5)
+            return retry_operation(
+                operation_name=f"Fetching batch fetch job {job_id}",
+                operation=lambda: self.get(job_id),
+                max_attempts=POLLING_ATTEMPTS,
+                retry_delay_seconds=0.5,
+            )
 
         failures = 0
+        page_fetch_start_time = time.monotonic()
         job_response = BatchFetchJobResponse(
             jobId=job_id,
             status=job_status,
@@ -105,6 +102,10 @@ class BatchFetchManager:
             first_check
             or job_response.current_page_batch < job_response.total_page_batches
         ):
+            if has_exceeded_max_wait(page_fetch_start_time, max_wait_seconds):
+                raise HyperbrowserError(
+                    f"Timed out fetching all pages for batch fetch job {job_id} after {max_wait_seconds} seconds"
+                )
             try:
                 tmp_job_response = self.get(
                     job_id,
