@@ -65,10 +65,10 @@ class _FakeClient:
         return f"https://api.hyperbrowser.ai/api{path}"
 
 
-def _create_test_extension_zip(tmp_path: Path) -> str:
+def _create_test_extension_zip(tmp_path: Path) -> Path:
     file_path = tmp_path / "extension.zip"
     file_path.write_bytes(b"extension-bytes")
-    return str(file_path)
+    return file_path
 
 
 def test_sync_extension_create_does_not_mutate_params_and_closes_file(tmp_path):

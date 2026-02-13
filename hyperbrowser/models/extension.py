@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,7 +14,7 @@ class CreateExtensionParams(BaseModel):
     )
 
     name: Optional[str] = Field(default=None, serialization_alias="name")
-    file_path: str = Field(serialization_alias="filePath")
+    file_path: Path = Field(serialization_alias="filePath")
 
 
 class ExtensionResponse(BaseModel):
