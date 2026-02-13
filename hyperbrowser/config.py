@@ -40,6 +40,11 @@ class ClientConfig:
             raise HyperbrowserError("base_url must not contain whitespace characters")
         if "\\" in normalized_base_url:
             raise HyperbrowserError("base_url must not contain backslashes")
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in normalized_base_url
+        ):
+            raise HyperbrowserError("base_url must not contain control characters")
 
         parsed_base_url = urlparse(normalized_base_url)
         if (

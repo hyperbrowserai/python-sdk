@@ -116,6 +116,12 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
         ):
             client._build_url("/session")
 
+        client.config.base_url = "https://example.local\x00api"
+        with pytest.raises(
+            HyperbrowserError, match="base_url must not contain control characters"
+        ):
+            client._build_url("/session")
+
         client.config.base_url = "   "
         with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
             client._build_url("/session")
