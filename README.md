@@ -146,6 +146,7 @@ Polling callback contracts are also validated:
 - Cancellation exceptions are treated as non-retryable and are surfaced immediately.
 - Callback contract violations and callback execution failures fail fast with explicit callback-specific errors.
 - Reused coroutine callback errors (e.g. `cannot reuse already awaited coroutine`) are treated as non-retryable and surfaced immediately.
+- Iterator exhaustion callback errors (`StopIteration` / `StopAsyncIteration`) are treated as non-retryable and surfaced immediately.
 
 Example:
 
