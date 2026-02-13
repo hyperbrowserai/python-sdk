@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import math
 from numbers import Real
 import time
@@ -58,6 +59,16 @@ def _ensure_status_string(status: object, *, operation_name: str) -> str:
     if not isinstance(status, str):
         raise HyperbrowserError(f"get_status must return a string for {operation_name}")
     return status
+
+
+def _ensure_awaitable(
+    result: object, *, callback_name: str, operation_name: str
+) -> Awaitable[object]:
+    if not inspect.isawaitable(result):
+        raise HyperbrowserError(
+            f"{callback_name} must return an awaitable for {operation_name}"
+        )
+    return result
 
 
 def _validate_retry_config(
@@ -153,7 +164,7 @@ def poll_until_terminal_status(
 
     while True:
         try:
-            status = _ensure_status_string(get_status(), operation_name=operation_name)
+            status = get_status()
             failures = 0
         except Exception as exc:
             failures += 1
@@ -168,6 +179,7 @@ def poll_until_terminal_status(
             time.sleep(poll_interval_seconds)
             continue
 
+        status = _ensure_status_string(status, operation_name=operation_name)
         if _ensure_boolean_terminal_result(
             is_terminal_status(status), operation_name=operation_name
         ):
@@ -226,9 +238,25 @@ async def poll_until_terminal_status_async(
 
     while True:
         try:
-            status = _ensure_status_string(
-                await get_status(), operation_name=operation_name
-            )
+            status_result = get_status()
+        except Exception as exc:
+            failures += 1
+            if failures >= max_status_failures:
+                raise HyperbrowserPollingError(
+                    f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
+                ) from exc
+            if has_exceeded_max_wait(start_time, max_wait_seconds):
+                raise HyperbrowserTimeoutError(
+                    f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
+                )
+            await asyncio.sleep(poll_interval_seconds)
+            continue
+
+        status_awaitable = _ensure_awaitable(
+            status_result, callback_name="get_status", operation_name=operation_name
+        )
+        try:
+            status = await status_awaitable
             failures = 0
         except Exception as exc:
             failures += 1
@@ -243,6 +271,7 @@ async def poll_until_terminal_status_async(
             await asyncio.sleep(poll_interval_seconds)
             continue
 
+        status = _ensure_status_string(status, operation_name=operation_name)
         if _ensure_boolean_terminal_result(
             is_terminal_status(status), operation_name=operation_name
         ):

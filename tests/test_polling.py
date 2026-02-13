@@ -895,6 +895,16 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
                 max_wait_seconds=1.0,
             )
         with pytest.raises(
+            HyperbrowserError, match="get_status must return an awaitable"
+        ):
+            await poll_until_terminal_status_async(
+                operation_name="invalid-status-awaitable-async",
+                get_status=lambda: "completed",  # type: ignore[return-value]
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0,
+                max_wait_seconds=1.0,
+            )
+        with pytest.raises(
             HyperbrowserError, match="operation_name must be 200 characters or fewer"
         ):
             await poll_until_terminal_status_async(
