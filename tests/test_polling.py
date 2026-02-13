@@ -43,6 +43,30 @@ def test_poll_until_terminal_status_returns_terminal_value():
     assert status == "completed"
 
 
+def test_poll_until_terminal_status_wraps_isfinite_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_isfinite_error(value: float) -> bool:
+        _ = value
+        raise OverflowError("finite check overflow")
+
+    monkeypatch.setattr(polling_helpers.math, "isfinite", _raise_isfinite_error)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="poll_interval_seconds must be finite",
+    ) as exc_info:
+        poll_until_terminal_status(
+            operation_name="sync poll finite check",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.1,
+            max_wait_seconds=1.0,
+        )
+
+    assert exc_info.value.original_error is not None
+
+
 def test_build_fetch_operation_name_prefixes_when_within_length_limit():
     assert build_fetch_operation_name("crawl job 123") == "Fetching crawl job 123"
 

@@ -5,6 +5,7 @@ from fractions import Fraction
 
 import pytest
 
+import hyperbrowser.client.timeout_utils as timeout_helpers
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -128,5 +129,35 @@ def test_sync_client_rejects_overflowing_real_timeout():
 def test_async_client_rejects_overflowing_real_timeout():
     with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
         AsyncHyperbrowser(api_key="test-key", timeout=Fraction(10**1000, 1))
+
+    assert exc_info.value.original_error is not None
+
+
+def test_sync_client_wraps_timeout_isfinite_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_isfinite_error(value: float) -> bool:
+        _ = value
+        raise OverflowError("finite check overflow")
+
+    monkeypatch.setattr(timeout_helpers.math, "isfinite", _raise_isfinite_error)
+
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
+        Hyperbrowser(api_key="test-key", timeout=1)
+
+    assert exc_info.value.original_error is not None
+
+
+def test_async_client_wraps_timeout_isfinite_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_isfinite_error(value: float) -> bool:
+        _ = value
+        raise OverflowError("finite check overflow")
+
+    monkeypatch.setattr(timeout_helpers.math, "isfinite", _raise_isfinite_error)
+
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
+        AsyncHyperbrowser(api_key="test-key", timeout=1)
 
     assert exc_info.value.original_error is not None

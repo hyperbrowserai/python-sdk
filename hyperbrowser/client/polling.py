@@ -89,8 +89,11 @@ def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
         ) from exc
     try:
         is_finite = math.isfinite(normalized_value)
-    except (TypeError, ValueError, OverflowError):
-        is_finite = False
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise HyperbrowserError(
+            f"{field_name} must be finite",
+            original_error=exc,
+        ) from exc
     if not is_finite:
         raise HyperbrowserError(f"{field_name} must be finite")
     if normalized_value < 0:
