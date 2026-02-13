@@ -138,6 +138,12 @@ def _is_async_generator_reuse_runtime_error(exc: Exception) -> bool:
     )
 
 
+def _is_generator_reentrancy_error(exc: Exception) -> bool:
+    if not isinstance(exc, ValueError):
+        return False
+    return "generator already executing" in str(exc).lower()
+
+
 def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
     if not isinstance(exc, RuntimeError):
         return False
@@ -155,6 +161,8 @@ def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
 
 def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, (StopIteration, StopAsyncIteration)):
+        return False
+    if _is_generator_reentrancy_error(exc):
         return False
     if _is_reused_coroutine_runtime_error(exc):
         return False
