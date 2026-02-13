@@ -460,3 +460,13 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         ClientConfig.normalize_base_url(
             f"https://example.local/{deeply_encoded_dot}/api"
         )
+    deeply_encoded_host_label = "%61"
+    for _ in range(11):
+        deeply_encoded_host_label = quote(deeply_encoded_host_label, safe="")
+    with pytest.raises(
+        HyperbrowserError,
+        match="base_url host contains excessively nested URL encoding",
+    ):
+        ClientConfig.normalize_base_url(
+            f"https://{deeply_encoded_host_label}.example.local"
+        )

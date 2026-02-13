@@ -163,6 +163,16 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
         ):
             client._build_url("/session")
 
+        deeply_encoded_host_label = "%61"
+        for _ in range(11):
+            deeply_encoded_host_label = quote(deeply_encoded_host_label, safe="")
+        client.config.base_url = f"https://{deeply_encoded_host_label}.example.local"
+        with pytest.raises(
+            HyperbrowserError,
+            match="base_url host contains excessively nested URL encoding",
+        ):
+            client._build_url("/session")
+
         client.config.base_url = "https://example.local%2Fapi"
         with pytest.raises(
             HyperbrowserError,
