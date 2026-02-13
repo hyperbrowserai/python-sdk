@@ -10,11 +10,26 @@ def test_ensure_existing_file_path_accepts_existing_file(tmp_path: Path):
     file_path = tmp_path / "file.txt"
     file_path.write_text("content")
 
-    ensure_existing_file_path(
+    normalized_path = ensure_existing_file_path(
         str(file_path),
         missing_file_message="missing",
         not_file_message="not-file",
     )
+
+    assert normalized_path == str(file_path)
+
+
+def test_ensure_existing_file_path_accepts_pathlike_inputs(tmp_path: Path):
+    file_path = tmp_path / "pathlike-file.txt"
+    file_path.write_text("content")
+
+    normalized_path = ensure_existing_file_path(
+        file_path,
+        missing_file_message="missing",
+        not_file_message="not-file",
+    )
+
+    assert normalized_path == str(file_path)
 
 
 def test_ensure_existing_file_path_raises_for_missing_file(tmp_path: Path):
