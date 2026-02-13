@@ -346,7 +346,9 @@ def test_screenshot_tool_rejects_non_string_screenshot_field():
 
 
 def test_screenshot_tool_decodes_utf8_bytes_field():
-    client = _SyncScrapeClient(_Response(data=SimpleNamespace(screenshot=b"image-data")))
+    client = _SyncScrapeClient(
+        _Response(data=SimpleNamespace(screenshot=b"image-data"))
+    )
 
     output = WebsiteScreenshotTool.runnable(client, {"url": "https://example.com"})
 
@@ -504,7 +506,9 @@ def test_browser_use_tool_rejects_non_string_final_result():
 
 
 def test_browser_use_tool_decodes_utf8_bytes_final_result():
-    client = _SyncBrowserUseClient(_Response(data=SimpleNamespace(final_result=b"done")))
+    client = _SyncBrowserUseClient(
+        _Response(data=SimpleNamespace(final_result=b"done"))
+    )
 
     output = BrowserUseTool.runnable(client, {"task": "search docs"})
 
