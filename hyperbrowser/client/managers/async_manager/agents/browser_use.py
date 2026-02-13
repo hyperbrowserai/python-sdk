@@ -55,6 +55,7 @@ class BrowserUseManager:
         params: StartBrowserUseTaskParams,
         poll_interval_seconds: float = 2.0,
         max_wait_seconds: Optional[float] = 600.0,
+        max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BrowserUseTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
@@ -68,6 +69,7 @@ class BrowserUseManager:
             in {"completed", "failed", "stopped"},
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
+            max_status_failures=max_status_failures,
         )
         return await retry_operation_async(
             operation_name=f"Fetching browser-use task job {job_id}",

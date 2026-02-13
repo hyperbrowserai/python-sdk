@@ -107,6 +107,7 @@ These methods now support explicit polling controls:
 
 - `poll_interval_seconds` (default `2.0`)
 - `max_wait_seconds` (default `600.0`)
+- `max_status_failures` (default `5`)
 
 Example:
 

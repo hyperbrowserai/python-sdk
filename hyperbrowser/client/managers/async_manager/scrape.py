@@ -55,6 +55,7 @@ class BatchScrapeManager:
         return_all_pages: bool = True,
         poll_interval_seconds: float = 2.0,
         max_wait_seconds: Optional[float] = 600.0,
+        max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BatchScrapeJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
@@ -67,6 +68,7 @@ class BatchScrapeManager:
             is_terminal_status=lambda status: status in {"completed", "failed"},
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
+            max_status_failures=max_status_failures,
         )
 
         if not return_all_pages:
@@ -142,6 +144,7 @@ class ScrapeManager:
         params: StartScrapeJobParams,
         poll_interval_seconds: float = 2.0,
         max_wait_seconds: Optional[float] = 600.0,
+        max_status_failures: int = POLLING_ATTEMPTS,
     ) -> ScrapeJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
@@ -154,6 +157,7 @@ class ScrapeManager:
             is_terminal_status=lambda status: status in {"completed", "failed"},
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
+            max_status_failures=max_status_failures,
         )
         return await retry_operation_async(
             operation_name=f"Fetching scrape job {job_id}",
