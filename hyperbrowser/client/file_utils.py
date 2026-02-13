@@ -24,6 +24,10 @@ def ensure_existing_file_path(
         raise HyperbrowserError("file_path must not be empty")
     if "\x00" in normalized_path:
         raise HyperbrowserError("file_path must not contain null bytes")
+    if any(
+        ord(character) < 32 or ord(character) == 127 for character in normalized_path
+    ):
+        raise HyperbrowserError("file_path must not contain control characters")
     try:
         path_exists = os.path.exists(normalized_path)
     except (OSError, ValueError) as exc:

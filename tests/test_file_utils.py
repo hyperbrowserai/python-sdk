@@ -99,6 +99,17 @@ def test_ensure_existing_file_path_rejects_null_byte_paths():
         )
 
 
+def test_ensure_existing_file_path_rejects_control_character_paths():
+    with pytest.raises(
+        HyperbrowserError, match="file_path must not contain control characters"
+    ):
+        ensure_existing_file_path(
+            "bad\tpath.txt",
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+
 def test_ensure_existing_file_path_wraps_invalid_path_os_errors(monkeypatch):
     def raising_exists(path: str) -> bool:
         raise OSError("invalid path")
