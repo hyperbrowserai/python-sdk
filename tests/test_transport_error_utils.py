@@ -281,3 +281,25 @@ def test_extract_error_message_skips_blank_message_and_uses_detail():
     )
 
     assert message == "useful detail"
+
+
+def test_extract_error_message_truncates_extracted_messages():
+    large_message = "x" * 2100
+    message = extract_error_message(
+        _DummyResponse({"message": large_message}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message.endswith("... (truncated)")
+    assert len(message) < len(large_message)
+
+
+def test_extract_error_message_truncates_fallback_response_text():
+    large_response_text = "y" * 2100
+    message = extract_error_message(
+        _DummyResponse("   ", text=large_response_text),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message.endswith("... (truncated)")
+    assert len(message) < len(large_response_text)

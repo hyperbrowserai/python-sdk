@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 _HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
+_MAX_ERROR_MESSAGE_LENGTH = 2000
 
 
 def _normalize_request_method(method: Any) -> str:
@@ -29,6 +30,12 @@ def _normalize_request_url(url: Any) -> str:
     ):
         return "unknown URL"
     return normalized_url
+
+
+def _truncate_error_message(message: str) -> str:
+    if len(message) <= _MAX_ERROR_MESSAGE_LENGTH:
+        return message
+    return f"{message[:_MAX_ERROR_MESSAGE_LENGTH]}... (truncated)"
 
 
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
@@ -71,8 +78,8 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
     def _fallback_message() -> str:
         response_text = response.text
         if isinstance(response_text, str) and response_text.strip():
-            return response_text
-        return str(fallback_error)
+            return _truncate_error_message(response_text)
+        return _truncate_error_message(str(fallback_error))
 
     try:
         error_data: Any = response.json()
@@ -95,7 +102,9 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
     else:
         extracted_message = _stringify_error_value(error_data)
 
-    return extracted_message if extracted_message.strip() else _fallback_message()
+    if not extracted_message.strip():
+        return _fallback_message()
+    return _truncate_error_message(extracted_message)
 
 
 def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
