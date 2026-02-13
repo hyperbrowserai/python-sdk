@@ -52,7 +52,9 @@ def _format_tool_param_key_for_error(key: str) -> str:
     return f"{normalized_key[:available_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
 
 
-def _normalize_extract_schema_mapping(schema_value: MappingABC[object, Any]) -> Dict[str, Any]:
+def _normalize_extract_schema_mapping(
+    schema_value: MappingABC[object, Any],
+) -> Dict[str, Any]:
     try:
         schema_keys = list(schema_value.keys())
     except HyperbrowserError:
