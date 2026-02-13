@@ -332,6 +332,25 @@ def test_collect_paginated_results_async_collects_all_pages():
     asyncio.run(run())
 
 
+def test_collect_paginated_results_async_rejects_non_awaitable_page_callback_result():
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError, match="get_next_page must return an awaitable"
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated awaitable validation",
+                get_next_page=lambda page: {"current": 1, "total": 1, "items": []},  # type: ignore[return-value]
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=2,
+                retry_delay_seconds=0.0001,
+            )
+
+    asyncio.run(run())
+
+
 def test_collect_paginated_results_async_allows_single_page_on_zero_max_wait():
     async def run() -> None:
         collected = []

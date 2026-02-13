@@ -420,7 +420,13 @@ async def collect_paginated_results_async(
         should_sleep = True
         try:
             previous_page_batch = current_page_batch
-            page_response = await get_next_page(current_page_batch + 1)
+            page_result = get_next_page(current_page_batch + 1)
+            page_awaitable = _ensure_awaitable(
+                page_result,
+                callback_name="get_next_page",
+                operation_name=operation_name,
+            )
+            page_response = await page_awaitable
             on_page_success(page_response)
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
