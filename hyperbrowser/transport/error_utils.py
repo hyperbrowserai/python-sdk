@@ -7,12 +7,15 @@ import httpx
 _HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
 _MAX_ERROR_MESSAGE_LENGTH = 2000
 _MAX_REQUEST_URL_DISPLAY_LENGTH = 1000
+_MAX_REQUEST_METHOD_LENGTH = 50
 
 
 def _normalize_request_method(method: Any) -> str:
     if not isinstance(method, str) or not method.strip():
         return "UNKNOWN"
     normalized_method = method.strip().upper()
+    if len(normalized_method) > _MAX_REQUEST_METHOD_LENGTH:
+        return "UNKNOWN"
     if not _HTTP_METHOD_TOKEN_PATTERN.fullmatch(normalized_method):
         return "UNKNOWN"
     return normalized_method

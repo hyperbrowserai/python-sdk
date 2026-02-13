@@ -32,6 +32,11 @@ class _LowercaseMethodRequest:
     url = "https://example.com/lowercase"
 
 
+class _TooLongMethodRequest:
+    method = "A" * 51
+    url = "https://example.com/too-long-method"
+
+
 class _InvalidMethodTokenRequest:
     method = "GET /invalid"
     url = "https://example.com/invalid-method"
@@ -70,6 +75,12 @@ class _RequestErrorWithLowercaseMethod(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _LowercaseMethodRequest()
+
+
+class _RequestErrorWithTooLongMethod(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _TooLongMethodRequest()
 
 
 class _RequestErrorWithInvalidMethodToken(httpx.RequestError):
@@ -145,6 +156,15 @@ def test_extract_request_error_context_normalizes_method_to_uppercase():
     assert url == "https://example.com/lowercase"
 
 
+def test_extract_request_error_context_rejects_overlong_methods():
+    method, url = extract_request_error_context(
+        _RequestErrorWithTooLongMethod("network down")
+    )
+
+    assert method == "UNKNOWN"
+    assert url == "https://example.com/too-long-method"
+
+
 def test_extract_request_error_context_rejects_invalid_method_tokens():
     method, url = extract_request_error_context(
         _RequestErrorWithInvalidMethodToken("network down")
@@ -202,6 +222,16 @@ def test_format_request_failure_message_normalizes_lowercase_fallback_method():
     )
 
     assert message == "Request POST https://example.com/fallback failed"
+
+
+def test_format_request_failure_message_rejects_overlong_fallback_methods():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="A" * 51,
+        fallback_url="https://example.com/fallback",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/fallback failed"
 
 
 def test_format_request_failure_message_truncates_very_long_fallback_urls():
