@@ -168,6 +168,13 @@ python -m pytest -q
 python -m build
 ```
 
+## Examples
+
+Ready-to-run examples are available in `examples/`:
+
+- `examples/sync_scrape.py`
+- `examples/async_extract.py`
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
