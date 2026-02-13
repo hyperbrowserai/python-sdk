@@ -176,8 +176,14 @@ def _is_executor_shutdown_runtime_error(exc: Exception) -> bool:
 
 def _decode_ascii_bytes_like(value: object) -> Optional[str]:
     try:
-        return memoryview(value).tobytes().decode("ascii")
+        status_buffer = memoryview(value)
     except (TypeError, ValueError, UnicodeDecodeError):
+        return None
+    if status_buffer.nbytes > _MAX_STATUS_CODE_TEXT_LENGTH:
+        return None
+    try:
+        return status_buffer.tobytes().decode("ascii")
+    except UnicodeDecodeError:
         return None
 
 
