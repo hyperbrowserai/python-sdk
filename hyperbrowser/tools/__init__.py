@@ -26,6 +26,15 @@ from .anthropic import (
 
 _MAX_KEY_DISPLAY_LENGTH = 120
 _TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
+_NON_OBJECT_CRAWL_PAGE_TYPES = (
+    str,
+    bytes,
+    bytearray,
+    memoryview,
+    int,
+    float,
+    bool,
+)
 
 
 def _format_tool_param_key_for_error(key: str) -> str:
@@ -232,6 +241,10 @@ def _render_crawl_markdown_output(response_data: Any) -> str:
         ) from exc
     markdown_sections: list[str] = []
     for index, page in enumerate(crawl_pages):
+        if page is None or isinstance(page, _NON_OBJECT_CRAWL_PAGE_TYPES):
+            raise HyperbrowserError(
+                f"crawl tool page must be an object at index {index}"
+            )
         page_markdown = _read_crawl_page_field(
             page, field_name="markdown", page_index=index
         )

@@ -349,6 +349,15 @@ def test_crawl_tool_wraps_page_field_read_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_crawl_tool_rejects_non_object_page_items():
+    client = _SyncCrawlClient(_Response(data=[123]))
+
+    with pytest.raises(
+        HyperbrowserError, match="crawl tool page must be an object at index 0"
+    ):
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+
 def test_crawl_tool_supports_mapping_page_items():
     client = _SyncCrawlClient(
         _Response(data=[{"url": "https://example.com", "markdown": "mapping body"}])
@@ -487,6 +496,17 @@ def test_async_crawl_tool_rejects_non_list_response_data():
             await WebsiteCrawlTool.async_runnable(
                 client, {"url": "https://example.com"}
             )
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_rejects_non_object_page_items():
+    async def run() -> None:
+        client = _AsyncCrawlClient(_Response(data=[123]))
+        with pytest.raises(
+            HyperbrowserError, match="crawl tool page must be an object at index 0"
+        ):
+            await WebsiteCrawlTool.async_runnable(client, {"url": "https://example.com"})
 
     asyncio.run(run())
 
