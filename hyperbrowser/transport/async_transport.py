@@ -8,7 +8,6 @@ from hyperbrowser.version import __version__
 from .base import APIResponse, AsyncTransportStrategy
 from .error_utils import (
     extract_error_message,
-    extract_request_error_context,
     format_generic_request_failure_message,
     format_request_failure_message,
 )
@@ -75,9 +74,13 @@ class AsyncTransport(AsyncTransportStrategy):
                 original_error=e,
             )
         except httpx.RequestError as e:
-            request_method, request_url = extract_request_error_context(e)
             raise HyperbrowserError(
-                f"Request {request_method} {request_url} failed", original_error=e
+                format_request_failure_message(
+                    e,
+                    fallback_method="UNKNOWN",
+                    fallback_url="unknown URL",
+                ),
+                original_error=e,
             )
 
     async def post(
