@@ -72,6 +72,8 @@ class HyperbrowserBase:
         stripped_path = path.strip()
         if not stripped_path:
             raise HyperbrowserError("path must not be empty")
+        if "\\" in stripped_path:
+            raise HyperbrowserError("path must not contain backslashes")
         parsed_path = urlparse(stripped_path)
         if parsed_path.scheme and parsed_path.netloc:
             raise HyperbrowserError("path must be a relative API path")
