@@ -431,6 +431,34 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         ClientConfig.normalize_base_url("https://user:pass@example.local")
 
 
+def test_client_config_normalize_base_url_wraps_unexpected_urlparse_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_runtime_error(_value: str):
+        raise RuntimeError("url parser exploded")
+
+    monkeypatch.setattr(config_module, "urlparse", _raise_runtime_error)
+
+    with pytest.raises(HyperbrowserError, match="Failed to parse base_url") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_preserves_hyperbrowser_urlparse_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_hyperbrowser_error(_value: str):
+        raise HyperbrowserError("custom urlparse failure")
+
+    monkeypatch.setattr(config_module, "urlparse", _raise_hyperbrowser_error)
+
+    with pytest.raises(HyperbrowserError, match="custom urlparse failure") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_normalize_base_url_preserves_invalid_port_original_error():
     with pytest.raises(
         HyperbrowserError, match="base_url must contain a valid port number"

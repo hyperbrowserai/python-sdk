@@ -67,7 +67,15 @@ class ClientConfig:
         ):
             raise HyperbrowserError("base_url must not contain control characters")
 
-        parsed_base_url = urlparse(normalized_base_url)
+        try:
+            parsed_base_url = urlparse(normalized_base_url)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to parse base_url",
+                original_error=exc,
+            ) from exc
         if (
             parsed_base_url.scheme not in {"https", "http"}
             or not parsed_base_url.netloc
