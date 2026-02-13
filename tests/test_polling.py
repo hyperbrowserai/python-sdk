@@ -6786,3 +6786,36 @@ def test_retry_operation_truncates_oversized_error_messages():
         )
 
     assert "... (truncated)" in str(exc_info.value)
+
+
+def test_poll_until_terminal_status_sanitizes_control_characters_in_errors():
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match=(
+            r"Failed to poll control-error poll after 1 attempts: "
+            r"bad\?message\?with\?controls"
+        ),
+    ):
+        poll_until_terminal_status(
+            operation_name="control-error poll",
+            get_status=lambda: (_ for _ in ()).throw(
+                RuntimeError("bad\tmessage\nwith\x7fcontrols")
+            ),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
+def test_retry_operation_sanitizes_control_characters_in_errors():
+    with pytest.raises(
+        HyperbrowserError,
+        match=r"control-error retry failed after 1 attempts: bad\?value\?error",
+    ):
+        retry_operation(
+            operation_name="control-error retry",
+            operation=lambda: (_ for _ in ()).throw(ValueError("bad\tvalue\nerror")),
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
