@@ -2,6 +2,7 @@ from typing import List
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ...file_utils import ensure_existing_file_path
+from ..extension_utils import parse_extension_list_response_data
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
 
 
@@ -38,18 +39,4 @@ class ExtensionManager:
         response = await self._client.transport.get(
             self._client._build_url("/extensions/list"),
         )
-        if not isinstance(response.data, dict):
-            raise HyperbrowserError(
-                f"Expected dict response but got {type(response.data)}"
-            )
-        if "extensions" not in response.data:
-            raise HyperbrowserError(
-                f"Expected 'extensions' key in response but got {response.data.keys()}"
-            )
-        if not isinstance(response.data["extensions"], list):
-            raise HyperbrowserError(
-                f"Expected list in 'extensions' key but got {type(response.data['extensions'])}"
-            )
-        return [
-            ExtensionResponse(**extension) for extension in response.data["extensions"]
-        ]
+        return parse_extension_list_response_data(response.data)
