@@ -47,6 +47,16 @@ def test_client_build_url_uses_normalized_base_url():
         client.close()
 
 
+def test_client_build_url_supports_base_url_with_port():
+    client = Hyperbrowser(
+        config=ClientConfig(api_key="test-key", base_url="https://example.local:8443")
+    )
+    try:
+        assert client._build_url("/session") == "https://example.local:8443/api/session"
+    finally:
+        client.close()
+
+
 def test_client_build_url_avoids_duplicate_api_when_base_url_already_has_api():
     client = Hyperbrowser(
         config=ClientConfig(api_key="test-key", base_url="https://example.local/api")

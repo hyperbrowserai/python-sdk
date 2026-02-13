@@ -360,6 +360,10 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         ClientConfig.normalize_base_url(" https://example.local/custom/api/ ")
         == "https://example.local/custom/api"
     )
+    assert (
+        ClientConfig.normalize_base_url("https://example.local:443/custom/api")
+        == "https://example.local:443/custom/api"
+    )
 
     with pytest.raises(HyperbrowserError, match="base_url must be a string"):
         ClientConfig.normalize_base_url(None)  # type: ignore[arg-type]

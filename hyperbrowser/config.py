@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+import re
 from urllib.parse import unquote, urlparse
 from typing import Dict, Mapping, Optional
 import os
 
 from .exceptions import HyperbrowserError
 from .header_utils import normalize_headers, parse_headers_env_json
+
+_ENCODED_HOST_DELIMITER_PATTERN = re.compile(r"%(?:2f|3f|23|40|3a)", re.IGNORECASE)
 
 
 @dataclass
@@ -102,6 +105,10 @@ class ClientConfig:
 
         decoded_base_netloc = parsed_base_url.netloc
         for _ in range(10):
+            if _ENCODED_HOST_DELIMITER_PATTERN.search(decoded_base_netloc):
+                raise HyperbrowserError(
+                    "base_url host must not contain encoded delimiter characters"
+                )
             next_decoded_base_netloc = unquote(decoded_base_netloc)
             if next_decoded_base_netloc == decoded_base_netloc:
                 break
@@ -121,9 +128,7 @@ class ClientConfig:
             for character in decoded_base_netloc
         ):
             raise HyperbrowserError("base_url host must not contain control characters")
-        if any(
-            character in {"?", "#", "/", "@", ":"} for character in decoded_base_netloc
-        ):
+        if any(character in {"?", "#", "/", "@"} for character in decoded_base_netloc):
             raise HyperbrowserError(
                 "base_url host must not contain encoded delimiter characters"
             )
