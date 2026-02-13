@@ -43,6 +43,20 @@ def test_api_response_from_json_rejects_non_mapping_inputs() -> None:
         )
 
 
+def test_api_response_from_json_rejects_non_string_mapping_keys() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to parse response data for _SampleResponseModel: "
+            "expected string keys but received int"
+        ),
+    ):
+        APIResponse.from_json(
+            cast("dict[str, object]", {1: "job-1"}),
+            _SampleResponseModel,
+        )
+
+
 def test_api_response_from_json_wraps_non_hyperbrowser_errors() -> None:
     with pytest.raises(
         HyperbrowserError,

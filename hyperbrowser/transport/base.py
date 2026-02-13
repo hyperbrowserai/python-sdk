@@ -28,6 +28,14 @@ class APIResponse(Generic[T]):
                 f"Failed to parse response data for {model_name}: "
                 f"expected a mapping but received {actual_type_name}"
             )
+        for key in json_data.keys():
+            if isinstance(key, str):
+                continue
+            key_type_name = type(key).__name__
+            raise HyperbrowserError(
+                f"Failed to parse response data for {model_name}: "
+                f"expected string keys but received {key_type_name}"
+            )
         try:
             return cls(data=model(**json_data))
         except HyperbrowserError:
