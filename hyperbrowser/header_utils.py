@@ -8,6 +8,17 @@ _INVALID_HEADER_NAME_CHARACTER_PATTERN = re.compile(r"[^!#$%&'*+\-.^_`|~0-9A-Za-
 _MAX_HEADER_NAME_LENGTH = 256
 
 
+def _read_header_items(
+    headers: Mapping[str, str], *, mapping_error_message: str
+) -> list[tuple[object, object]]:
+    try:
+        return list(headers.items())
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(mapping_error_message, original_error=exc) from exc
+
+
 def normalize_headers(
     headers: Optional[Mapping[str, str]],
     *,
@@ -22,7 +33,9 @@ def normalize_headers(
     effective_pair_error_message = pair_error_message or mapping_error_message
     normalized_headers: Dict[str, str] = {}
     seen_header_names = set()
-    for key, value in headers.items():
+    for key, value in _read_header_items(
+        headers, mapping_error_message=mapping_error_message
+    ):
         if not isinstance(key, str) or not isinstance(value, str):
             raise HyperbrowserError(effective_pair_error_message)
         normalized_key = key.strip()

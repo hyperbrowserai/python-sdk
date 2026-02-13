@@ -8,6 +8,11 @@ from hyperbrowser.header_utils import (
 )
 
 
+class _BrokenHeadersMapping(dict):
+    def items(self):
+        raise RuntimeError("broken header iteration")
+
+
 def test_normalize_headers_trims_header_names():
     headers = normalize_headers(
         {"  X-Correlation-Id  ": "abc123"},
@@ -161,3 +166,28 @@ def test_merge_headers_rejects_duplicate_base_header_names_case_insensitive():
             None,
             mapping_error_message="headers must be a mapping of string pairs",
         )
+
+
+def test_normalize_headers_wraps_mapping_iteration_failures():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ) as exc_info:
+        normalize_headers(
+            _BrokenHeadersMapping({"X-Trace-Id": "abc123"}),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_merge_headers_wraps_override_mapping_iteration_failures():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ) as exc_info:
+        merge_headers(
+            {"X-Trace-Id": "abc123"},
+            _BrokenHeadersMapping({"X-Correlation-Id": "corr-1"}),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert exc_info.value.original_error is not None
