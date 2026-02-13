@@ -140,7 +140,9 @@ class SessionManager:
                 files=files,
             )
         else:
-            raise TypeError("file_input must be a file path or file-like object")
+            raise HyperbrowserError(
+                "file_input must be a file path or file-like object"
+            )
 
         return UploadFileResponse(**response.data)
 

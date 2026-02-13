@@ -126,7 +126,7 @@ def test_async_session_upload_file_accepts_file_like_object():
 def test_sync_session_upload_file_rejects_invalid_input_type():
     manager = SyncSessionManager(_FakeClient(_SyncTransport()))
 
-    with pytest.raises(TypeError, match="file_input must be a file path"):
+    with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
         manager.upload_file("session_123", 123)  # type: ignore[arg-type]
 
 
@@ -134,7 +134,7 @@ def test_async_session_upload_file_rejects_invalid_input_type():
     manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
 
     async def run():
-        with pytest.raises(TypeError, match="file_input must be a file path"):
+        with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
             await manager.upload_file("session_123", 123)  # type: ignore[arg-type]
 
     asyncio.run(run())
@@ -144,7 +144,7 @@ def test_sync_session_upload_file_rejects_non_callable_read_attribute():
     manager = SyncSessionManager(_FakeClient(_SyncTransport()))
     fake_file = type("FakeFile", (), {"read": "not-callable"})()
 
-    with pytest.raises(TypeError, match="file_input must be a file path"):
+    with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
         manager.upload_file("session_123", fake_file)
 
 
@@ -153,7 +153,7 @@ def test_async_session_upload_file_rejects_non_callable_read_attribute():
     fake_file = type("FakeFile", (), {"read": "not-callable"})()
 
     async def run():
-        with pytest.raises(TypeError, match="file_input must be a file path"):
+        with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
             await manager.upload_file("session_123", fake_file)
 
     asyncio.run(run())
