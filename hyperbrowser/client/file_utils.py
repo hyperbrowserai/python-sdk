@@ -20,6 +20,8 @@ def ensure_existing_file_path(
         ) from exc
     if not isinstance(normalized_path, str):
         raise HyperbrowserError("file_path must resolve to a string path")
+    if not normalized_path:
+        raise HyperbrowserError("file_path must not be empty")
     if not os.path.exists(normalized_path):
         raise HyperbrowserError(missing_file_message)
     if not os.path.isfile(normalized_path):
