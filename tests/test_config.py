@@ -290,6 +290,10 @@ def test_client_config_resolve_base_url_from_env_defaults_and_rejects_blank():
         ClientConfig.resolve_base_url_from_env("   ")
     with pytest.raises(HyperbrowserError, match="include a host"):
         ClientConfig.resolve_base_url_from_env("https://")
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_BASE_URL must be a string"
+    ):
+        ClientConfig.resolve_base_url_from_env(123)  # type: ignore[arg-type]
 
 
 def test_client_config_normalize_base_url_validates_and_normalizes():

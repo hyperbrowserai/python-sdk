@@ -71,6 +71,8 @@ class ClientConfig:
     def resolve_base_url_from_env(raw_base_url: Optional[str]) -> str:
         if raw_base_url is None:
             return "https://api.hyperbrowser.ai"
+        if not isinstance(raw_base_url, str):
+            raise HyperbrowserError("HYPERBROWSER_BASE_URL must be a string")
         if not raw_base_url.strip():
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must not be empty when set")
         return ClientConfig.normalize_base_url(raw_base_url)
