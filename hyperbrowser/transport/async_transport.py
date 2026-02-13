@@ -37,6 +37,20 @@ class AsyncTransport(AsyncTransportStrategy):
         self.client = httpx.AsyncClient(headers=merged_headers)
         self._closed = False
 
+    def _normalize_response_status_code(self, response: httpx.Response) -> int:
+        try:
+            status_code = response.status_code
+            if isinstance(status_code, bool):
+                raise TypeError("boolean status code is invalid")
+            return int(status_code)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to process response status code",
+                original_error=exc,
+            ) from exc
+
     async def close(self) -> None:
         if not self._closed:
             await self.client.aclose()
@@ -51,21 +65,12 @@ class AsyncTransport(AsyncTransportStrategy):
     async def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:
             response.raise_for_status()
+            normalized_status_code = self._normalize_response_status_code(response)
             try:
                 if not response.content:
-                    return APIResponse.from_status(response.status_code)
+                    return APIResponse.from_status(normalized_status_code)
                 return APIResponse(response.json())
             except Exception as e:
-                try:
-                    status_code = response.status_code
-                    if isinstance(status_code, bool):
-                        raise TypeError("boolean status code is invalid")
-                    normalized_status_code = int(status_code)
-                except Exception as status_exc:
-                    raise HyperbrowserError(
-                        "Failed to process response status code",
-                        original_error=status_exc,
-                    ) from status_exc
                 if normalized_status_code >= 400:
                     try:
                         response_text = response.text
@@ -80,9 +85,10 @@ class AsyncTransport(AsyncTransportStrategy):
                 return APIResponse.from_status(normalized_status_code)
         except httpx.HTTPStatusError as e:
             message = extract_error_message(response, fallback_error=e)
+            normalized_status_code = self._normalize_response_status_code(response)
             raise HyperbrowserError(
                 message,
-                status_code=response.status_code,
+                status_code=normalized_status_code,
                 response=response,
                 original_error=e,
             )

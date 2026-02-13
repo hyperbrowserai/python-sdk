@@ -66,6 +66,34 @@ class _BrokenStatusCodeJsonResponse:
         raise RuntimeError("broken json")
 
 
+class _BooleanStatusNoContentResponse:
+    status_code = True
+    content = b""
+    text = ""
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return {}
+
+
+class _BrokenStatusCodeHttpErrorResponse:
+    content = b""
+    text = "status error"
+
+    def raise_for_status(self) -> None:
+        request = httpx.Request("GET", "https://example.com/status-error")
+        raise httpx.HTTPStatusError("status failure", request=request, response=self)
+
+    @property
+    def status_code(self) -> int:
+        raise RuntimeError("broken status code")
+
+    def json(self):
+        return {"message": "status failure"}
+
+
 def test_sync_handle_response_with_non_json_success_body_returns_status_only():
     transport = SyncTransport(api_key="test-key")
     try:
@@ -113,6 +141,32 @@ def test_sync_handle_response_with_broken_status_code_raises_hyperbrowser_error(
                 _BrokenStatusCodeJsonResponse()  # type: ignore[arg-type]
             )
         assert exc_info.value.original_error is not None
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_boolean_status_no_content_raises_hyperbrowser_error():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to process response status code"
+        ):
+            transport._handle_response(
+                _BooleanStatusNoContentResponse()  # type: ignore[arg-type]
+            )
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_http_status_error_and_broken_status_code():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to process response status code"
+        ):
+            transport._handle_response(
+                _BrokenStatusCodeHttpErrorResponse()  # type: ignore[arg-type]
+            )
     finally:
         transport.close()
 
@@ -230,6 +284,38 @@ def test_async_handle_response_with_broken_status_code_raises_hyperbrowser_error
                     _BrokenStatusCodeJsonResponse()  # type: ignore[arg-type]
                 )
             assert exc_info.value.original_error is not None
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_boolean_status_no_content_raises_hyperbrowser_error():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Failed to process response status code"
+            ):
+                await transport._handle_response(
+                    _BooleanStatusNoContentResponse()  # type: ignore[arg-type]
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_http_status_error_and_broken_status_code():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Failed to process response status code"
+            ):
+                await transport._handle_response(
+                    _BrokenStatusCodeHttpErrorResponse()  # type: ignore[arg-type]
+                )
         finally:
             await transport.close()
 
