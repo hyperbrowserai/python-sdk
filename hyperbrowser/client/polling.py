@@ -18,6 +18,7 @@ _MAX_OPERATION_NAME_LENGTH = 200
 _CLIENT_ERROR_STATUS_MIN = 400
 _CLIENT_ERROR_STATUS_MAX = 500
 _RETRYABLE_CLIENT_ERROR_STATUS_CODES = {408, 429}
+_MAX_STATUS_CODE_TEXT_LENGTH = 6
 
 
 class _NonRetryablePollingError(HyperbrowserError):
@@ -177,14 +178,28 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
         return None
     if isinstance(status_code, int):
         return status_code
-    if isinstance(status_code, str):
-        normalized_status = status_code.strip()
+    status_text: Optional[str] = None
+    if isinstance(status_code, (bytes, bytearray)):
+        try:
+            status_text = bytes(status_code).decode("ascii")
+        except UnicodeDecodeError:
+            return None
+    elif isinstance(status_code, str):
+        status_text = status_code
+
+    if status_text is not None:
+        normalized_status = status_text.strip()
         if not normalized_status:
             return None
-        try:
-            return int(normalized_status, 10)
-        except ValueError:
+        if len(normalized_status) > _MAX_STATUS_CODE_TEXT_LENGTH:
             return None
+        if normalized_status[0] in {"+", "-"}:
+            digits = normalized_status[1:]
+        else:
+            digits = normalized_status
+        if not digits or not digits.isdigit():
+            return None
+        return int(normalized_status, 10)
     return None
 
 
