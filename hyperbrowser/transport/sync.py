@@ -42,9 +42,9 @@ class SyncTransport(SyncTransportStrategy):
     def _normalize_response_status_code(self, response: httpx.Response) -> int:
         try:
             status_code = response.status_code
-            if isinstance(status_code, bool):
-                raise TypeError("boolean status code is invalid")
-            normalized_status_code = int(status_code)
+            if isinstance(status_code, bool) or not isinstance(status_code, int):
+                raise TypeError("status code must be an integer")
+            normalized_status_code = status_code
             if not (
                 self._MIN_HTTP_STATUS_CODE
                 <= normalized_status_code

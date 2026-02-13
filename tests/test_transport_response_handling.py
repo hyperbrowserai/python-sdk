@@ -92,6 +92,20 @@ class _OutOfRangeStatusNoContentResponse:
         return {}
 
 
+class _NonIntegerStatusNoContentResponse:
+    content = b""
+    text = ""
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return {}
+
+
 class _BrokenStatusCodeHttpErrorResponse:
     content = b""
     text = "status error"
@@ -196,6 +210,22 @@ def test_sync_handle_response_with_out_of_range_status_raises_hyperbrowser_error
         ):
             transport._handle_response(
                 _OutOfRangeStatusNoContentResponse(status_code)  # type: ignore[arg-type]
+            )
+    finally:
+        transport.close()
+
+
+@pytest.mark.parametrize("status_code", ["200", 200.0])
+def test_sync_handle_response_with_non_integer_status_raises_hyperbrowser_error(
+    status_code,
+):
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to process response status code"
+        ):
+            transport._handle_response(
+                _NonIntegerStatusNoContentResponse(status_code)  # type: ignore[arg-type]
             )
     finally:
         transport.close()
@@ -364,6 +394,25 @@ def test_async_handle_response_with_out_of_range_status_raises_hyperbrowser_erro
             ):
                 await transport._handle_response(
                     _OutOfRangeStatusNoContentResponse(status_code)  # type: ignore[arg-type]
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("status_code", ["200", 200.0])
+def test_async_handle_response_with_non_integer_status_raises_hyperbrowser_error(
+    status_code,
+):
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Failed to process response status code"
+            ):
+                await transport._handle_response(
+                    _NonIntegerStatusNoContentResponse(status_code)  # type: ignore[arg-type]
                 )
         finally:
             await transport.close()
