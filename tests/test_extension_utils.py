@@ -35,7 +35,8 @@ def test_parse_extension_list_response_data_rejects_non_dict_payload():
 
 def test_parse_extension_list_response_data_rejects_missing_extensions_key():
     with pytest.raises(
-        HyperbrowserError, match="Expected 'extensions' key in response but got \\[\\] keys"
+        HyperbrowserError,
+        match="Expected 'extensions' key in response but got \\[\\] keys",
     ):
         parse_extension_list_response_data({})
 
@@ -263,9 +264,7 @@ def test_parse_extension_list_response_data_wraps_unreadable_extension_object():
     with pytest.raises(
         HyperbrowserError, match="Failed to read extension object at index 0"
     ) as exc_info:
-        parse_extension_list_response_data(
-            {"extensions": [_BrokenExtensionMapping()]}
-        )
+        parse_extension_list_response_data({"extensions": [_BrokenExtensionMapping()]})
 
     assert exc_info.value.original_error is not None
 
@@ -285,8 +284,6 @@ def test_parse_extension_list_response_data_preserves_hyperbrowser_extension_rea
     with pytest.raises(
         HyperbrowserError, match="custom extension read failure"
     ) as exc_info:
-        parse_extension_list_response_data(
-            {"extensions": [_BrokenExtensionMapping()]}
-        )
+        parse_extension_list_response_data({"extensions": [_BrokenExtensionMapping()]})
 
     assert exc_info.value.original_error is None

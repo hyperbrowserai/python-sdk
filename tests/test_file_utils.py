@@ -24,7 +24,9 @@ def test_ensure_existing_file_path_rejects_non_string_missing_message(tmp_path: 
     file_path = tmp_path / "file.txt"
     file_path.write_text("content")
 
-    with pytest.raises(HyperbrowserError, match="missing_file_message must be a string"):
+    with pytest.raises(
+        HyperbrowserError, match="missing_file_message must be a string"
+    ):
         ensure_existing_file_path(
             str(file_path),
             missing_file_message=123,  # type: ignore[arg-type]

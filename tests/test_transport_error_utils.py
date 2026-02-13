@@ -385,7 +385,9 @@ def test_format_request_failure_message_normalizes_sentinel_fallback_methods(
     assert message == "Request UNKNOWN https://example.com/fallback failed"
 
 
-@pytest.mark.parametrize("numeric_like_method", ["1", "1.5", "-1.25", "+2", ".75", "1e3"])
+@pytest.mark.parametrize(
+    "numeric_like_method", ["1", "1.5", "-1.25", "+2", ".75", "1e3"]
+)
 def test_format_request_failure_message_normalizes_numeric_like_fallback_methods(
     numeric_like_method: str,
 ):
@@ -625,7 +627,9 @@ def test_format_generic_request_failure_message_normalizes_sentinel_method_value
     assert message == "Request UNKNOWN https://example.com/path failed"
 
 
-@pytest.mark.parametrize("numeric_like_method", ["1", "1.5", "-1.25", "+2", ".75", "1e3"])
+@pytest.mark.parametrize(
+    "numeric_like_method", ["1", "1.5", "-1.25", "+2", ".75", "1e3"]
+)
 def test_format_generic_request_failure_message_normalizes_numeric_like_method_values(
     numeric_like_method: str,
 ):
@@ -782,7 +786,9 @@ def test_extract_error_message_handles_broken_fallback_response_text():
 
 
 def test_extract_error_message_uses_placeholder_for_blank_fallback_error_text():
-    message = extract_error_message(_DummyResponse("   ", text="   "), _BlankFallbackError())
+    message = extract_error_message(
+        _DummyResponse("   ", text="   "), _BlankFallbackError()
+    )
 
     assert message == "<_BlankFallbackError>"
 

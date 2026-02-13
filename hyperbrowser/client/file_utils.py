@@ -27,8 +27,7 @@ def ensure_existing_file_path(
     if not not_file_message.strip():
         raise HyperbrowserError("not_file_message must not be empty")
     if any(
-        ord(character) < 32 or ord(character) == 127
-        for character in not_file_message
+        ord(character) < 32 or ord(character) == 127 for character in not_file_message
     ):
         raise HyperbrowserError("not_file_message must not contain control characters")
     try:

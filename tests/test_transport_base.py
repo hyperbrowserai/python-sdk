@@ -206,7 +206,9 @@ def test_api_response_from_json_sanitizes_and_truncates_model_name_in_errors() -
         )
 
 
-def test_api_response_from_json_uses_placeholder_for_blank_mapping_key_in_errors() -> None:
+def test_api_response_from_json_uses_placeholder_for_blank_mapping_key_in_errors() -> (
+    None
+):
     with pytest.raises(
         HyperbrowserError,
         match=(
@@ -217,7 +219,9 @@ def test_api_response_from_json_uses_placeholder_for_blank_mapping_key_in_errors
         APIResponse.from_json(_BrokenBlankKeyValueMapping(), _SampleResponseModel)
 
 
-def test_api_response_from_json_sanitizes_and_truncates_mapping_keys_in_errors() -> None:
+def test_api_response_from_json_sanitizes_and_truncates_mapping_keys_in_errors() -> (
+    None
+):
     with pytest.raises(
         HyperbrowserError,
         match=(
@@ -249,7 +253,9 @@ def test_api_response_constructor_rejects_boolean_status_code() -> None:
 def test_api_response_constructor_rejects_out_of_range_status_code(
     status_code: int,
 ) -> None:
-    with pytest.raises(HyperbrowserError, match="status_code must be between 100 and 599"):
+    with pytest.raises(
+        HyperbrowserError, match="status_code must be between 100 and 599"
+    ):
         APIResponse(status_code=status_code)
 
 
@@ -262,5 +268,7 @@ def test_api_response_from_status_rejects_boolean_status_code() -> None:
 def test_api_response_from_status_rejects_out_of_range_status_code(
     status_code: int,
 ) -> None:
-    with pytest.raises(HyperbrowserError, match="status_code must be between 100 and 599"):
+    with pytest.raises(
+        HyperbrowserError, match="status_code must be between 100 and 599"
+    ):
         APIResponse.from_status(status_code)

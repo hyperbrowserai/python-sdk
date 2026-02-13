@@ -51,8 +51,7 @@ def parse_response_model(
         if isinstance(key, str):
             continue
         raise HyperbrowserError(
-            "Expected "
-            f"{normalized_operation_name} response object keys to be strings"
+            f"Expected {normalized_operation_name} response object keys to be strings"
         )
     try:
         return model(**response_payload)

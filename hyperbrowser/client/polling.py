@@ -44,8 +44,8 @@ def _safe_exception_text(exc: Exception) -> str:
     if sanitized_exception_message.strip():
         if len(sanitized_exception_message) <= _MAX_EXCEPTION_TEXT_LENGTH:
             return sanitized_exception_message
-        available_message_length = (
-            _MAX_EXCEPTION_TEXT_LENGTH - len(_TRUNCATED_EXCEPTION_TEXT_SUFFIX)
+        available_message_length = _MAX_EXCEPTION_TEXT_LENGTH - len(
+            _TRUNCATED_EXCEPTION_TEXT_SUFFIX
         )
         if available_message_length <= 0:
             return _TRUNCATED_EXCEPTION_TEXT_SUFFIX

@@ -336,7 +336,9 @@ def test_sync_computer_action_manager_rejects_invalid_response_shape():
             return _FakeResponse(["invalid"])
 
     manager = SyncComputerActionManager(_FakeClient(_SyncTransport()))
-    session = SimpleNamespace(computer_action_endpoint="https://example.com/computer-action")
+    session = SimpleNamespace(
+        computer_action_endpoint="https://example.com/computer-action"
+    )
 
     with pytest.raises(
         HyperbrowserError, match="Expected computer action response to be an object"
@@ -353,7 +355,9 @@ def test_async_computer_action_manager_rejects_invalid_response_shape():
             return _FakeResponse(["invalid"])
 
     manager = AsyncComputerActionManager(_FakeClient(_AsyncTransport()))
-    session = SimpleNamespace(computer_action_endpoint="https://example.com/computer-action")
+    session = SimpleNamespace(
+        computer_action_endpoint="https://example.com/computer-action"
+    )
 
     async def run() -> None:
         with pytest.raises(
