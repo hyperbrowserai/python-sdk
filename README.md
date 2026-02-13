@@ -32,6 +32,7 @@ automatically (same as API key and base URL).
 
 You can also pass custom headers (for tracing/correlation) either via
 `ClientConfig` or directly to the client constructor.
+Header keys/values must be strings; header names are trimmed and newline characters are rejected.
 
 ```python
 from hyperbrowser import ClientConfig, Hyperbrowser
