@@ -25,7 +25,7 @@ from .anthropic import (
 
 
 def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
-    normalized_params: Dict[str, Any] = dict(params)
+    normalized_params = _to_param_dict(params)
     schema_value = normalized_params.get("schema")
     if isinstance(schema_value, str):
         try:
@@ -39,6 +39,8 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
+    if not isinstance(params, Mapping):
+        raise HyperbrowserError("tool params must be a mapping")
     return dict(params)
 
 

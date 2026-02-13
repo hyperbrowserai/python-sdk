@@ -1,7 +1,10 @@
 from types import MappingProxyType
 
+import pytest
+
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.scrape import StartScrapeJobParams
-from hyperbrowser.tools import WebsiteScrapeTool
+from hyperbrowser.tools import WebsiteExtractTool, WebsiteScrapeTool
 
 
 class _Response:
@@ -31,3 +34,24 @@ def test_tool_wrappers_accept_mapping_inputs():
 
     assert output == "ok"
     assert isinstance(client.scrape.last_params, StartScrapeJobParams)
+
+
+def test_tool_wrappers_reject_non_mapping_inputs():
+    client = _Client()
+
+    with pytest.raises(HyperbrowserError, match="tool params must be a mapping"):
+        WebsiteScrapeTool.runnable(client, ["https://example.com"])  # type: ignore[arg-type]
+
+
+def test_extract_tool_wrapper_rejects_non_mapping_inputs():
+    class _ExtractManager:
+        def start_and_wait(self, params):
+            return type("_Response", (), {"data": {"ok": True}})()
+
+    class _ExtractClient:
+        def __init__(self):
+            self.extract = _ExtractManager()
+
+    client = _ExtractClient()
+    with pytest.raises(HyperbrowserError, match="tool params must be a mapping"):
+        WebsiteExtractTool.runnable(client, "bad")  # type: ignore[arg-type]
