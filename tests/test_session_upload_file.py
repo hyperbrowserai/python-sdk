@@ -148,6 +148,15 @@ def test_sync_session_upload_file_rejects_non_callable_read_attribute():
         manager.upload_file("session_123", fake_file)
 
 
+def test_sync_session_upload_file_rejects_closed_file_like_object():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+    closed_file_obj = io.BytesIO(b"content")
+    closed_file_obj.close()
+
+    with pytest.raises(HyperbrowserError, match="file-like object must be open"):
+        manager.upload_file("session_123", closed_file_obj)
+
+
 def test_async_session_upload_file_rejects_non_callable_read_attribute():
     manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
     fake_file = type("FakeFile", (), {"read": "not-callable"})()
@@ -155,6 +164,18 @@ def test_async_session_upload_file_rejects_non_callable_read_attribute():
     async def run():
         with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
             await manager.upload_file("session_123", fake_file)
+
+    asyncio.run(run())
+
+
+def test_async_session_upload_file_rejects_closed_file_like_object():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+    closed_file_obj = io.BytesIO(b"content")
+    closed_file_obj.close()
+
+    async def run():
+        with pytest.raises(HyperbrowserError, match="file-like object must be open"):
+            await manager.upload_file("session_123", closed_file_obj)
 
     asyncio.run(run())
 

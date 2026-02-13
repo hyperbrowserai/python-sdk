@@ -126,6 +126,8 @@ class SessionManager:
                     original_error=exc,
                 ) from exc
         elif callable(getattr(file_input, "read", None)):
+            if getattr(file_input, "closed", False):
+                raise HyperbrowserError("file_input file-like object must be open")
             files = {"file": file_input}
             response = self._client.transport.post(
                 self._client._build_url(f"/session/{id}/uploads"),
