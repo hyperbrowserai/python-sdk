@@ -123,6 +123,26 @@ def test_poll_until_terminal_status_does_not_retry_non_retryable_client_errors()
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_does_not_retry_stop_iteration_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise StopIteration("callback exhausted")
+
+    with pytest.raises(StopIteration, match="callback exhausted"):
+        poll_until_terminal_status(
+            operation_name="sync poll stop-iteration passthrough",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_does_not_retry_timeout_or_polling_errors():
     timeout_attempts = {"count": 0}
 
@@ -476,6 +496,24 @@ def test_retry_operation_does_not_retry_non_retryable_client_errors():
     assert attempts["count"] == 1
 
 
+def test_retry_operation_does_not_retry_stop_iteration_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise StopIteration("callback exhausted")
+
+    with pytest.raises(StopIteration, match="callback exhausted"):
+        retry_operation(
+            operation_name="sync retry stop-iteration passthrough",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_retry_operation_does_not_retry_timeout_or_polling_errors():
     timeout_attempts = {"count": 0}
 
@@ -745,6 +783,29 @@ def test_poll_until_terminal_status_async_does_not_retry_non_retryable_client_er
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_does_not_retry_stop_async_iteration_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise StopAsyncIteration("callback exhausted")
+
+        with pytest.raises(StopAsyncIteration, match="callback exhausted"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll stop-async-iteration passthrough",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_async_does_not_retry_timeout_or_polling_errors():
     async def run() -> None:
         timeout_attempts = {"count": 0}
@@ -870,6 +931,27 @@ def test_retry_operation_async_does_not_retry_non_retryable_client_errors():
         with pytest.raises(HyperbrowserError, match="client failure"):
             await retry_operation_async(
                 operation_name="async retry client error",
+                operation=operation,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_does_not_retry_stop_async_iteration_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            raise StopAsyncIteration("callback exhausted")
+
+        with pytest.raises(StopAsyncIteration, match="callback exhausted"):
+            await retry_operation_async(
+                operation_name="async retry stop-async-iteration passthrough",
                 operation=operation,
                 max_attempts=5,
                 retry_delay_seconds=0.0001,
@@ -1666,6 +1748,28 @@ def test_collect_paginated_results_does_not_retry_non_retryable_client_errors():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_does_not_retry_stop_iteration_errors():
+    attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        raise StopIteration("callback exhausted")
+
+    with pytest.raises(StopIteration, match="callback exhausted"):
+        collect_paginated_results(
+            operation_name="sync paginated stop-iteration passthrough",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_collect_paginated_results_does_not_retry_timeout_errors():
     attempts = {"count": 0}
 
@@ -1962,6 +2066,31 @@ def test_collect_paginated_results_async_does_not_retry_non_retryable_client_err
         with pytest.raises(HyperbrowserError, match="client failure"):
             await collect_paginated_results_async(
                 operation_name="async paginated client error",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_does_not_retry_stop_async_iteration_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            raise StopAsyncIteration("callback exhausted")
+
+        with pytest.raises(StopAsyncIteration, match="callback exhausted"):
+            await collect_paginated_results_async(
+                operation_name="async paginated stop-async-iteration passthrough",
                 get_next_page=get_next_page,
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],
