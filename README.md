@@ -54,6 +54,7 @@ with Hyperbrowser(
 ```
 
 > If you pass `config=...`, do not also pass `api_key`, `base_url`, or `headers`.
+> `timeout` may be provided to client constructors and must be non-negative (`None` disables request timeouts).
 
 ## Clients
 
