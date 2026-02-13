@@ -6,6 +6,7 @@ from hyperbrowser.models.extension import ExtensionResponse
 
 _MAX_DISPLAYED_MISSING_KEYS = 20
 _MAX_DISPLAYED_MISSING_KEY_LENGTH = 120
+_TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 
 
 def _get_type_name(value: Any) -> str:
@@ -21,12 +22,20 @@ def _safe_stringify_key(value: object) -> str:
 
 def _format_key_display(value: object) -> str:
     normalized_key = _safe_stringify_key(value)
+    normalized_key = "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in normalized_key
+    ).strip()
+    if not normalized_key:
+        return "<blank key>"
     if len(normalized_key) <= _MAX_DISPLAYED_MISSING_KEY_LENGTH:
         return normalized_key
-    return (
-        f"{normalized_key[:_MAX_DISPLAYED_MISSING_KEY_LENGTH]}"
-        "... (truncated)"
+    available_key_length = _MAX_DISPLAYED_MISSING_KEY_LENGTH - len(
+        _TRUNCATED_KEY_DISPLAY_SUFFIX
     )
+    if available_key_length <= 0:
+        return _TRUNCATED_KEY_DISPLAY_SUFFIX
+    return f"{normalized_key[:available_key_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
 
 
 def _summarize_mapping_keys(mapping: Mapping[object, object]) -> str:

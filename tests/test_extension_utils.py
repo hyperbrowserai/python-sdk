@@ -138,10 +138,26 @@ def test_parse_extension_list_response_data_missing_key_truncates_long_key_names
         HyperbrowserError,
         match=(
             "Expected 'extensions' key in response but got "
-            r"\[k{120}\.\.\. \(truncated\)\] keys"
+            r"\[k{105}\.\.\. \(truncated\)\] keys"
         ),
     ):
         parse_extension_list_response_data({long_key: "value"})
+
+
+def test_parse_extension_list_response_data_missing_key_normalizes_blank_key_names():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected 'extensions' key in response but got \\[<blank key>\\] keys",
+    ):
+        parse_extension_list_response_data({"   ": "value"})
+
+
+def test_parse_extension_list_response_data_missing_key_normalizes_control_characters():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected 'extensions' key in response but got \\[bad\\?key\\] keys",
+    ):
+        parse_extension_list_response_data({"bad\tkey": "value"})
 
 
 def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys():
