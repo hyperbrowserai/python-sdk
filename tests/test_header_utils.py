@@ -25,6 +25,17 @@ def test_normalize_headers_rejects_empty_header_name():
         )
 
 
+def test_normalize_headers_rejects_invalid_header_name_characters():
+    with pytest.raises(
+        HyperbrowserError,
+        match="header names must contain only valid HTTP token characters",
+    ):
+        normalize_headers(
+            {"X Trace Id": "value"},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
 def test_normalize_headers_rejects_duplicate_names_after_normalization():
     with pytest.raises(
         HyperbrowserError,
@@ -71,6 +82,14 @@ def test_parse_headers_env_json_rejects_non_mapping_payload():
         match="HYPERBROWSER_HEADERS must be a JSON object of string pairs",
     ):
         parse_headers_env_json('["bad"]')
+
+
+def test_parse_headers_env_json_rejects_invalid_header_name_characters():
+    with pytest.raises(
+        HyperbrowserError,
+        match="header names must contain only valid HTTP token characters",
+    ):
+        parse_headers_env_json('{"X Trace Id":"abc123"}')
 
 
 def test_normalize_headers_rejects_control_characters():

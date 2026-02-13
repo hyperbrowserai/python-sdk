@@ -255,6 +255,14 @@ def test_client_config_rejects_empty_header_name():
         ClientConfig(api_key="test-key", headers={"   ": "value"})
 
 
+def test_client_config_rejects_invalid_header_name_characters():
+    with pytest.raises(
+        HyperbrowserError,
+        match="header names must contain only valid HTTP token characters",
+    ):
+        ClientConfig(api_key="test-key", headers={"X Trace": "value"})
+
+
 def test_client_config_rejects_newline_header_values():
     with pytest.raises(
         HyperbrowserError, match="headers must not contain newline characters"

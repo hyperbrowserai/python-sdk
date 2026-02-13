@@ -40,6 +40,14 @@ def test_sync_transport_rejects_empty_header_name():
         SyncTransport(api_key="test-key", headers={"   ": "value"})
 
 
+def test_sync_transport_rejects_invalid_header_name_characters():
+    with pytest.raises(
+        HyperbrowserError,
+        match="header names must contain only valid HTTP token characters",
+    ):
+        SyncTransport(api_key="test-key", headers={"X Trace": "value"})
+
+
 def test_sync_transport_rejects_header_newline_values():
     with pytest.raises(
         HyperbrowserError, match="headers must not contain newline characters"
@@ -85,6 +93,14 @@ def test_async_transport_rejects_invalid_api_key_values():
 def test_async_transport_rejects_empty_header_name():
     with pytest.raises(HyperbrowserError, match="header names must not be empty"):
         AsyncTransport(api_key="test-key", headers={"   ": "value"})
+
+
+def test_async_transport_rejects_invalid_header_name_characters():
+    with pytest.raises(
+        HyperbrowserError,
+        match="header names must contain only valid HTTP token characters",
+    ):
+        AsyncTransport(api_key="test-key", headers={"X Trace": "value"})
 
 
 def test_async_transport_rejects_header_newline_values():

@@ -1,7 +1,10 @@
 import json
+import re
 from typing import Dict, Mapping, Optional, cast
 
 from .exceptions import HyperbrowserError
+
+_INVALID_HEADER_NAME_CHARACTER_PATTERN = re.compile(r"[^!#$%&'*+\-.^_`|~0-9A-Za-z]")
 
 
 def normalize_headers(
@@ -24,6 +27,10 @@ def normalize_headers(
         normalized_key = key.strip()
         if not normalized_key:
             raise HyperbrowserError("header names must not be empty")
+        if _INVALID_HEADER_NAME_CHARACTER_PATTERN.search(normalized_key):
+            raise HyperbrowserError(
+                "header names must contain only valid HTTP token characters"
+            )
         if (
             "\n" in normalized_key
             or "\r" in normalized_key
