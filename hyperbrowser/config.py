@@ -100,12 +100,25 @@ class ClientConfig:
                 "Failed to parse base_url",
                 original_error=exc,
             ) from exc
+        try:
+            parsed_base_url_scheme = parsed_base_url.scheme
+            parsed_base_url_netloc = parsed_base_url.netloc
+            parsed_base_url_path = parsed_base_url.path
+            parsed_base_url_query = parsed_base_url.query
+            parsed_base_url_fragment = parsed_base_url.fragment
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to parse base_url components",
+                original_error=exc,
+            ) from exc
         if (
-            not isinstance(parsed_base_url.scheme, str)
-            or not isinstance(parsed_base_url.netloc, str)
-            or not isinstance(parsed_base_url.path, str)
-            or not isinstance(parsed_base_url.query, str)
-            or not isinstance(parsed_base_url.fragment, str)
+            not isinstance(parsed_base_url_scheme, str)
+            or not isinstance(parsed_base_url_netloc, str)
+            or not isinstance(parsed_base_url_path, str)
+            or not isinstance(parsed_base_url_query, str)
+            or not isinstance(parsed_base_url_fragment, str)
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         try:
@@ -122,8 +135,8 @@ class ClientConfig:
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if (
-            parsed_base_url.scheme not in {"https", "http"}
-            or not parsed_base_url.netloc
+            parsed_base_url_scheme not in {"https", "http"}
+            or not parsed_base_url_netloc
         ):
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://' and include a host"
@@ -132,7 +145,7 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://' and include a host"
             )
-        if parsed_base_url.query or parsed_base_url.fragment:
+        if parsed_base_url_query or parsed_base_url_fragment:
             raise HyperbrowserError(
                 "base_url must not include query parameters or fragments"
             )
@@ -177,7 +190,7 @@ class ClientConfig:
             raise HyperbrowserError("base_url parser returned invalid URL components")
 
         decoded_base_path = ClientConfig._decode_url_component_with_limit(
-            parsed_base_url.path, component_label="base_url path"
+            parsed_base_url_path, component_label="base_url path"
         )
         if "\\" in decoded_base_path:
             raise HyperbrowserError("base_url must not contain backslashes")
@@ -198,7 +211,7 @@ class ClientConfig:
                 "base_url path must not contain encoded query or fragment delimiters"
             )
 
-        decoded_base_netloc = parsed_base_url.netloc
+        decoded_base_netloc = parsed_base_url_netloc
         for _ in range(10):
             if _ENCODED_HOST_DELIMITER_PATTERN.search(decoded_base_netloc):
                 raise HyperbrowserError(

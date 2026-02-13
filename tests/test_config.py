@@ -459,6 +459,66 @@ def test_client_config_normalize_base_url_preserves_hyperbrowser_urlparse_errors
     assert exc_info.value.original_error is None
 
 
+def test_client_config_normalize_base_url_wraps_component_access_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        @property
+        def scheme(self):
+            raise RuntimeError("scheme parser exploded")
+
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def port(self) -> int:
+            return 443
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to parse base_url components"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_preserves_hyperbrowser_component_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        @property
+        def scheme(self):
+            raise HyperbrowserError("custom component failure")
+
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def port(self) -> int:
+            return 443
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="custom component failure"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_normalize_base_url_rejects_invalid_urlparse_component_types(
     monkeypatch: pytest.MonkeyPatch,
 ):
