@@ -16,14 +16,20 @@ class ExtensionManager:
 
         # Check if file exists before trying to open it
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Extension file not found at path: {file_path}")
+            raise HyperbrowserError(f"Extension file not found at path: {file_path}")
 
-        with open(file_path, "rb") as extension_file:
-            response = await self._client.transport.post(
-                self._client._build_url("/extensions/add"),
-                data=payload,
-                files={"file": extension_file},
-            )
+        try:
+            with open(file_path, "rb") as extension_file:
+                response = await self._client.transport.post(
+                    self._client._build_url("/extensions/add"),
+                    data=payload,
+                    files={"file": extension_file},
+                )
+        except OSError as exc:
+            raise HyperbrowserError(
+                f"Failed to open extension file at path: {file_path}",
+                original_error=exc,
+            ) from exc
         return ExtensionResponse(**response.data)
 
     async def list(self) -> List[ExtensionResponse]:

@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+import pytest
 
 from hyperbrowser.client.managers.async_manager.extension import (
     ExtensionManager as AsyncExtensionManager,
@@ -7,6 +8,7 @@ from hyperbrowser.client.managers.async_manager.extension import (
 from hyperbrowser.client.managers.sync_manager.extension import (
     ExtensionManager as SyncExtensionManager,
 )
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import CreateExtensionParams
 
 
@@ -104,3 +106,26 @@ def test_async_extension_create_does_not_mutate_params_and_closes_file(tmp_path)
         transport.received_file is not None and transport.received_file.closed is True
     )
     assert transport.received_data == {"name": "my-extension"}
+
+
+def test_sync_extension_create_raises_hyperbrowser_error_when_file_missing(tmp_path):
+    transport = _SyncTransport()
+    manager = SyncExtensionManager(_FakeClient(transport))
+    missing_path = tmp_path / "missing-extension.zip"
+    params = CreateExtensionParams(name="missing-extension", file_path=missing_path)
+
+    with pytest.raises(HyperbrowserError, match="Extension file not found"):
+        manager.create(params)
+
+
+def test_async_extension_create_raises_hyperbrowser_error_when_file_missing(tmp_path):
+    transport = _AsyncTransport()
+    manager = AsyncExtensionManager(_FakeClient(transport))
+    missing_path = tmp_path / "missing-extension.zip"
+    params = CreateExtensionParams(name="missing-extension", file_path=missing_path)
+
+    async def run():
+        with pytest.raises(HyperbrowserError, match="Extension file not found"):
+            await manager.create(params)
+
+    asyncio.run(run())
