@@ -60,6 +60,13 @@ def test_build_fetch_operation_name_sanitizes_non_string_and_control_input():
     assert numeric_operation_name == "Fetching 123"
 
 
+def test_build_fetch_operation_name_bounds_very_large_operation_names():
+    operation_name = build_fetch_operation_name("x" * 10000)
+
+    assert operation_name.endswith("...")
+    assert len(operation_name) == 200
+
+
 def test_build_fetch_operation_name_handles_unstringifiable_input():
     class _BadOperationName:
         def __str__(self) -> str:
@@ -75,6 +82,14 @@ def test_build_operation_name_keeps_short_names_unchanged():
 
 def test_build_operation_name_truncates_long_identifiers():
     operation_name = build_operation_name("crawl job ", "x" * 500)
+
+    assert operation_name.startswith("crawl job ")
+    assert operation_name.endswith("...")
+    assert len(operation_name) == 200
+
+
+def test_build_operation_name_handles_very_large_identifier_inputs():
+    operation_name = build_operation_name("crawl job ", "x" * 10000)
 
     assert operation_name.startswith("crawl job ")
     assert operation_name.endswith("...")

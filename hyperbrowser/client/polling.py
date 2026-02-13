@@ -92,10 +92,11 @@ def build_operation_name(prefix: object, identifier: object) -> str:
         for character in normalized_identifier
     )
 
-    operation_name = f"{normalized_prefix}{normalized_identifier}".strip()
-    if not operation_name:
-        operation_name = "operation"
-    if len(operation_name) <= _MAX_OPERATION_NAME_LENGTH:
+    combined_length = len(normalized_prefix) + len(normalized_identifier)
+    if combined_length <= _MAX_OPERATION_NAME_LENGTH:
+        operation_name = f"{normalized_prefix}{normalized_identifier}".strip()
+        if not operation_name:
+            return "operation"
         return operation_name
     available_identifier_length = (
         _MAX_OPERATION_NAME_LENGTH
