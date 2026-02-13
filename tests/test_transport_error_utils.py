@@ -92,3 +92,13 @@ def test_format_request_failure_message_prefers_request_context():
     )
 
     assert message == "Request POST https://example.com/actual failed"
+
+
+def test_format_request_failure_message_normalizes_blank_fallback_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="   ",
+        fallback_url="",
+    )
+
+    assert message == "Request UNKNOWN unknown URL failed"

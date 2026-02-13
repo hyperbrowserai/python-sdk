@@ -77,5 +77,10 @@ def format_request_failure_message(
     effective_method = (
         request_method if request_method != "UNKNOWN" else fallback_method
     )
+    if not isinstance(effective_method, str) or not effective_method.strip():
+        effective_method = "UNKNOWN"
+
     effective_url = request_url if request_url != "unknown URL" else fallback_url
+    if not isinstance(effective_url, str) or not effective_url.strip():
+        effective_url = "unknown URL"
     return f"Request {effective_method} {effective_url} failed"
