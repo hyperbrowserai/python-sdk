@@ -227,6 +227,7 @@ def collect_paginated_results(
     total_page_batches = 0
     first_check = True
     failures = 0
+    stagnation_failures = 0
 
     while first_check or current_page_batch < total_page_batches:
         if has_exceeded_max_wait(start_time, max_wait_seconds):
@@ -235,13 +236,27 @@ def collect_paginated_results(
             )
         should_sleep = True
         try:
+            previous_page_batch = current_page_batch
             page_response = get_next_page(current_page_batch + 1)
             on_page_success(page_response)
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
             failures = 0
             first_check = False
+            if (
+                current_page_batch < total_page_batches
+                and current_page_batch <= previous_page_batch
+            ):
+                stagnation_failures += 1
+                if stagnation_failures >= max_attempts:
+                    raise HyperbrowserPollingError(
+                        f"No pagination progress for {operation_name} after {max_attempts} attempts (stuck on page batch {current_page_batch} of {total_page_batches})"
+                    )
+            else:
+                stagnation_failures = 0
             should_sleep = current_page_batch < total_page_batches
+        except HyperbrowserPollingError:
+            raise
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:
@@ -274,6 +289,7 @@ async def collect_paginated_results_async(
     total_page_batches = 0
     first_check = True
     failures = 0
+    stagnation_failures = 0
 
     while first_check or current_page_batch < total_page_batches:
         if has_exceeded_max_wait(start_time, max_wait_seconds):
@@ -282,13 +298,27 @@ async def collect_paginated_results_async(
             )
         should_sleep = True
         try:
+            previous_page_batch = current_page_batch
             page_response = await get_next_page(current_page_batch + 1)
             on_page_success(page_response)
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
             failures = 0
             first_check = False
+            if (
+                current_page_batch < total_page_batches
+                and current_page_batch <= previous_page_batch
+            ):
+                stagnation_failures += 1
+                if stagnation_failures >= max_attempts:
+                    raise HyperbrowserPollingError(
+                        f"No pagination progress for {operation_name} after {max_attempts} attempts (stuck on page batch {current_page_batch} of {total_page_batches})"
+                    )
+            else:
+                stagnation_failures = 0
             should_sleep = current_page_batch < total_page_batches
+        except HyperbrowserPollingError:
+            raise
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:
