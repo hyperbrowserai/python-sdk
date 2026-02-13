@@ -78,6 +78,16 @@ class HyperbrowserBase:
         if parsed_path.scheme:
             raise HyperbrowserError("path must be a relative API path")
         normalized_path = f"/{stripped_path.lstrip('/')}"
+        parsed_base_url = urlparse(self.config.base_url)
+        base_path = parsed_base_url.path.rstrip("/")
+        base_has_api_suffix = base_path.endswith("/api")
+
         if normalized_path == "/api" or normalized_path.startswith("/api/"):
+            if base_has_api_suffix:
+                deduped_path = normalized_path[len("/api") :]
+                return f"{self.config.base_url}{deduped_path}"
+            return f"{self.config.base_url}{normalized_path}"
+
+        if base_has_api_suffix:
             return f"{self.config.base_url}{normalized_path}"
         return f"{self.config.base_url}/api{normalized_path}"

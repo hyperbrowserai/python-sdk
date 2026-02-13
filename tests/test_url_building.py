@@ -42,6 +42,35 @@ def test_client_build_url_uses_normalized_base_url():
         client.close()
 
 
+def test_client_build_url_avoids_duplicate_api_when_base_url_already_has_api():
+    client = Hyperbrowser(
+        config=ClientConfig(api_key="test-key", base_url="https://example.local/api")
+    )
+    try:
+        assert client._build_url("/session") == "https://example.local/api/session"
+        assert client._build_url("/api/session") == "https://example.local/api/session"
+    finally:
+        client.close()
+
+
+def test_client_build_url_handles_nested_api_base_paths():
+    client = Hyperbrowser(
+        config=ClientConfig(
+            api_key="test-key", base_url="https://example.local/custom/api"
+        )
+    )
+    try:
+        assert (
+            client._build_url("/session") == "https://example.local/custom/api/session"
+        )
+        assert (
+            client._build_url("/api/session")
+            == "https://example.local/custom/api/session"
+        )
+    finally:
+        client.close()
+
+
 def test_client_build_url_rejects_empty_or_non_string_paths():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
