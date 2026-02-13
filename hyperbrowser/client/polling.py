@@ -298,7 +298,24 @@ async def retry_operation_async(
     failures = 0
     while True:
         try:
-            return await operation()
+            operation_result = operation()
+        except Exception as exc:
+            failures += 1
+            if failures >= max_attempts:
+                raise HyperbrowserError(
+                    f"{operation_name} failed after {max_attempts} attempts: {exc}"
+                ) from exc
+            await asyncio.sleep(retry_delay_seconds)
+            continue
+
+        operation_awaitable = _ensure_awaitable(
+            operation_result,
+            callback_name="operation",
+            operation_name=operation_name,
+        )
+
+        try:
+            return await operation_awaitable
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:

@@ -177,6 +177,21 @@ def test_async_polling_and_retry_helpers():
     asyncio.run(run())
 
 
+def test_retry_operation_async_rejects_non_awaitable_operation_result() -> None:
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError, match="operation must return an awaitable"
+        ):
+            await retry_operation_async(
+                operation_name="invalid-async-retry-awaitable",
+                operation=lambda: "ok",  # type: ignore[return-value]
+                max_attempts=2,
+                retry_delay_seconds=0.0001,
+            )
+
+    asyncio.run(run())
+
+
 def test_async_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
     async def run() -> None:
         status = await poll_until_terminal_status_async(
