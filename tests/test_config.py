@@ -62,6 +62,17 @@ def test_client_config_from_env_rejects_non_object_headers_json(monkeypatch):
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_rejects_non_string_header_values(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Request-Id":123}')
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="HYPERBROWSER_HEADERS must be a JSON object of string pairs",
+    ):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_ignores_blank_headers(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_HEADERS", "   ")

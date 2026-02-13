@@ -63,5 +63,12 @@ class ClientConfig:
                 raise HyperbrowserError(
                     "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
                 )
+            if any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in parsed_headers.items()
+            ):
+                raise HyperbrowserError(
+                    "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
+                )
             headers = parsed_headers
         return cls(api_key=api_key, base_url=base_url, headers=headers)
