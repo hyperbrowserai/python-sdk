@@ -390,6 +390,50 @@ def test_collect_paginated_results_rejects_awaitable_on_page_success_result():
     assert callback_attempts["count"] == 1
 
 
+def test_collect_paginated_results_fails_fast_when_on_page_success_raises():
+    page_attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        page_attempts["count"] += 1
+        return {"current": 1, "total": 1, "items": []}
+
+    with pytest.raises(HyperbrowserError, match="on_page_success failed"):
+        collect_paginated_results(
+            operation_name="sync paginated callback exception",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: (_ for _ in ()).throw(ValueError("boom")),
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert page_attempts["count"] == 1
+
+
+def test_collect_paginated_results_fails_fast_when_page_batch_callback_raises():
+    page_attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        page_attempts["count"] += 1
+        return {"current": 1, "total": 1, "items": []}
+
+    with pytest.raises(HyperbrowserError, match="get_current_page_batch failed"):
+        collect_paginated_results(
+            operation_name="sync paginated page-batch callback exception",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["missing"],  # type: ignore[index]
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert page_attempts["count"] == 1
+
+
 def test_collect_paginated_results_rejects_awaitable_current_page_callback_result():
     with pytest.raises(
         HyperbrowserError,
@@ -516,6 +560,58 @@ def test_collect_paginated_results_async_rejects_awaitable_on_page_success_resul
                 retry_delay_seconds=0.0001,
             )
         assert callback_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_fails_fast_when_on_page_success_raises():
+    async def run() -> None:
+        page_attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            page_attempts["count"] += 1
+            return {"current": 1, "total": 1, "items": []}
+
+        with pytest.raises(HyperbrowserError, match="on_page_success failed"):
+            await collect_paginated_results_async(
+                operation_name="async paginated callback exception",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: (_ for _ in ()).throw(
+                    ValueError("boom")
+                ),
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert page_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_fails_fast_when_page_batch_callback_raises():
+    async def run() -> None:
+        page_attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            page_attempts["count"] += 1
+            return {"current": 1, "total": 1, "items": []}
+
+        with pytest.raises(HyperbrowserError, match="get_total_page_batches failed"):
+            await collect_paginated_results_async(
+                operation_name="async paginated page-batch callback exception",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["missing"],  # type: ignore[index]
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert page_attempts["count"] == 1
 
     asyncio.run(run())
 

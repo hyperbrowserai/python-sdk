@@ -94,6 +94,19 @@ def _ensure_non_awaitable(
         )
 
 
+def _invoke_non_retryable_callback(
+    callback: Callable[..., T], *args: object, callback_name: str, operation_name: str
+) -> T:
+    try:
+        return callback(*args)
+    except _NonRetryablePollingError:
+        raise
+    except Exception as exc:
+        raise _NonRetryablePollingError(
+            f"{callback_name} failed for {operation_name}: {exc}"
+        ) from exc
+
+
 def _validate_retry_config(
     *,
     max_attempts: int,
@@ -390,19 +403,34 @@ def collect_paginated_results(
                 callback_name="get_next_page",
                 operation_name=operation_name,
             )
-            callback_result = on_page_success(page_response)
+            callback_result = _invoke_non_retryable_callback(
+                on_page_success,
+                page_response,
+                callback_name="on_page_success",
+                operation_name=operation_name,
+            )
             _ensure_non_awaitable(
                 callback_result,
                 callback_name="on_page_success",
                 operation_name=operation_name,
             )
-            current_page_batch = get_current_page_batch(page_response)
+            current_page_batch = _invoke_non_retryable_callback(
+                get_current_page_batch,
+                page_response,
+                callback_name="get_current_page_batch",
+                operation_name=operation_name,
+            )
             _ensure_non_awaitable(
                 current_page_batch,
                 callback_name="get_current_page_batch",
                 operation_name=operation_name,
             )
-            total_page_batches = get_total_page_batches(page_response)
+            total_page_batches = _invoke_non_retryable_callback(
+                get_total_page_batches,
+                page_response,
+                callback_name="get_total_page_batches",
+                operation_name=operation_name,
+            )
             _ensure_non_awaitable(
                 total_page_batches,
                 callback_name="get_total_page_batches",
@@ -480,19 +508,34 @@ async def collect_paginated_results_async(
                 operation_name=operation_name,
             )
             page_response = await page_awaitable
-            callback_result = on_page_success(page_response)
+            callback_result = _invoke_non_retryable_callback(
+                on_page_success,
+                page_response,
+                callback_name="on_page_success",
+                operation_name=operation_name,
+            )
             _ensure_non_awaitable(
                 callback_result,
                 callback_name="on_page_success",
                 operation_name=operation_name,
             )
-            current_page_batch = get_current_page_batch(page_response)
+            current_page_batch = _invoke_non_retryable_callback(
+                get_current_page_batch,
+                page_response,
+                callback_name="get_current_page_batch",
+                operation_name=operation_name,
+            )
             _ensure_non_awaitable(
                 current_page_batch,
                 callback_name="get_current_page_batch",
                 operation_name=operation_name,
             )
-            total_page_batches = get_total_page_batches(page_response)
+            total_page_batches = _invoke_non_retryable_callback(
+                get_total_page_batches,
+                page_response,
+                callback_name="get_total_page_batches",
+                operation_name=operation_name,
+            )
             _ensure_non_awaitable(
                 total_page_batches,
                 callback_name="get_total_page_batches",
