@@ -150,6 +150,7 @@ Polling callback contracts are also validated:
 - Generator reentrancy errors (e.g. `generator already executing`) are treated as non-retryable and surfaced immediately.
 - Iterator exhaustion callback errors (`StopIteration` / `StopAsyncIteration`) are treated as non-retryable and surfaced immediately.
 - Async loop contract runtime errors (e.g. `Future attached to a different loop`, `Task is bound to a different event loop`, `Non-thread-safe operation invoked on an event loop other than the current one`, `Event loop is closed`) are treated as non-retryable and surfaced immediately.
+- Executor-shutdown runtime errors (e.g. `cannot schedule new futures after shutdown`) are treated as non-retryable and surfaced immediately.
 - Wait helpers (`start_and_wait`, `wait_for_job_result`) only execute fetch/result callbacks after terminal status is reached; polling failures/timeouts short-circuit before fetch retries begin.
 
 Example:
