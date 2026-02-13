@@ -61,7 +61,7 @@ def parse_response_model(
         raise
     except Exception as exc:
         raise HyperbrowserError(
-            f"Failed to read {normalized_operation_name} response data",
+            f"Failed to read {normalized_operation_name} response keys",
             original_error=exc,
         ) from exc
     for key in response_keys:

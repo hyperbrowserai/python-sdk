@@ -226,7 +226,7 @@ def test_parse_response_model_truncates_operation_name_in_errors():
 def test_parse_response_model_wraps_mapping_read_failures():
     with pytest.raises(
         HyperbrowserError,
-        match="Failed to read basic operation response data",
+        match="Failed to read basic operation response keys",
     ) as exc_info:
         parse_response_model(
             _BrokenMapping({"success": True}),
@@ -235,6 +235,27 @@ def test_parse_response_model_wraps_mapping_read_failures():
         )
 
     assert exc_info.value.original_error is not None
+
+
+def test_parse_response_model_preserves_hyperbrowser_key_read_failures():
+    class _BrokenMapping(Mapping[str, object]):
+        def __iter__(self):
+            raise HyperbrowserError("custom key read failure")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            return key
+
+    with pytest.raises(HyperbrowserError, match="custom key read failure") as exc_info:
+        parse_response_model(
+            _BrokenMapping(),
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+    assert exc_info.value.original_error is None
 
 
 def test_parse_response_model_wraps_mapping_value_read_failures():
