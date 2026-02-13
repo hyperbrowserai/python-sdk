@@ -71,6 +71,8 @@ class HyperbrowserBase:
         stripped_path = path.strip()
         if not stripped_path:
             raise HyperbrowserError("path must not be empty")
+        if "://" in stripped_path:
+            raise HyperbrowserError("path must be a relative API path")
         normalized_path = f"/{stripped_path.lstrip('/')}"
         if normalized_path == "/api" or normalized_path.startswith("/api/"):
             return f"{self.config.base_url}{normalized_path}"
