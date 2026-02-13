@@ -136,6 +136,17 @@ def test_build_operation_name_trims_leading_whitespace_from_prefix_text():
     assert operation_name == "crawl job 123"
 
 
+def test_build_operation_name_uses_full_length_budget_after_prefix_lstrip():
+    operation_name = build_operation_name(
+        "   crawl job ",
+        "x" * 400,
+    )
+
+    assert operation_name.startswith("crawl job ")
+    assert operation_name.endswith("...")
+    assert len(operation_name) == 200
+
+
 def test_build_operation_name_avoids_trailing_whitespace_in_prefix_only_truncation():
     overlong_prefix = ("a" * 199) + " "
 
