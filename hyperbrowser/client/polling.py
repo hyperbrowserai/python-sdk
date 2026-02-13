@@ -129,7 +129,9 @@ def build_operation_name(prefix: object, identifier: object) -> str:
 
 def build_fetch_operation_name(operation_name: object) -> str:
     normalized_operation_name = build_operation_name("", operation_name)
-    if normalized_operation_name.startswith(_FETCH_OPERATION_NAME_PREFIX):
+    if normalized_operation_name.lower().startswith(
+        _FETCH_OPERATION_NAME_PREFIX.lower()
+    ):
         return normalized_operation_name
     return build_operation_name(
         _FETCH_OPERATION_NAME_PREFIX,
