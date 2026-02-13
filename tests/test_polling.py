@@ -1437,6 +1437,31 @@ def test_collect_paginated_results_retries_rate_limit_errors():
     assert attempts["count"] == 3
 
 
+def test_collect_paginated_results_retries_request_timeout_errors():
+    attempts = {"count": 0}
+    collected = []
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("request timeout", status_code=408)
+        return {"current": 1, "total": 1, "items": ["a"]}
+
+    collect_paginated_results(
+        operation_name="sync paginated request-timeout retries",
+        get_next_page=get_next_page,
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: collected.extend(response["items"]),
+        max_wait_seconds=1.0,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert collected == ["a"]
+    assert attempts["count"] == 3
+
+
 def test_collect_paginated_results_raises_when_page_batch_stagnates():
     with pytest.raises(HyperbrowserPollingError, match="No pagination progress"):
         collect_paginated_results(
@@ -1709,6 +1734,34 @@ def test_collect_paginated_results_async_retries_rate_limit_errors():
     asyncio.run(run())
 
 
+def test_collect_paginated_results_async_retries_request_timeout_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+        collected = []
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("request timeout", status_code=408)
+            return {"current": 1, "total": 1, "items": ["a"]}
+
+        await collect_paginated_results_async(
+            operation_name="async paginated request-timeout retries",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: collected.extend(response["items"]),
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert collected == ["a"]
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
 def test_wait_for_job_result_returns_fetched_value():
     status_values = iter(["running", "completed"])
 
@@ -1761,6 +1814,31 @@ def test_wait_for_job_result_retries_rate_limit_fetch_errors():
 
     result = wait_for_job_result(
         operation_name="sync wait helper rate limit retries",
+        get_status=lambda: "completed",
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=fetch_result,
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=2,
+        fetch_max_attempts=5,
+        fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+    assert fetch_attempts["count"] == 3
+
+
+def test_wait_for_job_result_retries_request_timeout_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        if fetch_attempts["count"] < 3:
+            raise HyperbrowserError("request timeout", status_code=408)
+        return {"ok": True}
+
+    result = wait_for_job_result(
+        operation_name="sync wait helper request-timeout retries",
         get_status=lambda: "completed",
         is_terminal_status=lambda value: value == "completed",
         fetch_result=fetch_result,
@@ -1834,6 +1912,34 @@ def test_wait_for_job_result_async_retries_rate_limit_fetch_errors():
 
         result = await wait_for_job_result_async(
             operation_name="async wait helper rate limit retries",
+            get_status=lambda: asyncio.sleep(0, result="completed"),
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=2,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+        assert result == {"ok": True}
+        assert fetch_attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_retries_request_timeout_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            if fetch_attempts["count"] < 3:
+                raise HyperbrowserError("request timeout", status_code=408)
+            return {"ok": True}
+
+        result = await wait_for_job_result_async(
+            operation_name="async wait helper request-timeout retries",
             get_status=lambda: asyncio.sleep(0, result="completed"),
             is_terminal_status=lambda value: value == "completed",
             fetch_result=fetch_result,
