@@ -152,10 +152,22 @@ def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
         return True
     if "event loop other than the current one" in normalized_message:
         return True
+    if "attached to a different loop" in normalized_message:
+        return True
     if "different event loop" in normalized_message:
         return True
     return "different loop" in normalized_message and any(
         marker in normalized_message for marker in ("future", "task")
+    )
+
+
+def _is_executor_shutdown_runtime_error(exc: Exception) -> bool:
+    if not isinstance(exc, RuntimeError):
+        return False
+    normalized_message = str(exc).lower()
+    return (
+        "cannot schedule new futures after" in normalized_message
+        and "shutdown" in normalized_message
     )
 
 
@@ -169,6 +181,8 @@ def _is_retryable_exception(exc: Exception) -> bool:
     if _is_async_generator_reuse_runtime_error(exc):
         return False
     if _is_async_loop_contract_runtime_error(exc):
+        return False
+    if _is_executor_shutdown_runtime_error(exc):
         return False
     if isinstance(exc, ConcurrentCancelledError):
         return False
