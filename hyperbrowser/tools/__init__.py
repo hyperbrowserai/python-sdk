@@ -163,6 +163,26 @@ def _serialize_extract_tool_data(data: Any) -> str:
         ) from exc
 
 
+def _normalize_optional_text_field_value(
+    field_value: Any,
+    *,
+    error_message: str,
+) -> str:
+    if field_value is None:
+        return ""
+    if isinstance(field_value, str):
+        return field_value
+    if isinstance(field_value, (bytes, bytearray, memoryview)):
+        try:
+            return memoryview(field_value).tobytes().decode("utf-8")
+        except (TypeError, ValueError, UnicodeDecodeError) as exc:
+            raise HyperbrowserError(
+                error_message,
+                original_error=exc,
+            ) from exc
+    raise HyperbrowserError(error_message)
+
+
 def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
     if isinstance(response, MappingABC):
         try:
@@ -232,11 +252,12 @@ def _read_optional_tool_response_field(
             ) from exc
     if field_value is None:
         return ""
-    if not isinstance(field_value, str):
-        raise HyperbrowserError(
-            f"{tool_name} response field '{field_name}' must be a string"
-        )
-    return field_value
+    return _normalize_optional_text_field_value(
+        field_value,
+        error_message=(
+            f"{tool_name} response field '{field_name}' must be a UTF-8 string"
+        ),
+    )
 
 
 def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> Any:
@@ -290,20 +311,25 @@ def _render_crawl_markdown_output(response_data: Any) -> str:
         )
         if page_markdown is None:
             continue
-        if not isinstance(page_markdown, str):
-            raise HyperbrowserError(
-                f"crawl tool page field 'markdown' must be a string at index {index}"
-            )
+        page_markdown = _normalize_optional_text_field_value(
+            page_markdown,
+            error_message=(
+                "crawl tool page field 'markdown' must be a UTF-8 string "
+                f"at index {index}"
+            ),
+        )
         if not page_markdown:
             continue
         page_url = _read_crawl_page_field(page, field_name="url", page_index=index)
         if page_url is None:
             page_url_display = "<unknown url>"
-        elif not isinstance(page_url, str):
-            raise HyperbrowserError(
-                f"crawl tool page field 'url' must be a string at index {index}"
-            )
         else:
+            page_url = _normalize_optional_text_field_value(
+                page_url,
+                error_message=(
+                    f"crawl tool page field 'url' must be a UTF-8 string at index {index}"
+                ),
+            )
             page_url_display = page_url if page_url.strip() else "<unknown url>"
         markdown_sections.append(
             f"\n{'-' * 50}\nUrl: {page_url_display}\nMarkdown:\n{page_markdown}\n"

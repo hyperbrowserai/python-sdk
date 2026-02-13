@@ -269,9 +269,31 @@ def test_scrape_tool_rejects_non_string_markdown_field():
 
     with pytest.raises(
         HyperbrowserError,
-        match="scrape tool response field 'markdown' must be a string",
+        match="scrape tool response field 'markdown' must be a UTF-8 string",
     ):
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+
+def test_scrape_tool_decodes_utf8_bytes_markdown_field():
+    client = _SyncScrapeClient(_Response(data=SimpleNamespace(markdown=b"hello")))
+
+    output = WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert output == "hello"
+
+
+def test_scrape_tool_wraps_invalid_utf8_markdown_bytes():
+    client = _SyncScrapeClient(
+        _Response(data=SimpleNamespace(markdown=b"\xff\xfe\xfd"))
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="scrape tool response field 'markdown' must be a UTF-8 string",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
 
 
 def test_scrape_tool_supports_mapping_response_data():
@@ -318,9 +340,17 @@ def test_screenshot_tool_rejects_non_string_screenshot_field():
 
     with pytest.raises(
         HyperbrowserError,
-        match="screenshot tool response field 'screenshot' must be a string",
+        match="screenshot tool response field 'screenshot' must be a UTF-8 string",
     ):
         WebsiteScreenshotTool.runnable(client, {"url": "https://example.com"})
+
+
+def test_screenshot_tool_decodes_utf8_bytes_field():
+    client = _SyncScrapeClient(_Response(data=SimpleNamespace(screenshot=b"image-data")))
+
+    output = WebsiteScreenshotTool.runnable(client, {"url": "https://example.com"})
+
+    assert output == "image-data"
 
 
 def test_crawl_tool_rejects_non_list_response_data():
@@ -407,9 +437,34 @@ def test_crawl_tool_rejects_non_string_page_urls():
 
     with pytest.raises(
         HyperbrowserError,
-        match="crawl tool page field 'url' must be a string at index 0",
+        match="crawl tool page field 'url' must be a UTF-8 string at index 0",
     ):
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+
+def test_crawl_tool_decodes_utf8_bytes_page_fields():
+    client = _SyncCrawlClient(
+        _Response(data=[SimpleNamespace(url=b"https://example.com", markdown=b"page")])
+    )
+
+    output = WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert "Url: https://example.com" in output
+    assert "page" in output
+
+
+def test_crawl_tool_wraps_invalid_utf8_page_field_bytes():
+    client = _SyncCrawlClient(
+        _Response(data=[SimpleNamespace(url=b"\xff", markdown="body")])
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="crawl tool page field 'url' must be a UTF-8 string at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
 
 
 def test_crawl_tool_uses_unknown_url_for_blank_page_urls():
@@ -443,9 +498,17 @@ def test_browser_use_tool_rejects_non_string_final_result():
 
     with pytest.raises(
         HyperbrowserError,
-        match="browser-use tool response field 'final_result' must be a string",
+        match="browser-use tool response field 'final_result' must be a UTF-8 string",
     ):
         BrowserUseTool.runnable(client, {"task": "search docs"})
+
+
+def test_browser_use_tool_decodes_utf8_bytes_final_result():
+    client = _SyncBrowserUseClient(_Response(data=SimpleNamespace(final_result=b"done")))
+
+    output = BrowserUseTool.runnable(client, {"task": "search docs"})
+
+    assert output == "done"
 
 
 def test_browser_use_tool_supports_mapping_response_data():
@@ -520,7 +583,7 @@ def test_async_browser_use_tool_rejects_non_string_final_result():
         )
         with pytest.raises(
             HyperbrowserError,
-            match="browser-use tool response field 'final_result' must be a string",
+            match="browser-use tool response field 'final_result' must be a UTF-8 string",
         ):
             await BrowserUseTool.async_runnable(client, {"task": "search docs"})
 
@@ -535,6 +598,18 @@ def test_async_scrape_tool_supports_mapping_response_data():
             {"url": "https://example.com"},
         )
         assert output == "async mapping"
+
+    asyncio.run(run())
+
+
+def test_async_scrape_tool_decodes_utf8_bytes_markdown_field():
+    async def run() -> None:
+        client = _AsyncScrapeClient(_Response(data=SimpleNamespace(markdown=b"async")))
+        output = await WebsiteScrapeTool.async_runnable(
+            client,
+            {"url": "https://example.com"},
+        )
+        assert output == "async"
 
     asyncio.run(run())
 
