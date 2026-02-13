@@ -22,6 +22,11 @@ class _BlankContextRequest:
     url = "   "
 
 
+class _WhitespaceContextRequest:
+    method = "  POST  "
+    url = "  https://example.com/trim  "
+
+
 class _RequestErrorWithFailingRequestProperty(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
@@ -38,6 +43,12 @@ class _RequestErrorWithBlankContext(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _BlankContextRequest()
+
+
+class _RequestErrorWithWhitespaceContext(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _WhitespaceContextRequest()
 
 
 class _DummyResponse:
@@ -81,6 +92,15 @@ def test_extract_request_error_context_normalizes_blank_method_and_url():
 
     assert method == "UNKNOWN"
     assert url == "unknown URL"
+
+
+def test_extract_request_error_context_strips_method_and_url_whitespace():
+    method, url = extract_request_error_context(
+        _RequestErrorWithWhitespaceContext("network down")
+    )
+
+    assert method == "POST"
+    assert url == "https://example.com/trim"
 
 
 def test_format_request_failure_message_uses_fallback_values():
