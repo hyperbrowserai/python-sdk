@@ -9,6 +9,8 @@ from hyperbrowser.client.polling import (
     poll_until_terminal_status_async,
     retry_operation,
     retry_operation_async,
+    wait_for_job_result,
+    wait_for_job_result_async,
 )
 from hyperbrowser.exceptions import (
     HyperbrowserError,
@@ -253,5 +255,44 @@ def test_collect_paginated_results_async_times_out():
                 max_attempts=2,
                 retry_delay_seconds=0.01,
             )
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_returns_fetched_value():
+    status_values = iter(["running", "completed"])
+
+    result = wait_for_job_result(
+        operation_name="sync wait helper",
+        get_status=lambda: next(status_values),
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=lambda: {"ok": True},
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=2,
+        fetch_max_attempts=2,
+        fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+
+
+def test_wait_for_job_result_async_returns_fetched_value():
+    async def run() -> None:
+        status_values = iter(["running", "completed"])
+
+        result = await wait_for_job_result_async(
+            operation_name="async wait helper",
+            get_status=lambda: asyncio.sleep(0, result=next(status_values)),
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=lambda: asyncio.sleep(0, result={"ok": True}),
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=2,
+            fetch_max_attempts=2,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+        assert result == {"ok": True}
 
     asyncio.run(run())
