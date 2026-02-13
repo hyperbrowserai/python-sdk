@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+from urllib.parse import urlparse
 from typing import Dict, Mapping, Optional
 import os
 
@@ -27,10 +28,14 @@ class ClientConfig:
         self.base_url = self.base_url.strip().rstrip("/")
         if not self.base_url:
             raise HyperbrowserError("base_url must not be empty")
-        if not (
-            self.base_url.startswith("https://") or self.base_url.startswith("http://")
+        parsed_base_url = urlparse(self.base_url)
+        if (
+            parsed_base_url.scheme not in {"https", "http"}
+            or not parsed_base_url.netloc
         ):
-            raise HyperbrowserError("base_url must start with 'https://' or 'http://'")
+            raise HyperbrowserError(
+                "base_url must start with 'https://' or 'http://' and include a host"
+            )
         if self.headers is not None:
             normalized_headers: Dict[str, str] = {}
             for key, value in self.headers.items():

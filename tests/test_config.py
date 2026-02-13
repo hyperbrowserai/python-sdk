@@ -117,6 +117,14 @@ def test_client_config_from_env_rejects_invalid_base_url(monkeypatch):
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_rejects_base_url_without_host(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", "https://")
+
+    with pytest.raises(HyperbrowserError, match="include a host"):
+        ClientConfig.from_env()
+
+
 def test_client_config_normalizes_whitespace_and_trailing_slash():
     config = ClientConfig(api_key="  test-key  ", base_url=" https://example.local/ ")
 
@@ -144,6 +152,9 @@ def test_client_config_rejects_empty_or_invalid_base_url():
 
     with pytest.raises(HyperbrowserError, match="base_url must start with"):
         ClientConfig(api_key="test-key", base_url="api.hyperbrowser.ai")
+
+    with pytest.raises(HyperbrowserError, match="include a host"):
+        ClientConfig(api_key="test-key", base_url="http://")
 
 
 def test_client_config_normalizes_headers_to_internal_copy():
