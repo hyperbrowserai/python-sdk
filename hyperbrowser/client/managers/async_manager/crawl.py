@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ....models.crawl import (
@@ -30,11 +31,12 @@ class CrawlManager:
         return CrawlJobStatusResponse(**response.data)
 
     async def get(
-        self, job_id: str, params: GetCrawlJobParams = GetCrawlJobParams()
+        self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
+        params_obj = params or GetCrawlJobParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return CrawlJobResponse(**response.data)
 

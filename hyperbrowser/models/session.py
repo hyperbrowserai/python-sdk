@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Any, List, Literal, Optional, Union, Dict
-from .computer_action import ComputerActionParams, ComputerActionResponse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -267,7 +266,7 @@ class CreateSessionParams(BaseModel):
     )
     device: Optional[List[Literal["desktop", "mobile"]]] = Field(default=None)
     platform: Optional[List[Platform]] = Field(default=None)
-    locales: List[ISO639_1] = Field(default=["en"])
+    locales: List[ISO639_1] = Field(default_factory=lambda: ["en"])
     screen: Optional[ScreenConfig] = Field(default=None)
     solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
     adblock: bool = Field(default=False, serialization_alias="adblock")

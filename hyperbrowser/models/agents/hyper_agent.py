@@ -106,7 +106,7 @@ class HyperAgentOutput(BaseModel):
     thoughts: Optional[str] = Field(default=None)
     memory: Optional[str] = Field(default=None)
     next_goal: Optional[str] = Field(default=None, alias="nextGoal")
-    actions: List[Dict[str, Any]] = Field(default=[])
+    actions: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class HyperAgentStep(BaseModel):

@@ -13,7 +13,6 @@ from ....models.session import (
     UploadFileResponse,
     SessionEventLogListParams,
     SessionEventLogListResponse,
-    SessionEventLog,
     UpdateSessionProfileParams,
     SessionGetParams,
 )
@@ -26,11 +25,12 @@ class SessionEventLogsManager:
     def list(
         self,
         session_id: str,
-        params: SessionEventLogListParams = SessionEventLogListParams(),
+        params: Optional[SessionEventLogListParams] = None,
     ) -> SessionEventLogListResponse:
+        params_obj = params or SessionEventLogListParams()
         response = self._client.transport.get(
             self._client._build_url(f"/session/{session_id}/event-logs"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionEventLogListResponse(**response.data)
 
@@ -54,11 +54,12 @@ class SessionManager:
         return SessionDetail(**response.data)
 
     def get(
-        self, id: str, params: SessionGetParams = SessionGetParams()
+        self, id: str, params: Optional[SessionGetParams] = None
     ) -> SessionDetail:
+        params_obj = params or SessionGetParams()
         response = self._client.transport.get(
             self._client._build_url(f"/session/{id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionDetail(**response.data)
 
@@ -68,12 +69,11 @@ class SessionManager:
         )
         return BasicResponse(**response.data)
 
-    def list(
-        self, params: SessionListParams = SessionListParams()
-    ) -> SessionListResponse:
+    def list(self, params: Optional[SessionListParams] = None) -> SessionListResponse:
+        params_obj = params or SessionListParams()
         response = self._client.transport.get(
             self._client._build_url("/sessions"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionListResponse(**response.data)
 

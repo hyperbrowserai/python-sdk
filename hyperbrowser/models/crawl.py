@@ -22,10 +22,10 @@ class StartCrawlJobParams(BaseModel):
     follow_links: bool = Field(default=True, serialization_alias="followLinks")
     ignore_sitemap: bool = Field(default=False, serialization_alias="ignoreSitemap")
     exclude_patterns: List[str] = Field(
-        default=[], serialization_alias="excludePatterns"
+        default_factory=list, serialization_alias="excludePatterns"
     )
     include_patterns: List[str] = Field(
-        default=[], serialization_alias="includePatterns"
+        default_factory=list, serialization_alias="includePatterns"
     )
     session_options: Optional[CreateSessionParams] = Field(
         default=None, serialization_alias="sessionOptions"

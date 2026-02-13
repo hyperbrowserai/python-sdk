@@ -31,11 +31,12 @@ class CrawlManager:
         return CrawlJobStatusResponse(**response.data)
 
     def get(
-        self, job_id: str, params: GetCrawlJobParams = GetCrawlJobParams()
+        self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
+        params_obj = params or GetCrawlJobParams()
         response = self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return CrawlJobResponse(**response.data)
 

@@ -31,7 +31,7 @@ class SyncTransport(TransportStrategy):
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
-            except:
+            except Exception:
                 message = str(e)
             raise HyperbrowserError(
                 message,

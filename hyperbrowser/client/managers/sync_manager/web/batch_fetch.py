@@ -1,3 +1,5 @@
+from typing import Optional
+
 from hyperbrowser.models import (
     StartBatchFetchJobParams,
     StartBatchFetchJobResponse,
@@ -41,11 +43,12 @@ class BatchFetchManager:
         return BatchFetchJobStatusResponse(**response.data)
 
     def get(
-        self, job_id: str, params: GetBatchFetchJobParams = GetBatchFetchJobParams()
+        self, job_id: str, params: Optional[GetBatchFetchJobParams] = None
     ) -> BatchFetchJobResponse:
+        params_obj = params or GetBatchFetchJobParams()
         response = self._client.transport.get(
             self._client._build_url(f"/web/batch-fetch/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return BatchFetchJobResponse(**response.data)
 

@@ -11,21 +11,19 @@ class ExtensionManager:
 
     def create(self, params: CreateExtensionParams) -> ExtensionResponse:
         file_path = params.file_path
-        params.file_path = None
+        payload = params.model_dump(exclude_none=True, by_alias=True)
+        payload.pop("filePath", None)
 
         # Check if file exists before trying to open it
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Extension file not found at path: {file_path}")
 
-        response = self._client.transport.post(
-            self._client._build_url("/extensions/add"),
-            data=(
-                {}
-                if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
-            ),
-            files={"file": open(file_path, "rb")},
-        )
+        with open(file_path, "rb") as extension_file:
+            response = self._client.transport.post(
+                self._client._build_url("/extensions/add"),
+                data=payload,
+                files={"file": extension_file},
+            )
         return ExtensionResponse(**response.data)
 
     def list(self) -> List[ExtensionResponse]:

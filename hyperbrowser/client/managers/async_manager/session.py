@@ -13,7 +13,6 @@ from ....models.session import (
     UploadFileResponse,
     SessionEventLogListParams,
     SessionEventLogListResponse,
-    SessionEventLog,
     UpdateSessionProfileParams,
     SessionGetParams,
 )
@@ -26,11 +25,12 @@ class SessionEventLogsManager:
     async def list(
         self,
         session_id: str,
-        params: SessionEventLogListParams = SessionEventLogListParams(),
-    ) -> List[SessionEventLog]:
+        params: Optional[SessionEventLogListParams] = None,
+    ) -> SessionEventLogListResponse:
+        params_obj = params or SessionEventLogListParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{session_id}/event-logs"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionEventLogListResponse(**response.data)
 
@@ -54,11 +54,12 @@ class SessionManager:
         return SessionDetail(**response.data)
 
     async def get(
-        self, id: str, params: SessionGetParams = SessionGetParams()
+        self, id: str, params: Optional[SessionGetParams] = None
     ) -> SessionDetail:
+        params_obj = params or SessionGetParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionDetail(**response.data)
 
@@ -69,11 +70,12 @@ class SessionManager:
         return BasicResponse(**response.data)
 
     async def list(
-        self, params: SessionListParams = SessionListParams()
+        self, params: Optional[SessionListParams] = None
     ) -> SessionListResponse:
+        params_obj = params or SessionListParams()
         response = await self._client.transport.get(
             self._client._build_url("/sessions"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return SessionListResponse(**response.data)
 

@@ -35,11 +35,12 @@ class BatchScrapeManager:
         return BatchScrapeJobStatusResponse(**response.data)
 
     def get(
-        self, job_id: str, params: GetBatchScrapeJobParams = GetBatchScrapeJobParams()
+        self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
     ) -> BatchScrapeJobResponse:
+        params_obj = params or GetBatchScrapeJobParams()
         response = self._client.transport.get(
             self._client._build_url(f"/scrape/batch/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return BatchScrapeJobResponse(**response.data)
 

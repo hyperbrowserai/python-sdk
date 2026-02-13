@@ -1,3 +1,5 @@
+from typing import Optional
+
 from hyperbrowser.models import (
     StartWebCrawlJobParams,
     StartWebCrawlJobResponse,
@@ -41,11 +43,12 @@ class WebCrawlManager:
         return WebCrawlJobStatusResponse(**response.data)
 
     async def get(
-        self, job_id: str, params: GetWebCrawlJobParams = GetWebCrawlJobParams()
+        self, job_id: str, params: Optional[GetWebCrawlJobParams] = None
     ) -> WebCrawlJobResponse:
+        params_obj = params or GetWebCrawlJobParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/web/crawl/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return WebCrawlJobResponse(**response.data)
 

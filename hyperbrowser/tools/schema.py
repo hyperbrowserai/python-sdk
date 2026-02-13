@@ -1,9 +1,10 @@
-from typing import Literal, List
+from typing import Literal, List, Optional
 
 scrape_types = Literal["markdown", "screenshot"]
 
 
-def get_scrape_options(formats: List[scrape_types] = ["markdown"]):
+def get_scrape_options(formats: Optional[List[scrape_types]] = None):
+    formats = formats or ["markdown"]
     return {
         "type": "object",
         "description": "The options for the scrape",

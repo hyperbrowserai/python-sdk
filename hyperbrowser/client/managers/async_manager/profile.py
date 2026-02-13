@@ -1,3 +1,5 @@
+from typing import Optional
+
 from hyperbrowser.models.profile import (
     CreateProfileParams,
     CreateProfileResponse,
@@ -36,10 +38,11 @@ class ProfileManager:
         return BasicResponse(**response.data)
 
     async def list(
-        self, params: ProfileListParams = ProfileListParams()
+        self, params: Optional[ProfileListParams] = None
     ) -> ProfileListResponse:
+        params_obj = params or ProfileListParams()
         response = await self._client.transport.get(
             self._client._build_url("/profiles"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=params_obj.model_dump(exclude_none=True, by_alias=True),
         )
         return ProfileListResponse(**response.data)
