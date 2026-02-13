@@ -42,7 +42,12 @@ def _normalize_request_url(url: Any) -> str:
     if isinstance(url, bool):
         return "unknown URL"
     raw_url = url
-    if not isinstance(raw_url, str):
+    if isinstance(raw_url, (bytes, bytearray, memoryview)):
+        try:
+            raw_url = memoryview(raw_url).tobytes().decode("utf-8")
+        except (TypeError, ValueError, UnicodeDecodeError):
+            return "unknown URL"
+    elif not isinstance(raw_url, str):
         try:
             raw_url = str(raw_url)
         except Exception:

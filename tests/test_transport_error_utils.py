@@ -316,6 +316,26 @@ def test_format_request_failure_message_supports_url_like_fallback_values():
     assert message == "Request GET https://example.com/fallback failed"
 
 
+def test_format_request_failure_message_supports_utf8_bytes_fallback_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="GET",
+        fallback_url=b"https://example.com/bytes",
+    )
+
+    assert message == "Request GET https://example.com/bytes failed"
+
+
+def test_format_request_failure_message_normalizes_invalid_bytes_fallback_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="GET",
+        fallback_url=b"\xff\xfe\xfd",
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
 def test_format_generic_request_failure_message_normalizes_invalid_url_objects():
     message = format_generic_request_failure_message(
         method="GET",
@@ -388,6 +408,15 @@ def test_format_generic_request_failure_message_supports_url_like_values():
     )
 
     assert message == "Request GET https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_supports_utf8_memoryview_urls():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=memoryview(b"https://example.com/memoryview"),
+    )
+
+    assert message == "Request GET https://example.com/memoryview failed"
 
 
 def test_format_generic_request_failure_message_normalizes_invalid_method_values():
