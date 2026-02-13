@@ -948,6 +948,124 @@ def test_async_scrape_tool_wraps_mapping_response_data_keyerrors():
     asyncio.run(run())
 
 
+def test_async_scrape_tool_wraps_mapping_response_data_read_failures():
+    class _BrokenResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "data"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read response data")
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_BrokenResponse())  # type: ignore[arg-type]
+        with pytest.raises(
+            HyperbrowserError, match="Failed to read scrape tool response data"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
+def test_async_scrape_tool_wraps_mapping_response_data_inspection_failures():
+    class _BrokenContainsResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect response")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return {"markdown": "ok"}
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_BrokenContainsResponse())  # type: ignore[arg-type]
+        with pytest.raises(
+            HyperbrowserError, match="Failed to inspect scrape tool response data field"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
+def test_async_scrape_tool_preserves_hyperbrowser_mapping_data_inspection_failures():
+    class _BrokenContainsResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise HyperbrowserError("custom contains failure")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return {"markdown": "ok"}
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_BrokenContainsResponse())  # type: ignore[arg-type]
+        with pytest.raises(
+            HyperbrowserError, match="custom contains failure"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
+def test_async_scrape_tool_preserves_hyperbrowser_mapping_data_read_failures():
+    class _BrokenResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "data"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise HyperbrowserError("custom data read failure")
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_BrokenResponse())  # type: ignore[arg-type]
+        with pytest.raises(
+            HyperbrowserError, match="custom data read failure"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
 def test_async_crawl_tool_rejects_non_list_response_data():
     async def run() -> None:
         client = _AsyncCrawlClient(_Response(data={"invalid": "payload"}))
