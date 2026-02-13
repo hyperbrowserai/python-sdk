@@ -40,7 +40,7 @@ unsafe traversal segments, backslashes, and whitespace/control characters.
 
 You can also pass custom headers (for tracing/correlation) either via
 `ClientConfig` or directly to the client constructor.
-Header keys/values must be strings; header names are trimmed and newline characters are rejected.
+Header keys/values must be strings; header names are trimmed and control characters are rejected.
 Duplicate header names are rejected after normalization (case-insensitive), e.g.
 `"X-Trace"` with `"  X-Trace  "` or `"x-trace"`.
 
