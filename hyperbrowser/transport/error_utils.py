@@ -15,6 +15,8 @@ _INVALID_URL_SENTINELS = {
     "none",
     "null",
     "undefined",
+    "true",
+    "false",
     "nan",
     "inf",
     "+inf",
