@@ -17,6 +17,7 @@ from hyperbrowser.exceptions import (
 
 T = TypeVar("T")
 _MAX_OPERATION_NAME_LENGTH = 200
+_FETCH_OPERATION_NAME_PREFIX = "Fetching "
 _CLIENT_ERROR_STATUS_MIN = 400
 _CLIENT_ERROR_STATUS_MAX = 500
 _RETRYABLE_CLIENT_ERROR_STATUS_CODES = {408, 429}
@@ -63,6 +64,13 @@ def _validate_operation_name(operation_name: str) -> None:
         ord(character) < 32 or ord(character) == 127 for character in operation_name
     ):
         raise HyperbrowserError("operation_name must not contain control characters")
+
+
+def _build_fetch_operation_name(operation_name: str) -> str:
+    prefixed_operation_name = f"{_FETCH_OPERATION_NAME_PREFIX}{operation_name}"
+    if len(prefixed_operation_name) <= _MAX_OPERATION_NAME_LENGTH:
+        return prefixed_operation_name
+    return operation_name
 
 
 def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> bool:
@@ -792,8 +800,9 @@ def wait_for_job_result(
         max_wait_seconds=max_wait_seconds,
         max_status_failures=max_status_failures,
     )
+    fetch_operation_name = _build_fetch_operation_name(operation_name)
     return retry_operation(
-        operation_name=f"Fetching {operation_name}",
+        operation_name=fetch_operation_name,
         operation=fetch_result,
         max_attempts=fetch_max_attempts,
         retry_delay_seconds=fetch_retry_delay_seconds,
@@ -828,8 +837,9 @@ async def wait_for_job_result_async(
         max_wait_seconds=max_wait_seconds,
         max_status_failures=max_status_failures,
     )
+    fetch_operation_name = _build_fetch_operation_name(operation_name)
     return await retry_operation_async(
-        operation_name=f"Fetching {operation_name}",
+        operation_name=fetch_operation_name,
         operation=fetch_result,
         max_attempts=fetch_max_attempts,
         retry_delay_seconds=fetch_retry_delay_seconds,

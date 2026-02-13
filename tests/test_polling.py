@@ -4031,6 +4031,31 @@ def test_wait_for_job_result_accepts_fraction_timing_values():
     assert result == {"ok": True}
 
 
+def test_wait_for_job_result_allows_max_length_operation_name():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        if fetch_attempts["count"] < 2:
+            raise ValueError("temporary fetch failure")
+        return {"ok": True}
+
+    result = wait_for_job_result(
+        operation_name="x" * 200,
+        get_status=lambda: "completed",
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=fetch_result,
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=2,
+        fetch_max_attempts=2,
+        fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+    assert fetch_attempts["count"] == 2
+
+
 def test_wait_for_job_result_status_polling_failures_short_circuit_fetch():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -5013,6 +5038,34 @@ def test_wait_for_job_result_async_returns_fetched_value():
         )
 
         assert result == {"ok": True}
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_allows_max_length_operation_name():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            if fetch_attempts["count"] < 2:
+                raise ValueError("temporary fetch failure")
+            return {"ok": True}
+
+        result = await wait_for_job_result_async(
+            operation_name="x" * 200,
+            get_status=lambda: asyncio.sleep(0, result="completed"),
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=2,
+            fetch_max_attempts=2,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+        assert result == {"ok": True}
+        assert fetch_attempts["count"] == 2
 
     asyncio.run(run())
 
