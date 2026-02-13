@@ -198,10 +198,13 @@ def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
             raise HyperbrowserError(f"{tool_name} response must include 'data'")
         try:
             return response["data"]
-        except KeyError:
-            raise HyperbrowserError(f"{tool_name} response must include 'data'")
         except HyperbrowserError:
             raise
+        except KeyError as exc:
+            raise HyperbrowserError(
+                f"Failed to read {tool_name} response data",
+                original_error=exc,
+            ) from exc
         except Exception as exc:
             raise HyperbrowserError(
                 f"Failed to read {tool_name} response data",
@@ -230,11 +233,25 @@ def _read_optional_tool_response_field(
         return ""
     if isinstance(response_data, MappingABC):
         try:
-            field_value = response_data[field_name]
-        except KeyError:
-            return ""
+            has_field = field_name in response_data
         except HyperbrowserError:
             raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to inspect {tool_name} response field '{field_name}'",
+                original_error=exc,
+            ) from exc
+        if not has_field:
+            return ""
+        try:
+            field_value = response_data[field_name]
+        except HyperbrowserError:
+            raise
+        except KeyError as exc:
+            raise HyperbrowserError(
+                f"Failed to read {tool_name} response field '{field_name}'",
+                original_error=exc,
+            ) from exc
         except Exception as exc:
             raise HyperbrowserError(
                 f"Failed to read {tool_name} response field '{field_name}'",
@@ -265,11 +282,25 @@ def _read_optional_tool_response_field(
 def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> Any:
     if isinstance(page, MappingABC):
         try:
-            return page[field_name]
-        except KeyError:
-            return None
+            has_field = field_name in page
         except HyperbrowserError:
             raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to inspect crawl tool page field '{field_name}' at index {page_index}",
+                original_error=exc,
+            ) from exc
+        if not has_field:
+            return None
+        try:
+            return page[field_name]
+        except HyperbrowserError:
+            raise
+        except KeyError as exc:
+            raise HyperbrowserError(
+                f"Failed to read crawl tool page field '{field_name}' at index {page_index}",
+                original_error=exc,
+            ) from exc
         except Exception as exc:
             raise HyperbrowserError(
                 f"Failed to read crawl tool page field '{field_name}' at index {page_index}",

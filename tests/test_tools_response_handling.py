@@ -169,7 +169,7 @@ def test_scrape_tool_wraps_mapping_response_data_read_failures():
     assert exc_info.value.original_error is not None
 
 
-def test_scrape_tool_rejects_mapping_responses_missing_data_on_lookup():
+def test_scrape_tool_wraps_mapping_responses_keyerrors_on_data_lookup():
     class _InconsistentResponse(Mapping[str, object]):
         def __iter__(self):
             yield "data"
@@ -187,9 +187,11 @@ def test_scrape_tool_rejects_mapping_responses_missing_data_on_lookup():
     client = _SyncScrapeClient(_InconsistentResponse())  # type: ignore[arg-type]
 
     with pytest.raises(
-        HyperbrowserError, match="scrape tool response must include 'data'"
-    ):
+        HyperbrowserError, match="Failed to read scrape tool response data"
+    ) as exc_info:
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
 
 
 def test_scrape_tool_wraps_mapping_response_data_inspection_failures():
@@ -343,6 +345,9 @@ def test_scrape_tool_wraps_mapping_field_read_failures():
         def __len__(self) -> int:
             return 1
 
+        def __contains__(self, key: object) -> bool:
+            return key == "markdown"
+
         def __getitem__(self, key: str) -> object:
             _ = key
             raise RuntimeError("cannot read mapping field")
@@ -352,6 +357,59 @@ def test_scrape_tool_wraps_mapping_field_read_failures():
     with pytest.raises(
         HyperbrowserError,
         match="Failed to read scrape tool response field 'markdown'",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_scrape_tool_wraps_mapping_field_keyerrors_after_membership_check():
+    class _InconsistentMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "markdown"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise KeyError("markdown")
+
+    client = _SyncScrapeClient(_Response(data=_InconsistentMapping()))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read scrape tool response field 'markdown'",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_scrape_tool_wraps_mapping_field_inspection_failures():
+    class _BrokenContainsMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect markdown key")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    client = _SyncScrapeClient(_Response(data=_BrokenContainsMapping()))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to inspect scrape tool response field 'markdown'",
     ) as exc_info:
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
@@ -454,6 +512,9 @@ def test_crawl_tool_wraps_mapping_page_value_read_failures():
         def __len__(self) -> int:
             return 1
 
+        def __contains__(self, key: object) -> bool:
+            return key == "markdown"
+
         def __getitem__(self, key: str) -> object:
             _ = key
             raise RuntimeError("cannot read page field")
@@ -463,6 +524,59 @@ def test_crawl_tool_wraps_mapping_page_value_read_failures():
     with pytest.raises(
         HyperbrowserError,
         match="Failed to read crawl tool page field 'markdown' at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_crawl_tool_wraps_mapping_page_keyerrors_after_membership_check():
+    class _InconsistentPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "markdown"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise KeyError("markdown")
+
+    client = _SyncCrawlClient(_Response(data=[_InconsistentPage()]))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read crawl tool page field 'markdown' at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_crawl_tool_wraps_mapping_page_inspection_failures():
+    class _BrokenContainsPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect markdown key")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    client = _SyncCrawlClient(_Response(data=[_BrokenContainsPage()]))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to inspect crawl tool page field 'markdown' at index 0",
     ) as exc_info:
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
