@@ -140,3 +140,63 @@ def test_async_handle_response_with_detail_field_uses_detail_value():
             await transport.close()
 
     asyncio.run(run())
+
+
+def test_sync_transport_post_wraps_request_errors_with_url_context():
+    transport = SyncTransport(api_key="test-key")
+    original_post = transport.client.post
+
+    def failing_post(*args, **kwargs):
+        request = httpx.Request("POST", "https://example.com/post")
+        raise httpx.RequestError("network down", request=request)
+
+    transport.client.post = failing_post  # type: ignore[assignment]
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="POST request to https://example.com/post failed"
+        ):
+            transport.post("https://example.com/post", data={"ok": True})
+    finally:
+        transport.client.post = original_post  # type: ignore[assignment]
+        transport.close()
+
+
+def test_sync_transport_post_wraps_unexpected_errors_with_url_context():
+    transport = SyncTransport(api_key="test-key")
+    original_post = transport.client.post
+
+    def failing_post(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    transport.client.post = failing_post  # type: ignore[assignment]
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="POST request to https://example.com/post failed"
+        ):
+            transport.post("https://example.com/post", data={"ok": True})
+    finally:
+        transport.client.post = original_post  # type: ignore[assignment]
+        transport.close()
+
+
+def test_async_transport_get_wraps_request_errors_with_url_context():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        original_get = transport.client.get
+
+        async def failing_get(*args, **kwargs):
+            request = httpx.Request("GET", "https://example.com/get")
+            raise httpx.RequestError("network down", request=request)
+
+        transport.client.get = failing_get  # type: ignore[assignment]
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="GET request to https://example.com/get failed",
+            ):
+                await transport.get("https://example.com/get")
+        finally:
+            transport.client.get = original_get  # type: ignore[assignment]
+            await transport.close()
+
+    asyncio.run(run())

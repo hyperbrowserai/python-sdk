@@ -55,7 +55,10 @@ class SyncTransport(SyncTransportStrategy):
                 original_error=e,
             )
         except httpx.RequestError as e:
-            raise HyperbrowserError("Request failed", original_error=e)
+            request_url = str(e.request.url) if e.request else "unknown URL"
+            raise HyperbrowserError(
+                f"Request failed for {request_url}", original_error=e
+            )
 
     def close(self) -> None:
         self.client.close()
@@ -69,10 +72,16 @@ class SyncTransport(SyncTransportStrategy):
             else:
                 response = self.client.post(url, json=data)
             return self._handle_response(response)
+        except httpx.RequestError as e:
+            raise HyperbrowserError(
+                f"POST request to {url} failed", original_error=e
+            ) from e
         except HyperbrowserError:
             raise
         except Exception as e:
-            raise HyperbrowserError("Post request failed", original_error=e)
+            raise HyperbrowserError(
+                f"POST request to {url} failed", original_error=e
+            ) from e
 
     def get(
         self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
@@ -84,25 +93,43 @@ class SyncTransport(SyncTransportStrategy):
                 url, params=params, follow_redirects=follow_redirects
             )
             return self._handle_response(response)
+        except httpx.RequestError as e:
+            raise HyperbrowserError(
+                f"GET request to {url} failed", original_error=e
+            ) from e
         except HyperbrowserError:
             raise
         except Exception as e:
-            raise HyperbrowserError("Get request failed", original_error=e)
+            raise HyperbrowserError(
+                f"GET request to {url} failed", original_error=e
+            ) from e
 
     def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
         try:
             response = self.client.put(url, json=data)
             return self._handle_response(response)
+        except httpx.RequestError as e:
+            raise HyperbrowserError(
+                f"PUT request to {url} failed", original_error=e
+            ) from e
         except HyperbrowserError:
             raise
         except Exception as e:
-            raise HyperbrowserError("Put request failed", original_error=e)
+            raise HyperbrowserError(
+                f"PUT request to {url} failed", original_error=e
+            ) from e
 
     def delete(self, url: str) -> APIResponse:
         try:
             response = self.client.delete(url)
             return self._handle_response(response)
+        except httpx.RequestError as e:
+            raise HyperbrowserError(
+                f"DELETE request to {url} failed", original_error=e
+            ) from e
         except HyperbrowserError:
             raise
         except Exception as e:
-            raise HyperbrowserError("Delete request failed", original_error=e)
+            raise HyperbrowserError(
+                f"DELETE request to {url} failed", original_error=e
+            ) from e
