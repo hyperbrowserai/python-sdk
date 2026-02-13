@@ -26,9 +26,15 @@ _INVALID_URL_SENTINELS = {
 
 
 def _normalize_request_method(method: Any) -> str:
-    if not isinstance(method, str) or not method.strip():
+    raw_method = method
+    if isinstance(raw_method, (bytes, bytearray, memoryview)):
+        try:
+            raw_method = memoryview(raw_method).tobytes().decode("ascii")
+        except (TypeError, ValueError, UnicodeDecodeError):
+            return "UNKNOWN"
+    if not isinstance(raw_method, str) or not raw_method.strip():
         return "UNKNOWN"
-    normalized_method = method.strip().upper()
+    normalized_method = raw_method.strip().upper()
     if len(normalized_method) > _MAX_REQUEST_METHOD_LENGTH:
         return "UNKNOWN"
     if not _HTTP_METHOD_TOKEN_PATTERN.fullmatch(normalized_method):

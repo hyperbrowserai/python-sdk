@@ -246,6 +246,26 @@ def test_format_request_failure_message_normalizes_non_string_fallback_values():
     assert message == "Request UNKNOWN unknown URL failed"
 
 
+def test_format_request_failure_message_supports_ascii_bytes_method_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method=b"post",
+        fallback_url="https://example.com/fallback",
+    )
+
+    assert message == "Request POST https://example.com/fallback failed"
+
+
+def test_format_request_failure_message_normalizes_invalid_bytes_method_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method=b"\xff\xfe",
+        fallback_url="https://example.com/fallback",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/fallback failed"
+
+
 def test_format_request_failure_message_normalizes_numeric_fallback_url_values():
     message = format_request_failure_message(
         httpx.RequestError("network down"),
@@ -435,6 +455,15 @@ def test_format_generic_request_failure_message_normalizes_non_string_method_val
     )
 
     assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_supports_memoryview_method_values():
+    message = format_generic_request_failure_message(
+        method=memoryview(b"patch"),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request PATCH https://example.com/path failed"
 
 
 def test_format_request_failure_message_truncates_very_long_fallback_urls():
