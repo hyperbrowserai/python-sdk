@@ -34,6 +34,26 @@ def test_sync_client_rejects_blank_env_api_key(monkeypatch):
         Hyperbrowser()
 
 
+def test_sync_client_rejects_blank_env_base_url(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", "   ")
+
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_BASE_URL must not be empty"
+    ):
+        Hyperbrowser()
+
+
+def test_async_client_rejects_blank_env_base_url(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", "   ")
+
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_BASE_URL must not be empty"
+    ):
+        AsyncHyperbrowser()
+
+
 def test_sync_client_rejects_non_string_api_key():
     with pytest.raises(HyperbrowserError, match="api_key must be a string"):
         Hyperbrowser(api_key=123)  # type: ignore[arg-type]
