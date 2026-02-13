@@ -233,3 +233,18 @@ def test_api_response_from_json_preserves_hyperbrowser_errors() -> None:
         APIResponse.from_json({}, _RaisesHyperbrowserModel)
 
     assert exc_info.value.original_error is None
+
+
+def test_api_response_constructor_rejects_non_integer_status_code() -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
+        APIResponse(status_code="200")  # type: ignore[arg-type]
+
+
+def test_api_response_constructor_rejects_boolean_status_code() -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
+        APIResponse(status_code=True)
+
+
+def test_api_response_from_status_rejects_boolean_status_code() -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
+        APIResponse.from_status(True)  # type: ignore[arg-type]

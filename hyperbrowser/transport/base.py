@@ -55,6 +55,8 @@ class APIResponse(Generic[T]):
     """
 
     def __init__(self, data: Optional[Union[dict, T]] = None, status_code: int = 200):
+        if isinstance(status_code, bool) or not isinstance(status_code, int):
+            raise HyperbrowserError("status_code must be an integer")
         self.data = data
         self.status_code = status_code
 
