@@ -390,6 +390,40 @@ def test_collect_paginated_results_rejects_awaitable_on_page_success_result():
     assert callback_attempts["count"] == 1
 
 
+def test_collect_paginated_results_rejects_awaitable_current_page_callback_result():
+    with pytest.raises(
+        HyperbrowserError,
+        match="get_current_page_batch must return a non-awaitable result",
+    ):
+        collect_paginated_results(
+            operation_name="sync paginated awaitable current page callback",
+            get_next_page=lambda page: {"current": 1, "total": 1, "items": []},
+            get_current_page_batch=lambda response: asyncio.sleep(0),  # type: ignore[return-value]
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+
+def test_collect_paginated_results_rejects_awaitable_total_pages_callback_result():
+    with pytest.raises(
+        HyperbrowserError,
+        match="get_total_page_batches must return a non-awaitable result",
+    ):
+        collect_paginated_results(
+            operation_name="sync paginated awaitable total pages callback",
+            get_next_page=lambda page: {"current": 1, "total": 1, "items": []},
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: asyncio.sleep(0),  # type: ignore[return-value]
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+
 def test_collect_paginated_results_allows_single_page_on_zero_max_wait():
     collected = []
 
@@ -482,6 +516,50 @@ def test_collect_paginated_results_async_rejects_awaitable_on_page_success_resul
                 retry_delay_seconds=0.0001,
             )
         assert callback_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_rejects_awaitable_current_page_callback_result():
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError,
+            match="get_current_page_batch must return a non-awaitable result",
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated awaitable current page callback",
+                get_next_page=lambda page: asyncio.sleep(
+                    0, result={"current": 1, "total": 1, "items": []}
+                ),
+                get_current_page_batch=lambda response: asyncio.sleep(0),  # type: ignore[return-value]
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_rejects_awaitable_total_pages_callback_result():
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError,
+            match="get_total_page_batches must return a non-awaitable result",
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated awaitable total pages callback",
+                get_next_page=lambda page: asyncio.sleep(
+                    0, result={"current": 1, "total": 1, "items": []}
+                ),
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: asyncio.sleep(0),  # type: ignore[return-value]
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
 
     asyncio.run(run())
 

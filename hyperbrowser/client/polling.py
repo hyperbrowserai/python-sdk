@@ -397,7 +397,17 @@ def collect_paginated_results(
                 operation_name=operation_name,
             )
             current_page_batch = get_current_page_batch(page_response)
+            _ensure_non_awaitable(
+                current_page_batch,
+                callback_name="get_current_page_batch",
+                operation_name=operation_name,
+            )
             total_page_batches = get_total_page_batches(page_response)
+            _ensure_non_awaitable(
+                total_page_batches,
+                callback_name="get_total_page_batches",
+                operation_name=operation_name,
+            )
             _validate_page_batch_values(
                 operation_name=operation_name,
                 current_page_batch=current_page_batch,
@@ -477,7 +487,17 @@ async def collect_paginated_results_async(
                 operation_name=operation_name,
             )
             current_page_batch = get_current_page_batch(page_response)
+            _ensure_non_awaitable(
+                current_page_batch,
+                callback_name="get_current_page_batch",
+                operation_name=operation_name,
+            )
             total_page_batches = get_total_page_batches(page_response)
+            _ensure_non_awaitable(
+                total_page_batches,
+                callback_name="get_total_page_batches",
+                operation_name=operation_name,
+            )
             _validate_page_batch_values(
                 operation_name=operation_name,
                 current_page_batch=current_page_batch,
