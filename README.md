@@ -191,6 +191,7 @@ Input and output normalization guarantees:
 - Tool response objects must expose a `data` field (attribute-based or mapping-based response wrappers are supported).
 - Text output fields support UTF-8 bytes-like values (`bytes`, `bytearray`, `memoryview`) and decode them to strings.
 - Invalid UTF-8 text payloads raise deterministic `HyperbrowserError` diagnostics.
+- Extract tool output serialization enforces strict JSON (for example, non-standard values like `NaN`/`Infinity` are rejected).
 
 ## Error handling
 
