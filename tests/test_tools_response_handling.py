@@ -84,7 +84,9 @@ class _SyncBrowserUseClient:
 
 
 def test_scrape_tool_wraps_response_data_read_failures():
-    client = _SyncScrapeClient(_Response(data_error=RuntimeError("broken response data")))
+    client = _SyncScrapeClient(
+        _Response(data_error=RuntimeError("broken response data"))
+    )
 
     with pytest.raises(
         HyperbrowserError, match="Failed to read scrape tool response data"
@@ -111,7 +113,8 @@ def test_scrape_tool_rejects_non_string_markdown_field():
     client = _SyncScrapeClient(_Response(data=SimpleNamespace(markdown=123)))
 
     with pytest.raises(
-        HyperbrowserError, match="scrape tool response field 'markdown' must be a string"
+        HyperbrowserError,
+        match="scrape tool response field 'markdown' must be a string",
     ):
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
@@ -129,7 +132,9 @@ def test_screenshot_tool_rejects_non_string_screenshot_field():
 def test_crawl_tool_rejects_non_list_response_data():
     client = _SyncCrawlClient(_Response(data={"invalid": "payload"}))
 
-    with pytest.raises(HyperbrowserError, match="crawl tool response data must be a list"):
+    with pytest.raises(
+        HyperbrowserError, match="crawl tool response data must be a list"
+    ):
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
 
@@ -151,7 +156,9 @@ def test_crawl_tool_wraps_page_field_read_failures():
 
 
 def test_crawl_tool_rejects_non_string_page_urls():
-    client = _SyncCrawlClient(_Response(data=[SimpleNamespace(url=42, markdown="body")]))
+    client = _SyncCrawlClient(
+        _Response(data=[SimpleNamespace(url=42, markdown="body")])
+    )
 
     with pytest.raises(
         HyperbrowserError,
