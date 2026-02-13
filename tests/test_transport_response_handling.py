@@ -21,6 +21,11 @@ class _RequestErrorResponse:
         raise httpx.RequestError("network down", request=self._request)
 
 
+class _RequestErrorNoRequestResponse:
+    def raise_for_status(self) -> None:
+        raise httpx.RequestError("network down")
+
+
 def test_sync_handle_response_with_non_json_success_body_returns_status_only():
     transport = SyncTransport(api_key="test-key")
     try:
@@ -75,6 +80,31 @@ def test_async_handle_response_with_request_error_includes_method_and_url():
                 await transport._handle_response(
                     _RequestErrorResponse("POST", "https://example.com/network")
                 )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_sync_handle_response_with_request_error_without_request_context():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Request UNKNOWN unknown URL failed"
+        ):
+            transport._handle_response(_RequestErrorNoRequestResponse())
+    finally:
+        transport.close()
+
+
+def test_async_handle_response_with_request_error_without_request_context():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Request UNKNOWN unknown URL failed"
+            ):
+                await transport._handle_response(_RequestErrorNoRequestResponse())
         finally:
             await transport.close()
 

@@ -6,7 +6,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.header_utils import normalize_headers
 from hyperbrowser.version import __version__
 from .base import APIResponse, AsyncTransportStrategy
-from .error_utils import extract_error_message
+from .error_utils import extract_error_message, extract_request_error_context
 
 
 class AsyncTransport(AsyncTransportStrategy):
@@ -67,8 +67,7 @@ class AsyncTransport(AsyncTransportStrategy):
                 original_error=e,
             )
         except httpx.RequestError as e:
-            request_method = e.request.method if e.request is not None else "UNKNOWN"
-            request_url = str(e.request.url) if e.request is not None else "unknown URL"
+            request_method, request_url = extract_request_error_context(e)
             raise HyperbrowserError(
                 f"Request {request_method} {request_url} failed", original_error=e
             )
