@@ -121,7 +121,7 @@ Both clients expose:
 - `client.team`
 - `client.computer_action`
 
-For file uploads (session uploads, extension uploads), provided paths must reference existing files (not directories), must not contain control characters, and must not include leading/trailing whitespace.
+For file uploads (session uploads, extension uploads), provided paths must reference existing files (not directories), must not contain control characters, and must not include leading/trailing whitespace. File-like upload objects must expose a callable `read()` and remain open.
 
 ## Job polling (`start_and_wait`)
 
