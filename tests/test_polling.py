@@ -1,6 +1,7 @@
 import asyncio
-from concurrent.futures import CancelledError as ConcurrentCancelledError
 from concurrent.futures import BrokenExecutor as ConcurrentBrokenExecutor
+from concurrent.futures import CancelledError as ConcurrentCancelledError
+from concurrent.futures import InvalidStateError as ConcurrentInvalidStateError
 import math
 from fractions import Fraction
 
@@ -277,6 +278,26 @@ def test_poll_until_terminal_status_does_not_retry_broken_executor_errors():
     with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
         poll_until_terminal_status(
             operation_name="sync poll broken-executor passthrough",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
+def test_poll_until_terminal_status_does_not_retry_invalid_state_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise asyncio.InvalidStateError("invalid async state")
+
+    with pytest.raises(asyncio.InvalidStateError, match="invalid async state"):
+        poll_until_terminal_status(
+            operation_name="sync poll invalid-state passthrough",
             get_status=get_status,
             is_terminal_status=lambda value: value == "completed",
             poll_interval_seconds=0.0001,
@@ -754,6 +775,24 @@ def test_retry_operation_does_not_retry_broken_executor_errors():
     assert attempts["count"] == 1
 
 
+def test_retry_operation_does_not_retry_invalid_state_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise ConcurrentInvalidStateError("invalid executor state")
+
+    with pytest.raises(ConcurrentInvalidStateError, match="invalid executor state"):
+        retry_operation(
+            operation_name="sync retry invalid-state passthrough",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_retry_operation_retries_server_errors():
     attempts = {"count": 0}
 
@@ -1158,6 +1197,29 @@ def test_poll_until_terminal_status_async_does_not_retry_broken_executor_errors(
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_does_not_retry_invalid_state_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise asyncio.InvalidStateError("invalid async state")
+
+        with pytest.raises(asyncio.InvalidStateError, match="invalid async state"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll invalid-state passthrough",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_async_retries_server_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -1392,6 +1454,27 @@ def test_retry_operation_async_does_not_retry_broken_executor_errors():
         with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
             await retry_operation_async(
                 operation_name="async retry broken-executor passthrough",
+                operation=operation,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_does_not_retry_invalid_state_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            raise ConcurrentInvalidStateError("invalid executor state")
+
+        with pytest.raises(ConcurrentInvalidStateError, match="invalid executor state"):
+            await retry_operation_async(
+                operation_name="async retry invalid-state passthrough",
                 operation=operation,
                 max_attempts=5,
                 retry_delay_seconds=0.0001,
@@ -2519,6 +2602,28 @@ def test_collect_paginated_results_does_not_retry_broken_executor_errors():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_does_not_retry_invalid_state_errors():
+    attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        raise asyncio.InvalidStateError("invalid async state")
+
+    with pytest.raises(asyncio.InvalidStateError, match="invalid async state"):
+        collect_paginated_results(
+            operation_name="sync paginated invalid-state passthrough",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_collect_paginated_results_does_not_retry_executor_shutdown_runtime_errors():
     attempts = {"count": 0}
 
@@ -2934,6 +3039,31 @@ def test_collect_paginated_results_async_does_not_retry_broken_executor_errors()
     asyncio.run(run())
 
 
+def test_collect_paginated_results_async_does_not_retry_invalid_state_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            raise ConcurrentInvalidStateError("invalid executor state")
+
+        with pytest.raises(ConcurrentInvalidStateError, match="invalid executor state"):
+            await collect_paginated_results_async(
+                operation_name="async paginated invalid-state passthrough",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_collect_paginated_results_async_does_not_retry_executor_shutdown_runtime_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -3209,6 +3339,35 @@ def test_wait_for_job_result_does_not_retry_broken_executor_status_errors():
     assert fetch_attempts["count"] == 0
 
 
+def test_wait_for_job_result_does_not_retry_invalid_state_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        raise asyncio.InvalidStateError("invalid async state")
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(asyncio.InvalidStateError, match="invalid async state"):
+        wait_for_job_result(
+            operation_name="sync wait helper status invalid-state",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
 def test_wait_for_job_result_does_not_retry_executor_shutdown_status_errors():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -3459,6 +3618,29 @@ def test_wait_for_job_result_does_not_retry_broken_executor_fetch_errors():
     with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
         wait_for_job_result(
             operation_name="sync wait helper fetch broken-executor",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_does_not_retry_invalid_state_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise ConcurrentInvalidStateError("invalid executor state")
+
+    with pytest.raises(ConcurrentInvalidStateError, match="invalid executor state"):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch invalid-state",
             get_status=lambda: "completed",
             is_terminal_status=lambda value: value == "completed",
             fetch_result=fetch_result,
@@ -3819,6 +4001,38 @@ def test_wait_for_job_result_async_does_not_retry_broken_executor_status_errors(
     asyncio.run(run())
 
 
+def test_wait_for_job_result_async_does_not_retry_invalid_state_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            raise ConcurrentInvalidStateError("invalid executor state")
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(ConcurrentInvalidStateError, match="invalid executor state"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper status invalid-state",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
 def test_wait_for_job_result_async_does_not_retry_executor_shutdown_status_errors():
     async def run() -> None:
         status_attempts = {"count": 0}
@@ -4091,6 +4305,32 @@ def test_wait_for_job_result_async_does_not_retry_broken_executor_fetch_errors()
         with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
             await wait_for_job_result_async(
                 operation_name="async wait helper fetch broken-executor",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_invalid_state_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise asyncio.InvalidStateError("invalid async state")
+
+        with pytest.raises(asyncio.InvalidStateError, match="invalid async state"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch invalid-state",
                 get_status=lambda: asyncio.sleep(0, result="completed"),
                 is_terminal_status=lambda value: value == "completed",
                 fetch_result=fetch_result,

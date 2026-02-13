@@ -1,6 +1,7 @@
 import asyncio
-from concurrent.futures import CancelledError as ConcurrentCancelledError
 from concurrent.futures import BrokenExecutor as ConcurrentBrokenExecutor
+from concurrent.futures import CancelledError as ConcurrentCancelledError
+from concurrent.futures import InvalidStateError as ConcurrentInvalidStateError
 import inspect
 import math
 from numbers import Real
@@ -205,6 +206,8 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
 
 def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, ConcurrentBrokenExecutor):
+        return False
+    if isinstance(exc, (asyncio.InvalidStateError, ConcurrentInvalidStateError)):
         return False
     if isinstance(exc, (StopIteration, StopAsyncIteration)):
         return False
