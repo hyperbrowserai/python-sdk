@@ -214,6 +214,13 @@ def test_sync_extension_list_raises_for_invalid_payload_shape():
         manager.list()
 
 
+def test_sync_extension_create_rejects_invalid_params_type():
+    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
+
+    with pytest.raises(HyperbrowserError, match="params must be CreateExtensionParams"):
+        manager.create({"name": "bad", "filePath": "/tmp/ext.zip"})  # type: ignore[arg-type]
+
+
 def test_async_extension_list_raises_for_invalid_payload_shape():
     class _InvalidAsyncTransport:
         async def get(self, url, params=None, follow_redirects=False):
@@ -226,5 +233,19 @@ def test_async_extension_list_raises_for_invalid_payload_shape():
             HyperbrowserError, match="Expected list in 'extensions' key"
         ):
             await manager.list()
+
+    asyncio.run(run())
+
+
+def test_async_extension_create_rejects_invalid_params_type():
+    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="params must be CreateExtensionParams"
+        ):
+            await manager.create(
+                {"name": "bad", "filePath": "/tmp/ext.zip"}  # type: ignore[arg-type]
+            )
 
     asyncio.run(run())
