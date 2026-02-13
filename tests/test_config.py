@@ -531,7 +531,9 @@ def test_client_config_normalize_base_url_wraps_hostname_access_errors(
 
     monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
 
-    with pytest.raises(HyperbrowserError, match="Failed to parse base_url host") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="Failed to parse base_url host"
+    ) as exc_info:
         ClientConfig.normalize_base_url("https://example.local")
 
     assert exc_info.value.original_error is not None
