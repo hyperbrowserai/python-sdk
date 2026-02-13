@@ -73,6 +73,10 @@ class HyperbrowserBase:
         if not isinstance(path, str):
             raise HyperbrowserError("path must be a string")
         stripped_path = path.strip()
+        if stripped_path != path:
+            raise HyperbrowserError(
+                "path must not contain leading or trailing whitespace"
+            )
         if not stripped_path:
             raise HyperbrowserError("path must not be empty")
         if "\\" in stripped_path:

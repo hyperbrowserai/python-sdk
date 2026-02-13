@@ -42,7 +42,11 @@ def test_client_build_url_uses_normalized_base_url():
     )
     try:
         assert client._build_url("/session") == "https://example.local/api/session"
-        assert client._build_url("  session  ") == "https://example.local/api/session"
+        with pytest.raises(
+            HyperbrowserError,
+            match="path must not contain leading or trailing whitespace",
+        ):
+            client._build_url("  session  ")
     finally:
         client.close()
 
@@ -219,7 +223,12 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
         with pytest.raises(HyperbrowserError, match="path must not be empty"):
-            client._build_url("   ")
+            client._build_url("")
+        with pytest.raises(
+            HyperbrowserError,
+            match="path must not contain leading or trailing whitespace",
+        ):
+            client._build_url(" /session")
         with pytest.raises(HyperbrowserError, match="path must be a string"):
             client._build_url(123)  # type: ignore[arg-type]
         with pytest.raises(
