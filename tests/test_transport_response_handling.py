@@ -78,6 +78,20 @@ class _BooleanStatusNoContentResponse:
         return {}
 
 
+class _OutOfRangeStatusNoContentResponse:
+    content = b""
+    text = ""
+
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return {}
+
+
 class _BrokenStatusCodeHttpErrorResponse:
     content = b""
     text = "status error"
@@ -166,6 +180,22 @@ def test_sync_handle_response_with_http_status_error_and_broken_status_code():
         ):
             transport._handle_response(
                 _BrokenStatusCodeHttpErrorResponse()  # type: ignore[arg-type]
+            )
+    finally:
+        transport.close()
+
+
+@pytest.mark.parametrize("status_code", [99, 600])
+def test_sync_handle_response_with_out_of_range_status_raises_hyperbrowser_error(
+    status_code: int,
+):
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to process response status code"
+        ):
+            transport._handle_response(
+                _OutOfRangeStatusNoContentResponse(status_code)  # type: ignore[arg-type]
             )
     finally:
         transport.close()
@@ -315,6 +345,25 @@ def test_async_handle_response_with_http_status_error_and_broken_status_code():
             ):
                 await transport._handle_response(
                     _BrokenStatusCodeHttpErrorResponse()  # type: ignore[arg-type]
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("status_code", [99, 600])
+def test_async_handle_response_with_out_of_range_status_raises_hyperbrowser_error(
+    status_code: int,
+):
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Failed to process response status code"
+            ):
+                await transport._handle_response(
+                    _OutOfRangeStatusNoContentResponse(status_code)  # type: ignore[arg-type]
                 )
         finally:
             await transport.close()

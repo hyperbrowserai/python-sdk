@@ -15,6 +15,9 @@ from .error_utils import (
 class SyncTransport(SyncTransportStrategy):
     """Synchronous transport implementation using httpx"""
 
+    _MIN_HTTP_STATUS_CODE = 100
+    _MAX_HTTP_STATUS_CODE = 599
+
     def __init__(self, api_key: str, headers: Optional[Mapping[str, str]] = None):
         if not isinstance(api_key, str):
             raise HyperbrowserError("api_key must be a string")
@@ -41,7 +44,14 @@ class SyncTransport(SyncTransportStrategy):
             status_code = response.status_code
             if isinstance(status_code, bool):
                 raise TypeError("boolean status code is invalid")
-            return int(status_code)
+            normalized_status_code = int(status_code)
+            if not (
+                self._MIN_HTTP_STATUS_CODE
+                <= normalized_status_code
+                <= self._MAX_HTTP_STATUS_CODE
+            ):
+                raise ValueError("status code is outside HTTP range")
+            return normalized_status_code
         except HyperbrowserError:
             raise
         except Exception as exc:
