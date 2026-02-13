@@ -27,8 +27,8 @@ class AsyncTransport(AsyncTransportStrategy):
 
     async def close(self) -> None:
         if not self._closed:
-            self._closed = True
             await self.client.aclose()
+            self._closed = True
 
     async def __aenter__(self):
         return self
