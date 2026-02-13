@@ -2,6 +2,7 @@ from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
+    build_fetch_operation_name,
     collect_paginated_results_async,
     poll_until_terminal_status_async,
     retry_operation_async,
@@ -74,7 +75,7 @@ class BatchScrapeManager:
 
         if not return_all_pages:
             return await retry_operation_async(
-                operation_name=f"Fetching batch scrape job {job_id}",
+                operation_name=build_fetch_operation_name(f"batch scrape job {job_id}"),
                 operation=lambda: self.get(job_id),
                 max_attempts=POLLING_ATTEMPTS,
                 retry_delay_seconds=0.5,

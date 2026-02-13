@@ -10,6 +10,7 @@ from hyperbrowser.models import (
 )
 from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import (
+    build_fetch_operation_name,
     collect_paginated_results,
     poll_until_terminal_status,
     retry_operation,
@@ -73,7 +74,7 @@ class BatchFetchManager:
 
         if not return_all_pages:
             return retry_operation(
-                operation_name=f"Fetching batch fetch job {job_id}",
+                operation_name=build_fetch_operation_name(f"batch fetch job {job_id}"),
                 operation=lambda: self.get(job_id),
                 max_attempts=POLLING_ATTEMPTS,
                 retry_delay_seconds=0.5,

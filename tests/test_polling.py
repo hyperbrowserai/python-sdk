@@ -11,6 +11,7 @@ import pytest
 
 import hyperbrowser.client.polling as polling_helpers
 from hyperbrowser.client.polling import (
+    build_fetch_operation_name,
     collect_paginated_results,
     collect_paginated_results_async,
     poll_until_terminal_status,
@@ -39,6 +40,15 @@ def test_poll_until_terminal_status_returns_terminal_value():
     )
 
     assert status == "completed"
+
+
+def test_build_fetch_operation_name_prefixes_when_within_length_limit():
+    assert build_fetch_operation_name("crawl job 123") == "Fetching crawl job 123"
+
+
+def test_build_fetch_operation_name_falls_back_for_max_length_inputs():
+    operation_name = "x" * 200
+    assert build_fetch_operation_name(operation_name) == operation_name
 
 
 def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():

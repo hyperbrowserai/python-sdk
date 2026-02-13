@@ -66,7 +66,7 @@ def _validate_operation_name(operation_name: str) -> None:
         raise HyperbrowserError("operation_name must not contain control characters")
 
 
-def _build_fetch_operation_name(operation_name: str) -> str:
+def build_fetch_operation_name(operation_name: str) -> str:
     prefixed_operation_name = f"{_FETCH_OPERATION_NAME_PREFIX}{operation_name}"
     if len(prefixed_operation_name) <= _MAX_OPERATION_NAME_LENGTH:
         return prefixed_operation_name
@@ -800,7 +800,7 @@ def wait_for_job_result(
         max_wait_seconds=max_wait_seconds,
         max_status_failures=max_status_failures,
     )
-    fetch_operation_name = _build_fetch_operation_name(operation_name)
+    fetch_operation_name = build_fetch_operation_name(operation_name)
     return retry_operation(
         operation_name=fetch_operation_name,
         operation=fetch_result,
@@ -837,7 +837,7 @@ async def wait_for_job_result_async(
         max_wait_seconds=max_wait_seconds,
         max_status_failures=max_status_failures,
     )
-    fetch_operation_name = _build_fetch_operation_name(operation_name)
+    fetch_operation_name = build_fetch_operation_name(operation_name)
     return await retry_operation_async(
         operation_name=fetch_operation_name,
         operation=fetch_result,
