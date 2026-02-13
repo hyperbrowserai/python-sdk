@@ -44,7 +44,7 @@ class SessionManager:
         self._client = client
         self.event_logs = SessionEventLogsManager(client)
 
-    def create(self, params: CreateSessionParams = None) -> SessionDetail:
+    def create(self, params: Optional[CreateSessionParams] = None) -> SessionDetail:
         response = self._client.transport.post(
             self._client._build_url("/session"),
             data=(

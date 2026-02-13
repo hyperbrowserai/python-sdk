@@ -14,7 +14,9 @@ class ProfileManager:
     def __init__(self, client):
         self._client = client
 
-    async def create(self, params: CreateProfileParams = None) -> CreateProfileResponse:
+    async def create(
+        self, params: Optional[CreateProfileParams] = None
+    ) -> CreateProfileResponse:
         response = await self._client.transport.post(
             self._client._build_url("/profile"),
             data=(
