@@ -20,8 +20,6 @@ class ClientConfig:
             raise HyperbrowserError("api_key must be a string")
         if not isinstance(self.base_url, str):
             raise HyperbrowserError("base_url must be a string")
-        if self.headers is not None and not isinstance(self.headers, Mapping):
-            raise HyperbrowserError("headers must be a mapping of string pairs")
         self.api_key = self.api_key.strip()
         if not self.api_key:
             raise HyperbrowserError("api_key must not be empty")
