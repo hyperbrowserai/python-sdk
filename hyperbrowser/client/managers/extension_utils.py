@@ -69,8 +69,17 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
             "Expected list in 'extensions' key but got "
             f"{_get_type_name(extensions_value)}"
         )
+    try:
+        extension_items = list(extensions_value)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to iterate 'extensions' list from response",
+            original_error=exc,
+        ) from exc
     parsed_extensions: List[ExtensionResponse] = []
-    for index, extension in enumerate(extensions_value):
+    for index, extension in enumerate(extension_items):
         if not isinstance(extension, Mapping):
             raise HyperbrowserError(
                 "Expected extension object at index "

@@ -189,3 +189,16 @@ def test_parse_extension_list_response_data_wraps_unreadable_extensions_value():
         )
 
     assert exc_info.value.original_error is not None
+
+
+def test_parse_extension_list_response_data_wraps_unreadable_extensions_iteration():
+    class _BrokenExtensionsList(list):
+        def __iter__(self):
+            raise RuntimeError("cannot iterate extensions list")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to iterate 'extensions' list from response"
+    ) as exc_info:
+        parse_extension_list_response_data({"extensions": _BrokenExtensionsList([{}])})
+
+    assert exc_info.value.original_error is not None
