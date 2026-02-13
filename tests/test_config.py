@@ -644,6 +644,56 @@ def test_client_config_normalize_base_url_rejects_invalid_port_types(
         ClientConfig.normalize_base_url("https://example.local")
 
 
+def test_client_config_normalize_base_url_rejects_out_of_range_port_values(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def port(self) -> int:
+            return 70000
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="base_url parser returned invalid URL components"
+    ):
+        ClientConfig.normalize_base_url("https://example.local")
+
+
+def test_client_config_normalize_base_url_rejects_negative_port_values(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def port(self) -> int:
+            return -1
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="base_url parser returned invalid URL components"
+    ):
+        ClientConfig.normalize_base_url("https://example.local")
+
+
 def test_client_config_normalize_base_url_wraps_hostname_access_errors(
     monkeypatch: pytest.MonkeyPatch,
 ):

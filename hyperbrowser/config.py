@@ -188,6 +188,8 @@ class ClientConfig:
             or not isinstance(parsed_base_url_port, int)
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
+        if parsed_base_url_port is not None and not (0 <= parsed_base_url_port <= 65535):
+            raise HyperbrowserError("base_url parser returned invalid URL components")
 
         decoded_base_path = ClientConfig._decode_url_component_with_limit(
             parsed_base_url_path, component_label="base_url path"
