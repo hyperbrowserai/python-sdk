@@ -3,6 +3,7 @@ from typing import Any, List, Type, TypeVar
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.session import SessionRecording
+from .response_utils import parse_response_model
 
 T = TypeVar("T")
 
@@ -13,28 +14,11 @@ def parse_session_response_model(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    if not isinstance(operation_name, str) or not operation_name.strip():
-        raise HyperbrowserError("operation_name must be a non-empty string")
-    if not isinstance(response_data, Mapping):
-        raise HyperbrowserError(f"Expected {operation_name} response to be an object")
-    try:
-        response_payload = dict(response_data)
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            f"Failed to read {operation_name} response data",
-            original_error=exc,
-        ) from exc
-    try:
-        return model(**response_payload)
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            f"Failed to parse {operation_name} response",
-            original_error=exc,
-        ) from exc
+    return parse_response_model(
+        response_data,
+        model=model,
+        operation_name=operation_name,
+    )
 
 
 def parse_session_recordings_response_data(response_data: Any) -> List[SessionRecording]:

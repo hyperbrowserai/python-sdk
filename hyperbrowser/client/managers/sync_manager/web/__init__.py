@@ -7,6 +7,7 @@ from hyperbrowser.models import (
     WebSearchResponse,
 )
 from ....schema_utils import inject_web_output_schemas
+from ...response_utils import parse_response_model
 
 
 class WebManager:
@@ -25,11 +26,19 @@ class WebManager:
             self._client._build_url("/web/fetch"),
             data=payload,
         )
-        return FetchResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=FetchResponse,
+            operation_name="web fetch",
+        )
 
     def search(self, params: WebSearchParams) -> WebSearchResponse:
         response = self._client.transport.post(
             self._client._build_url("/web/search"),
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return WebSearchResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=WebSearchResponse,
+            operation_name="web search",
+        )

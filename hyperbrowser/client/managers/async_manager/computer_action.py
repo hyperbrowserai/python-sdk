@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Union, List, Optional
 from hyperbrowser.exceptions import HyperbrowserError
+from ..response_utils import parse_response_model
 from hyperbrowser.models import (
     SessionDetail,
     ComputerActionParams,
@@ -46,7 +47,11 @@ class ComputerActionManager:
             session.computer_action_endpoint,
             data=payload,
         )
-        return ComputerActionResponse(**response.data)
+        return parse_response_model(
+            response.data,
+            model=ComputerActionResponse,
+            operation_name="computer action",
+        )
 
     async def click(
         self,

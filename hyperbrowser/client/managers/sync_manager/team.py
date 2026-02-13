@@ -1,4 +1,5 @@
 from hyperbrowser.models import TeamCreditInfo
+from ..response_utils import parse_response_model
 
 
 class TeamManager:
@@ -9,4 +10,8 @@ class TeamManager:
         response = self._client.transport.get(
             self._client._build_url("/team/credit-info")
         )
-        return TeamCreditInfo(**response.data)
+        return parse_response_model(
+            response.data,
+            model=TeamCreditInfo,
+            operation_name="team credit info",
+        )
