@@ -62,6 +62,38 @@ def _validate_max_wait_seconds(max_wait_seconds: Optional[float]) -> None:
         raise HyperbrowserError("max_wait_seconds must be non-negative")
 
 
+def _validate_page_batch_values(
+    *,
+    operation_name: str,
+    current_page_batch: int,
+    total_page_batches: int,
+) -> None:
+    if isinstance(current_page_batch, bool) or not isinstance(current_page_batch, int):
+        raise HyperbrowserPollingError(
+            f"Invalid current page batch for {operation_name}: expected integer"
+        )
+    if isinstance(total_page_batches, bool) or not isinstance(total_page_batches, int):
+        raise HyperbrowserPollingError(
+            f"Invalid total page batches for {operation_name}: expected integer"
+        )
+    if total_page_batches < 0:
+        raise HyperbrowserPollingError(
+            f"Invalid total page batches for {operation_name}: must be non-negative"
+        )
+    if current_page_batch < 0:
+        raise HyperbrowserPollingError(
+            f"Invalid current page batch for {operation_name}: must be non-negative"
+        )
+    if total_page_batches > 0 and current_page_batch < 1:
+        raise HyperbrowserPollingError(
+            f"Invalid current page batch for {operation_name}: must be at least 1 when total batches are positive"
+        )
+    if current_page_batch > total_page_batches:
+        raise HyperbrowserPollingError(
+            f"Invalid page batch state for {operation_name}: current page batch {current_page_batch} exceeds total page batches {total_page_batches}"
+        )
+
+
 def has_exceeded_max_wait(start_time: float, max_wait_seconds: Optional[float]) -> bool:
     return (
         max_wait_seconds is not None
@@ -241,6 +273,11 @@ def collect_paginated_results(
             on_page_success(page_response)
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
+            _validate_page_batch_values(
+                operation_name=operation_name,
+                current_page_batch=current_page_batch,
+                total_page_batches=total_page_batches,
+            )
             failures = 0
             first_check = False
             if (
@@ -303,6 +340,11 @@ async def collect_paginated_results_async(
             on_page_success(page_response)
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
+            _validate_page_batch_values(
+                operation_name=operation_name,
+                current_page_batch=current_page_batch,
+                total_page_batches=total_page_batches,
+            )
             failures = 0
             first_check = False
             if (

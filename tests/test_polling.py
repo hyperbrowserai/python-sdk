@@ -303,6 +303,20 @@ def test_collect_paginated_results_raises_when_page_batch_stagnates():
         )
 
 
+def test_collect_paginated_results_raises_on_invalid_page_batch_values():
+    with pytest.raises(HyperbrowserPollingError, match="Invalid page batch state"):
+        collect_paginated_results(
+            operation_name="sync paginated invalid batches",
+            get_next_page=lambda page: {"current": 3, "total": 2, "items": []},
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=2,
+            retry_delay_seconds=0.0001,
+        )
+
+
 def test_collect_paginated_results_async_times_out():
     async def run() -> None:
         with pytest.raises(
@@ -312,7 +326,7 @@ def test_collect_paginated_results_async_times_out():
             await collect_paginated_results_async(
                 operation_name="async paginated timeout",
                 get_next_page=lambda page: asyncio.sleep(
-                    0, result={"current": 0, "total": 1, "items": []}
+                    0, result={"current": 1, "total": 2, "items": []}
                 ),
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],
@@ -332,6 +346,25 @@ def test_collect_paginated_results_async_raises_when_page_batch_stagnates():
                 operation_name="async paginated stagnation",
                 get_next_page=lambda page: asyncio.sleep(
                     0, result={"current": 1, "total": 2, "items": []}
+                ),
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=2,
+                retry_delay_seconds=0.0001,
+            )
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_raises_on_invalid_page_batch_values():
+    async def run() -> None:
+        with pytest.raises(HyperbrowserPollingError, match="Invalid page batch state"):
+            await collect_paginated_results_async(
+                operation_name="async paginated invalid batches",
+                get_next_page=lambda page: asyncio.sleep(
+                    0, result={"current": 3, "total": 2, "items": []}
                 ),
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],
