@@ -13,8 +13,13 @@ class SyncTransport(SyncTransportStrategy):
     """Synchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str, headers: Optional[Mapping[str, str]] = None):
+        if not isinstance(api_key, str):
+            raise HyperbrowserError("api_key must be a string")
+        normalized_api_key = api_key.strip()
+        if not normalized_api_key:
+            raise HyperbrowserError("api_key must not be empty")
         merged_headers = {
-            "x-api-key": api_key,
+            "x-api-key": normalized_api_key,
             "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
         }
         normalized_headers = normalize_headers(

@@ -28,6 +28,13 @@ def test_sync_transport_rejects_non_string_header_pairs():
         SyncTransport(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]
 
 
+def test_sync_transport_rejects_invalid_api_key_values():
+    with pytest.raises(HyperbrowserError, match="api_key must be a string"):
+        SyncTransport(api_key=None)  # type: ignore[arg-type]
+    with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
+        SyncTransport(api_key="   ")
+
+
 def test_sync_transport_rejects_empty_header_name():
     with pytest.raises(HyperbrowserError, match="header names must not be empty"):
         SyncTransport(api_key="test-key", headers={"   ": "value"})
@@ -59,6 +66,13 @@ def test_async_transport_accepts_custom_headers():
 def test_async_transport_rejects_non_string_header_pairs():
     with pytest.raises(HyperbrowserError, match="headers must be a mapping"):
         AsyncTransport(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]
+
+
+def test_async_transport_rejects_invalid_api_key_values():
+    with pytest.raises(HyperbrowserError, match="api_key must be a string"):
+        AsyncTransport(api_key=None)  # type: ignore[arg-type]
+    with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
+        AsyncTransport(api_key="   ")
 
 
 def test_async_transport_rejects_empty_header_name():
