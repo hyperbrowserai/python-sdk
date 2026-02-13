@@ -1,10 +1,8 @@
-import asyncio
-import time
 from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
-    has_exceeded_max_wait,
+    collect_paginated_results_async,
     poll_until_terminal_status_async,
     retry_operation_async,
 )
@@ -73,8 +71,6 @@ class CrawlManager:
                 retry_delay_seconds=0.5,
             )
 
-        failures = 0
-        page_fetch_start_time = time.monotonic()
         job_response = CrawlJobResponse(
             jobId=job_id,
             status=job_status,
@@ -84,37 +80,28 @@ class CrawlManager:
             totalCrawledPages=0,
             batchSize=100,
         )
-        first_check = True
-        while (
-            first_check
-            or job_response.current_page_batch < job_response.total_page_batches
-        ):
-            if has_exceeded_max_wait(page_fetch_start_time, max_wait_seconds):
-                raise HyperbrowserError(
-                    f"Timed out fetching all pages for crawl job {job_id} after {max_wait_seconds} seconds"
-                )
-            try:
-                tmp_job_response = await self.get(
-                    job_start_resp.job_id,
-                    GetCrawlJobParams(
-                        page=job_response.current_page_batch + 1, batch_size=100
-                    ),
-                )
-                if tmp_job_response.data:
-                    job_response.data.extend(tmp_job_response.data)
-                job_response.current_page_batch = tmp_job_response.current_page_batch
-                job_response.total_crawled_pages = tmp_job_response.total_crawled_pages
-                job_response.total_page_batches = tmp_job_response.total_page_batches
-                job_response.batch_size = tmp_job_response.batch_size
-                job_response.error = tmp_job_response.error
-                failures = 0
-                first_check = False
-            except Exception as e:
-                failures += 1
-                if failures >= POLLING_ATTEMPTS:
-                    raise HyperbrowserError(
-                        f"Failed to get crawl batch page {job_response.current_page_batch} for job {job_id} after {POLLING_ATTEMPTS} attempts: {e}"
-                    )
-            await asyncio.sleep(0.5)
+
+        def merge_page_response(page_response: CrawlJobResponse) -> None:
+            if page_response.data:
+                job_response.data.extend(page_response.data)
+            job_response.current_page_batch = page_response.current_page_batch
+            job_response.total_crawled_pages = page_response.total_crawled_pages
+            job_response.total_page_batches = page_response.total_page_batches
+            job_response.batch_size = page_response.batch_size
+            job_response.error = page_response.error
+
+        await collect_paginated_results_async(
+            operation_name=f"crawl job {job_id}",
+            get_next_page=lambda page: self.get(
+                job_start_resp.job_id,
+                GetCrawlJobParams(page=page, batch_size=100),
+            ),
+            get_current_page_batch=lambda page_response: page_response.current_page_batch,
+            get_total_page_batches=lambda page_response: page_response.total_page_batches,
+            on_page_success=merge_page_response,
+            max_wait_seconds=max_wait_seconds,
+            max_attempts=POLLING_ATTEMPTS,
+            retry_delay_seconds=0.5,
+        )
 
         return job_response

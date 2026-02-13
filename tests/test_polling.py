@@ -3,6 +3,8 @@ import asyncio
 import pytest
 
 from hyperbrowser.client.polling import (
+    collect_paginated_results,
+    collect_paginated_results_async,
     poll_until_terminal_status,
     poll_until_terminal_status_async,
     retry_operation,
@@ -172,5 +174,50 @@ def test_async_poll_until_terminal_status_raises_after_status_failures():
                 max_wait_seconds=1.0,
                 max_status_failures=2,
             )
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_collects_all_pages():
+    page_map = {
+        1: {"current": 1, "total": 2, "items": ["a"]},
+        2: {"current": 2, "total": 2, "items": ["b"]},
+    }
+    collected = []
+
+    collect_paginated_results(
+        operation_name="sync paginated",
+        get_next_page=lambda page: page_map[page],
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: collected.extend(response["items"]),
+        max_wait_seconds=1.0,
+        max_attempts=2,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert collected == ["a", "b"]
+
+
+def test_collect_paginated_results_async_collects_all_pages():
+    async def run() -> None:
+        page_map = {
+            1: {"current": 1, "total": 2, "items": ["a"]},
+            2: {"current": 2, "total": 2, "items": ["b"]},
+        }
+        collected = []
+
+        await collect_paginated_results_async(
+            operation_name="async paginated",
+            get_next_page=lambda page: asyncio.sleep(0, result=page_map[page]),
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: collected.extend(response["items"]),
+            max_wait_seconds=1.0,
+            max_attempts=2,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert collected == ["a", "b"]
 
     asyncio.run(run())

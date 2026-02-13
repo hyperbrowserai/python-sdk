@@ -125,3 +125,79 @@ async def retry_operation_async(
                     f"{operation_name} failed after {max_attempts} attempts: {exc}"
                 ) from exc
             await asyncio.sleep(retry_delay_seconds)
+
+
+def collect_paginated_results(
+    *,
+    operation_name: str,
+    get_next_page: Callable[[int], T],
+    get_current_page_batch: Callable[[T], int],
+    get_total_page_batches: Callable[[T], int],
+    on_page_success: Callable[[T], None],
+    max_wait_seconds: Optional[float],
+    max_attempts: int,
+    retry_delay_seconds: float,
+) -> None:
+    start_time = time.monotonic()
+    current_page_batch = 0
+    total_page_batches = 0
+    first_check = True
+    failures = 0
+
+    while first_check or current_page_batch < total_page_batches:
+        if has_exceeded_max_wait(start_time, max_wait_seconds):
+            raise HyperbrowserTimeoutError(
+                f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
+            )
+        try:
+            page_response = get_next_page(current_page_batch + 1)
+            on_page_success(page_response)
+            current_page_batch = get_current_page_batch(page_response)
+            total_page_batches = get_total_page_batches(page_response)
+            failures = 0
+            first_check = False
+        except Exception as exc:
+            failures += 1
+            if failures >= max_attempts:
+                raise HyperbrowserError(
+                    f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
+                ) from exc
+        time.sleep(retry_delay_seconds)
+
+
+async def collect_paginated_results_async(
+    *,
+    operation_name: str,
+    get_next_page: Callable[[int], Awaitable[T]],
+    get_current_page_batch: Callable[[T], int],
+    get_total_page_batches: Callable[[T], int],
+    on_page_success: Callable[[T], None],
+    max_wait_seconds: Optional[float],
+    max_attempts: int,
+    retry_delay_seconds: float,
+) -> None:
+    start_time = time.monotonic()
+    current_page_batch = 0
+    total_page_batches = 0
+    first_check = True
+    failures = 0
+
+    while first_check or current_page_batch < total_page_batches:
+        if has_exceeded_max_wait(start_time, max_wait_seconds):
+            raise HyperbrowserTimeoutError(
+                f"Timed out fetching paginated results for {operation_name} after {max_wait_seconds} seconds"
+            )
+        try:
+            page_response = await get_next_page(current_page_batch + 1)
+            on_page_success(page_response)
+            current_page_batch = get_current_page_batch(page_response)
+            total_page_batches = get_total_page_batches(page_response)
+            failures = 0
+            first_check = False
+        except Exception as exc:
+            failures += 1
+            if failures >= max_attempts:
+                raise HyperbrowserError(
+                    f"Failed to fetch page batch {current_page_batch + 1} for {operation_name} after {max_attempts} attempts: {exc}"
+                ) from exc
+        await asyncio.sleep(retry_delay_seconds)
