@@ -115,8 +115,31 @@ def _serialize_extract_tool_data(data: Any) -> str:
 
 
 def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
+    if isinstance(response, MappingABC):
+        try:
+            has_data_field = "data" in response
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to inspect {tool_name} response data field",
+                original_error=exc,
+            ) from exc
+        if not has_data_field:
+            raise HyperbrowserError(f"{tool_name} response must include 'data'")
+        try:
+            return response["data"]
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read {tool_name} response data",
+                original_error=exc,
+            ) from exc
     try:
         return response.data
+    except AttributeError:
+        raise HyperbrowserError(f"{tool_name} response must include 'data'")
     except HyperbrowserError:
         raise
     except Exception as exc:

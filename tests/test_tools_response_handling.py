@@ -127,6 +127,74 @@ def test_scrape_tool_wraps_response_data_read_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_scrape_tool_supports_mapping_response_objects():
+    client = _SyncScrapeClient({"data": {"markdown": "from response mapping"}})  # type: ignore[arg-type]
+
+    output = WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert output == "from response mapping"
+
+
+def test_scrape_tool_rejects_response_objects_missing_data_field():
+    client = _SyncScrapeClient({"payload": {"markdown": "missing data"}})  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="scrape tool response must include 'data'"
+    ):
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+
+def test_scrape_tool_wraps_mapping_response_data_read_failures():
+    class _BrokenResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            return key == "data"
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read response data")
+
+    client = _SyncScrapeClient(_BrokenResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read scrape tool response data"
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_scrape_tool_wraps_mapping_response_data_inspection_failures():
+    class _BrokenContainsResponse(Mapping[str, object]):
+        def __iter__(self):
+            yield "data"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect response")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return {"markdown": "ok"}
+
+    client = _SyncScrapeClient(_BrokenContainsResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to inspect scrape tool response data field"
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
 def test_scrape_tool_preserves_hyperbrowser_response_data_read_failures():
     client = _SyncScrapeClient(
         _Response(data_error=HyperbrowserError("custom scrape data failure"))
@@ -336,6 +404,20 @@ def test_async_scrape_tool_wraps_response_data_read_failures():
                 {"url": "https://example.com"},
             )
         assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
+def test_async_scrape_tool_supports_mapping_response_objects():
+    async def run() -> None:
+        client = _AsyncScrapeClient(
+            {"data": {"markdown": "async response mapping"}}  # type: ignore[arg-type]
+        )
+        output = await WebsiteScrapeTool.async_runnable(
+            client,
+            {"url": "https://example.com"},
+        )
+        assert output == "async response mapping"
 
     asyncio.run(run())
 
