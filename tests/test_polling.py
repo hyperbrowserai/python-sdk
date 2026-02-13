@@ -343,6 +343,28 @@ def test_poll_until_terminal_status_rejects_awaitable_status_callback_result():
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_cancels_future_status_callback_results():
+    loop = asyncio.new_event_loop()
+    try:
+        status_future = loop.create_future()
+
+        with pytest.raises(
+            HyperbrowserError, match="get_status must return a non-awaitable result"
+        ):
+            poll_until_terminal_status(
+                operation_name="sync poll status future",
+                get_status=lambda: status_future,  # type: ignore[return-value]
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert status_future.cancelled()
+    finally:
+        loop.close()
+
+
 def test_poll_until_terminal_status_fails_fast_when_terminal_callback_raises():
     attempts = {"count": 0}
 
@@ -1007,6 +1029,30 @@ def test_collect_paginated_results_rejects_awaitable_page_callback_result():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_cancels_future_page_callback_results():
+    loop = asyncio.new_event_loop()
+    try:
+        page_future = loop.create_future()
+
+        with pytest.raises(
+            HyperbrowserError, match="get_next_page must return a non-awaitable result"
+        ):
+            collect_paginated_results(
+                operation_name="sync paginated page future",
+                get_next_page=lambda page: page_future,  # type: ignore[return-value]
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert page_future.cancelled()
+    finally:
+        loop.close()
+
+
 def test_collect_paginated_results_rejects_awaitable_on_page_success_result():
     callback_attempts = {"count": 0}
 
@@ -1310,6 +1356,8 @@ def test_collect_paginated_results_async_fails_fast_when_page_batch_callback_rai
 
 def test_collect_paginated_results_async_rejects_awaitable_current_page_callback_result():
     async def run() -> None:
+        callback_future = asyncio.get_running_loop().create_future()
+
         with pytest.raises(
             HyperbrowserError,
             match="get_current_page_batch must return a non-awaitable result",
@@ -1319,13 +1367,14 @@ def test_collect_paginated_results_async_rejects_awaitable_current_page_callback
                 get_next_page=lambda page: asyncio.sleep(
                     0, result={"current": 1, "total": 1, "items": []}
                 ),
-                get_current_page_batch=lambda response: asyncio.sleep(0),  # type: ignore[return-value]
+                get_current_page_batch=lambda response: callback_future,  # type: ignore[return-value]
                 get_total_page_batches=lambda response: response["total"],
                 on_page_success=lambda response: None,
                 max_wait_seconds=1.0,
                 max_attempts=5,
                 retry_delay_seconds=0.0001,
             )
+        assert callback_future.cancelled()
 
     asyncio.run(run())
 
