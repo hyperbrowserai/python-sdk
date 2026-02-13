@@ -50,8 +50,12 @@ def _safe_to_string(value: Any) -> str:
         normalized_value = str(value)
     except Exception:
         return f"<unstringifiable {type(value).__name__}>"
-    if normalized_value.strip():
-        return normalized_value
+    sanitized_value = "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in normalized_value
+    )
+    if sanitized_value.strip():
+        return sanitized_value
     return f"<{type(value).__name__}>"
 
 

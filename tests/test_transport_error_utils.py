@@ -158,6 +158,11 @@ class _BlankFallbackError(Exception):
         return "   "
 
 
+class _ControlFallbackError(Exception):
+    def __str__(self) -> str:
+        return "bad\tfallback\ntext"
+
+
 class _BrokenFallbackResponse:
     @property
     def text(self) -> str:
@@ -740,6 +745,14 @@ def test_extract_error_message_uses_placeholder_for_blank_fallback_error_text():
     message = extract_error_message(_DummyResponse("   ", text="   "), _BlankFallbackError())
 
     assert message == "<_BlankFallbackError>"
+
+
+def test_extract_error_message_sanitizes_control_characters_in_fallback_error_text():
+    message = extract_error_message(
+        _DummyResponse("   ", text="   "), _ControlFallbackError()
+    )
+
+    assert message == "bad?fallback?text"
 
 
 def test_extract_error_message_extracts_errors_list_messages():
