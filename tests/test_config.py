@@ -509,6 +509,97 @@ def test_client_config_normalize_base_url_rejects_invalid_hostname_types(
         ClientConfig.normalize_base_url("https://example.local")
 
 
+def test_client_config_normalize_base_url_wraps_hostname_access_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def hostname(self):
+            raise RuntimeError("hostname parser exploded")
+
+        @property
+        def port(self) -> int:
+            return 443
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(HyperbrowserError, match="Failed to parse base_url host") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_wraps_credential_access_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        path = "/api"
+
+        @property
+        def username(self):
+            raise RuntimeError("credential parser exploded")
+
+        @property
+        def password(self):
+            return None
+
+        @property
+        def port(self) -> int:
+            return 443
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to parse base_url credentials"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is not None
+
+
+def test_client_config_normalize_base_url_preserves_hyperbrowser_hostname_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def hostname(self):
+            raise HyperbrowserError("custom hostname parser failure")
+
+        @property
+        def port(self) -> int:
+            return 443
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="custom hostname parser failure"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local")
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_normalize_base_url_wraps_path_decode_runtime_errors(
     monkeypatch: pytest.MonkeyPatch,
 ):

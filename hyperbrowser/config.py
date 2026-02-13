@@ -108,9 +108,17 @@ class ClientConfig:
             or not isinstance(parsed_base_url.fragment, str)
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
-        if (
-            parsed_base_url.hostname is not None
-            and not isinstance(parsed_base_url.hostname, str)
+        try:
+            parsed_base_url_hostname = parsed_base_url.hostname
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to parse base_url host",
+                original_error=exc,
+            ) from exc
+        if parsed_base_url_hostname is not None and not isinstance(
+            parsed_base_url_hostname, str
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if (
@@ -120,7 +128,7 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://' and include a host"
             )
-        if parsed_base_url.hostname is None:
+        if parsed_base_url_hostname is None:
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://' and include a host"
             )
@@ -128,7 +136,17 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must not include query parameters or fragments"
             )
-        if parsed_base_url.username is not None or parsed_base_url.password is not None:
+        try:
+            parsed_base_url_username = parsed_base_url.username
+            parsed_base_url_password = parsed_base_url.password
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to parse base_url credentials",
+                original_error=exc,
+            ) from exc
+        if parsed_base_url_username is not None or parsed_base_url_password is not None:
             raise HyperbrowserError("base_url must not include user credentials")
         try:
             parsed_base_url.port
