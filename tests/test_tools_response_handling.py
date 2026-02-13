@@ -773,6 +773,24 @@ def test_async_screenshot_tool_decodes_utf8_bytes_field():
     asyncio.run(run())
 
 
+def test_async_screenshot_tool_wraps_invalid_utf8_bytes_field():
+    async def run() -> None:
+        client = _AsyncScrapeClient(
+            _Response(data=SimpleNamespace(screenshot=b"\xff\xfe"))
+        )
+        with pytest.raises(
+            HyperbrowserError,
+            match="screenshot tool response field 'screenshot' must be a UTF-8 string",
+        ) as exc_info:
+            await WebsiteScreenshotTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
 def test_async_browser_use_tool_wraps_invalid_utf8_bytes_final_result():
     async def run() -> None:
         client = _AsyncBrowserUseClient(
@@ -824,6 +842,36 @@ def test_async_crawl_tool_supports_mapping_page_items():
         )
         assert "Url: https://example.com" in output
         assert "async body" in output
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_wraps_mapping_page_inspection_failures():
+    class _BrokenContainsPage(Mapping[str, object]):
+        def __iter__(self):
+            yield "markdown"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __contains__(self, key: object) -> bool:
+            _ = key
+            raise RuntimeError("cannot inspect markdown key")
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    async def run() -> None:
+        client = _AsyncCrawlClient(_Response(data=[_BrokenContainsPage()]))
+        with pytest.raises(
+            HyperbrowserError,
+            match="Failed to inspect crawl tool page field 'markdown' at index 0",
+        ) as exc_info:
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
+        assert exc_info.value.original_error is not None
 
     asyncio.run(run())
 
