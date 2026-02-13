@@ -45,7 +45,23 @@ def parse_session_recordings_response_data(
                 f"{index} but got {type(recording).__name__}"
             )
         try:
-            parsed_recordings.append(SessionRecording(**dict(recording)))
+            recording_payload = dict(recording)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read session recording object at index {index}",
+                original_error=exc,
+            ) from exc
+        for key in recording_payload.keys():
+            if isinstance(key, str):
+                continue
+            raise HyperbrowserError(
+                "Expected session recording object keys to be strings at index "
+                f"{index}"
+            )
+        try:
+            parsed_recordings.append(SessionRecording(**recording_payload))
         except HyperbrowserError:
             raise
         except Exception as exc:

@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Iterator, Mapping
 from types import MappingProxyType
 
 import pytest
@@ -181,6 +182,59 @@ def test_parse_session_recordings_response_data_wraps_invalid_items():
         )
 
     assert exc_info.value.original_error is not None
+
+
+def test_parse_session_recordings_response_data_wraps_unreadable_recording_items():
+    class _BrokenRecordingMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            raise RuntimeError("cannot iterate recording object")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read session recording object at index 0",
+    ) as exc_info:
+        parse_session_recordings_response_data([_BrokenRecordingMapping()])
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_session_recordings_response_data_preserves_hyperbrowser_recording_read_errors():
+    class _BrokenRecordingMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            raise HyperbrowserError("custom recording read failure")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            return "ignored"
+
+    with pytest.raises(
+        HyperbrowserError, match="custom recording read failure"
+    ) as exc_info:
+        parse_session_recordings_response_data([_BrokenRecordingMapping()])
+
+    assert exc_info.value.original_error is None
+
+
+def test_parse_session_recordings_response_data_rejects_non_string_recording_keys():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected session recording object keys to be strings at index 0",
+    ):
+        parse_session_recordings_response_data(
+            [
+                {1: "bad-key"},  # type: ignore[dict-item]
+            ]
+        )
 
 
 def test_parse_session_recordings_response_data_wraps_unreadable_list_iteration():
