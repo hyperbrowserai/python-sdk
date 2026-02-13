@@ -50,3 +50,14 @@ def test_ensure_existing_file_path_raises_for_directory(tmp_path: Path):
             missing_file_message="missing",
             not_file_message="not-file",
         )
+
+
+def test_ensure_existing_file_path_rejects_invalid_path_type():
+    with pytest.raises(
+        HyperbrowserError, match="file_path must be a string or os.PathLike object"
+    ):
+        ensure_existing_file_path(
+            123,  # type: ignore[arg-type]
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )

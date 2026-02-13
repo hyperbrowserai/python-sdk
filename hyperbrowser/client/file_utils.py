@@ -11,7 +11,13 @@ def ensure_existing_file_path(
     missing_file_message: str,
     not_file_message: str,
 ) -> str:
-    normalized_path = os.fspath(file_path)
+    try:
+        normalized_path = os.fspath(file_path)
+    except TypeError as exc:
+        raise HyperbrowserError(
+            "file_path must be a string or os.PathLike object",
+            original_error=exc,
+        ) from exc
     if not os.path.exists(normalized_path):
         raise HyperbrowserError(missing_file_message)
     if not os.path.isfile(normalized_path):
