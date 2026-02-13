@@ -25,8 +25,20 @@ def test_sync_client_supports_context_manager():
 
 def test_async_client_supports_context_manager():
     async def run() -> None:
-        async with AsyncHyperbrowser(api_key="test-key") as client:
-            assert isinstance(client, AsyncHyperbrowser)
+        client = AsyncHyperbrowser(api_key="test-key")
+        close_calls = {"count": 0}
+        original_close = client.transport.close
+
+        async def tracked_close() -> None:
+            close_calls["count"] += 1
+            await original_close()
+
+        client.transport.close = tracked_close
+
+        async with client as entered:
+            assert entered is client
+
+        assert close_calls["count"] == 1
 
     asyncio.run(run())
 
