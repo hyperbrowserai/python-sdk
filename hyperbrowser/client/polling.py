@@ -136,7 +136,7 @@ def build_fetch_operation_name(operation_name: object) -> str:
         if next_character_index == len(normalized_lower_operation_name):
             return normalized_operation_name
         next_character = normalized_lower_operation_name[next_character_index]
-        if next_character.isspace() or next_character == "?":
+        if not next_character.isalnum():
             return normalized_operation_name
     return build_operation_name(
         _FETCH_OPERATION_NAME_PREFIX,

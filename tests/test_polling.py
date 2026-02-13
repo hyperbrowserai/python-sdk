@@ -70,6 +70,13 @@ def test_build_fetch_operation_name_is_idempotent_for_sanitized_fetch_separator(
     assert normalized_operation_name.count("Fetching") == 1
 
 
+def test_build_fetch_operation_name_is_idempotent_for_punctuation_separator():
+    operation_name = "Fetching...crawl job 123"
+    normalized_operation_name = build_fetch_operation_name(operation_name)
+
+    assert normalized_operation_name == operation_name
+
+
 def test_build_fetch_operation_name_prefixes_non_separator_fetching_variants():
     operation_name = "FetchingTask"
     normalized_operation_name = build_fetch_operation_name(operation_name)
