@@ -21,7 +21,7 @@ class HyperbrowserError(Exception):
         """Custom string representation to show a cleaner error message"""
         parts = [f"{self.args[0]}"]
 
-        if self.status_code:
+        if self.status_code is not None:
             parts.append(f"Status: {self.status_code}")
 
         if self.original_error and not isinstance(
