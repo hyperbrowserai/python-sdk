@@ -9,6 +9,7 @@ from hyperbrowser.client.managers.async_manager.session import (
 from hyperbrowser.client.managers.sync_manager.session import (
     SessionManager as SyncSessionManager,
 )
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.session import UpdateSessionProfileParams
 
 
@@ -86,7 +87,7 @@ def test_sync_update_profile_params_bool_deprecation_warning_only_emitted_once()
 def test_sync_update_profile_params_rejects_conflicting_arguments():
     manager = SyncSessionManager(_SyncClient())
 
-    with pytest.raises(TypeError, match="not both"):
+    with pytest.raises(HyperbrowserError, match="not both"):
         manager.update_profile_params(
             "session-1",
             UpdateSessionProfileParams(persist_changes=True),
@@ -127,7 +128,7 @@ def test_async_update_profile_params_rejects_conflicting_arguments():
     manager = AsyncSessionManager(_AsyncClient())
 
     async def run() -> None:
-        with pytest.raises(TypeError, match="not both"):
+        with pytest.raises(HyperbrowserError, match="not both"):
             await manager.update_profile_params(
                 "session-1",
                 UpdateSessionProfileParams(persist_changes=True),
@@ -140,5 +141,15 @@ def test_async_update_profile_params_rejects_conflicting_arguments():
 def test_sync_update_profile_params_requires_argument_or_keyword():
     manager = SyncSessionManager(_SyncClient())
 
-    with pytest.raises(TypeError, match="requires either"):
+    with pytest.raises(HyperbrowserError, match="requires either"):
         manager.update_profile_params("session-1")
+
+
+def test_async_update_profile_params_requires_argument_or_keyword():
+    manager = AsyncSessionManager(_AsyncClient())
+
+    async def run() -> None:
+        with pytest.raises(HyperbrowserError, match="requires either"):
+            await manager.update_profile_params("session-1")
+
+    asyncio.run(run())

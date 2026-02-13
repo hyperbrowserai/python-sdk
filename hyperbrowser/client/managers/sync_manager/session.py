@@ -183,26 +183,26 @@ class SessionManager:
 
         if isinstance(params, UpdateSessionProfileParams):
             if persist_changes is not None:
-                raise TypeError(
+                raise HyperbrowserError(
                     "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
                 )
             params_obj = params
         elif isinstance(params, bool):
             if persist_changes is not None:
-                raise TypeError(
+                raise HyperbrowserError(
                     "Pass either a boolean as the second argument or persist_changes=bool, not both."
                 )
             self._warn_update_profile_params_boolean_deprecated()
             params_obj = UpdateSessionProfileParams(persist_changes=params)
         elif params is None:
             if persist_changes is None:
-                raise TypeError(
+                raise HyperbrowserError(
                     "update_profile_params() requires either UpdateSessionProfileParams or persist_changes=bool."
                 )
             self._warn_update_profile_params_boolean_deprecated()
             params_obj = UpdateSessionProfileParams(persist_changes=persist_changes)
         else:
-            raise TypeError(
+            raise HyperbrowserError(
                 "update_profile_params() requires either UpdateSessionProfileParams or a boolean persist_changes."
             )
 
