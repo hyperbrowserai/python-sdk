@@ -208,6 +208,10 @@ def test_client_config_rejects_empty_or_invalid_base_url():
 
     with pytest.raises(HyperbrowserError, match="must not include query parameters"):
         ClientConfig(api_key="test-key", base_url="https://example.local#frag")
+    with pytest.raises(
+        HyperbrowserError, match="base_url must not include user credentials"
+    ):
+        ClientConfig(api_key="test-key", base_url="https://user:pass@example.local")
 
     with pytest.raises(
         HyperbrowserError, match="base_url must not contain newline characters"
@@ -361,6 +365,10 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
     ):
         ClientConfig.normalize_base_url("https://example.local\x00api")
     with pytest.raises(
+        HyperbrowserError, match="base_url must not include user credentials"
+    ):
+        ClientConfig.normalize_base_url("https://user:pass@example.local")
+    with pytest.raises(
         HyperbrowserError, match="base_url path must not contain relative path segments"
     ):
         ClientConfig.normalize_base_url("https://example.local/%252e%252e/api")
@@ -372,3 +380,15 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         HyperbrowserError, match="base_url must not contain whitespace characters"
     ):
         ClientConfig.normalize_base_url("https://example.local/%2520api")
+    with pytest.raises(
+        HyperbrowserError, match="base_url host must not contain backslashes"
+    ):
+        ClientConfig.normalize_base_url("https://example.local%255C")
+    with pytest.raises(
+        HyperbrowserError, match="base_url host must not contain whitespace characters"
+    ):
+        ClientConfig.normalize_base_url("https://example.local%2520")
+    with pytest.raises(
+        HyperbrowserError, match="base_url host must not contain control characters"
+    ):
+        ClientConfig.normalize_base_url("https://example.local%2500")

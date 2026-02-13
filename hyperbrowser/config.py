@@ -58,6 +58,8 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must not include query parameters or fragments"
             )
+        if parsed_base_url.username is not None or parsed_base_url.password is not None:
+            raise HyperbrowserError("base_url must not include user credentials")
 
         decoded_base_path = parsed_base_url.path
         for _ in range(10):
@@ -79,6 +81,24 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url path must not contain relative path segments"
             )
+
+        decoded_base_netloc = parsed_base_url.netloc
+        for _ in range(10):
+            next_decoded_base_netloc = unquote(decoded_base_netloc)
+            if next_decoded_base_netloc == decoded_base_netloc:
+                break
+            decoded_base_netloc = next_decoded_base_netloc
+        if "\\" in decoded_base_netloc:
+            raise HyperbrowserError("base_url host must not contain backslashes")
+        if any(character.isspace() for character in decoded_base_netloc):
+            raise HyperbrowserError(
+                "base_url host must not contain whitespace characters"
+            )
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in decoded_base_netloc
+        ):
+            raise HyperbrowserError("base_url host must not contain control characters")
         return normalized_base_url
 
     @classmethod
