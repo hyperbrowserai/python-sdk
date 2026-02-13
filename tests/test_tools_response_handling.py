@@ -553,7 +553,9 @@ def test_browser_use_tool_decodes_utf8_bytes_final_result():
 
 
 def test_browser_use_tool_wraps_invalid_utf8_bytes_final_result():
-    client = _SyncBrowserUseClient(_Response(data=SimpleNamespace(final_result=b"\xff")))
+    client = _SyncBrowserUseClient(
+        _Response(data=SimpleNamespace(final_result=b"\xff"))
+    )
 
     with pytest.raises(
         HyperbrowserError,
@@ -645,7 +647,9 @@ def test_async_browser_use_tool_rejects_non_string_final_result():
 
 def test_async_screenshot_tool_decodes_utf8_bytes_field():
     async def run() -> None:
-        client = _AsyncScrapeClient(_Response(data=SimpleNamespace(screenshot=b"async-shot")))
+        client = _AsyncScrapeClient(
+            _Response(data=SimpleNamespace(screenshot=b"async-shot"))
+        )
         output = await WebsiteScreenshotTool.async_runnable(
             client,
             {"url": "https://example.com"},
@@ -663,8 +667,7 @@ def test_async_browser_use_tool_wraps_invalid_utf8_bytes_final_result():
         with pytest.raises(
             HyperbrowserError,
             match=(
-                "browser-use tool response field "
-                "'final_result' must be a UTF-8 string"
+                "browser-use tool response field 'final_result' must be a UTF-8 string"
             ),
         ) as exc_info:
             await BrowserUseTool.async_runnable(client, {"task": "search docs"})
