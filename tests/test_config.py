@@ -503,6 +503,20 @@ def test_client_config_normalize_base_url_preserves_hyperbrowser_decode_errors(
     assert exc_info.value.original_error is None
 
 
+def test_client_config_normalize_base_url_wraps_non_string_decode_results(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _return_bytes(_value: str) -> bytes:
+        return b"/api"
+
+    monkeypatch.setattr(config_module, "unquote", _return_bytes)
+
+    with pytest.raises(HyperbrowserError, match="Failed to decode base_url path") as exc_info:
+        ClientConfig.normalize_base_url("https://example.local/api")
+
+    assert exc_info.value.original_error is not None
+
+
 def test_client_config_normalize_base_url_preserves_invalid_port_original_error():
     with pytest.raises(
         HyperbrowserError, match="base_url must contain a valid port number"
