@@ -9,9 +9,26 @@ _HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
 _NUMERIC_LIKE_URL_PATTERN = re.compile(
     r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$"
 )
+_NUMERIC_LIKE_METHOD_PATTERN = re.compile(
+    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$"
+)
 _MAX_ERROR_MESSAGE_LENGTH = 2000
 _MAX_REQUEST_URL_DISPLAY_LENGTH = 1000
 _MAX_REQUEST_METHOD_LENGTH = 50
+_INVALID_METHOD_SENTINELS = {
+    "none",
+    "null",
+    "undefined",
+    "true",
+    "false",
+    "nan",
+    "inf",
+    "+inf",
+    "-inf",
+    "infinity",
+    "+infinity",
+    "-infinity",
+}
 _INVALID_URL_SENTINELS = {
     "none",
     "null",
@@ -47,6 +64,12 @@ def _normalize_request_method(method: Any) -> str:
     if not isinstance(raw_method, str) or not raw_method.strip():
         return "UNKNOWN"
     normalized_method = raw_method.strip().upper()
+    lowered_method = normalized_method.lower()
+    if (
+        lowered_method in _INVALID_METHOD_SENTINELS
+        or _NUMERIC_LIKE_METHOD_PATTERN.fullmatch(normalized_method)
+    ):
+        return "UNKNOWN"
     if len(normalized_method) > _MAX_REQUEST_METHOD_LENGTH:
         return "UNKNOWN"
     if not _HTTP_METHOD_TOKEN_PATTERN.fullmatch(normalized_method):

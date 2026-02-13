@@ -310,6 +310,32 @@ def test_format_request_failure_message_normalizes_non_string_fallback_values():
     assert message == "Request UNKNOWN unknown URL failed"
 
 
+@pytest.mark.parametrize("sentinel_method", ["null", "undefined", "true", "false"])
+def test_format_request_failure_message_normalizes_sentinel_fallback_methods(
+    sentinel_method: str,
+):
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method=sentinel_method,
+        fallback_url="https://example.com/fallback",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/fallback failed"
+
+
+@pytest.mark.parametrize("numeric_like_method", ["1", "1.5", "-1.25", "+2", ".75", "1e3"])
+def test_format_request_failure_message_normalizes_numeric_like_fallback_methods(
+    numeric_like_method: str,
+):
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method=numeric_like_method,
+        fallback_url="https://example.com/fallback",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/fallback failed"
+
+
 def test_format_request_failure_message_supports_ascii_bytes_method_values():
     message = format_request_failure_message(
         httpx.RequestError("network down"),
@@ -519,6 +545,30 @@ def test_format_generic_request_failure_message_normalizes_invalid_method_values
 def test_format_generic_request_failure_message_normalizes_non_string_method_values():
     message = format_generic_request_failure_message(
         method=123,
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+@pytest.mark.parametrize("sentinel_method", ["null", "undefined", "true", "false"])
+def test_format_generic_request_failure_message_normalizes_sentinel_method_values(
+    sentinel_method: str,
+):
+    message = format_generic_request_failure_message(
+        method=sentinel_method,
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+@pytest.mark.parametrize("numeric_like_method", ["1", "1.5", "-1.25", "+2", ".75", "1e3"])
+def test_format_generic_request_failure_message_normalizes_numeric_like_method_values(
+    numeric_like_method: str,
+):
+    message = format_generic_request_failure_message(
+        method=numeric_like_method,
         url="https://example.com/path",
     )
 

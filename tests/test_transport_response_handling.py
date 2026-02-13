@@ -67,6 +67,34 @@ def test_sync_handle_response_with_request_error_normalizes_method_casing():
         transport.close()
 
 
+def test_sync_handle_response_with_request_error_normalizes_sentinel_method():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError,
+            match="Request UNKNOWN https://example.com/network failed",
+        ):
+            transport._handle_response(
+                _RequestErrorResponse("null", "https://example.com/network")
+            )
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_request_error_normalizes_numeric_like_method():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError,
+            match="Request UNKNOWN https://example.com/network failed",
+        ):
+            transport._handle_response(
+                _RequestErrorResponse("1e3", "https://example.com/network")
+            )
+    finally:
+        transport.close()
+
+
 def test_async_handle_response_with_non_json_success_body_returns_status_only():
     async def run() -> None:
         transport = AsyncTransport(api_key="test-key")
@@ -110,6 +138,40 @@ def test_async_handle_response_with_request_error_normalizes_method_casing():
             ):
                 await transport._handle_response(
                     _RequestErrorResponse("post", "https://example.com/network")
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_request_error_normalizes_sentinel_method():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="Request UNKNOWN https://example.com/network failed",
+            ):
+                await transport._handle_response(
+                    _RequestErrorResponse("undefined", "https://example.com/network")
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_request_error_normalizes_numeric_like_method():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="Request UNKNOWN https://example.com/network failed",
+            ):
+                await transport._handle_response(
+                    _RequestErrorResponse("1.5", "https://example.com/network")
                 )
         finally:
             await transport.close()
