@@ -168,6 +168,13 @@ python -m pytest -q
 python -m build
 ```
 
+Or use Make targets:
+
+```bash
+make install
+make check
+```
+
 ## Examples
 
 Ready-to-run examples are available in `examples/`:
