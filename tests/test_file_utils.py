@@ -88,6 +88,18 @@ def test_ensure_existing_file_path_rejects_empty_string_paths():
         )
 
 
+def test_ensure_existing_file_path_rejects_surrounding_whitespace():
+    with pytest.raises(
+        HyperbrowserError,
+        match="file_path must not contain leading or trailing whitespace",
+    ):
+        ensure_existing_file_path(
+            " /tmp/file.txt",
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+
 def test_ensure_existing_file_path_rejects_null_byte_paths():
     with pytest.raises(
         HyperbrowserError, match="file_path must not contain null bytes"
