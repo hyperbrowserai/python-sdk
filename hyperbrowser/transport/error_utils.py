@@ -1,6 +1,21 @@
+import json
 from typing import Any
 
 import httpx
+
+
+def _stringify_error_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for key in ("message", "error", "detail"):
+            nested_value = value.get(key)
+            if nested_value is not None:
+                return _stringify_error_value(nested_value)
+    try:
+        return json.dumps(value, sort_keys=True)
+    except TypeError:
+        return str(value)
 
 
 def extract_error_message(response: httpx.Response, fallback_error: Exception) -> str:
@@ -10,10 +25,11 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
         return response.text or str(fallback_error)
 
     if isinstance(error_data, dict):
-        message = error_data.get("message") or error_data.get("error")
-        if message is not None:
-            return str(message)
+        for key in ("message", "error", "detail"):
+            message = error_data.get(key)
+            if message is not None:
+                return _stringify_error_value(message)
         return response.text or str(fallback_error)
     if isinstance(error_data, str):
         return error_data
-    return str(response.text or str(fallback_error))
+    return _stringify_error_value(response.text or str(fallback_error))

@@ -97,7 +97,7 @@ def test_sync_handle_response_with_non_string_message_field_coerces_to_string():
     try:
         response = _build_response(500, '{"message":{"detail":"failed"}}')
 
-        with pytest.raises(HyperbrowserError, match="detail"):
+        with pytest.raises(HyperbrowserError, match="failed"):
             transport._handle_response(response)
     finally:
         transport.close()
@@ -109,7 +109,32 @@ def test_async_handle_response_with_non_string_message_field_coerces_to_string()
         try:
             response = _build_response(500, '{"message":{"detail":"failed"}}')
 
-            with pytest.raises(HyperbrowserError, match="detail"):
+            with pytest.raises(HyperbrowserError, match="failed"):
+                await transport._handle_response(response)
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_sync_handle_response_with_nested_error_message_uses_nested_value():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        response = _build_response(500, '{"error":{"message":"nested failure"}}')
+
+        with pytest.raises(HyperbrowserError, match="nested failure"):
+            transport._handle_response(response)
+    finally:
+        transport.close()
+
+
+def test_async_handle_response_with_detail_field_uses_detail_value():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            response = _build_response(500, '{"detail":"invalid request"}')
+
+            with pytest.raises(HyperbrowserError, match="invalid request"):
                 await transport._handle_response(response)
         finally:
             await transport.close()
