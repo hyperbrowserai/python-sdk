@@ -394,6 +394,14 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             retry_delay_seconds=0,
         )
 
+    with pytest.raises(HyperbrowserError, match="max_attempts must be an integer"):
+        retry_operation(
+            operation_name="invalid-retry-type",
+            operation=lambda: "ok",
+            max_attempts=1.5,  # type: ignore[arg-type]
+            retry_delay_seconds=0,
+        )
+
     with pytest.raises(
         HyperbrowserError, match="retry_delay_seconds must be non-negative"
     ):
@@ -417,6 +425,18 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
         )
 
     with pytest.raises(
+        HyperbrowserError, match="max_status_failures must be an integer"
+    ):
+        poll_until_terminal_status(
+            operation_name="invalid-status-failures-type",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.1,
+            max_wait_seconds=1.0,
+            max_status_failures=1.5,  # type: ignore[arg-type]
+        )
+
+    with pytest.raises(
         HyperbrowserError, match="poll_interval_seconds must be non-negative"
     ):
         poll_until_terminal_status(
@@ -424,6 +444,17 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             get_status=lambda: "completed",
             is_terminal_status=lambda value: value == "completed",
             poll_interval_seconds=-0.1,
+            max_wait_seconds=1.0,
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="poll_interval_seconds must be a number"
+    ):
+        poll_until_terminal_status(
+            operation_name="invalid-poll-interval-type",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds="0.1",  # type: ignore[arg-type]
             max_wait_seconds=1.0,
         )
 
@@ -437,6 +468,18 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             get_total_page_batches=lambda response: response["total"],
             on_page_success=lambda response: None,
             max_wait_seconds=-1.0,
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
+
+    with pytest.raises(HyperbrowserError, match="max_wait_seconds must be a number"):
+        collect_paginated_results(
+            operation_name="invalid-max-wait-type",
+            get_next_page=lambda page: {"current": 1, "total": 1, "items": []},
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds="1",  # type: ignore[arg-type]
             max_attempts=1,
             retry_delay_seconds=0.0,
         )

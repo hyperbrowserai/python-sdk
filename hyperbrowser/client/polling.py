@@ -1,4 +1,5 @@
 import asyncio
+from numbers import Real
 import time
 from typing import Awaitable, Callable, Optional, TypeVar
 
@@ -17,20 +18,39 @@ def _validate_retry_config(
     retry_delay_seconds: float,
     max_status_failures: Optional[int] = None,
 ) -> None:
+    if isinstance(max_attempts, bool) or not isinstance(max_attempts, int):
+        raise HyperbrowserError("max_attempts must be an integer")
     if max_attempts < 1:
         raise HyperbrowserError("max_attempts must be at least 1")
+    if isinstance(retry_delay_seconds, bool) or not isinstance(
+        retry_delay_seconds, Real
+    ):
+        raise HyperbrowserError("retry_delay_seconds must be a number")
     if retry_delay_seconds < 0:
         raise HyperbrowserError("retry_delay_seconds must be non-negative")
-    if max_status_failures is not None and max_status_failures < 1:
-        raise HyperbrowserError("max_status_failures must be at least 1")
+    if max_status_failures is not None:
+        if isinstance(max_status_failures, bool) or not isinstance(
+            max_status_failures, int
+        ):
+            raise HyperbrowserError("max_status_failures must be an integer")
+        if max_status_failures < 1:
+            raise HyperbrowserError("max_status_failures must be at least 1")
 
 
 def _validate_poll_interval(poll_interval_seconds: float) -> None:
+    if isinstance(poll_interval_seconds, bool) or not isinstance(
+        poll_interval_seconds, Real
+    ):
+        raise HyperbrowserError("poll_interval_seconds must be a number")
     if poll_interval_seconds < 0:
         raise HyperbrowserError("poll_interval_seconds must be non-negative")
 
 
 def _validate_max_wait_seconds(max_wait_seconds: Optional[float]) -> None:
+    if max_wait_seconds is not None and (
+        isinstance(max_wait_seconds, bool) or not isinstance(max_wait_seconds, Real)
+    ):
+        raise HyperbrowserError("max_wait_seconds must be a number")
     if max_wait_seconds is not None and max_wait_seconds < 0:
         raise HyperbrowserError("max_wait_seconds must be non-negative")
 
