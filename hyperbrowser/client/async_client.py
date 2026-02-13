@@ -1,5 +1,6 @@
 from typing import Mapping, Optional
 
+from ..exceptions import HyperbrowserError
 from ..config import ClientConfig
 from ..transport.async_transport import AsyncTransport
 from .base import HyperbrowserBase
@@ -24,8 +25,10 @@ class AsyncHyperbrowser(HyperbrowserBase):
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         headers: Optional[Mapping[str, str]] = None,
-        timeout: Optional[int] = 30,
+        timeout: Optional[float] = 30,
     ):
+        if timeout is not None and timeout < 0:
+            raise HyperbrowserError("timeout must be non-negative")
         super().__init__(AsyncTransport, config, api_key, base_url, headers)
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
