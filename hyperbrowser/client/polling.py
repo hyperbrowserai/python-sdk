@@ -29,6 +29,15 @@ class _NonRetryablePollingError(HyperbrowserError):
     pass
 
 
+def _coerce_operation_name_component(value: object, *, fallback: str) -> str:
+    if isinstance(value, str):
+        return value
+    try:
+        return str(value)
+    except Exception:
+        return fallback
+
+
 def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
     is_supported_numeric_type = isinstance(value, Real) or isinstance(value, Decimal)
     if isinstance(value, bool) or not is_supported_numeric_type:
@@ -68,7 +77,9 @@ def _validate_operation_name(operation_name: str) -> None:
 
 
 def build_operation_name(prefix: str, identifier: str) -> str:
-    normalized_identifier = identifier.strip()
+    normalized_prefix = _coerce_operation_name_component(prefix, fallback="")
+    raw_identifier = _coerce_operation_name_component(identifier, fallback="unknown")
+    normalized_identifier = raw_identifier.strip()
     if not normalized_identifier:
         normalized_identifier = "unknown"
     normalized_identifier = "".join(
@@ -76,16 +87,21 @@ def build_operation_name(prefix: str, identifier: str) -> str:
         for character in normalized_identifier
     )
 
-    operation_name = f"{prefix}{normalized_identifier}"
+    operation_name = f"{normalized_prefix}{normalized_identifier}"
     if len(operation_name) <= _MAX_OPERATION_NAME_LENGTH:
         return operation_name
     available_identifier_length = (
-        _MAX_OPERATION_NAME_LENGTH - len(prefix) - len(_TRUNCATED_OPERATION_NAME_SUFFIX)
+        _MAX_OPERATION_NAME_LENGTH
+        - len(normalized_prefix)
+        - len(_TRUNCATED_OPERATION_NAME_SUFFIX)
     )
     if available_identifier_length > 0:
         truncated_identifier = normalized_identifier[:available_identifier_length]
-        return f"{prefix}{truncated_identifier}{_TRUNCATED_OPERATION_NAME_SUFFIX}"
-    return prefix[:_MAX_OPERATION_NAME_LENGTH]
+        return (
+            f"{normalized_prefix}{truncated_identifier}"
+            f"{_TRUNCATED_OPERATION_NAME_SUFFIX}"
+        )
+    return normalized_prefix[:_MAX_OPERATION_NAME_LENGTH]
 
 
 def build_fetch_operation_name(operation_name: str) -> str:
