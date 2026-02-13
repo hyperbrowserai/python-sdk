@@ -17,12 +17,24 @@ class AsyncTransport(AsyncTransportStrategy):
             "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
         }
         if headers:
-            if any(
-                not isinstance(key, str) or not isinstance(value, str)
-                for key, value in headers.items()
-            ):
-                raise HyperbrowserError("headers must be a mapping of string pairs")
-            merged_headers.update(headers)
+            normalized_headers = {}
+            for key, value in headers.items():
+                if not isinstance(key, str) or not isinstance(value, str):
+                    raise HyperbrowserError("headers must be a mapping of string pairs")
+                normalized_key = key.strip()
+                if not normalized_key:
+                    raise HyperbrowserError("header names must not be empty")
+                if (
+                    "\n" in normalized_key
+                    or "\r" in normalized_key
+                    or "\n" in value
+                    or "\r" in value
+                ):
+                    raise HyperbrowserError(
+                        "headers must not contain newline characters"
+                    )
+                normalized_headers[normalized_key] = value
+            merged_headers.update(normalized_headers)
         self.client = httpx.AsyncClient(headers=merged_headers)
         self._closed = False
 

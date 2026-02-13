@@ -36,7 +36,19 @@ class ClientConfig:
             for key, value in self.headers.items():
                 if not isinstance(key, str) or not isinstance(value, str):
                     raise HyperbrowserError("headers must be a mapping of string pairs")
-                normalized_headers[key] = value
+                normalized_key = key.strip()
+                if not normalized_key:
+                    raise HyperbrowserError("header names must not be empty")
+                if (
+                    "\n" in normalized_key
+                    or "\r" in normalized_key
+                    or "\n" in value
+                    or "\r" in value
+                ):
+                    raise HyperbrowserError(
+                        "headers must not contain newline characters"
+                    )
+                normalized_headers[normalized_key] = value
             self.headers = normalized_headers
 
     @classmethod

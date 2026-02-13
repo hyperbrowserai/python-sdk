@@ -142,6 +142,24 @@ def test_client_config_rejects_non_string_header_pairs():
         ClientConfig(api_key="test-key", headers={"X-Correlation-Id": 123})  # type: ignore[dict-item]
 
 
+def test_client_config_rejects_empty_header_name():
+    with pytest.raises(HyperbrowserError, match="header names must not be empty"):
+        ClientConfig(api_key="test-key", headers={"   ": "value"})
+
+
+def test_client_config_rejects_newline_header_values():
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain newline characters"
+    ):
+        ClientConfig(api_key="test-key", headers={"X-Correlation-Id": "bad\nvalue"})
+
+
+def test_client_config_normalizes_header_name_whitespace():
+    config = ClientConfig(api_key="test-key", headers={"  X-Correlation-Id  ": "value"})
+
+    assert config.headers == {"X-Correlation-Id": "value"}
+
+
 def test_client_config_accepts_mapping_header_inputs():
     headers = MappingProxyType({"X-Correlation-Id": "abc123"})
     config = ClientConfig(api_key="test-key", headers=headers)
