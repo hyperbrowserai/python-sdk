@@ -20,8 +20,10 @@ def poll_until_terminal_status(
     is_terminal_status: Callable[[str], bool],
     poll_interval_seconds: float,
     max_wait_seconds: Optional[float],
+    max_status_failures: int = 5,
 ) -> str:
     start_time = time.monotonic()
+    failures = 0
 
     while True:
         if has_exceeded_max_wait(start_time, max_wait_seconds):
@@ -29,7 +31,18 @@ def poll_until_terminal_status(
                 f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
             )
 
-        status = get_status()
+        try:
+            status = get_status()
+            failures = 0
+        except Exception as exc:
+            failures += 1
+            if failures >= max_status_failures:
+                raise HyperbrowserError(
+                    f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
+                ) from exc
+            time.sleep(poll_interval_seconds)
+            continue
+
         if is_terminal_status(status):
             return status
         time.sleep(poll_interval_seconds)
@@ -62,8 +75,10 @@ async def poll_until_terminal_status_async(
     is_terminal_status: Callable[[str], bool],
     poll_interval_seconds: float,
     max_wait_seconds: Optional[float],
+    max_status_failures: int = 5,
 ) -> str:
     start_time = time.monotonic()
+    failures = 0
 
     while True:
         if has_exceeded_max_wait(start_time, max_wait_seconds):
@@ -71,7 +86,18 @@ async def poll_until_terminal_status_async(
                 f"Timed out waiting for {operation_name} after {max_wait_seconds} seconds"
             )
 
-        status = await get_status()
+        try:
+            status = await get_status()
+            failures = 0
+        except Exception as exc:
+            failures += 1
+            if failures >= max_status_failures:
+                raise HyperbrowserError(
+                    f"Failed to poll {operation_name} after {max_status_failures} attempts: {exc}"
+                ) from exc
+            await asyncio.sleep(poll_interval_seconds)
+            continue
+
         if is_terminal_status(status):
             return status
         await asyncio.sleep(poll_interval_seconds)

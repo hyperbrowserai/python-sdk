@@ -36,6 +36,38 @@ def test_poll_until_terminal_status_times_out():
         )
 
 
+def test_poll_until_terminal_status_retries_transient_status_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise ValueError("temporary")
+        return "completed"
+
+    status = poll_until_terminal_status(
+        operation_name="sync poll retries",
+        get_status=get_status,
+        is_terminal_status=lambda value: value in {"completed", "failed"},
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+    )
+
+    assert status == "completed"
+
+
+def test_poll_until_terminal_status_raises_after_status_failures():
+    with pytest.raises(HyperbrowserError, match="Failed to poll sync poll failure"):
+        poll_until_terminal_status(
+            operation_name="sync poll failure",
+            get_status=lambda: (_ for _ in ()).throw(ValueError("always")),
+            is_terminal_status=lambda value: value in {"completed", "failed"},
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=2,
+        )
+
+
 def test_retry_operation_retries_and_returns_value():
     attempts = {"count": 0}
 
@@ -93,5 +125,27 @@ def test_async_polling_and_retry_helpers():
             retry_delay_seconds=0.0001,
         )
         assert result == "ok"
+
+    asyncio.run(run())
+
+
+def test_async_poll_until_terminal_status_retries_transient_status_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise ValueError("temporary")
+            return "completed"
+
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll retries",
+            get_status=get_status,
+            is_terminal_status=lambda value: value in {"completed", "failed"},
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+        )
+        assert status == "completed"
 
     asyncio.run(run())
