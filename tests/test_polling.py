@@ -1202,6 +1202,24 @@ def test_retry_operation_does_not_retry_runtime_errors_for_loop_mismatch():
     assert attempts["count"] == 1
 
 
+def test_retry_operation_does_not_retry_runtime_errors_for_event_loop_binding():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise RuntimeError("Task is bound to a different event loop")
+
+    with pytest.raises(RuntimeError, match="different event loop"):
+        retry_operation(
+            operation_name="sync retry loop-binding runtime error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_for_closed_loop():
     async def run() -> None:
         attempts = {"count": 0}
@@ -1213,6 +1231,29 @@ def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_for_clos
         with pytest.raises(RuntimeError, match="Event loop is closed"):
             await poll_until_terminal_status_async(
                 operation_name="async poll closed-loop runtime error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_for_event_loop_binding():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise RuntimeError("Task is bound to a different event loop")
+
+        with pytest.raises(RuntimeError, match="different event loop"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll loop-binding runtime error",
                 get_status=get_status,
                 is_terminal_status=lambda value: value == "completed",
                 poll_interval_seconds=0.0001,

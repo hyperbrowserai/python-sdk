@@ -134,7 +134,11 @@ def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
     normalized_message = str(exc).lower()
     if "event loop is closed" in normalized_message:
         return True
-    return "different loop" in normalized_message and "future" in normalized_message
+    if "different event loop" in normalized_message:
+        return True
+    return "different loop" in normalized_message and any(
+        marker in normalized_message for marker in ("future", "task")
+    )
 
 
 def _is_retryable_exception(exc: Exception) -> bool:
