@@ -1,4 +1,5 @@
 import asyncio
+import math
 
 import pytest
 
@@ -751,6 +752,35 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             get_total_page_batches=lambda response: response["total"],
             on_page_success=lambda response: None,
             max_wait_seconds="1",  # type: ignore[arg-type]
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
+
+    with pytest.raises(HyperbrowserError, match="retry_delay_seconds must be finite"):
+        retry_operation(
+            operation_name="invalid-retry-delay-finite",
+            operation=lambda: "ok",
+            max_attempts=1,
+            retry_delay_seconds=math.inf,
+        )
+
+    with pytest.raises(HyperbrowserError, match="poll_interval_seconds must be finite"):
+        poll_until_terminal_status(
+            operation_name="invalid-poll-interval-finite",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=math.nan,
+            max_wait_seconds=1.0,
+        )
+
+    with pytest.raises(HyperbrowserError, match="max_wait_seconds must be finite"):
+        collect_paginated_results(
+            operation_name="invalid-max-wait-finite",
+            get_next_page=lambda page: {"current": 1, "total": 1, "items": []},
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=math.inf,
             max_attempts=1,
             retry_delay_seconds=0.0,
         )
