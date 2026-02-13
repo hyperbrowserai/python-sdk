@@ -5,6 +5,24 @@ from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 from hyperbrowser.exceptions import HyperbrowserError
 
 T = TypeVar("T")
+_TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
+_MAX_MODEL_NAME_DISPLAY_LENGTH = 120
+_MAX_MAPPING_KEY_DISPLAY_LENGTH = 120
+
+
+def _sanitize_display_text(value: str, *, max_length: int) -> str:
+    sanitized_value = "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in value
+    ).strip()
+    if not sanitized_value:
+        return ""
+    if len(sanitized_value) <= max_length:
+        return sanitized_value
+    available_length = max_length - len(_TRUNCATED_DISPLAY_SUFFIX)
+    if available_length <= 0:
+        return _TRUNCATED_DISPLAY_SUFFIX
+    return f"{sanitized_value[:available_length]}{_TRUNCATED_DISPLAY_SUFFIX}"
 
 
 def _safe_model_name(model: object) -> str:
@@ -14,10 +32,21 @@ def _safe_model_name(model: object) -> str:
         return "response model"
     if not isinstance(model_name, str):
         return "response model"
-    normalized_model_name = model_name.strip()
+    normalized_model_name = _sanitize_display_text(
+        model_name, max_length=_MAX_MODEL_NAME_DISPLAY_LENGTH
+    )
     if not normalized_model_name:
         return "response model"
     return normalized_model_name
+
+
+def _format_mapping_key_for_error(key: str) -> str:
+    normalized_key = _sanitize_display_text(
+        key, max_length=_MAX_MAPPING_KEY_DISPLAY_LENGTH
+    )
+    if normalized_key:
+        return normalized_key
+    return "<blank key>"
 
 
 class APIResponse(Generic[T]):
@@ -66,9 +95,10 @@ class APIResponse(Generic[T]):
             except HyperbrowserError:
                 raise
             except Exception as exc:
+                key_display = _format_mapping_key_for_error(key)
                 raise HyperbrowserError(
                     f"Failed to parse response data for {model_name}: "
-                    f"unable to read value for key '{key}'",
+                    f"unable to read value for key '{key_display}'",
                     original_error=exc,
                 ) from exc
         try:

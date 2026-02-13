@@ -65,6 +65,42 @@ class _BlankNameCallableModel:
         raise RuntimeError("call failed")
 
 
+class _LongControlNameCallableModel:
+    __name__ = "  Model\t" + ("x" * 200)
+
+    def __call__(self, **kwargs):
+        _ = kwargs
+        raise RuntimeError("call failed")
+
+
+class _BrokenBlankKeyValueMapping(Mapping[str, object]):
+    def __iter__(self):
+        return iter(["   "])
+
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, key: str) -> object:
+        if key == "   ":
+            raise RuntimeError("cannot read blank key value")
+        raise KeyError(key)
+
+
+class _BrokenLongKeyValueMapping(Mapping[str, object]):
+    _KEY = "bad\t" + ("k" * 200)
+
+    def __iter__(self):
+        return iter([self._KEY])
+
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, key: str) -> object:
+        if key == self._KEY:
+            raise RuntimeError("cannot read long key value")
+        raise KeyError(key)
+
+
 def test_api_response_from_json_parses_model_data() -> None:
     response = APIResponse.from_json(
         {"name": "job-1", "retries": 2}, _SampleResponseModel
@@ -157,6 +193,39 @@ def test_api_response_from_json_uses_default_name_for_blank_model_name() -> None
             {"name": "job-1"},
             cast("type[_SampleResponseModel]", _BlankNameCallableModel()),
         )
+
+
+def test_api_response_from_json_sanitizes_and_truncates_model_name_in_errors() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match=r"Failed to parse response data for Model\?x+\.\.\. \(truncated\)",
+    ):
+        APIResponse.from_json(
+            {"name": "job-1"},
+            cast("type[_SampleResponseModel]", _LongControlNameCallableModel()),
+        )
+
+
+def test_api_response_from_json_uses_placeholder_for_blank_mapping_key_in_errors() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to parse response data for _SampleResponseModel: "
+            "unable to read value for key '<blank key>'"
+        ),
+    ):
+        APIResponse.from_json(_BrokenBlankKeyValueMapping(), _SampleResponseModel)
+
+
+def test_api_response_from_json_sanitizes_and_truncates_mapping_keys_in_errors() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to parse response data for _SampleResponseModel: "
+            r"unable to read value for key 'bad\?k+\.\.\. \(truncated\)'"
+        ),
+    ):
+        APIResponse.from_json(_BrokenLongKeyValueMapping(), _SampleResponseModel)
 
 
 def test_api_response_from_json_preserves_hyperbrowser_errors() -> None:
