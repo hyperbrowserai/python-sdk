@@ -21,6 +21,8 @@ class ClientConfig:
         if self.headers is not None and not isinstance(self.headers, dict):
             raise HyperbrowserError("headers must be a dictionary of string pairs")
         self.api_key = self.api_key.strip()
+        if not self.api_key:
+            raise HyperbrowserError("api_key must not be empty")
         self.base_url = self.base_url.strip().rstrip("/")
         if not self.base_url:
             raise HyperbrowserError("base_url must not be empty")

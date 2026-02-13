@@ -64,6 +64,9 @@ def test_client_config_rejects_non_string_values():
     with pytest.raises(HyperbrowserError, match="headers must be a dictionary"):
         ClientConfig(api_key="test-key", headers="x=1")  # type: ignore[arg-type]
 
+    with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
+        ClientConfig(api_key="   ")
+
 
 def test_client_config_rejects_empty_or_invalid_base_url():
     with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
