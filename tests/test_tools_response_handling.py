@@ -365,3 +365,40 @@ def test_async_browser_use_tool_rejects_non_string_final_result():
             await BrowserUseTool.async_runnable(client, {"task": "search docs"})
 
     asyncio.run(run())
+
+
+def test_async_scrape_tool_supports_mapping_response_data():
+    async def run() -> None:
+        client = _AsyncScrapeClient(_Response(data={"markdown": "async mapping"}))
+        output = await WebsiteScrapeTool.async_runnable(
+            client,
+            {"url": "https://example.com"},
+        )
+        assert output == "async mapping"
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_supports_mapping_page_items():
+    async def run() -> None:
+        client = _AsyncCrawlClient(
+            _Response(data=[{"url": "https://example.com", "markdown": "async body"}])
+        )
+        output = await WebsiteCrawlTool.async_runnable(
+            client, {"url": "https://example.com"}
+        )
+        assert "Url: https://example.com" in output
+        assert "async body" in output
+
+    asyncio.run(run())
+
+
+def test_async_browser_use_tool_supports_mapping_response_data():
+    async def run() -> None:
+        client = _AsyncBrowserUseClient(
+            _Response(data={"final_result": "async mapping output"})
+        )
+        output = await BrowserUseTool.async_runnable(client, {"task": "search docs"})
+        assert output == "async mapping output"
+
+    asyncio.run(run())
