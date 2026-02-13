@@ -21,6 +21,17 @@ def test_normalize_headers_rejects_empty_header_name():
         )
 
 
+def test_normalize_headers_rejects_duplicate_names_after_normalization():
+    with pytest.raises(
+        HyperbrowserError,
+        match="duplicate header names are not allowed after normalization",
+    ):
+        normalize_headers(
+            {"X-Trace-Id": "one", "  X-Trace-Id  ": "two"},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
 def test_parse_headers_env_json_ignores_blank_values():
     assert parse_headers_env_json("   ") is None
 

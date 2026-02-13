@@ -30,6 +30,10 @@ def normalize_headers(
             or "\r" in value
         ):
             raise HyperbrowserError("headers must not contain newline characters")
+        if normalized_key in normalized_headers:
+            raise HyperbrowserError(
+                "duplicate header names are not allowed after normalization"
+            )
         normalized_headers[normalized_key] = value
     return normalized_headers
 

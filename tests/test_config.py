@@ -200,6 +200,17 @@ def test_client_config_normalizes_header_name_whitespace():
     assert config.headers == {"X-Correlation-Id": "value"}
 
 
+def test_client_config_rejects_duplicate_header_names_after_normalization():
+    with pytest.raises(
+        HyperbrowserError,
+        match="duplicate header names are not allowed after normalization",
+    ):
+        ClientConfig(
+            api_key="test-key",
+            headers={"X-Correlation-Id": "one", "  X-Correlation-Id  ": "two"},
+        )
+
+
 def test_client_config_accepts_mapping_header_inputs():
     headers = MappingProxyType({"X-Correlation-Id": "abc123"})
     config = ClientConfig(api_key="test-key", headers=headers)
