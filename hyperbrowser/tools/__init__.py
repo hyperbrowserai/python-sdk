@@ -1,4 +1,7 @@
 import json
+from typing import Any, Dict, Mapping
+
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
@@ -19,6 +22,20 @@ from .anthropic import (
     SCREENSHOT_TOOL_ANTHROPIC,
     CRAWL_TOOL_ANTHROPIC,
 )
+
+
+def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
+    normalized_params: Dict[str, Any] = dict(params)
+    schema_value = normalized_params.get("schema")
+    if isinstance(schema_value, str):
+        try:
+            normalized_params["schema"] = json.loads(schema_value)
+        except json.JSONDecodeError as exc:
+            raise HyperbrowserError(
+                "Invalid JSON string provided for `schema` in extract tool params",
+                original_error=exc,
+            ) from exc
+    return normalized_params
 
 
 class WebsiteScrapeTool:
@@ -86,16 +103,18 @@ class WebsiteExtractTool:
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: dict) -> str:
-        if params.get("schema") and isinstance(params.get("schema"), str):
-            params["schema"] = json.loads(params["schema"])
-        resp = hb.extract.start_and_wait(params=StartExtractJobParams(**params))
+        normalized_params = _prepare_extract_tool_params(params)
+        resp = hb.extract.start_and_wait(
+            params=StartExtractJobParams(**normalized_params)
+        )
         return json.dumps(resp.data) if resp.data else ""
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        if params.get("schema") and isinstance(params.get("schema"), str):
-            params["schema"] = json.loads(params["schema"])
-        resp = await hb.extract.start_and_wait(params=StartExtractJobParams(**params))
+        normalized_params = _prepare_extract_tool_params(params)
+        resp = await hb.extract.start_and_wait(
+            params=StartExtractJobParams(**normalized_params)
+        )
         return json.dumps(resp.data) if resp.data else ""
 
 
