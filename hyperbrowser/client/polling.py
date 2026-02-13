@@ -198,7 +198,7 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
             digits = normalized_status[1:]
         else:
             digits = normalized_status
-        if not digits or not digits.isdigit():
+        if not digits or not digits.isascii() or not digits.isdigit():
             return None
         try:
             return int(normalized_status, 10)
