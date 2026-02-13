@@ -1,6 +1,7 @@
 import json
 from numbers import Real
 import re
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -138,7 +139,7 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
         return _safe_to_string(value)
     if isinstance(value, str):
         return value
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         for key in ("message", "error", "detail", "errors", "msg", "title", "reason"):
             try:
                 nested_value = value.get(key)
@@ -195,7 +196,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
         return _fallback_message()
 
     extracted_message: str
-    if isinstance(error_data, dict):
+    if isinstance(error_data, Mapping):
         for key in ("message", "error", "detail", "errors", "title", "reason"):
             try:
                 message = error_data.get(key)

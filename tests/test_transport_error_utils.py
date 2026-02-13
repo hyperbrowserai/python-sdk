@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from types import MappingProxyType
 
 from hyperbrowser.transport.error_utils import (
     extract_error_message,
@@ -687,6 +688,15 @@ def test_extract_error_message_handles_unstringifiable_message_values():
     )
 
     assert message == "<unstringifiable _UnstringifiableErrorValue>"
+
+
+def test_extract_error_message_supports_mapping_proxy_payloads():
+    message = extract_error_message(
+        _DummyResponse(MappingProxyType({"detail": "mapped detail"})),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "mapped detail"
 
 
 def test_extract_error_message_handles_dict_get_failures():
