@@ -149,6 +149,36 @@ def test_parse_headers_env_json_wraps_recursive_json_errors(
     assert exc_info.value.original_error is not None
 
 
+def test_parse_headers_env_json_wraps_unexpected_json_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_runtime_error(_raw_headers: str):
+        raise RuntimeError("unexpected json parser failure")
+
+    monkeypatch.setattr("hyperbrowser.header_utils.json.loads", _raise_runtime_error)
+
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be valid JSON object"
+    ) as exc_info:
+        parse_headers_env_json('{"X-Trace-Id":"abc123"}')
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_headers_env_json_preserves_hyperbrowser_json_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_hyperbrowser_error(_raw_headers: str):
+        raise HyperbrowserError("custom header json failure")
+
+    monkeypatch.setattr("hyperbrowser.header_utils.json.loads", _raise_hyperbrowser_error)
+
+    with pytest.raises(HyperbrowserError, match="custom header json failure") as exc_info:
+        parse_headers_env_json('{"X-Trace-Id":"abc123"}')
+
+    assert exc_info.value.original_error is None
+
+
 def test_parse_headers_env_json_rejects_non_mapping_payload():
     with pytest.raises(
         HyperbrowserError,
