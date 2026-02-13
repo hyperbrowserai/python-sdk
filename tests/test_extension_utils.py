@@ -287,3 +287,79 @@ def test_parse_extension_list_response_data_preserves_hyperbrowser_extension_rea
         parse_extension_list_response_data({"extensions": [_BrokenExtensionMapping()]})
 
     assert exc_info.value.original_error is None
+
+
+def test_parse_extension_list_response_data_rejects_non_string_extension_keys():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected extension object keys to be strings at index 0",
+    ):
+        parse_extension_list_response_data(
+            {
+                "extensions": [
+                    {1: "invalid-key"},  # type: ignore[dict-item]
+                ]
+            }
+        )
+
+
+def test_parse_extension_list_response_data_wraps_extension_value_read_failures():
+    class _BrokenValueLookupMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield "name"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read extension value")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read extension object value for key 'name' at index 0",
+    ) as exc_info:
+        parse_extension_list_response_data({"extensions": [_BrokenValueLookupMapping()]})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_extension_list_response_data_sanitizes_extension_value_read_keys():
+    class _BrokenValueLookupMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield "bad\tkey"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read extension value")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read extension object value for key 'bad\\?key' at index 0",
+    ) as exc_info:
+        parse_extension_list_response_data({"extensions": [_BrokenValueLookupMapping()]})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_extension_list_response_data_preserves_hyperbrowser_value_read_errors():
+    class _BrokenValueLookupMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield "name"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise HyperbrowserError("custom extension value read failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom extension value read failure"
+    ) as exc_info:
+        parse_extension_list_response_data({"extensions": [_BrokenValueLookupMapping()]})
+
+    assert exc_info.value.original_error is None

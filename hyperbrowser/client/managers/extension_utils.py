@@ -106,7 +106,7 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
                 f"{index} but got {_get_type_name(extension)}"
             )
         try:
-            extension_payload = dict(extension)
+            extension_keys = list(extension.keys())
         except HyperbrowserError:
             raise
         except Exception as exc:
@@ -114,6 +114,25 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
                 f"Failed to read extension object at index {index}",
                 original_error=exc,
             ) from exc
+        for key in extension_keys:
+            if isinstance(key, str):
+                continue
+            raise HyperbrowserError(
+                f"Expected extension object keys to be strings at index {index}"
+            )
+        extension_payload: dict[str, object] = {}
+        for key in extension_keys:
+            try:
+                extension_payload[key] = extension[key]
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                key_display = _format_key_display(key)
+                raise HyperbrowserError(
+                    "Failed to read extension object value for key "
+                    f"'{key_display}' at index {index}",
+                    original_error=exc,
+                ) from exc
         try:
             parsed_extensions.append(ExtensionResponse(**extension_payload))
         except HyperbrowserError:
