@@ -40,7 +40,7 @@ class SyncTransport(SyncTransportStrategy):
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
             except Exception:
-                message = str(e)
+                message = response.text or str(e)
             raise HyperbrowserError(
                 message,
                 status_code=response.status_code,

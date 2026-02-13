@@ -47,7 +47,7 @@ def test_sync_handle_response_with_error_and_non_json_body_raises_hyperbrowser_e
     try:
         response = _build_response(500, "server exploded")
 
-        with pytest.raises(HyperbrowserError):
+        with pytest.raises(HyperbrowserError, match="server exploded"):
             transport._handle_response(response)
     finally:
         transport.close()
@@ -59,7 +59,7 @@ def test_async_handle_response_with_error_and_non_json_body_raises_hyperbrowser_
         try:
             response = _build_response(500, "server exploded")
 
-            with pytest.raises(HyperbrowserError):
+            with pytest.raises(HyperbrowserError, match="server exploded"):
                 await transport._handle_response(response)
         finally:
             await transport.close()
