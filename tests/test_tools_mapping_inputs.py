@@ -1,5 +1,6 @@
 from types import MappingProxyType
 
+import asyncio
 import pytest
 
 from hyperbrowser.exceptions import HyperbrowserError
@@ -24,6 +25,16 @@ class _ScrapeManager:
 class _Client:
     def __init__(self):
         self.scrape = _ScrapeManager()
+
+
+class _AsyncScrapeManager:
+    async def start_and_wait(self, params: StartScrapeJobParams):
+        return _Response(type("Data", (), {"markdown": "ok"})())
+
+
+class _AsyncClient:
+    def __init__(self):
+        self.scrape = _AsyncScrapeManager()
 
 
 def test_tool_wrappers_accept_mapping_inputs():
@@ -55,3 +66,15 @@ def test_extract_tool_wrapper_rejects_non_mapping_inputs():
     client = _ExtractClient()
     with pytest.raises(HyperbrowserError, match="tool params must be a mapping"):
         WebsiteExtractTool.runnable(client, "bad")  # type: ignore[arg-type]
+
+
+def test_async_tool_wrappers_reject_non_mapping_inputs():
+    async def run() -> None:
+        client = _AsyncClient()
+        with pytest.raises(HyperbrowserError, match="tool params must be a mapping"):
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                ["https://example.com"],  # type: ignore[arg-type]
+            )
+
+    asyncio.run(run())
