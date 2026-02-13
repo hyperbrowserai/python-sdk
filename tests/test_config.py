@@ -62,6 +62,15 @@ def test_client_config_from_env_rejects_non_object_headers_json(monkeypatch):
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_ignores_blank_headers(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", "   ")
+
+    config = ClientConfig.from_env()
+
+    assert config.headers is None
+
+
 def test_client_config_from_env_normalizes_base_url(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_BASE_URL", " https://example.local/ ")

@@ -52,7 +52,7 @@ class ClientConfig:
         )
         headers = None
         raw_headers = os.environ.get("HYPERBROWSER_HEADERS")
-        if raw_headers:
+        if raw_headers is not None and raw_headers.strip():
             try:
                 parsed_headers = json.loads(raw_headers)
             except json.JSONDecodeError as exc:
