@@ -86,7 +86,7 @@ def test_build_operation_name_uses_unknown_for_blank_identifier():
 def test_build_operation_name_supports_non_string_identifier_values():
     operation_name = build_operation_name(
         "crawl job ",
-        123,  # type: ignore[arg-type]
+        123,
     )
 
     assert operation_name == "crawl job 123"
@@ -99,7 +99,7 @@ def test_build_operation_name_falls_back_for_unstringifiable_identifiers():
 
     operation_name = build_operation_name(
         "crawl job ",
-        _BadIdentifier(),  # type: ignore[arg-type]
+        _BadIdentifier(),
     )
 
     assert operation_name == "crawl job unknown"
@@ -111,7 +111,7 @@ def test_build_operation_name_falls_back_for_unstringifiable_prefixes():
             raise RuntimeError("cannot stringify")
 
     operation_name = build_operation_name(
-        _BadPrefix(),  # type: ignore[arg-type]
+        _BadPrefix(),
         "identifier",
     )
 

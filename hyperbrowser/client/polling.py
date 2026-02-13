@@ -76,7 +76,7 @@ def _validate_operation_name(operation_name: str) -> None:
         raise HyperbrowserError("operation_name must not contain control characters")
 
 
-def build_operation_name(prefix: str, identifier: str) -> str:
+def build_operation_name(prefix: object, identifier: object) -> str:
     normalized_prefix = _coerce_operation_name_component(prefix, fallback="")
     raw_identifier = _coerce_operation_name_component(identifier, fallback="unknown")
     normalized_identifier = raw_identifier.strip()
