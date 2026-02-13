@@ -17,6 +17,7 @@ def normalize_headers(
 
     effective_pair_error_message = pair_error_message or mapping_error_message
     normalized_headers: Dict[str, str] = {}
+    seen_header_names = set()
     for key, value in headers.items():
         if not isinstance(key, str) or not isinstance(value, str):
             raise HyperbrowserError(effective_pair_error_message)
@@ -30,10 +31,12 @@ def normalize_headers(
             or "\r" in value
         ):
             raise HyperbrowserError("headers must not contain newline characters")
-        if normalized_key in normalized_headers:
+        canonical_header_name = normalized_key.lower()
+        if canonical_header_name in seen_header_names:
             raise HyperbrowserError(
                 "duplicate header names are not allowed after normalization"
             )
+        seen_header_names.add(canonical_header_name)
         normalized_headers[normalized_key] = value
     return normalized_headers
 

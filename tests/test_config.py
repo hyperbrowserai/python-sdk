@@ -227,6 +227,17 @@ def test_client_config_rejects_duplicate_header_names_after_normalization():
         )
 
 
+def test_client_config_rejects_case_insensitive_duplicate_header_names():
+    with pytest.raises(
+        HyperbrowserError,
+        match="duplicate header names are not allowed after normalization",
+    ):
+        ClientConfig(
+            api_key="test-key",
+            headers={"X-Correlation-Id": "one", "x-correlation-id": "two"},
+        )
+
+
 def test_client_config_accepts_mapping_header_inputs():
     headers = MappingProxyType({"X-Correlation-Id": "abc123"})
     config = ClientConfig(api_key="test-key", headers=headers)
