@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import CancelledError as ConcurrentCancelledError
+from concurrent.futures import BrokenExecutor as ConcurrentBrokenExecutor
 import inspect
 import math
 from numbers import Real
@@ -172,6 +173,8 @@ def _is_executor_shutdown_runtime_error(exc: Exception) -> bool:
 
 
 def _is_retryable_exception(exc: Exception) -> bool:
+    if isinstance(exc, ConcurrentBrokenExecutor):
+        return False
     if isinstance(exc, (StopIteration, StopAsyncIteration)):
         return False
     if _is_generator_reentrancy_error(exc):

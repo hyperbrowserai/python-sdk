@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import CancelledError as ConcurrentCancelledError
+from concurrent.futures import BrokenExecutor as ConcurrentBrokenExecutor
 import math
 from fractions import Fraction
 
@@ -211,6 +212,26 @@ def test_poll_until_terminal_status_does_not_retry_concurrent_cancelled_errors()
     with pytest.raises(ConcurrentCancelledError):
         poll_until_terminal_status(
             operation_name="sync poll concurrent-cancelled passthrough",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
+def test_poll_until_terminal_status_does_not_retry_broken_executor_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise ConcurrentBrokenExecutor("executor is broken")
+
+    with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+        poll_until_terminal_status(
+            operation_name="sync poll broken-executor passthrough",
             get_status=get_status,
             is_terminal_status=lambda value: value == "completed",
             poll_interval_seconds=0.0001,
@@ -604,6 +625,24 @@ def test_retry_operation_does_not_retry_concurrent_cancelled_errors():
     assert attempts["count"] == 1
 
 
+def test_retry_operation_does_not_retry_broken_executor_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise ConcurrentBrokenExecutor("executor is broken")
+
+    with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+        retry_operation(
+            operation_name="sync retry broken-executor passthrough",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_retry_operation_retries_server_errors():
     attempts = {"count": 0}
 
@@ -931,6 +970,29 @@ def test_poll_until_terminal_status_async_does_not_retry_concurrent_cancelled_er
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_does_not_retry_broken_executor_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise ConcurrentBrokenExecutor("executor is broken")
+
+        with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll broken-executor passthrough",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_async_retries_server_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -1092,6 +1154,27 @@ def test_retry_operation_async_does_not_retry_concurrent_cancelled_errors():
         with pytest.raises(ConcurrentCancelledError):
             await retry_operation_async(
                 operation_name="async retry concurrent-cancelled passthrough",
+                operation=operation,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_does_not_retry_broken_executor_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            raise ConcurrentBrokenExecutor("executor is broken")
+
+        with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+            await retry_operation_async(
+                operation_name="async retry broken-executor passthrough",
                 operation=operation,
                 max_attempts=5,
                 retry_delay_seconds=0.0001,
@@ -2174,6 +2257,28 @@ def test_collect_paginated_results_does_not_retry_concurrent_cancelled_errors():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_does_not_retry_broken_executor_errors():
+    attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        raise ConcurrentBrokenExecutor("executor is broken")
+
+    with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+        collect_paginated_results(
+            operation_name="sync paginated broken-executor passthrough",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_collect_paginated_results_retries_server_errors():
     attempts = {"count": 0}
     collected = []
@@ -2526,6 +2631,31 @@ def test_collect_paginated_results_async_does_not_retry_concurrent_cancelled_err
         with pytest.raises(ConcurrentCancelledError):
             await collect_paginated_results_async(
                 operation_name="async paginated concurrent-cancelled passthrough",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_does_not_retry_broken_executor_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            raise ConcurrentBrokenExecutor("executor is broken")
+
+        with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
+            await collect_paginated_results_async(
+                operation_name="async paginated broken-executor passthrough",
                 get_next_page=get_next_page,
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],
