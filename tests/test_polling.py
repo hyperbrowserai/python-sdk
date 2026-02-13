@@ -127,6 +127,23 @@ def test_build_operation_name_sanitizes_control_characters_in_prefix():
     assert operation_name == "crawl?job? identifier"
 
 
+def test_build_operation_name_trims_leading_whitespace_from_prefix_text():
+    operation_name = build_operation_name(
+        "   crawl job ",
+        "123",
+    )
+
+    assert operation_name == "crawl job 123"
+
+
+def test_build_operation_name_avoids_trailing_whitespace_in_prefix_only_truncation():
+    overlong_prefix = ("a" * 199) + " "
+
+    operation_name = build_operation_name(overlong_prefix, " \n\t ")
+
+    assert operation_name == ("a" * 199)
+
+
 def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
     status = poll_until_terminal_status(
         operation_name="sync immediate zero wait",

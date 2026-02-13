@@ -91,7 +91,9 @@ def build_operation_name(prefix: object, identifier: object) -> str:
         for character in normalized_identifier
     )
 
-    operation_name = f"{normalized_prefix}{normalized_identifier}"
+    operation_name = f"{normalized_prefix}{normalized_identifier}".strip()
+    if not operation_name:
+        operation_name = "operation"
     if len(operation_name) <= _MAX_OPERATION_NAME_LENGTH:
         return operation_name
     available_identifier_length = (
@@ -101,11 +103,16 @@ def build_operation_name(prefix: object, identifier: object) -> str:
     )
     if available_identifier_length > 0:
         truncated_identifier = normalized_identifier[:available_identifier_length]
-        return (
+        operation_name = (
             f"{normalized_prefix}{truncated_identifier}"
             f"{_TRUNCATED_OPERATION_NAME_SUFFIX}"
         )
-    return normalized_prefix[:_MAX_OPERATION_NAME_LENGTH]
+    else:
+        operation_name = normalized_prefix[:_MAX_OPERATION_NAME_LENGTH]
+    operation_name = operation_name.strip()
+    if not operation_name:
+        return "operation"
+    return operation_name
 
 
 def build_fetch_operation_name(operation_name: str) -> str:
