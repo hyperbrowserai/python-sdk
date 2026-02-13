@@ -46,8 +46,20 @@ class APIResponse(Generic[T]):
                 f"Failed to parse response data for {model_name}: "
                 f"expected string keys but received {key_type_name}"
             )
+        normalized_payload: dict[str, object] = {}
+        for key in response_keys:
+            try:
+                normalized_payload[key] = json_data[key]
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    f"Failed to parse response data for {model_name}: "
+                    f"unable to read value for key '{key}'",
+                    original_error=exc,
+                ) from exc
         try:
-            return cls(data=model(**json_data))
+            return cls(data=model(**normalized_payload))
         except HyperbrowserError:
             raise
         except Exception as exc:
