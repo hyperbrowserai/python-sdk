@@ -50,25 +50,28 @@ class ClientConfig:
         base_url = os.environ.get(
             "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
         )
-        headers = None
-        raw_headers = os.environ.get("HYPERBROWSER_HEADERS")
-        if raw_headers is not None and raw_headers.strip():
-            try:
-                parsed_headers = json.loads(raw_headers)
-            except json.JSONDecodeError as exc:
-                raise HyperbrowserError(
-                    "HYPERBROWSER_HEADERS must be valid JSON object"
-                ) from exc
-            if not isinstance(parsed_headers, dict):
-                raise HyperbrowserError(
-                    "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
-                )
-            if any(
-                not isinstance(key, str) or not isinstance(value, str)
-                for key, value in parsed_headers.items()
-            ):
-                raise HyperbrowserError(
-                    "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
-                )
-            headers = parsed_headers
+        headers = cls.parse_headers_from_env(os.environ.get("HYPERBROWSER_HEADERS"))
         return cls(api_key=api_key, base_url=base_url, headers=headers)
+
+    @staticmethod
+    def parse_headers_from_env(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
+        if raw_headers is None or not raw_headers.strip():
+            return None
+        try:
+            parsed_headers = json.loads(raw_headers)
+        except json.JSONDecodeError as exc:
+            raise HyperbrowserError(
+                "HYPERBROWSER_HEADERS must be valid JSON object"
+            ) from exc
+        if not isinstance(parsed_headers, dict):
+            raise HyperbrowserError(
+                "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
+            )
+        if any(
+            not isinstance(key, str) or not isinstance(value, str)
+            for key, value in parsed_headers.items()
+        ):
+            raise HyperbrowserError(
+                "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
+            )
+        return parsed_headers

@@ -25,6 +25,13 @@ class HyperbrowserBase:
             )
 
         if config is None:
+            resolved_headers = (
+                headers
+                if headers is not None
+                else ClientConfig.parse_headers_from_env(
+                    os.environ.get("HYPERBROWSER_HEADERS")
+                )
+            )
             config = ClientConfig(
                 api_key=(
                     api_key
@@ -38,7 +45,7 @@ class HyperbrowserBase:
                         "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
                     )
                 ),
-                headers=headers,
+                headers=resolved_headers,
             )
 
         if not config.api_key:

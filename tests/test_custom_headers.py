@@ -5,6 +5,7 @@ import pytest
 
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.config import ClientConfig
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.transport.async_transport import AsyncTransport
 from hyperbrowser.transport.sync import SyncTransport
 
@@ -109,6 +110,35 @@ def test_async_client_constructor_accepts_mapping_headers():
             await client.close()
 
     asyncio.run(run())
+
+
+def test_sync_client_constructor_reads_headers_from_environment(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Team-Trace":"env-sync"}')
+    client = Hyperbrowser(api_key="test-key")
+    try:
+        assert client.transport.client.headers["X-Team-Trace"] == "env-sync"
+    finally:
+        client.close()
+
+
+def test_async_client_constructor_reads_headers_from_environment(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Team-Trace":"env-async"}')
+
+    async def run() -> None:
+        client = AsyncHyperbrowser(api_key="test-key")
+        try:
+            assert client.transport.client.headers["X-Team-Trace"] == "env-async"
+        finally:
+            await client.close()
+
+    asyncio.run(run())
+
+
+def test_client_constructor_rejects_invalid_env_headers(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", "{invalid")
+
+    with pytest.raises(HyperbrowserError, match="HYPERBROWSER_HEADERS"):
+        Hyperbrowser(api_key="test-key")
 
 
 def test_client_constructor_rejects_mixed_config_and_direct_args():
