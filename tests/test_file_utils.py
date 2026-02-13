@@ -136,6 +136,45 @@ def test_ensure_existing_file_path_wraps_invalid_path_os_errors(monkeypatch):
         )
 
 
+def test_ensure_existing_file_path_wraps_unexpected_exists_errors(monkeypatch):
+    def raising_exists(path: str) -> bool:
+        _ = path
+        raise RuntimeError("unexpected exists failure")
+
+    monkeypatch.setattr(file_utils.os.path, "exists", raising_exists)
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        ensure_existing_file_path(
+            "/tmp/maybe-invalid",
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_ensure_existing_file_path_wraps_unexpected_isfile_errors(
+    monkeypatch, tmp_path: Path
+):
+    file_path = tmp_path / "target.txt"
+    file_path.write_text("content")
+
+    def raising_isfile(path: str) -> bool:
+        _ = path
+        raise RuntimeError("unexpected isfile failure")
+
+    monkeypatch.setattr(file_utils.os.path, "isfile", raising_isfile)
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
 def test_ensure_existing_file_path_wraps_fspath_runtime_errors():
     class _BrokenPathLike:
         def __fspath__(self) -> str:
