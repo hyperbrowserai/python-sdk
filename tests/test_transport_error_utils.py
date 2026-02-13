@@ -162,6 +162,19 @@ def test_extract_error_message_extracts_errors_list_messages():
     assert message == "first issue; second issue"
 
 
+def test_extract_error_message_truncates_long_errors_lists():
+    errors_payload = {"errors": [{"msg": f"issue-{index}"} for index in range(12)]}
+    message = extract_error_message(
+        _DummyResponse(errors_payload),
+        RuntimeError("fallback detail"),
+    )
+
+    assert "issue-0" in message
+    assert "issue-9" in message
+    assert "issue-10" not in message
+    assert "... (+2 more)" in message
+
+
 def test_extract_error_message_skips_blank_message_and_uses_detail():
     message = extract_error_message(
         _DummyResponse({"message": "   ", "detail": "useful detail"}),

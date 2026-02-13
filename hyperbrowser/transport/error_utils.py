@@ -15,19 +15,25 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
             if nested_value is not None:
                 return _stringify_error_value(nested_value, _depth=_depth + 1)
     if isinstance(value, (list, tuple)):
+        max_list_items = 10
         collected_messages = [
             item_message
             for item_message in (
-                _stringify_error_value(item, _depth=_depth + 1) for item in value
+                _stringify_error_value(item, _depth=_depth + 1)
+                for item in value[:max_list_items]
             )
             if item_message
         ]
         if collected_messages:
-            return (
+            joined_messages = (
                 collected_messages[0]
                 if len(collected_messages) == 1
                 else "; ".join(collected_messages)
             )
+            remaining_items = len(value) - max_list_items
+            if remaining_items > 0:
+                return f"{joined_messages}; ... (+{remaining_items} more)"
+            return joined_messages
     try:
         return json.dumps(value, sort_keys=True)
     except (TypeError, ValueError, RecursionError):
