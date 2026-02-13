@@ -34,6 +34,9 @@ def _normalize_request_url(url: Any) -> str:
     normalized_url = raw_url.strip()
     if not normalized_url:
         return "unknown URL"
+    lowered_url = normalized_url.lower()
+    if lowered_url in {"none", "null"} or normalized_url.isdigit():
+        return "unknown URL"
     if any(character.isspace() for character in normalized_url):
         return "unknown URL"
     if any(
