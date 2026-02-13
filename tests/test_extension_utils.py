@@ -157,3 +157,15 @@ def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys
         ),
     ):
         parse_extension_list_response_data({_BrokenStringKey(): "value"})
+
+
+def test_parse_extension_list_response_data_missing_key_handles_unreadable_keys():
+    class _BrokenKeysMapping(dict):
+        def keys(self):
+            raise RuntimeError("cannot read keys")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected 'extensions' key in response but got \\[<unavailable keys>\\] keys",
+    ):
+        parse_extension_list_response_data(_BrokenKeysMapping({"id": "ext_1"}))

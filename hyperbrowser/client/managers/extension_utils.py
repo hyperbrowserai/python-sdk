@@ -30,7 +30,11 @@ def _format_key_display(value: object) -> str:
 
 
 def _summarize_mapping_keys(mapping: Mapping[object, object]) -> str:
-    key_names = sorted(_format_key_display(key) for key in mapping.keys())
+    try:
+        mapping_keys = list(mapping.keys())
+    except Exception:
+        return "[<unavailable keys>]"
+    key_names = sorted(_format_key_display(key) for key in mapping_keys)
     if not key_names:
         return "[]"
     displayed_keys = key_names[:_MAX_DISPLAYED_MISSING_KEYS]
