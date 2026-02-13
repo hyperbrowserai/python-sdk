@@ -101,6 +101,19 @@ class ClientConfig:
                 original_error=exc,
             ) from exc
         if (
+            not isinstance(parsed_base_url.scheme, str)
+            or not isinstance(parsed_base_url.netloc, str)
+            or not isinstance(parsed_base_url.path, str)
+            or not isinstance(parsed_base_url.query, str)
+            or not isinstance(parsed_base_url.fragment, str)
+        ):
+            raise HyperbrowserError("base_url parser returned invalid URL components")
+        if (
+            parsed_base_url.hostname is not None
+            and not isinstance(parsed_base_url.hostname, str)
+        ):
+            raise HyperbrowserError("base_url parser returned invalid URL components")
+        if (
             parsed_base_url.scheme not in {"https", "http"}
             or not parsed_base_url.netloc
         ):
