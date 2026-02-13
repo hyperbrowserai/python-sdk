@@ -222,7 +222,7 @@ def test_sync_transport_post_wraps_request_errors_with_url_context():
     transport.client.post = failing_post  # type: ignore[assignment]
     try:
         with pytest.raises(
-            HyperbrowserError, match="POST request to https://example.com/post failed"
+            HyperbrowserError, match="Request POST https://example.com/post failed"
         ):
             transport.post("https://example.com/post", data={"ok": True})
     finally:
@@ -261,7 +261,7 @@ def test_async_transport_get_wraps_request_errors_with_url_context():
         try:
             with pytest.raises(
                 HyperbrowserError,
-                match="GET request to https://example.com/get failed",
+                match="Request GET https://example.com/get failed",
             ):
                 await transport.get("https://example.com/get")
         finally:
@@ -307,6 +307,46 @@ def test_async_transport_put_wraps_unexpected_errors_with_url_context():
                 await transport.put("https://example.com/put", data={"ok": True})
         finally:
             transport.client.put = original_put  # type: ignore[assignment]
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_sync_transport_request_error_without_request_uses_fallback_url():
+    transport = SyncTransport(api_key="test-key")
+    original_get = transport.client.get
+
+    def failing_get(*args, **kwargs):
+        raise httpx.RequestError("network down")
+
+    transport.client.get = failing_get  # type: ignore[assignment]
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Request GET https://example.com/fallback failed"
+        ):
+            transport.get("https://example.com/fallback")
+    finally:
+        transport.client.get = original_get  # type: ignore[assignment]
+        transport.close()
+
+
+def test_async_transport_request_error_without_request_uses_fallback_url():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        original_delete = transport.client.delete
+
+        async def failing_delete(*args, **kwargs):
+            raise httpx.RequestError("network down")
+
+        transport.client.delete = failing_delete  # type: ignore[assignment]
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="Request DELETE https://example.com/fallback failed",
+            ):
+                await transport.delete("https://example.com/fallback")
+        finally:
+            transport.client.delete = original_delete  # type: ignore[assignment]
             await transport.close()
 
     asyncio.run(run())

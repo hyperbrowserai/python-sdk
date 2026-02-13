@@ -6,7 +6,11 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.header_utils import merge_headers
 from hyperbrowser.version import __version__
 from .base import APIResponse, SyncTransportStrategy
-from .error_utils import extract_error_message, extract_request_error_context
+from .error_utils import (
+    extract_error_message,
+    extract_request_error_context,
+    format_request_failure_message,
+)
 
 
 class SyncTransport(SyncTransportStrategy):
@@ -72,7 +76,10 @@ class SyncTransport(SyncTransportStrategy):
             return self._handle_response(response)
         except httpx.RequestError as e:
             raise HyperbrowserError(
-                f"POST request to {url} failed", original_error=e
+                format_request_failure_message(
+                    e, fallback_method="POST", fallback_url=url
+                ),
+                original_error=e,
             ) from e
         except HyperbrowserError:
             raise
@@ -93,7 +100,10 @@ class SyncTransport(SyncTransportStrategy):
             return self._handle_response(response)
         except httpx.RequestError as e:
             raise HyperbrowserError(
-                f"GET request to {url} failed", original_error=e
+                format_request_failure_message(
+                    e, fallback_method="GET", fallback_url=url
+                ),
+                original_error=e,
             ) from e
         except HyperbrowserError:
             raise
@@ -108,7 +118,10 @@ class SyncTransport(SyncTransportStrategy):
             return self._handle_response(response)
         except httpx.RequestError as e:
             raise HyperbrowserError(
-                f"PUT request to {url} failed", original_error=e
+                format_request_failure_message(
+                    e, fallback_method="PUT", fallback_url=url
+                ),
+                original_error=e,
             ) from e
         except HyperbrowserError:
             raise
@@ -123,7 +136,10 @@ class SyncTransport(SyncTransportStrategy):
             return self._handle_response(response)
         except httpx.RequestError as e:
             raise HyperbrowserError(
-                f"DELETE request to {url} failed", original_error=e
+                format_request_failure_message(
+                    e, fallback_method="DELETE", fallback_url=url
+                ),
+                original_error=e,
             ) from e
         except HyperbrowserError:
             raise

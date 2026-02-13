@@ -43,3 +43,14 @@ def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
     if request is None:
         return "UNKNOWN", "unknown URL"
     return request.method, str(request.url)
+
+
+def format_request_failure_message(
+    error: httpx.RequestError, *, fallback_method: str, fallback_url: str
+) -> str:
+    request_method, request_url = extract_request_error_context(error)
+    effective_method = (
+        request_method if request_method != "UNKNOWN" else fallback_method
+    )
+    effective_url = request_url if request_url != "unknown URL" else fallback_url
+    return f"Request {effective_method} {effective_url} failed"
