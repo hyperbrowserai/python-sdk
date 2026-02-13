@@ -32,6 +32,16 @@ class _LowercaseMethodRequest:
     url = "https://example.com/lowercase"
 
 
+class _InvalidMethodTokenRequest:
+    method = "GET /invalid"
+    url = "https://example.com/invalid-method"
+
+
+class _WhitespaceInsideUrlRequest:
+    method = "GET"
+    url = "https://example.com/with space"
+
+
 class _RequestErrorWithFailingRequestProperty(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
@@ -60,6 +70,18 @@ class _RequestErrorWithLowercaseMethod(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _LowercaseMethodRequest()
+
+
+class _RequestErrorWithInvalidMethodToken(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _InvalidMethodTokenRequest()
+
+
+class _RequestErrorWithWhitespaceInsideUrl(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _WhitespaceInsideUrlRequest()
 
 
 class _DummyResponse:
@@ -123,6 +145,24 @@ def test_extract_request_error_context_normalizes_method_to_uppercase():
     assert url == "https://example.com/lowercase"
 
 
+def test_extract_request_error_context_rejects_invalid_method_tokens():
+    method, url = extract_request_error_context(
+        _RequestErrorWithInvalidMethodToken("network down")
+    )
+
+    assert method == "UNKNOWN"
+    assert url == "https://example.com/invalid-method"
+
+
+def test_extract_request_error_context_rejects_urls_with_whitespace():
+    method, url = extract_request_error_context(
+        _RequestErrorWithWhitespaceInsideUrl("network down")
+    )
+
+    assert method == "GET"
+    assert url == "unknown URL"
+
+
 def test_format_request_failure_message_uses_fallback_values():
     message = format_request_failure_message(
         httpx.RequestError("network down"),
@@ -152,6 +192,16 @@ def test_format_request_failure_message_normalizes_blank_fallback_values():
     )
 
     assert message == "Request UNKNOWN unknown URL failed"
+
+
+def test_format_request_failure_message_normalizes_lowercase_fallback_method():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="post",
+        fallback_url="https://example.com/fallback",
+    )
+
+    assert message == "Request POST https://example.com/fallback failed"
 
 
 def test_extract_error_message_handles_recursive_list_payloads():

@@ -1,7 +1,34 @@
 import json
+import re
 from typing import Any
 
 import httpx
+
+_HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
+
+
+def _normalize_request_method(method: Any) -> str:
+    if not isinstance(method, str) or not method.strip():
+        return "UNKNOWN"
+    normalized_method = method.strip().upper()
+    if not _HTTP_METHOD_TOKEN_PATTERN.fullmatch(normalized_method):
+        return "UNKNOWN"
+    return normalized_method
+
+
+def _normalize_request_url(url: Any) -> str:
+    if not isinstance(url, str):
+        return "unknown URL"
+    normalized_url = url.strip()
+    if not normalized_url:
+        return "unknown URL"
+    if any(character.isspace() for character in normalized_url):
+        return "unknown URL"
+    if any(
+        ord(character) < 32 or ord(character) == 127 for character in normalized_url
+    ):
+        return "unknown URL"
+    return normalized_url
 
 
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
@@ -82,19 +109,13 @@ def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
         request_method = request.method
     except Exception:
         request_method = "UNKNOWN"
-    if not isinstance(request_method, str) or not request_method.strip():
-        request_method = "UNKNOWN"
-    else:
-        request_method = request_method.strip().upper()
+    request_method = _normalize_request_method(request_method)
 
     try:
         request_url = str(request.url)
     except Exception:
         request_url = "unknown URL"
-    if not request_url.strip():
-        request_url = "unknown URL"
-    else:
-        request_url = request_url.strip()
+    request_url = _normalize_request_url(request_url)
     return request_method, request_url
 
 
@@ -105,10 +126,8 @@ def format_request_failure_message(
     effective_method = (
         request_method if request_method != "UNKNOWN" else fallback_method
     )
-    if not isinstance(effective_method, str) or not effective_method.strip():
-        effective_method = "UNKNOWN"
+    effective_method = _normalize_request_method(effective_method)
 
     effective_url = request_url if request_url != "unknown URL" else fallback_url
-    if not isinstance(effective_url, str) or not effective_url.strip():
-        effective_url = "unknown URL"
+    effective_url = _normalize_request_url(effective_url)
     return f"Request {effective_method} {effective_url} failed"
