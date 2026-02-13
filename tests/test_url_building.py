@@ -328,6 +328,11 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             client._build_url("/session?foo=bar baz")
         with pytest.raises(
             HyperbrowserError,
+            match="path query must not contain unencoded delimiter characters",
+        ):
+            client._build_url("/session?foo=bar?baz")
+        with pytest.raises(
+            HyperbrowserError,
             match="path query must not contain unencoded whitespace or control characters",
         ):
             client._build_url("/session?foo=bar\tbaz")

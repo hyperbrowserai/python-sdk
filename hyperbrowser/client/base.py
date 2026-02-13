@@ -91,6 +91,10 @@ class HyperbrowserBase:
         raw_query_component = (
             stripped_path.split("?", 1)[1] if "?" in stripped_path else ""
         )
+        if "?" in raw_query_component or "#" in raw_query_component:
+            raise HyperbrowserError(
+                "path query must not contain unencoded delimiter characters"
+            )
         if any(
             character.isspace() or ord(character) < 32 or ord(character) == 127
             for character in raw_query_component
