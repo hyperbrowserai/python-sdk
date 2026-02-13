@@ -1,4 +1,3 @@
-import json
 import httpx
 from typing import Mapping, Optional
 
@@ -44,10 +43,14 @@ class SyncTransport(SyncTransportStrategy):
                 if not response.content:
                     return APIResponse.from_status(response.status_code)
                 return APIResponse(response.json())
-            except (httpx.DecodingError, json.JSONDecodeError, ValueError) as e:
+            except Exception as e:
                 if response.status_code >= 400:
+                    try:
+                        response_text = response.text
+                    except Exception:
+                        response_text = ""
                     raise HyperbrowserError(
-                        response.text or "Unknown error occurred",
+                        response_text or "Unknown error occurred",
                         status_code=response.status_code,
                         response=response,
                         original_error=e,

@@ -26,6 +26,32 @@ class _RequestErrorNoRequestResponse:
         raise httpx.RequestError("network down")
 
 
+class _BrokenJsonSuccessResponse:
+    status_code = 200
+    content = b"{broken-json}"
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        raise RuntimeError("broken json")
+
+
+class _BrokenJsonErrorResponse:
+    status_code = 500
+    content = b"{broken-json}"
+
+    def raise_for_status(self) -> None:
+        return None
+
+    @property
+    def text(self) -> str:
+        raise RuntimeError("broken response text")
+
+    def json(self):
+        raise RuntimeError("broken json")
+
+
 def test_sync_handle_response_with_non_json_success_body_returns_status_only():
     transport = SyncTransport(api_key="test-key")
     try:
@@ -35,6 +61,30 @@ def test_sync_handle_response_with_non_json_success_body_returns_status_only():
 
         assert api_response.status_code == 200
         assert api_response.data is None
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_broken_json_success_payload_returns_status_only():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        api_response = transport._handle_response(
+            _BrokenJsonSuccessResponse()  # type: ignore[arg-type]
+        )
+
+        assert api_response.status_code == 200
+        assert api_response.data is None
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_broken_json_error_payload_uses_default_message():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(HyperbrowserError, match="Unknown error occurred"):
+            transport._handle_response(
+                _BrokenJsonErrorResponse()  # type: ignore[arg-type]
+            )
     finally:
         transport.close()
 
@@ -105,6 +155,36 @@ def test_async_handle_response_with_non_json_success_body_returns_status_only():
 
             assert api_response.status_code == 200
             assert api_response.data is None
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_broken_json_success_payload_returns_status_only():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            api_response = await transport._handle_response(
+                _BrokenJsonSuccessResponse()  # type: ignore[arg-type]
+            )
+
+            assert api_response.status_code == 200
+            assert api_response.data is None
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_broken_json_error_payload_uses_default_message():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(HyperbrowserError, match="Unknown error occurred"):
+                await transport._handle_response(
+                    _BrokenJsonErrorResponse()  # type: ignore[arg-type]
+                )
         finally:
             await transport.close()
 
