@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Mapping, Optional
+from typing import Dict, Mapping, Optional, cast
 
 from .exceptions import HyperbrowserError
 
@@ -43,8 +43,12 @@ def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str
         raise HyperbrowserError(
             "HYPERBROWSER_HEADERS must be valid JSON object"
         ) from exc
+    if not isinstance(parsed_headers, Mapping):
+        raise HyperbrowserError(
+            "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
+        )
     return normalize_headers(
-        parsed_headers,  # type: ignore[arg-type]
+        cast(Mapping[str, str], parsed_headers),
         mapping_error_message="HYPERBROWSER_HEADERS must be a JSON object of string pairs",
         pair_error_message="HYPERBROWSER_HEADERS must be a JSON object of string pairs",
     )
