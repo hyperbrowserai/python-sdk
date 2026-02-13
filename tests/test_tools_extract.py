@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Mapping
+import math
 from types import MappingProxyType
 
 import pytest
@@ -357,6 +358,33 @@ def test_extract_tool_async_runnable_returns_empty_string_for_none_data():
 
 def test_extract_tool_async_runnable_wraps_serialization_failures():
     client = _AsyncClient(response_data={1, 2})
+
+    async def run():
+        return await WebsiteExtractTool.async_runnable(
+            client, {"urls": ["https://example.com"]}
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize extract tool response data"
+    ) as exc_info:
+        asyncio.run(run())
+
+    assert exc_info.value.original_error is not None
+
+
+def test_extract_tool_runnable_rejects_nan_json_payloads():
+    client = _SyncClient(response_data={"value": math.nan})
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize extract tool response data"
+    ) as exc_info:
+        WebsiteExtractTool.runnable(client, {"urls": ["https://example.com"]})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_extract_tool_async_runnable_rejects_nan_json_payloads():
+    client = _AsyncClient(response_data={"value": math.nan})
 
     async def run():
         return await WebsiteExtractTool.async_runnable(

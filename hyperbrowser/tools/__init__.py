@@ -153,7 +153,7 @@ def _serialize_extract_tool_data(data: Any) -> str:
     if data is None:
         return ""
     try:
-        return json.dumps(data)
+        return json.dumps(data, allow_nan=False)
     except HyperbrowserError:
         raise
     except Exception as exc:
