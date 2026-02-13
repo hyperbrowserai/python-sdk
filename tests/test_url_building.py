@@ -55,6 +55,10 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             client._build_url(r"\\session")
         with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
             client._build_url("https://api.hyperbrowser.ai/session")
+        with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
+            client._build_url("mailto:ops@hyperbrowser.ai")
+        with pytest.raises(HyperbrowserError, match="path must be a relative API path"):
+            client._build_url("http:example.com")
     finally:
         client.close()
 

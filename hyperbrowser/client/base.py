@@ -75,7 +75,7 @@ class HyperbrowserBase:
         if "\\" in stripped_path:
             raise HyperbrowserError("path must not contain backslashes")
         parsed_path = urlparse(stripped_path)
-        if parsed_path.scheme and parsed_path.netloc:
+        if parsed_path.scheme:
             raise HyperbrowserError("path must be a relative API path")
         normalized_path = f"/{stripped_path.lstrip('/')}"
         if normalized_path == "/api" or normalized_path.startswith("/api/"):
