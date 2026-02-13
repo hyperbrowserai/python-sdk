@@ -48,7 +48,12 @@ def merge_headers(
     mapping_error_message: str,
     pair_error_message: Optional[str] = None,
 ) -> Dict[str, str]:
-    merged_headers = dict(base_headers)
+    normalized_base_headers = normalize_headers(
+        base_headers,
+        mapping_error_message=mapping_error_message,
+        pair_error_message=pair_error_message,
+    )
+    merged_headers = dict(normalized_base_headers or {})
     normalized_overrides = normalize_headers(
         override_headers,
         mapping_error_message=mapping_error_message,

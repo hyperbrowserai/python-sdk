@@ -84,3 +84,24 @@ def test_merge_headers_replaces_existing_headers_case_insensitively():
     assert merged["X-API-KEY"] == "override-key"
     assert "User-Agent" not in merged
     assert "x-api-key" not in merged
+
+
+def test_merge_headers_rejects_invalid_base_header_pairs():
+    with pytest.raises(HyperbrowserError, match="headers must be a mapping"):
+        merge_headers(
+            {"x-api-key": 123},  # type: ignore[dict-item]
+            {"User-Agent": "custom"},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
+def test_merge_headers_rejects_duplicate_base_header_names_case_insensitive():
+    with pytest.raises(
+        HyperbrowserError,
+        match="duplicate header names are not allowed after normalization",
+    ):
+        merge_headers(
+            {"X-Request-Id": "one", "x-request-id": "two"},
+            None,
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
