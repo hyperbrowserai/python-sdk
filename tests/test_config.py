@@ -11,6 +11,13 @@ def test_client_config_from_env_raises_hyperbrowser_error_without_api_key(monkey
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_raises_hyperbrowser_error_for_blank_api_key(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "   ")
+
+    with pytest.raises(HyperbrowserError, match="HYPERBROWSER_API_KEY"):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_reads_api_key_and_base_url(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_BASE_URL", "https://example.local")

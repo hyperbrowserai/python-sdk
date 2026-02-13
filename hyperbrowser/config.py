@@ -16,7 +16,7 @@ class ClientConfig:
     @classmethod
     def from_env(cls) -> "ClientConfig":
         api_key = os.environ.get("HYPERBROWSER_API_KEY")
-        if api_key is None:
+        if api_key is None or not api_key.strip():
             raise HyperbrowserError(
                 "HYPERBROWSER_API_KEY environment variable is required"
             )
