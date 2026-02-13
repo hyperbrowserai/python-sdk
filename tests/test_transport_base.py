@@ -44,6 +44,27 @@ class _BrokenValueMapping(Mapping[str, object]):
         raise KeyError(key)
 
 
+class _BrokenNameMeta(type):
+    def __getattribute__(cls, name: str):
+        if name == "__name__":
+            raise RuntimeError("cannot read model name")
+        return super().__getattribute__(name)
+
+
+class _BrokenNameModel(metaclass=_BrokenNameMeta):
+    def __init__(self, **kwargs):
+        self.name = kwargs["name"]
+        self.retries = kwargs.get("retries", 0)
+
+
+class _BlankNameCallableModel:
+    __name__ = "   "
+
+    def __call__(self, **kwargs):
+        _ = kwargs
+        raise RuntimeError("call failed")
+
+
 def test_api_response_from_json_parses_model_data() -> None:
     response = APIResponse.from_json(
         {"name": "job-1", "retries": 2}, _SampleResponseModel
@@ -93,6 +114,14 @@ def test_api_response_from_json_wraps_non_hyperbrowser_errors() -> None:
     assert exc_info.value.original_error is not None
 
 
+def test_api_response_from_json_parses_model_when_name_lookup_fails() -> None:
+    response = APIResponse.from_json({"name": "job-1"}, _BrokenNameModel)
+
+    assert isinstance(response.data, _BrokenNameModel)
+    assert response.data.name == "job-1"
+    assert response.status_code == 200
+
+
 def test_api_response_from_json_wraps_unreadable_mapping_keys() -> None:
     with pytest.raises(
         HyperbrowserError,
@@ -117,6 +146,17 @@ def test_api_response_from_json_wraps_unreadable_mapping_values() -> None:
         APIResponse.from_json(_BrokenValueMapping(), _SampleResponseModel)
 
     assert exc_info.value.original_error is not None
+
+
+def test_api_response_from_json_uses_default_name_for_blank_model_name() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to parse response data for response model",
+    ):
+        APIResponse.from_json(
+            {"name": "job-1"},
+            cast("type[_SampleResponseModel]", _BlankNameCallableModel()),
+        )
 
 
 def test_api_response_from_json_preserves_hyperbrowser_errors() -> None:

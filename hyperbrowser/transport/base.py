@@ -7,6 +7,19 @@ from hyperbrowser.exceptions import HyperbrowserError
 T = TypeVar("T")
 
 
+def _safe_model_name(model: object) -> str:
+    try:
+        model_name = getattr(model, "__name__", "response model")
+    except Exception:
+        return "response model"
+    if not isinstance(model_name, str):
+        return "response model"
+    normalized_model_name = model_name.strip()
+    if not normalized_model_name:
+        return "response model"
+    return normalized_model_name
+
+
 class APIResponse(Generic[T]):
     """
     Wrapper for API responses to standardize sync/async handling.
@@ -21,7 +34,7 @@ class APIResponse(Generic[T]):
         cls, json_data: Mapping[str, object], model: Type[T]
     ) -> "APIResponse[T]":
         """Create an APIResponse from JSON data with a specific model."""
-        model_name = getattr(model, "__name__", "response model")
+        model_name = _safe_model_name(model)
         if not isinstance(json_data, MappingABC):
             actual_type_name = type(json_data).__name__
             raise HyperbrowserError(
