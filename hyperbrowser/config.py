@@ -61,6 +61,10 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must start with 'https://' or 'http://' and include a host"
             )
+        if parsed_base_url.hostname is None:
+            raise HyperbrowserError(
+                "base_url must start with 'https://' or 'http://' and include a host"
+            )
         if parsed_base_url.query or parsed_base_url.fragment:
             raise HyperbrowserError(
                 "base_url must not include query parameters or fragments"

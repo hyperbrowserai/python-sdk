@@ -210,6 +210,8 @@ def test_client_config_rejects_empty_or_invalid_base_url():
 
     with pytest.raises(HyperbrowserError, match="include a host"):
         ClientConfig(api_key="test-key", base_url="http://")
+    with pytest.raises(HyperbrowserError, match="include a host"):
+        ClientConfig(api_key="test-key", base_url="https://:443")
     with pytest.raises(
         HyperbrowserError, match="base_url must contain a valid port number"
     ):
@@ -373,6 +375,8 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
 
     with pytest.raises(HyperbrowserError, match="base_url must start with"):
         ClientConfig.normalize_base_url("example.local")
+    with pytest.raises(HyperbrowserError, match="include a host"):
+        ClientConfig.normalize_base_url("https://:443")
     with pytest.raises(
         HyperbrowserError, match="base_url must contain a valid port number"
     ):

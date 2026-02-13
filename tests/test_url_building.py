@@ -103,6 +103,10 @@ def test_client_build_url_rejects_runtime_invalid_base_url_changes():
         with pytest.raises(HyperbrowserError, match="include a host"):
             client._build_url("/session")
 
+        client.config.base_url = "https://:443"
+        with pytest.raises(HyperbrowserError, match="include a host"):
+            client._build_url("/session")
+
         client.config.base_url = "https://example.local?foo=bar"
         with pytest.raises(
             HyperbrowserError, match="must not include query parameters"
