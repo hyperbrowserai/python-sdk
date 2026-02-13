@@ -172,6 +172,22 @@ def _is_executor_shutdown_runtime_error(exc: Exception) -> bool:
     )
 
 
+def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
+    if isinstance(status_code, bool):
+        return None
+    if isinstance(status_code, int):
+        return status_code
+    if isinstance(status_code, str):
+        normalized_status = status_code.strip()
+        if not normalized_status:
+            return None
+        try:
+            return int(normalized_status, 10)
+        except ValueError:
+            return None
+    return None
+
+
 def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, ConcurrentBrokenExecutor):
         return False
@@ -194,11 +210,14 @@ def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, (HyperbrowserTimeoutError, HyperbrowserPollingError)):
         return False
     if isinstance(exc, HyperbrowserError) and exc.status_code is not None:
-        if isinstance(exc.status_code, bool) or not isinstance(exc.status_code, int):
+        normalized_status_code = _normalize_status_code_for_retry(exc.status_code)
+        if normalized_status_code is None:
             return True
         if (
-            _CLIENT_ERROR_STATUS_MIN <= exc.status_code < _CLIENT_ERROR_STATUS_MAX
-            and exc.status_code not in _RETRYABLE_CLIENT_ERROR_STATUS_CODES
+            _CLIENT_ERROR_STATUS_MIN
+            <= normalized_status_code
+            < _CLIENT_ERROR_STATUS_MAX
+            and normalized_status_code not in _RETRYABLE_CLIENT_ERROR_STATUS_CODES
         ):
             return False
     return True

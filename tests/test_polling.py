@@ -124,6 +124,26 @@ def test_poll_until_terminal_status_does_not_retry_non_retryable_client_errors()
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_does_not_retry_numeric_string_client_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        raise HyperbrowserError("client failure", status_code="400")  # type: ignore[arg-type]
+
+    with pytest.raises(HyperbrowserError, match="client failure"):
+        poll_until_terminal_status(
+            operation_name="sync poll numeric-string client error",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_does_not_retry_stop_iteration_errors():
     attempts = {"count": 0}
 
@@ -367,7 +387,7 @@ def test_poll_until_terminal_status_async_handles_non_integer_status_codes_as_re
             if attempts["count"] < 3:
                 raise HyperbrowserError(
                     "malformed status code",
-                    status_code="400",  # type: ignore[arg-type]
+                    status_code="invalid-status",  # type: ignore[arg-type]
                 )
             return "completed"
 
@@ -559,6 +579,29 @@ def test_retry_operation_does_not_retry_non_retryable_client_errors():
     assert attempts["count"] == 1
 
 
+def test_retry_operation_retries_numeric_string_rate_limit_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError(
+                "rate limited",
+                status_code=" 429 ",  # type: ignore[arg-type]
+            )
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry numeric-string rate limit",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
 def test_retry_operation_does_not_retry_stop_iteration_errors():
     attempts = {"count": 0}
 
@@ -733,7 +776,7 @@ def test_retry_operation_handles_non_integer_status_codes_as_retryable():
         if attempts["count"] < 3:
             raise HyperbrowserError(
                 "malformed status code",
-                status_code="400",  # type: ignore[arg-type]
+                status_code="invalid-status",  # type: ignore[arg-type]
             )
         return "ok"
 
@@ -870,6 +913,32 @@ def test_poll_until_terminal_status_async_does_not_retry_non_retryable_client_er
         with pytest.raises(HyperbrowserError, match="client failure"):
             await poll_until_terminal_status_async(
                 operation_name="async poll client error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_poll_until_terminal_status_async_does_not_retry_numeric_string_client_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise HyperbrowserError(
+                "client failure",
+                status_code="404",  # type: ignore[arg-type]
+            )
+
+        with pytest.raises(HyperbrowserError, match="client failure"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll numeric-string client error",
                 get_status=get_status,
                 is_terminal_status=lambda value: value == "completed",
                 poll_interval_seconds=0.0001,
@@ -1082,6 +1151,32 @@ def test_retry_operation_async_does_not_retry_non_retryable_client_errors():
             )
 
         assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_retries_numeric_string_rate_limit_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "rate limited",
+                    status_code="429",  # type: ignore[arg-type]
+                )
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry numeric-string rate limit",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
 
     asyncio.run(run())
 
