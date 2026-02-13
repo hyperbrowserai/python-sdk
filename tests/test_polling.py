@@ -2571,6 +2571,74 @@ def test_wait_for_job_result_does_not_retry_concurrent_cancelled_status_errors()
     assert fetch_attempts["count"] == 0
 
 
+def test_wait_for_job_result_does_not_retry_terminal_callback_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        return "completed"
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(HyperbrowserError, match="is_terminal_status failed"):
+        wait_for_job_result(
+            operation_name="sync wait helper terminal callback exception",
+            get_status=get_status,
+            is_terminal_status=lambda value: (_ for _ in ()).throw(ValueError("boom")),
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
+def test_wait_for_job_result_cancels_awaitable_terminal_callback_results():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+    loop = asyncio.new_event_loop()
+    try:
+        callback_future = loop.create_future()
+
+        def get_status() -> str:
+            status_attempts["count"] += 1
+            return "completed"
+
+        def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(
+            HyperbrowserError,
+            match="is_terminal_status must return a non-awaitable result",
+        ):
+            wait_for_job_result(
+                operation_name="sync wait helper terminal callback future",
+                get_status=get_status,
+                is_terminal_status=lambda value: callback_future,  # type: ignore[return-value]
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert callback_future.cancelled()
+    finally:
+        loop.close()
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
 def test_wait_for_job_result_retries_rate_limit_status_errors():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -2910,6 +2978,77 @@ def test_wait_for_job_result_async_does_not_retry_concurrent_cancelled_status_er
                 fetch_retry_delay_seconds=0.0001,
             )
 
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_terminal_callback_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            return "completed"
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(HyperbrowserError, match="is_terminal_status failed"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper terminal callback exception",
+                get_status=get_status,
+                is_terminal_status=lambda value: (_ for _ in ()).throw(
+                    ValueError("boom")
+                ),
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_cancels_awaitable_terminal_callback_results():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+        callback_future = asyncio.get_running_loop().create_future()
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            return "completed"
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(
+            HyperbrowserError,
+            match="is_terminal_status must return a non-awaitable result",
+        ):
+            await wait_for_job_result_async(
+                operation_name="async wait helper terminal callback future",
+                get_status=get_status,
+                is_terminal_status=lambda value: callback_future,  # type: ignore[return-value]
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert callback_future.cancelled()
         assert status_attempts["count"] == 1
         assert fetch_attempts["count"] == 0
 
