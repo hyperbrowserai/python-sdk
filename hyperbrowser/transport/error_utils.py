@@ -22,9 +22,16 @@ def _normalize_request_method(method: Any) -> str:
 
 
 def _normalize_request_url(url: Any) -> str:
-    if not isinstance(url, str):
+    if url is None:
         return "unknown URL"
-    normalized_url = url.strip()
+    raw_url = url
+    if not isinstance(raw_url, str):
+        try:
+            raw_url = str(raw_url)
+        except Exception:
+            return "unknown URL"
+
+    normalized_url = raw_url.strip()
     if not normalized_url:
         return "unknown URL"
     if any(character.isspace() for character in normalized_url):

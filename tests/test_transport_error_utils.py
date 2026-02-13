@@ -245,6 +245,16 @@ def test_format_request_failure_message_normalizes_non_string_fallback_values():
     assert message == "Request UNKNOWN unknown URL failed"
 
 
+def test_format_request_failure_message_supports_url_like_fallback_values():
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="GET",
+        fallback_url=httpx.URL("https://example.com/fallback"),
+    )
+
+    assert message == "Request GET https://example.com/fallback failed"
+
+
 def test_format_generic_request_failure_message_normalizes_invalid_url_objects():
     message = format_generic_request_failure_message(
         method="GET",
@@ -252,6 +262,15 @@ def test_format_generic_request_failure_message_normalizes_invalid_url_objects()
     )
 
     assert message == "Request GET unknown URL failed"
+
+
+def test_format_generic_request_failure_message_supports_url_like_values():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=httpx.URL("https://example.com/path"),
+    )
+
+    assert message == "Request GET https://example.com/path failed"
 
 
 def test_format_generic_request_failure_message_normalizes_invalid_method_values():

@@ -439,6 +439,24 @@ def test_sync_transport_request_error_without_request_uses_fallback_url():
         transport.close()
 
 
+def test_sync_transport_request_error_without_request_uses_url_like_fallback():
+    transport = SyncTransport(api_key="test-key")
+    original_get = transport.client.get
+
+    def failing_get(*args, **kwargs):
+        raise httpx.RequestError("network down")
+
+    transport.client.get = failing_get  # type: ignore[assignment]
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Request GET https://example.com/fallback failed"
+        ):
+            transport.get(httpx.URL("https://example.com/fallback"))  # type: ignore[arg-type]
+    finally:
+        transport.client.get = original_get  # type: ignore[assignment]
+        transport.close()
+
+
 def test_sync_transport_request_error_without_request_uses_unknown_url_for_invalid_input():
     transport = SyncTransport(api_key="test-key")
     original_get = transport.client.get
@@ -470,6 +488,28 @@ def test_async_transport_request_error_without_request_uses_fallback_url():
                 match="Request DELETE https://example.com/fallback failed",
             ):
                 await transport.delete("https://example.com/fallback")
+        finally:
+            transport.client.delete = original_delete  # type: ignore[assignment]
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_transport_request_error_without_request_uses_url_like_fallback():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        original_delete = transport.client.delete
+
+        async def failing_delete(*args, **kwargs):
+            raise httpx.RequestError("network down")
+
+        transport.client.delete = failing_delete  # type: ignore[assignment]
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="Request DELETE https://example.com/fallback failed",
+            ):
+                await transport.delete(httpx.URL("https://example.com/fallback"))  # type: ignore[arg-type]
         finally:
             transport.client.delete = original_delete  # type: ignore[assignment]
             await transport.close()
