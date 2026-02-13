@@ -12,3 +12,28 @@ def test_hyperbrowser_error_str_includes_original_error_details_once():
     error = HyperbrowserError("request failed", original_error=root_cause)
 
     assert str(error) == "request failed - Caused by ValueError: boom"
+
+
+def test_hyperbrowser_error_str_handles_unstringifiable_original_error():
+    class _UnstringifiableError(Exception):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify")
+
+    error = HyperbrowserError("request failed", original_error=_UnstringifiableError())
+
+    assert (
+        str(error)
+        == "request failed - Caused by _UnstringifiableError: <unstringifiable _UnstringifiableError>"
+    )
+
+
+def test_hyperbrowser_error_str_sanitizes_control_characters():
+    error = HyperbrowserError("bad\trequest\nmessage\x7f")
+
+    assert str(error) == "bad?request?message?"
+
+
+def test_hyperbrowser_error_str_uses_placeholder_for_blank_message():
+    error = HyperbrowserError("   ")
+
+    assert str(error) == "Hyperbrowser error"

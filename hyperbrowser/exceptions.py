@@ -2,6 +2,20 @@
 from typing import Optional, Any
 
 
+def _safe_exception_text(value: Any, *, fallback: str) -> str:
+    try:
+        text_value = str(value)
+    except Exception:
+        return fallback
+    sanitized_value = "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in text_value
+    )
+    if sanitized_value.strip():
+        return sanitized_value
+    return fallback
+
+
 class HyperbrowserError(Exception):
     """Base exception class for Hyperbrowser SDK errors"""
 
@@ -19,17 +33,29 @@ class HyperbrowserError(Exception):
 
     def __str__(self) -> str:
         """Custom string representation to show a cleaner error message"""
-        parts = [f"{self.args[0]}"]
+        message_value = self.args[0] if self.args else "Hyperbrowser error"
+        message_text = _safe_exception_text(
+            message_value,
+            fallback="Hyperbrowser error",
+        )
+        parts = [message_text]
 
         if self.status_code is not None:
-            parts.append(f"Status: {self.status_code}")
+            status_text = _safe_exception_text(
+                self.status_code,
+                fallback="<unknown status>",
+            )
+            parts.append(f"Status: {status_text}")
 
         if self.original_error and not isinstance(
             self.original_error, HyperbrowserError
         ):
             error_type = type(self.original_error).__name__
-            error_msg = str(self.original_error)
-            if error_msg and error_msg != str(self.args[0]):
+            error_msg = _safe_exception_text(
+                self.original_error,
+                fallback=f"<unstringifiable {error_type}>",
+            )
+            if error_msg != message_text:
                 parts.append(f"Caused by {error_type}: {error_msg}")
 
         return " - ".join(parts)
