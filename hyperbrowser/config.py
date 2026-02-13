@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 from typing import Dict, Mapping, Optional
 import os
 
@@ -49,4 +50,18 @@ class ClientConfig:
         base_url = os.environ.get(
             "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
         )
-        return cls(api_key=api_key, base_url=base_url)
+        headers = None
+        raw_headers = os.environ.get("HYPERBROWSER_HEADERS")
+        if raw_headers:
+            try:
+                parsed_headers = json.loads(raw_headers)
+            except json.JSONDecodeError as exc:
+                raise HyperbrowserError(
+                    "HYPERBROWSER_HEADERS must be valid JSON object"
+                ) from exc
+            if not isinstance(parsed_headers, dict):
+                raise HyperbrowserError(
+                    "HYPERBROWSER_HEADERS must be a JSON object of string pairs"
+                )
+            headers = parsed_headers
+        return cls(api_key=api_key, base_url=base_url, headers=headers)

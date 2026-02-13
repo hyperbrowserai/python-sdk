@@ -32,6 +32,36 @@ def test_client_config_from_env_reads_api_key_and_base_url(monkeypatch):
     assert config.base_url == "https://example.local"
 
 
+def test_client_config_from_env_reads_headers(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Request-Id":"abc123"}')
+
+    config = ClientConfig.from_env()
+
+    assert config.headers == {"X-Request-Id": "abc123"}
+
+
+def test_client_config_from_env_rejects_invalid_headers_json(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", "{invalid")
+
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be valid JSON object"
+    ):
+        ClientConfig.from_env()
+
+
+def test_client_config_from_env_rejects_non_object_headers_json(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", '["not-an-object"]')
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="HYPERBROWSER_HEADERS must be a JSON object of string pairs",
+    ):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_normalizes_base_url(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_BASE_URL", " https://example.local/ ")
