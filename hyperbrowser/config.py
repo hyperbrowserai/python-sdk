@@ -36,6 +36,8 @@ class ClientConfig:
             raise HyperbrowserError("base_url must not be empty")
         if "\n" in normalized_base_url or "\r" in normalized_base_url:
             raise HyperbrowserError("base_url must not contain newline characters")
+        if any(character.isspace() for character in normalized_base_url):
+            raise HyperbrowserError("base_url must not contain whitespace characters")
 
         parsed_base_url = urlparse(normalized_base_url)
         if (
