@@ -31,6 +31,33 @@ def test_async_client_accepts_none_timeout():
     asyncio.run(run())
 
 
+def test_sync_client_normalizes_fraction_timeout_to_float():
+    client = Hyperbrowser(
+        api_key="test-key",
+        timeout=Fraction(1, 2),  # type: ignore[arg-type]
+    )
+    try:
+        assert isinstance(client.transport.client.timeout.connect, float)
+        assert client.transport.client.timeout.connect == 0.5
+    finally:
+        client.close()
+
+
+def test_async_client_normalizes_fraction_timeout_to_float():
+    async def run() -> None:
+        client = AsyncHyperbrowser(
+            api_key="test-key",
+            timeout=Fraction(1, 2),  # type: ignore[arg-type]
+        )
+        try:
+            assert isinstance(client.transport.client.timeout.connect, float)
+            assert client.transport.client.timeout.connect == 0.5
+        finally:
+            await client.close()
+
+    asyncio.run(run())
+
+
 def test_sync_client_rejects_non_numeric_timeout():
     with pytest.raises(HyperbrowserError, match="timeout must be a number"):
         Hyperbrowser(api_key="test-key", timeout="30")  # type: ignore[arg-type]

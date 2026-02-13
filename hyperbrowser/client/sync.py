@@ -27,7 +27,7 @@ class Hyperbrowser(HyperbrowserBase):
         headers: Optional[Mapping[str, str]] = None,
         timeout: Optional[float] = 30,
     ):
-        validate_timeout_seconds(timeout)
+        timeout = validate_timeout_seconds(timeout)
         super().__init__(SyncTransport, config, api_key, base_url, headers)
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
