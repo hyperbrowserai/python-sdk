@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import CancelledError as ConcurrentCancelledError
 import inspect
 import math
 from numbers import Real
@@ -113,6 +114,8 @@ def _invoke_non_retryable_callback(
 
 
 def _is_retryable_exception(exc: Exception) -> bool:
+    if isinstance(exc, ConcurrentCancelledError):
+        return False
     if isinstance(exc, _NonRetryablePollingError):
         return False
     if isinstance(exc, (HyperbrowserTimeoutError, HyperbrowserPollingError)):
