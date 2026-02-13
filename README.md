@@ -27,6 +27,8 @@ export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON obj
 
 `base_url` must start with `https://` (or `http://` for local testing).  
 The SDK normalizes trailing slashes automatically.
+When `config` is not provided, client constructors also read `HYPERBROWSER_HEADERS`
+automatically (same as API key and base URL).
 
 You can also pass custom headers (for tracing/correlation) either via
 `ClientConfig` or directly to the client constructor.
