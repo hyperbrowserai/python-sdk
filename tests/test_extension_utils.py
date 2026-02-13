@@ -117,6 +117,21 @@ def test_parse_extension_list_response_data_missing_key_lists_available_keys():
         )
 
 
+def test_parse_extension_list_response_data_missing_key_limits_key_list_size():
+    payload = {f"key-{index:02d}": index for index in range(25)}
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            r"\[key-00, key-01, key-02, key-03, key-04, key-05, key-06, key-07,"
+            r" key-08, key-09, key-10, key-11, key-12, key-13, key-14, key-15,"
+            r" key-16, key-17, key-18, key-19, \.\.\. \(\+5 more\)\] keys"
+        ),
+    ):
+        parse_extension_list_response_data(payload)
+
+
 def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys():
     class _BrokenStringKey:
         def __str__(self) -> str:
