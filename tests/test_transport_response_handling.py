@@ -53,6 +53,20 @@ def test_sync_handle_response_with_request_error_includes_method_and_url():
         transport.close()
 
 
+def test_sync_handle_response_with_request_error_normalizes_method_casing():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError,
+            match="Request GET https://example.com/network failed",
+        ):
+            transport._handle_response(
+                _RequestErrorResponse("get", "https://example.com/network")
+            )
+    finally:
+        transport.close()
+
+
 def test_async_handle_response_with_non_json_success_body_returns_status_only():
     async def run() -> None:
         transport = AsyncTransport(api_key="test-key")
@@ -79,6 +93,23 @@ def test_async_handle_response_with_request_error_includes_method_and_url():
             ):
                 await transport._handle_response(
                     _RequestErrorResponse("POST", "https://example.com/network")
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_request_error_normalizes_method_casing():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="Request POST https://example.com/network failed",
+            ):
+                await transport._handle_response(
+                    _RequestErrorResponse("post", "https://example.com/network")
                 )
         finally:
             await transport.close()
