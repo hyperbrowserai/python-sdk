@@ -2,13 +2,19 @@ import asyncio
 from types import SimpleNamespace
 
 import hyperbrowser.client.managers.async_manager.agents.browser_use as async_browser_use_module
+import hyperbrowser.client.managers.async_manager.agents.claude_computer_use as async_claude_module
 import hyperbrowser.client.managers.async_manager.agents.cua as async_cua_module
+import hyperbrowser.client.managers.async_manager.agents.gemini_computer_use as async_gemini_module
+import hyperbrowser.client.managers.async_manager.agents.hyper_agent as async_hyper_agent_module
 import hyperbrowser.client.managers.async_manager.web.batch_fetch as async_batch_fetch_module
 import hyperbrowser.client.managers.async_manager.web.crawl as async_web_crawl_module
 import hyperbrowser.client.managers.async_manager.crawl as async_crawl_module
 import hyperbrowser.client.managers.async_manager.extract as async_extract_module
 import hyperbrowser.client.managers.sync_manager.agents.browser_use as sync_browser_use_module
+import hyperbrowser.client.managers.sync_manager.agents.claude_computer_use as sync_claude_module
 import hyperbrowser.client.managers.sync_manager.agents.cua as sync_cua_module
+import hyperbrowser.client.managers.sync_manager.agents.gemini_computer_use as sync_gemini_module
+import hyperbrowser.client.managers.sync_manager.agents.hyper_agent as sync_hyper_agent_module
 import hyperbrowser.client.managers.sync_manager.web.batch_fetch as sync_batch_fetch_module
 import hyperbrowser.client.managers.sync_manager.web.crawl as sync_web_crawl_module
 import hyperbrowser.client.managers.sync_manager.crawl as sync_crawl_module
@@ -638,5 +644,241 @@ def test_async_cua_manager_bounds_operation_name_in_wait_helper(monkeypatch):
 
         assert result == {"ok": True}
         assert captured["operation_name"].startswith("CUA task job ")
+
+    asyncio.run(run())
+
+
+def test_sync_scrape_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    manager = sync_scrape_module.ScrapeManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_wait_for_job_result(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["operation_name"] = operation_name
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        sync_scrape_module,
+        "wait_for_job_result",
+        fake_wait_for_job_result,
+    )
+
+    result = manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+    assert result == {"ok": True}
+    assert captured["operation_name"].startswith("scrape job ")
+
+
+def test_async_scrape_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    async def run() -> None:
+        manager = async_scrape_module.ScrapeManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_wait_for_job_result_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["operation_name"] = operation_name
+            return {"ok": True}
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_scrape_module,
+            "wait_for_job_result_async",
+            fake_wait_for_job_result_async,
+        )
+
+        result = await manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+        assert result == {"ok": True}
+        assert captured["operation_name"].startswith("scrape job ")
+
+    asyncio.run(run())
+
+
+def test_sync_claude_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    manager = sync_claude_module.ClaudeComputerUseManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_wait_for_job_result(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["operation_name"] = operation_name
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        sync_claude_module,
+        "wait_for_job_result",
+        fake_wait_for_job_result,
+    )
+
+    result = manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+    assert result == {"ok": True}
+    assert captured["operation_name"].startswith("Claude Computer Use task job ")
+
+
+def test_async_claude_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    async def run() -> None:
+        manager = async_claude_module.ClaudeComputerUseManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_wait_for_job_result_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["operation_name"] = operation_name
+            return {"ok": True}
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_claude_module,
+            "wait_for_job_result_async",
+            fake_wait_for_job_result_async,
+        )
+
+        result = await manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+        assert result == {"ok": True}
+        assert captured["operation_name"].startswith("Claude Computer Use task job ")
+
+    asyncio.run(run())
+
+
+def test_sync_gemini_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    manager = sync_gemini_module.GeminiComputerUseManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_wait_for_job_result(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["operation_name"] = operation_name
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        sync_gemini_module,
+        "wait_for_job_result",
+        fake_wait_for_job_result,
+    )
+
+    result = manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+    assert result == {"ok": True}
+    assert captured["operation_name"].startswith("Gemini Computer Use task job ")
+
+
+def test_async_gemini_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    async def run() -> None:
+        manager = async_gemini_module.GeminiComputerUseManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_wait_for_job_result_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["operation_name"] = operation_name
+            return {"ok": True}
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_gemini_module,
+            "wait_for_job_result_async",
+            fake_wait_for_job_result_async,
+        )
+
+        result = await manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+        assert result == {"ok": True}
+        assert captured["operation_name"].startswith("Gemini Computer Use task job ")
+
+    asyncio.run(run())
+
+
+def test_sync_hyper_agent_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    manager = sync_hyper_agent_module.HyperAgentManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_wait_for_job_result(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["operation_name"] = operation_name
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        sync_hyper_agent_module,
+        "wait_for_job_result",
+        fake_wait_for_job_result,
+    )
+
+    result = manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+    assert result == {"ok": True}
+    assert captured["operation_name"].startswith("HyperAgent task ")
+
+
+def test_async_hyper_agent_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    async def run() -> None:
+        manager = async_hyper_agent_module.HyperAgentManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_wait_for_job_result_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["operation_name"] = operation_name
+            return {"ok": True}
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_hyper_agent_module,
+            "wait_for_job_result_async",
+            fake_wait_for_job_result_async,
+        )
+
+        result = await manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+        assert result == {"ok": True}
+        assert captured["operation_name"].startswith("HyperAgent task ")
 
     asyncio.run(run())
