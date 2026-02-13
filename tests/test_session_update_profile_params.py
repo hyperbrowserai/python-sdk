@@ -71,6 +71,18 @@ def test_sync_update_profile_params_bool_warns_and_serializes():
     assert payload == {"type": "profile", "params": {"persistChanges": True}}
 
 
+def test_sync_update_profile_params_bool_deprecation_warning_only_emitted_once():
+    SyncSessionManager._has_warned_update_profile_params_boolean_deprecated = False
+    client = _SyncClient()
+    manager = SyncSessionManager(client)
+
+    with pytest.warns(DeprecationWarning) as warning_records:
+        manager.update_profile_params("session-1", True)
+        manager.update_profile_params("session-2", True)
+
+    assert len(warning_records) == 1
+
+
 def test_sync_update_profile_params_rejects_conflicting_arguments():
     manager = SyncSessionManager(_SyncClient())
 
@@ -95,6 +107,20 @@ def test_async_update_profile_params_bool_warns_and_serializes():
 
     _, payload = client.transport.calls[0]
     assert payload == {"type": "profile", "params": {"persistChanges": True}}
+
+
+def test_async_update_profile_params_bool_deprecation_warning_only_emitted_once():
+    AsyncSessionManager._has_warned_update_profile_params_boolean_deprecated = False
+    client = _AsyncClient()
+    manager = AsyncSessionManager(client)
+
+    async def run() -> None:
+        with pytest.warns(DeprecationWarning) as warning_records:
+            await manager.update_profile_params("session-1", True)
+            await manager.update_profile_params("session-2", True)
+        assert len(warning_records) == 1
+
+    asyncio.run(run())
 
 
 def test_async_update_profile_params_rejects_conflicting_arguments():
