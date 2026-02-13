@@ -1,4 +1,6 @@
-from typing import List, Optional, Union, IO, overload
+import os
+from os import PathLike
+from typing import IO, List, Optional, Union, overload
 import warnings
 from ....models.session import (
     BasicResponse,
@@ -101,10 +103,12 @@ class SessionManager:
         )
         return GetSessionDownloadsUrlResponse(**response.data)
 
-    def upload_file(self, id: str, file_input: Union[str, IO]) -> UploadFileResponse:
+    def upload_file(
+        self, id: str, file_input: Union[str, PathLike[str], IO]
+    ) -> UploadFileResponse:
         response = None
-        if isinstance(file_input, str):
-            with open(file_input, "rb") as file_obj:
+        if isinstance(file_input, (str, PathLike)):
+            with open(os.fspath(file_input), "rb") as file_obj:
                 files = {"file": file_obj}
                 response = self._client.transport.post(
                     self._client._build_url(f"/session/{id}/uploads"),
