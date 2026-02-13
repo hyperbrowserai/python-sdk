@@ -175,6 +175,53 @@ def test_ensure_existing_file_path_wraps_unexpected_isfile_errors(
     assert exc_info.value.original_error is not None
 
 
+def test_ensure_existing_file_path_wraps_non_boolean_exists_results(monkeypatch):
+    class _BrokenTruthValue:
+        def __bool__(self) -> bool:
+            raise RuntimeError("cannot coerce exists result")
+
+    def invalid_exists(path: str):
+        _ = path
+        return _BrokenTruthValue()
+
+    monkeypatch.setattr(file_utils.os.path, "exists", invalid_exists)
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        ensure_existing_file_path(
+            "/tmp/maybe-invalid",
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_ensure_existing_file_path_wraps_non_boolean_isfile_results(
+    monkeypatch, tmp_path: Path
+):
+    class _BrokenTruthValue:
+        def __bool__(self) -> bool:
+            raise RuntimeError("cannot coerce isfile result")
+
+    file_path = tmp_path / "target.txt"
+    file_path.write_text("content")
+
+    def invalid_isfile(path: str):
+        _ = path
+        return _BrokenTruthValue()
+
+    monkeypatch.setattr(file_utils.os.path, "isfile", invalid_isfile)
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
 def test_ensure_existing_file_path_wraps_fspath_runtime_errors():
     class _BrokenPathLike:
         def __fspath__(self) -> str:

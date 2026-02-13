@@ -37,7 +37,7 @@ def ensure_existing_file_path(
     ):
         raise HyperbrowserError("file_path must not contain control characters")
     try:
-        path_exists = os.path.exists(normalized_path)
+        path_exists = bool(os.path.exists(normalized_path))
     except HyperbrowserError:
         raise
     except (OSError, ValueError, TypeError) as exc:
@@ -47,7 +47,7 @@ def ensure_existing_file_path(
     if not path_exists:
         raise HyperbrowserError(missing_file_message)
     try:
-        is_file = os.path.isfile(normalized_path)
+        is_file = bool(os.path.isfile(normalized_path))
     except HyperbrowserError:
         raise
     except (OSError, ValueError, TypeError) as exc:
