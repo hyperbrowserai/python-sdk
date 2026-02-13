@@ -171,9 +171,13 @@ def test_parse_headers_env_json_preserves_hyperbrowser_json_errors(
     def _raise_hyperbrowser_error(_raw_headers: str):
         raise HyperbrowserError("custom header json failure")
 
-    monkeypatch.setattr("hyperbrowser.header_utils.json.loads", _raise_hyperbrowser_error)
+    monkeypatch.setattr(
+        "hyperbrowser.header_utils.json.loads", _raise_hyperbrowser_error
+    )
 
-    with pytest.raises(HyperbrowserError, match="custom header json failure") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="custom header json failure"
+    ) as exc_info:
         parse_headers_env_json('{"X-Trace-Id":"abc123"}')
 
     assert exc_info.value.original_error is None
