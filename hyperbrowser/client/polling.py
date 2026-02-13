@@ -31,6 +31,10 @@ def _validate_operation_name(operation_name: str) -> None:
         raise HyperbrowserError("operation_name must be a string")
     if not operation_name.strip():
         raise HyperbrowserError("operation_name must not be empty")
+    if any(
+        ord(character) < 32 or ord(character) == 127 for character in operation_name
+    ):
+        raise HyperbrowserError("operation_name must not contain control characters")
 
 
 def _validate_retry_config(
