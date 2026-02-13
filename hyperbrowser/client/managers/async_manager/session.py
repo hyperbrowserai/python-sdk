@@ -112,7 +112,6 @@ class SessionManager:
     async def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
-        response = None
         if isinstance(file_input, (str, PathLike)):
             with open(os.fspath(file_input), "rb") as file_obj:
                 files = {"file": file_obj}
@@ -120,12 +119,14 @@ class SessionManager:
                     self._client._build_url(f"/session/{id}/uploads"),
                     files=files,
                 )
-        else:
+        elif hasattr(file_input, "read"):
             files = {"file": file_input}
             response = await self._client.transport.post(
                 self._client._build_url(f"/session/{id}/uploads"),
                 files=files,
             )
+        else:
+            raise TypeError("file_input must be a file path or file-like object")
 
         return UploadFileResponse(**response.data)
 

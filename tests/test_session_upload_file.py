@@ -1,5 +1,7 @@
 import asyncio
+import io
 from pathlib import Path
+import pytest
 
 from hyperbrowser.client.managers.async_manager.session import (
     SessionManager as AsyncSessionManager,
@@ -93,3 +95,45 @@ def test_async_session_upload_file_accepts_pathlike(tmp_path):
     assert (
         transport.received_file is not None and transport.received_file.closed is True
     )
+
+
+def test_sync_session_upload_file_accepts_file_like_object():
+    transport = _SyncTransport()
+    manager = SyncSessionManager(_FakeClient(transport))
+    file_obj = io.BytesIO(b"content")
+
+    response = manager.upload_file("session_123", file_obj)
+
+    assert response.file_name == "file.txt"
+    assert transport.received_file is file_obj
+
+
+def test_async_session_upload_file_accepts_file_like_object():
+    transport = _AsyncTransport()
+    manager = AsyncSessionManager(_FakeClient(transport))
+    file_obj = io.BytesIO(b"content")
+
+    async def run():
+        return await manager.upload_file("session_123", file_obj)
+
+    response = asyncio.run(run())
+
+    assert response.file_name == "file.txt"
+    assert transport.received_file is file_obj
+
+
+def test_sync_session_upload_file_rejects_invalid_input_type():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    with pytest.raises(TypeError, match="file_input must be a file path"):
+        manager.upload_file("session_123", 123)  # type: ignore[arg-type]
+
+
+def test_async_session_upload_file_rejects_invalid_input_type():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    async def run():
+        with pytest.raises(TypeError, match="file_input must be a file path"):
+            await manager.upload_file("session_123", 123)  # type: ignore[arg-type]
+
+    asyncio.run(run())
