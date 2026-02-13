@@ -160,3 +160,12 @@ def test_extract_error_message_extracts_errors_list_messages():
     )
 
     assert message == "first issue; second issue"
+
+
+def test_extract_error_message_skips_blank_message_and_uses_detail():
+    message = extract_error_message(
+        _DummyResponse({"message": "   ", "detail": "useful detail"}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "useful detail"

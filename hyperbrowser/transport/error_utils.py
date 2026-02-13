@@ -48,8 +48,10 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
         for key in ("message", "error", "detail", "errors"):
             message = error_data.get(key)
             if message is not None:
-                extracted_message = _stringify_error_value(message)
-                break
+                candidate_message = _stringify_error_value(message)
+                if candidate_message.strip():
+                    extracted_message = candidate_message
+                    break
         else:
             extracted_message = _stringify_error_value(error_data)
     elif isinstance(error_data, str):
