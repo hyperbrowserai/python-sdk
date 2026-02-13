@@ -36,6 +36,13 @@ def test_parse_headers_env_json_ignores_blank_values():
     assert parse_headers_env_json("   ") is None
 
 
+def test_parse_headers_env_json_rejects_non_string_input():
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be a string"
+    ):
+        parse_headers_env_json(123)  # type: ignore[arg-type]
+
+
 def test_parse_headers_env_json_rejects_invalid_json():
     with pytest.raises(
         HyperbrowserError, match="HYPERBROWSER_HEADERS must be valid JSON object"

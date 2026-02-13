@@ -39,7 +39,11 @@ def normalize_headers(
 
 
 def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
-    if raw_headers is None or not raw_headers.strip():
+    if raw_headers is None:
+        return None
+    if not isinstance(raw_headers, str):
+        raise HyperbrowserError("HYPERBROWSER_HEADERS must be a string")
+    if not raw_headers.strip():
         return None
     try:
         parsed_headers = json.loads(raw_headers)
