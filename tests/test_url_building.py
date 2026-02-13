@@ -367,6 +367,21 @@ def test_client_build_url_allows_query_values_containing_absolute_urls():
         client.close()
 
 
+def test_client_build_url_allows_bounded_nested_safe_encoding():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        bounded_encoded_segment = "%61"
+        for _ in range(9):
+            bounded_encoded_segment = quote(bounded_encoded_segment, safe="")
+
+        assert (
+            client._build_url(f"/{bounded_encoded_segment}/session")
+            == f"https://api.hyperbrowser.ai/api/{bounded_encoded_segment}/session"
+        )
+    finally:
+        client.close()
+
+
 def test_client_build_url_normalizes_runtime_trailing_slashes():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:

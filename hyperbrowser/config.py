@@ -42,6 +42,8 @@ class ClientConfig:
             if next_decoded_value == decoded_value:
                 return decoded_value
             decoded_value = next_decoded_value
+        if unquote(decoded_value) == decoded_value:
+            return decoded_value
         raise HyperbrowserError(
             f"{component_label} contains excessively nested URL encoding"
         )
@@ -123,9 +125,14 @@ class ClientConfig:
                 break
             decoded_base_netloc = next_decoded_base_netloc
         else:
-            raise HyperbrowserError(
-                "base_url host contains excessively nested URL encoding"
-            )
+            if _ENCODED_HOST_DELIMITER_PATTERN.search(decoded_base_netloc):
+                raise HyperbrowserError(
+                    "base_url host must not contain encoded delimiter characters"
+                )
+            if unquote(decoded_base_netloc) != decoded_base_netloc:
+                raise HyperbrowserError(
+                    "base_url host contains excessively nested URL encoding"
+                )
         if "\\" in decoded_base_netloc:
             raise HyperbrowserError("base_url host must not contain backslashes")
         if any(character.isspace() for character in decoded_base_netloc):

@@ -472,6 +472,15 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         match="base_url path must not contain encoded query or fragment delimiters",
     ):
         ClientConfig.normalize_base_url("https://example.local/%253Fapi")
+    bounded_encoded_host_label = "%61"
+    for _ in range(9):
+        bounded_encoded_host_label = quote(bounded_encoded_host_label, safe="")
+    assert (
+        ClientConfig.normalize_base_url(
+            f"https://{bounded_encoded_host_label}.example.local"
+        )
+        == f"https://{bounded_encoded_host_label}.example.local"
+    )
     deeply_encoded_dot = "%2e"
     for _ in range(11):
         deeply_encoded_dot = quote(deeply_encoded_dot, safe="")
