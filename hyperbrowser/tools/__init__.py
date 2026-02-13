@@ -103,6 +103,98 @@ def _serialize_extract_tool_data(data: Any) -> str:
         ) from exc
 
 
+def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
+    try:
+        return response.data
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            f"Failed to read {tool_name} response data",
+            original_error=exc,
+        ) from exc
+
+
+def _read_optional_tool_response_field(
+    response_data: Any,
+    *,
+    tool_name: str,
+    field_name: str,
+) -> str:
+    if response_data is None:
+        return ""
+    try:
+        field_value = getattr(response_data, field_name)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            f"Failed to read {tool_name} response field '{field_name}'",
+            original_error=exc,
+        ) from exc
+    if field_value is None:
+        return ""
+    if not isinstance(field_value, str):
+        raise HyperbrowserError(
+            f"{tool_name} response field '{field_name}' must be a string"
+        )
+    return field_value
+
+
+def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> Any:
+    try:
+        return getattr(page, field_name)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            f"Failed to read crawl tool page field '{field_name}' at index {page_index}",
+            original_error=exc,
+        ) from exc
+
+
+def _render_crawl_markdown_output(response_data: Any) -> str:
+    if response_data is None:
+        return ""
+    if not isinstance(response_data, list):
+        raise HyperbrowserError("crawl tool response data must be a list")
+    try:
+        crawl_pages = list(response_data)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to iterate crawl tool response data",
+            original_error=exc,
+        ) from exc
+    markdown_sections: list[str] = []
+    for index, page in enumerate(crawl_pages):
+        page_markdown = _read_crawl_page_field(
+            page, field_name="markdown", page_index=index
+        )
+        if page_markdown is None:
+            continue
+        if not isinstance(page_markdown, str):
+            raise HyperbrowserError(
+                f"crawl tool page field 'markdown' must be a string at index {index}"
+            )
+        if not page_markdown:
+            continue
+        page_url = _read_crawl_page_field(page, field_name="url", page_index=index)
+        if page_url is None:
+            page_url_display = "<unknown url>"
+        elif not isinstance(page_url, str):
+            raise HyperbrowserError(
+                f"crawl tool page field 'url' must be a string at index {index}"
+            )
+        else:
+            page_url_display = page_url if page_url.strip() else "<unknown url>"
+        markdown_sections.append(
+            f"\n{'-' * 50}\nUrl: {page_url_display}\nMarkdown:\n{page_markdown}\n"
+        )
+    return "".join(markdown_sections)
+
+
 class WebsiteScrapeTool:
     openai_tool_definition = SCRAPE_TOOL_OPENAI
     anthropic_tool_definition = SCRAPE_TOOL_ANTHROPIC
@@ -112,14 +204,22 @@ class WebsiteScrapeTool:
         resp = hb.scrape.start_and_wait(
             params=StartScrapeJobParams(**_to_param_dict(params))
         )
-        return resp.data.markdown if resp.data and resp.data.markdown else ""
+        return _read_optional_tool_response_field(
+            _read_tool_response_data(resp, tool_name="scrape tool"),
+            tool_name="scrape tool",
+            field_name="markdown",
+        )
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: Mapping[str, Any]) -> str:
         resp = await hb.scrape.start_and_wait(
             params=StartScrapeJobParams(**_to_param_dict(params))
         )
-        return resp.data.markdown if resp.data and resp.data.markdown else ""
+        return _read_optional_tool_response_field(
+            _read_tool_response_data(resp, tool_name="scrape tool"),
+            tool_name="scrape tool",
+            field_name="markdown",
+        )
 
 
 class WebsiteScreenshotTool:
@@ -131,14 +231,22 @@ class WebsiteScreenshotTool:
         resp = hb.scrape.start_and_wait(
             params=StartScrapeJobParams(**_to_param_dict(params))
         )
-        return resp.data.screenshot if resp.data and resp.data.screenshot else ""
+        return _read_optional_tool_response_field(
+            _read_tool_response_data(resp, tool_name="screenshot tool"),
+            tool_name="screenshot tool",
+            field_name="screenshot",
+        )
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: Mapping[str, Any]) -> str:
         resp = await hb.scrape.start_and_wait(
             params=StartScrapeJobParams(**_to_param_dict(params))
         )
-        return resp.data.screenshot if resp.data and resp.data.screenshot else ""
+        return _read_optional_tool_response_field(
+            _read_tool_response_data(resp, tool_name="screenshot tool"),
+            tool_name="screenshot tool",
+            field_name="screenshot",
+        )
 
 
 class WebsiteCrawlTool:
@@ -150,28 +258,18 @@ class WebsiteCrawlTool:
         resp = hb.crawl.start_and_wait(
             params=StartCrawlJobParams(**_to_param_dict(params))
         )
-        markdown = ""
-        if resp.data:
-            for page in resp.data:
-                if page.markdown:
-                    markdown += (
-                        f"\n{'-' * 50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
-                    )
-        return markdown
+        return _render_crawl_markdown_output(
+            _read_tool_response_data(resp, tool_name="crawl tool")
+        )
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: Mapping[str, Any]) -> str:
         resp = await hb.crawl.start_and_wait(
             params=StartCrawlJobParams(**_to_param_dict(params))
         )
-        markdown = ""
-        if resp.data:
-            for page in resp.data:
-                if page.markdown:
-                    markdown += (
-                        f"\n{'-' * 50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
-                    )
-        return markdown
+        return _render_crawl_markdown_output(
+            _read_tool_response_data(resp, tool_name="crawl tool")
+        )
 
 
 class WebsiteExtractTool:
@@ -184,7 +282,9 @@ class WebsiteExtractTool:
         resp = hb.extract.start_and_wait(
             params=StartExtractJobParams(**normalized_params)
         )
-        return _serialize_extract_tool_data(resp.data)
+        return _serialize_extract_tool_data(
+            _read_tool_response_data(resp, tool_name="extract tool")
+        )
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: Mapping[str, Any]) -> str:
@@ -192,7 +292,9 @@ class WebsiteExtractTool:
         resp = await hb.extract.start_and_wait(
             params=StartExtractJobParams(**normalized_params)
         )
-        return _serialize_extract_tool_data(resp.data)
+        return _serialize_extract_tool_data(
+            _read_tool_response_data(resp, tool_name="extract tool")
+        )
 
 
 class BrowserUseTool:
@@ -204,14 +306,22 @@ class BrowserUseTool:
         resp = hb.agents.browser_use.start_and_wait(
             params=StartBrowserUseTaskParams(**_to_param_dict(params))
         )
-        return resp.data.final_result if resp.data and resp.data.final_result else ""
+        return _read_optional_tool_response_field(
+            _read_tool_response_data(resp, tool_name="browser-use tool"),
+            tool_name="browser-use tool",
+            field_name="final_result",
+        )
 
     @staticmethod
     async def async_runnable(hb: AsyncHyperbrowser, params: Mapping[str, Any]) -> str:
         resp = await hb.agents.browser_use.start_and_wait(
             params=StartBrowserUseTaskParams(**_to_param_dict(params))
         )
-        return resp.data.final_result if resp.data and resp.data.final_result else ""
+        return _read_optional_tool_response_field(
+            _read_tool_response_data(resp, tool_name="browser-use tool"),
+            tool_name="browser-use tool",
+            field_name="final_result",
+        )
 
 
 __all__ = [
