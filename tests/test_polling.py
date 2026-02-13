@@ -654,6 +654,27 @@ def test_retry_operation_cancels_future_operation_results():
         loop.close()
 
 
+def test_retry_operation_consumes_completed_future_exceptions():
+    loop = asyncio.new_event_loop()
+    try:
+        completed_future = loop.create_future()
+        completed_future.set_exception(RuntimeError("boom"))
+
+        with pytest.raises(
+            HyperbrowserError, match="operation must return a non-awaitable result"
+        ):
+            retry_operation(
+                operation_name="sync retry completed-future callback",
+                operation=lambda: completed_future,  # type: ignore[return-value]
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert getattr(completed_future, "_log_traceback", False) is False
+    finally:
+        loop.close()
+
+
 def test_async_polling_and_retry_helpers():
     async def run() -> None:
         status_values = iter(["pending", "completed"])

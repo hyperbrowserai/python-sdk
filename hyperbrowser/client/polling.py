@@ -93,8 +93,16 @@ def _ensure_non_awaitable(
     if inspect.isawaitable(result):
         if inspect.iscoroutine(result):
             result.close()
-        elif isinstance(result, asyncio.Future) and not result.done():
-            result.cancel()
+        elif isinstance(result, asyncio.Future):
+            if result.done():
+                try:
+                    result.exception()
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    pass
+            else:
+                result.cancel()
         raise _NonRetryablePollingError(
             f"{callback_name} must return a non-awaitable result for {operation_name}"
         )
