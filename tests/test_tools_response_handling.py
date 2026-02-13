@@ -256,7 +256,9 @@ def test_async_crawl_tool_rejects_non_list_response_data():
         with pytest.raises(
             HyperbrowserError, match="crawl tool response data must be a list"
         ):
-            await WebsiteCrawlTool.async_runnable(client, {"url": "https://example.com"})
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
 
     asyncio.run(run())
 
