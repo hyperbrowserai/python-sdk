@@ -146,6 +146,7 @@ Polling callback contracts are also validated:
 - SDK timeout/polling exceptions (`HyperbrowserTimeoutError`, `HyperbrowserPollingError`) are treated as non-retryable and are surfaced immediately.
 - Cancellation exceptions are treated as non-retryable and are surfaced immediately.
 - Broken executor errors are treated as non-retryable and are surfaced immediately.
+- Invalid-state errors are treated as non-retryable and are surfaced immediately.
 - Callback contract violations and callback execution failures fail fast with explicit callback-specific errors.
 - Reused coroutine callback errors (e.g. `cannot reuse already awaited coroutine`) are treated as non-retryable and surfaced immediately.
 - Async generator reuse runtime errors (e.g. `asynchronous generator is already running`) are treated as non-retryable and surfaced immediately.
