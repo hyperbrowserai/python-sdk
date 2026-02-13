@@ -143,6 +143,11 @@ class _DummyResponse:
         return self._json_value
 
 
+class _UnstringifiableErrorValue:
+    def __str__(self) -> str:
+        raise RuntimeError("cannot stringify error value")
+
+
 def test_extract_request_error_context_uses_unknown_when_request_unset():
     method, url = extract_request_error_context(httpx.RequestError("network down"))
 
@@ -629,6 +634,15 @@ def test_extract_error_message_handles_recursive_dict_payloads():
 
     assert isinstance(message, str)
     assert message
+
+
+def test_extract_error_message_handles_unstringifiable_message_values():
+    message = extract_error_message(
+        _DummyResponse({"message": _UnstringifiableErrorValue()}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "<unstringifiable _UnstringifiableErrorValue>"
 
 
 def test_extract_error_message_uses_fallback_for_blank_dict_message():

@@ -45,6 +45,13 @@ _INVALID_URL_SENTINELS = {
 }
 
 
+def _safe_to_string(value: Any) -> str:
+    try:
+        return str(value)
+    except Exception:
+        return f"<unstringifiable {type(value).__name__}>"
+
+
 def _normalize_request_method(method: Any) -> str:
     raw_method = method
     if isinstance(raw_method, bool):
@@ -121,7 +128,7 @@ def _truncate_error_message(message: str) -> str:
 
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if _depth > 10:
-        return str(value)
+        return _safe_to_string(value)
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
@@ -152,7 +159,7 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     try:
         return json.dumps(value, sort_keys=True)
     except (TypeError, ValueError, RecursionError):
-        return str(value)
+        return _safe_to_string(value)
 
 
 def extract_error_message(response: httpx.Response, fallback_error: Exception) -> str:
