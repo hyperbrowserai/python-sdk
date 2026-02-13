@@ -2,10 +2,10 @@ import httpx
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
-from .base import TransportStrategy, APIResponse
+from .base import APIResponse, SyncTransportStrategy
 
 
-class SyncTransport(TransportStrategy):
+class SyncTransport(SyncTransportStrategy):
     """Synchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str):

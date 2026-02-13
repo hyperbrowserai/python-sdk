@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, Generic, Type, Union
+from typing import Generic, Optional, Type, TypeVar, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -33,29 +33,69 @@ class APIResponse(Generic[T]):
         return 200 <= self.status_code < 300
 
 
-class TransportStrategy(ABC):
-    """Abstract base class for different transport implementations"""
+class SyncTransportStrategy(ABC):
+    """Abstract base class for synchronous transport implementations"""
 
     @abstractmethod
     def __init__(self, api_key: str):
-        pass
+        ...
 
     @abstractmethod
     def close(self) -> None:
-        pass
+        ...
 
     @abstractmethod
-    def post(self, url: str) -> APIResponse:
-        pass
+    def post(
+        self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
+    ) -> APIResponse:
+        ...
 
     @abstractmethod
-    def get(self, url: str, params: Optional[dict] = None) -> APIResponse:
-        pass
+    def get(
+        self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
+    ) -> APIResponse:
+        ...
 
     @abstractmethod
-    def put(self, url: str) -> APIResponse:
-        pass
+    def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
+        ...
 
     @abstractmethod
     def delete(self, url: str) -> APIResponse:
-        pass
+        ...
+
+
+class AsyncTransportStrategy(ABC):
+    """Abstract base class for asynchronous transport implementations"""
+
+    @abstractmethod
+    def __init__(self, api_key: str):
+        ...
+
+    @abstractmethod
+    async def close(self) -> None:
+        ...
+
+    @abstractmethod
+    async def post(
+        self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
+    ) -> APIResponse:
+        ...
+
+    @abstractmethod
+    async def get(
+        self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
+    ) -> APIResponse:
+        ...
+
+    @abstractmethod
+    async def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
+        ...
+
+    @abstractmethod
+    async def delete(self, url: str) -> APIResponse:
+        ...
+
+
+class TransportStrategy(SyncTransportStrategy):
+    """Backward-compatible alias for the sync transport interface."""

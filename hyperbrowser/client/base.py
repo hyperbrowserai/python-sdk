@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Optional, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ..config import ClientConfig
-from ..transport.base import TransportStrategy
+from ..transport.base import AsyncTransportStrategy, SyncTransportStrategy
 import os
 
 
@@ -11,7 +11,7 @@ class HyperbrowserBase:
 
     def __init__(
         self,
-        transport: TransportStrategy,
+        transport: Type[Union[SyncTransportStrategy, AsyncTransportStrategy]],
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
