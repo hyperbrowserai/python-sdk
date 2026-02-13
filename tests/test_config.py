@@ -195,6 +195,10 @@ def test_client_config_rejects_non_string_values():
 
     with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
         ClientConfig(api_key="   ")
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        ClientConfig(api_key="bad\nkey")
 
 
 def test_client_config_rejects_empty_or_invalid_base_url():

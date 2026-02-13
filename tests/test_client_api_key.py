@@ -76,3 +76,17 @@ def test_async_client_rejects_blank_constructor_api_key(monkeypatch):
 
     with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
         AsyncHyperbrowser(api_key="\t")
+
+
+def test_sync_client_rejects_control_character_api_key():
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        Hyperbrowser(api_key="bad\nkey")
+
+
+def test_async_client_rejects_control_character_api_key():
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        AsyncHyperbrowser(api_key="bad\nkey")

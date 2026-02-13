@@ -22,6 +22,11 @@ class SyncTransport(SyncTransportStrategy):
         normalized_api_key = api_key.strip()
         if not normalized_api_key:
             raise HyperbrowserError("api_key must not be empty")
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in normalized_api_key
+        ):
+            raise HyperbrowserError("api_key must not contain control characters")
         merged_headers = merge_headers(
             {
                 "x-api-key": normalized_api_key,

@@ -33,6 +33,10 @@ def test_sync_transport_rejects_invalid_api_key_values():
         SyncTransport(api_key=None)  # type: ignore[arg-type]
     with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
         SyncTransport(api_key="   ")
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        SyncTransport(api_key="bad\nkey")
 
 
 def test_sync_transport_rejects_empty_header_name():
@@ -88,6 +92,10 @@ def test_async_transport_rejects_invalid_api_key_values():
         AsyncTransport(api_key=None)  # type: ignore[arg-type]
     with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
         AsyncTransport(api_key="   ")
+    with pytest.raises(
+        HyperbrowserError, match="api_key must not contain control characters"
+    ):
+        AsyncTransport(api_key="bad\nkey")
 
 
 def test_async_transport_rejects_empty_header_name():

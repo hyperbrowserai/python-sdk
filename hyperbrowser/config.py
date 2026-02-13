@@ -21,6 +21,10 @@ class ClientConfig:
         self.api_key = self.api_key.strip()
         if not self.api_key:
             raise HyperbrowserError("api_key must not be empty")
+        if any(
+            ord(character) < 32 or ord(character) == 127 for character in self.api_key
+        ):
+            raise HyperbrowserError("api_key must not contain control characters")
         self.base_url = self.normalize_base_url(self.base_url)
         self.headers = normalize_headers(
             self.headers,
@@ -74,7 +78,9 @@ class ClientConfig:
                 break
             decoded_base_path = next_decoded_base_path
         else:
-            raise HyperbrowserError("base_url path contains excessively nested URL encoding")
+            raise HyperbrowserError(
+                "base_url path contains excessively nested URL encoding"
+            )
         if "\\" in decoded_base_path:
             raise HyperbrowserError("base_url must not contain backslashes")
         if any(character.isspace() for character in decoded_base_path):
@@ -101,7 +107,9 @@ class ClientConfig:
                 break
             decoded_base_netloc = next_decoded_base_netloc
         else:
-            raise HyperbrowserError("base_url host contains excessively nested URL encoding")
+            raise HyperbrowserError(
+                "base_url host contains excessively nested URL encoding"
+            )
         if "\\" in decoded_base_netloc:
             raise HyperbrowserError("base_url host must not contain backslashes")
         if any(character.isspace() for character in decoded_base_netloc):
