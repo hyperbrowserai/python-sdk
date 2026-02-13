@@ -1,5 +1,6 @@
 import asyncio
 import math
+from fractions import Fraction
 
 import pytest
 
@@ -783,6 +784,15 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             max_wait_seconds=math.inf,
             max_attempts=1,
             retry_delay_seconds=0.0,
+        )
+
+    with pytest.raises(HyperbrowserError, match="poll_interval_seconds must be finite"):
+        poll_until_terminal_status(
+            operation_name="invalid-poll-interval-overflowing-real",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=Fraction(10**1000, 1),  # type: ignore[arg-type]
+            max_wait_seconds=1.0,
         )
 
     async def validate_async_operation_name() -> None:

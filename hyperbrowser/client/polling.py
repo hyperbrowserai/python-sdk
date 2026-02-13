@@ -16,7 +16,11 @@ T = TypeVar("T")
 def _validate_non_negative_real(value: float, *, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise HyperbrowserError(f"{field_name} must be a number")
-    if not math.isfinite(float(value)):
+    try:
+        is_finite = math.isfinite(value)
+    except (TypeError, ValueError, OverflowError):
+        is_finite = False
+    if not is_finite:
         raise HyperbrowserError(f"{field_name} must be finite")
     if value < 0:
         raise HyperbrowserError(f"{field_name} must be non-negative")

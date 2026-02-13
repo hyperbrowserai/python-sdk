@@ -1,5 +1,6 @@
 import asyncio
 import math
+from fractions import Fraction
 
 import pytest
 
@@ -60,3 +61,13 @@ def test_sync_client_rejects_non_finite_timeout(invalid_timeout: float):
 def test_async_client_rejects_non_finite_timeout(invalid_timeout: float):
     with pytest.raises(HyperbrowserError, match="timeout must be finite"):
         AsyncHyperbrowser(api_key="test-key", timeout=invalid_timeout)
+
+
+def test_sync_client_rejects_overflowing_real_timeout():
+    with pytest.raises(HyperbrowserError, match="timeout must be finite"):
+        Hyperbrowser(api_key="test-key", timeout=Fraction(10**1000, 1))
+
+
+def test_async_client_rejects_overflowing_real_timeout():
+    with pytest.raises(HyperbrowserError, match="timeout must be finite"):
+        AsyncHyperbrowser(api_key="test-key", timeout=Fraction(10**1000, 1))
