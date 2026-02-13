@@ -40,18 +40,15 @@ class ExtensionManager:
         )
         if not isinstance(response.data, dict):
             raise HyperbrowserError(
-                f"Expected dict response but got {type(response.data)}",
-                original_error=None,
+                f"Expected dict response but got {type(response.data)}"
             )
         if "extensions" not in response.data:
             raise HyperbrowserError(
-                f"Expected 'extensions' key in response but got {response.data.keys()}",
-                original_error=None,
+                f"Expected 'extensions' key in response but got {response.data.keys()}"
             )
         if not isinstance(response.data["extensions"], list):
             raise HyperbrowserError(
-                f"Expected list in 'extensions' key but got {type(response.data['extensions'])}",
-                original_error=None,
+                f"Expected list in 'extensions' key but got {type(response.data['extensions'])}"
             )
         return [
             ExtensionResponse(**extension) for extension in response.data["extensions"]
