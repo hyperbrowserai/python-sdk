@@ -46,6 +46,27 @@ def test_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait()
     assert status == "completed"
 
 
+def test_poll_until_terminal_status_zero_max_wait_times_out_after_first_check():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        return "running"
+
+    with pytest.raises(
+        HyperbrowserTimeoutError, match="Timed out waiting for sync zero wait timeout"
+    ):
+        poll_until_terminal_status(
+            operation_name="sync zero wait timeout",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=0,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_times_out():
     with pytest.raises(
         HyperbrowserTimeoutError, match="Timed out waiting for sync timeout"
@@ -164,6 +185,31 @@ def test_async_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_
             max_wait_seconds=0,
         )
         assert status == "completed"
+
+    asyncio.run(run())
+
+
+def test_async_poll_until_terminal_status_zero_max_wait_times_out_after_first_check():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            return "running"
+
+        with pytest.raises(
+            HyperbrowserTimeoutError,
+            match="Timed out waiting for async zero wait timeout",
+        ):
+            await poll_until_terminal_status_async(
+                operation_name="async zero wait timeout",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=0,
+            )
+
+        assert attempts["count"] == 1
 
     asyncio.run(run())
 
