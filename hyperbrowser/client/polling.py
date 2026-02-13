@@ -46,6 +46,14 @@ def _validate_operation_name(operation_name: str) -> None:
         raise HyperbrowserError("operation_name must not contain control characters")
 
 
+def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> bool:
+    if not isinstance(result, bool):
+        raise HyperbrowserError(
+            f"is_terminal_status must return a boolean for {operation_name}"
+        )
+    return result
+
+
 def _validate_retry_config(
     *,
     max_attempts: int,
@@ -154,7 +162,9 @@ def poll_until_terminal_status(
             time.sleep(poll_interval_seconds)
             continue
 
-        if is_terminal_status(status):
+        if _ensure_boolean_terminal_result(
+            is_terminal_status(status), operation_name=operation_name
+        ):
             return status
         if has_exceeded_max_wait(start_time, max_wait_seconds):
             raise HyperbrowserTimeoutError(
@@ -225,7 +235,9 @@ async def poll_until_terminal_status_async(
             await asyncio.sleep(poll_interval_seconds)
             continue
 
-        if is_terminal_status(status):
+        if _ensure_boolean_terminal_result(
+            is_terminal_status(status), operation_name=operation_name
+        ):
             return status
         if has_exceeded_max_wait(start_time, max_wait_seconds):
             raise HyperbrowserTimeoutError(
