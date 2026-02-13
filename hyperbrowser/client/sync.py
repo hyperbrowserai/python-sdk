@@ -1,3 +1,4 @@
+from numbers import Real
 from typing import Mapping, Optional
 
 from ..exceptions import HyperbrowserError
@@ -27,8 +28,11 @@ class Hyperbrowser(HyperbrowserBase):
         headers: Optional[Mapping[str, str]] = None,
         timeout: Optional[float] = 30,
     ):
-        if timeout is not None and timeout < 0:
-            raise HyperbrowserError("timeout must be non-negative")
+        if timeout is not None:
+            if isinstance(timeout, bool) or not isinstance(timeout, Real):
+                raise HyperbrowserError("timeout must be a number")
+            if timeout < 0:
+                raise HyperbrowserError("timeout must be non-negative")
         super().__init__(SyncTransport, config, api_key, base_url, headers)
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)

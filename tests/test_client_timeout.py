@@ -27,3 +27,23 @@ def test_async_client_accepts_none_timeout():
         await client.close()
 
     asyncio.run(run())
+
+
+def test_sync_client_rejects_non_numeric_timeout():
+    with pytest.raises(HyperbrowserError, match="timeout must be a number"):
+        Hyperbrowser(api_key="test-key", timeout="30")  # type: ignore[arg-type]
+
+
+def test_async_client_rejects_non_numeric_timeout():
+    with pytest.raises(HyperbrowserError, match="timeout must be a number"):
+        AsyncHyperbrowser(api_key="test-key", timeout="30")  # type: ignore[arg-type]
+
+
+def test_sync_client_rejects_boolean_timeout():
+    with pytest.raises(HyperbrowserError, match="timeout must be a number"):
+        Hyperbrowser(api_key="test-key", timeout=True)
+
+
+def test_async_client_rejects_boolean_timeout():
+    with pytest.raises(HyperbrowserError, match="timeout must be a number"):
+        AsyncHyperbrowser(api_key="test-key", timeout=False)
