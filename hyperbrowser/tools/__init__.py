@@ -55,6 +55,10 @@ def _format_tool_param_key_for_error(key: str) -> str:
 def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
     normalized_params = _to_param_dict(params)
     schema_value = normalized_params.get("schema")
+    if schema_value is not None and not isinstance(schema_value, (str, MappingABC)):
+        raise HyperbrowserError(
+            "Extract tool `schema` must be an object or JSON string"
+        )
     if isinstance(schema_value, str):
         try:
             parsed_schema = json.loads(schema_value)

@@ -140,6 +140,35 @@ def test_extract_tool_async_runnable_rejects_non_object_schema_json():
         asyncio.run(run())
 
 
+def test_extract_tool_runnable_rejects_non_mapping_non_string_schema():
+    client = _SyncClient()
+    params = {
+        "urls": ["https://example.com"],
+        "schema": 123,
+    }
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` must be an object or JSON string"
+    ):
+        WebsiteExtractTool.runnable(client, params)
+
+
+def test_extract_tool_async_runnable_rejects_non_mapping_non_string_schema():
+    client = _AsyncClient()
+    params = {
+        "urls": ["https://example.com"],
+        "schema": 123,
+    }
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(client, params)
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` must be an object or JSON string"
+    ):
+        asyncio.run(run())
+
+
 def test_extract_tool_runnable_serializes_empty_object_data():
     client = _SyncClient(response_data={})
 
