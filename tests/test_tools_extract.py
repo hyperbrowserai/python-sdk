@@ -88,3 +88,19 @@ def test_extract_tool_runnable_raises_for_invalid_schema_json():
         HyperbrowserError, match="Invalid JSON string provided for `schema`"
     ):
         WebsiteExtractTool.runnable(client, params)
+
+
+def test_extract_tool_async_runnable_raises_for_invalid_schema_json():
+    client = _AsyncClient()
+    params = {
+        "urls": ["https://example.com"],
+        "schema": "{invalid-json}",
+    }
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(client, params)
+
+    with pytest.raises(
+        HyperbrowserError, match="Invalid JSON string provided for `schema`"
+    ):
+        asyncio.run(run())
