@@ -163,7 +163,7 @@ def test_sync_session_upload_file_raises_hyperbrowser_error_for_missing_path(tmp
     manager = SyncSessionManager(_FakeClient(_SyncTransport()))
     missing_path = tmp_path / "missing-file.txt"
 
-    with pytest.raises(HyperbrowserError, match="Failed to open upload file"):
+    with pytest.raises(HyperbrowserError, match="Upload file not found"):
         manager.upload_file("session_123", missing_path)
 
 
@@ -172,7 +172,24 @@ def test_async_session_upload_file_raises_hyperbrowser_error_for_missing_path(tm
     missing_path = tmp_path / "missing-file.txt"
 
     async def run():
-        with pytest.raises(HyperbrowserError, match="Failed to open upload file"):
+        with pytest.raises(HyperbrowserError, match="Upload file not found"):
             await manager.upload_file("session_123", missing_path)
+
+    asyncio.run(run())
+
+
+def test_sync_session_upload_file_rejects_directory_path(tmp_path):
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    with pytest.raises(HyperbrowserError, match="must point to a file"):
+        manager.upload_file("session_123", tmp_path)
+
+
+def test_async_session_upload_file_rejects_directory_path(tmp_path):
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    async def run():
+        with pytest.raises(HyperbrowserError, match="must point to a file"):
+            await manager.upload_file("session_123", tmp_path)
 
     asyncio.run(run())

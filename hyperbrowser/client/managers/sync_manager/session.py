@@ -107,6 +107,12 @@ class SessionManager:
     ) -> UploadFileResponse:
         if isinstance(file_input, (str, PathLike)):
             file_path = os.fspath(file_input)
+            if not os.path.exists(file_path):
+                raise HyperbrowserError(f"Upload file not found at path: {file_path}")
+            if not os.path.isfile(file_path):
+                raise HyperbrowserError(
+                    f"Upload file path must point to a file: {file_path}"
+                )
             try:
                 with open(file_path, "rb") as file_obj:
                     files = {"file": file_obj}

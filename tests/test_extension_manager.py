@@ -129,3 +129,24 @@ def test_async_extension_create_raises_hyperbrowser_error_when_file_missing(tmp_
             await manager.create(params)
 
     asyncio.run(run())
+
+
+def test_sync_extension_create_rejects_directory_path(tmp_path):
+    transport = _SyncTransport()
+    manager = SyncExtensionManager(_FakeClient(transport))
+    params = CreateExtensionParams(name="dir-extension", file_path=tmp_path)
+
+    with pytest.raises(HyperbrowserError, match="must point to a file"):
+        manager.create(params)
+
+
+def test_async_extension_create_rejects_directory_path(tmp_path):
+    transport = _AsyncTransport()
+    manager = AsyncExtensionManager(_FakeClient(transport))
+    params = CreateExtensionParams(name="dir-extension", file_path=tmp_path)
+
+    async def run():
+        with pytest.raises(HyperbrowserError, match="must point to a file"):
+            await manager.create(params)
+
+    asyncio.run(run())

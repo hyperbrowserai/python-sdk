@@ -17,6 +17,10 @@ class ExtensionManager:
         # Check if file exists before trying to open it
         if not os.path.exists(file_path):
             raise HyperbrowserError(f"Extension file not found at path: {file_path}")
+        if not os.path.isfile(file_path):
+            raise HyperbrowserError(
+                f"Extension file path must point to a file: {file_path}"
+            )
 
         try:
             with open(file_path, "rb") as extension_file:
