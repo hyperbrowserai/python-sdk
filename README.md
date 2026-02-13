@@ -62,7 +62,7 @@ with Hyperbrowser(
 ```
 
 > If you pass `config=...`, do not also pass `api_key`, `base_url`, or `headers`.
-> `timeout` may be provided to client constructors and must be non-negative (`None` disables request timeouts).
+> `timeout` may be provided to client constructors and must be finite and non-negative (`None` disables request timeouts).
 
 ## Clients
 
@@ -123,6 +123,8 @@ These methods now support explicit polling controls:
 - `poll_interval_seconds` (default `2.0`)
 - `max_wait_seconds` (default `600.0`)
 - `max_status_failures` (default `5`)
+
+Timing values must be finite, non-negative numbers.
 
 Example:
 
