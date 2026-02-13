@@ -187,6 +187,7 @@ Polling timeouts and repeated polling failures are surfaced as:
 
 `HyperbrowserPollingError` also covers stalled pagination (no page-batch progress during result collection).
 Transport-level request failures include HTTP method + URL context in error messages.
+Malformed or non-string transport URL inputs are normalized to `unknown URL` in wrapper-failure diagnostics.
 
 ```python
 from hyperbrowser import Hyperbrowser
