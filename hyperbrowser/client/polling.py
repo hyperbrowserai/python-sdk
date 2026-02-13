@@ -83,6 +83,12 @@ def build_operation_name(prefix: object, identifier: object) -> str:
         for character in normalized_prefix
     )
     normalized_prefix = normalized_prefix.lstrip()
+    has_trailing_whitespace = (
+        bool(normalized_prefix) and normalized_prefix[-1].isspace()
+    )
+    normalized_prefix = normalized_prefix.rstrip()
+    if has_trailing_whitespace and normalized_prefix:
+        normalized_prefix = f"{normalized_prefix} "
     raw_identifier = _coerce_operation_name_component(identifier, fallback="unknown")
     normalized_identifier = raw_identifier.strip()
     if not normalized_identifier:

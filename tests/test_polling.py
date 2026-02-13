@@ -172,6 +172,24 @@ def test_build_operation_name_trims_leading_whitespace_from_prefix_text():
     assert operation_name == "crawl job 123"
 
 
+def test_build_operation_name_collapses_trailing_prefix_whitespace():
+    operation_name = build_operation_name(
+        "crawl job    ",
+        "123",
+    )
+
+    assert operation_name == "crawl job 123"
+
+
+def test_build_operation_name_handles_large_trailing_prefix_whitespace():
+    operation_name = build_operation_name(
+        "a" + (" " * 500),
+        "b",
+    )
+
+    assert operation_name == "a b"
+
+
 def test_build_operation_name_uses_full_length_budget_after_prefix_lstrip():
     operation_name = build_operation_name(
         "   crawl job ",
