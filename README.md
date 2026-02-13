@@ -156,7 +156,7 @@ Polling callback contracts are also validated:
 - Executor-shutdown runtime errors (e.g. `cannot schedule new futures after shutdown`) are treated as non-retryable and surfaced immediately.
 - Wait helpers (`start_and_wait`, `wait_for_job_result`) only execute fetch/result callbacks after terminal status is reached; polling failures/timeouts short-circuit before fetch retries begin.
 - SDK-managed job operation labels derived from job IDs are automatically normalized and bounded (whitespace normalization/trimming, control-character cleanup, and truncation) to satisfy polling operation-name validation limits; internal fetch-step labels inherit the same normalization guarantees while preserving `Fetching ...` context (with truncation if needed).
-- Fetch-step operation labels are normalized idempotently; already-prefixed `Fetching ...` labels are preserved (not double-prefixed), including case-insensitive `fetching ...` variants, bare `fetching` keyword labels, and sanitized `fetching?...` forms.
+- Fetch-step operation labels are normalized idempotently; already-prefixed `Fetching ...` labels are preserved (not double-prefixed), including case-insensitive `fetching ...` variants, bare `fetching` keyword labels, and non-alphanumeric separator forms like `fetching?...` / `fetching...`.
 
 Example:
 
