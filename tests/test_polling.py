@@ -122,6 +122,44 @@ def test_poll_until_terminal_status_does_not_retry_non_retryable_client_errors()
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_does_not_retry_timeout_or_polling_errors():
+    timeout_attempts = {"count": 0}
+
+    def get_status_timeout() -> str:
+        timeout_attempts["count"] += 1
+        raise HyperbrowserTimeoutError("timed out internally")
+
+    with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+        poll_until_terminal_status(
+            operation_name="sync poll timeout passthrough",
+            get_status=get_status_timeout,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert timeout_attempts["count"] == 1
+
+    polling_attempts = {"count": 0}
+
+    def get_status_polling_error() -> str:
+        polling_attempts["count"] += 1
+        raise HyperbrowserPollingError("upstream polling failure")
+
+    with pytest.raises(HyperbrowserPollingError, match="upstream polling failure"):
+        poll_until_terminal_status(
+            operation_name="sync poll polling-error passthrough",
+            get_status=get_status_polling_error,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+    assert polling_attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_retries_rate_limit_errors():
     attempts = {"count": 0}
 
@@ -325,6 +363,40 @@ def test_retry_operation_does_not_retry_non_retryable_client_errors():
     assert attempts["count"] == 1
 
 
+def test_retry_operation_does_not_retry_timeout_or_polling_errors():
+    timeout_attempts = {"count": 0}
+
+    def timeout_operation() -> str:
+        timeout_attempts["count"] += 1
+        raise HyperbrowserTimeoutError("timed out internally")
+
+    with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+        retry_operation(
+            operation_name="sync retry timeout passthrough",
+            operation=timeout_operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert timeout_attempts["count"] == 1
+
+    polling_attempts = {"count": 0}
+
+    def polling_error_operation() -> str:
+        polling_attempts["count"] += 1
+        raise HyperbrowserPollingError("upstream polling failure")
+
+    with pytest.raises(HyperbrowserPollingError, match="upstream polling failure"):
+        retry_operation(
+            operation_name="sync retry polling-error passthrough",
+            operation=polling_error_operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert polling_attempts["count"] == 1
+
+
 def test_retry_operation_retries_server_errors():
     attempts = {"count": 0}
 
@@ -481,6 +553,47 @@ def test_poll_until_terminal_status_async_does_not_retry_non_retryable_client_er
     asyncio.run(run())
 
 
+def test_poll_until_terminal_status_async_does_not_retry_timeout_or_polling_errors():
+    async def run() -> None:
+        timeout_attempts = {"count": 0}
+
+        async def get_status_timeout() -> str:
+            timeout_attempts["count"] += 1
+            raise HyperbrowserTimeoutError("timed out internally")
+
+        with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll timeout passthrough",
+                get_status=get_status_timeout,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert timeout_attempts["count"] == 1
+
+        polling_attempts = {"count": 0}
+
+        async def get_status_polling_error() -> str:
+            polling_attempts["count"] += 1
+            raise HyperbrowserPollingError("upstream polling failure")
+
+        with pytest.raises(HyperbrowserPollingError, match="upstream polling failure"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll polling-error passthrough",
+                get_status=get_status_polling_error,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert polling_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_async_retries_server_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -548,6 +661,43 @@ def test_retry_operation_async_does_not_retry_non_retryable_client_errors():
             )
 
         assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_does_not_retry_timeout_or_polling_errors():
+    async def run() -> None:
+        timeout_attempts = {"count": 0}
+
+        async def timeout_operation() -> str:
+            timeout_attempts["count"] += 1
+            raise HyperbrowserTimeoutError("timed out internally")
+
+        with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+            await retry_operation_async(
+                operation_name="async retry timeout passthrough",
+                operation=timeout_operation,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert timeout_attempts["count"] == 1
+
+        polling_attempts = {"count": 0}
+
+        async def polling_error_operation() -> str:
+            polling_attempts["count"] += 1
+            raise HyperbrowserPollingError("upstream polling failure")
+
+        with pytest.raises(HyperbrowserPollingError, match="upstream polling failure"):
+            await retry_operation_async(
+                operation_name="async retry polling-error passthrough",
+                operation=polling_error_operation,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert polling_attempts["count"] == 1
 
     asyncio.run(run())
 
@@ -1125,6 +1275,28 @@ def test_collect_paginated_results_does_not_retry_non_retryable_client_errors():
     assert attempts["count"] == 1
 
 
+def test_collect_paginated_results_does_not_retry_timeout_errors():
+    attempts = {"count": 0}
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        raise HyperbrowserTimeoutError("timed out internally")
+
+    with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+        collect_paginated_results(
+            operation_name="sync paginated timeout passthrough",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_collect_paginated_results_retries_server_errors():
     attempts = {"count": 0}
     collected = []
@@ -1352,6 +1524,31 @@ def test_collect_paginated_results_async_does_not_retry_non_retryable_client_err
         with pytest.raises(HyperbrowserError, match="client failure"):
             await collect_paginated_results_async(
                 operation_name="async paginated client error",
+                get_next_page=get_next_page,
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_does_not_retry_timeout_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            raise HyperbrowserTimeoutError("timed out internally")
+
+        with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+            await collect_paginated_results_async(
+                operation_name="async paginated timeout passthrough",
                 get_next_page=get_next_page,
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],

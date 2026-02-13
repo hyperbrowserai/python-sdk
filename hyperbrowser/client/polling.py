@@ -113,6 +113,8 @@ def _invoke_non_retryable_callback(
 def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, _NonRetryablePollingError):
         return False
+    if isinstance(exc, (HyperbrowserTimeoutError, HyperbrowserPollingError)):
+        return False
     if isinstance(exc, HyperbrowserError) and exc.status_code is not None:
         if isinstance(exc.status_code, bool) or not isinstance(exc.status_code, int):
             return True
