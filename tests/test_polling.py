@@ -1080,6 +1080,29 @@ def test_wait_for_job_result_returns_fetched_value():
     assert result == {"ok": True}
 
 
+def test_wait_for_job_result_does_not_retry_non_retryable_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise HyperbrowserError("client failure", status_code=400)
+
+    with pytest.raises(HyperbrowserError, match="client failure"):
+        wait_for_job_result(
+            operation_name="sync wait helper client error",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=2,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
 def test_wait_for_job_result_async_returns_fetched_value():
     async def run() -> None:
         status_values = iter(["running", "completed"])
@@ -1097,6 +1120,32 @@ def test_wait_for_job_result_async_returns_fetched_value():
         )
 
         assert result == {"ok": True}
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_non_retryable_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise HyperbrowserError("client failure", status_code=404)
+
+        with pytest.raises(HyperbrowserError, match="client failure"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper client error",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=2,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
 
     asyncio.run(run())
 
