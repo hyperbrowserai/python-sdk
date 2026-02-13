@@ -11,6 +11,25 @@ from hyperbrowser.exceptions import (
 T = TypeVar("T")
 
 
+def _validate_retry_config(
+    *,
+    max_attempts: int,
+    retry_delay_seconds: float,
+    max_status_failures: Optional[int] = None,
+) -> None:
+    if max_attempts < 1:
+        raise HyperbrowserError("max_attempts must be at least 1")
+    if retry_delay_seconds < 0:
+        raise HyperbrowserError("retry_delay_seconds must be non-negative")
+    if max_status_failures is not None and max_status_failures < 1:
+        raise HyperbrowserError("max_status_failures must be at least 1")
+
+
+def _validate_poll_interval(poll_interval_seconds: float) -> None:
+    if poll_interval_seconds < 0:
+        raise HyperbrowserError("poll_interval_seconds must be non-negative")
+
+
 def has_exceeded_max_wait(start_time: float, max_wait_seconds: Optional[float]) -> bool:
     return (
         max_wait_seconds is not None
@@ -27,6 +46,12 @@ def poll_until_terminal_status(
     max_wait_seconds: Optional[float],
     max_status_failures: int = 5,
 ) -> str:
+    _validate_poll_interval(poll_interval_seconds)
+    _validate_retry_config(
+        max_attempts=1,
+        retry_delay_seconds=0,
+        max_status_failures=max_status_failures,
+    )
     start_time = time.monotonic()
     failures = 0
 
@@ -60,6 +85,10 @@ def retry_operation(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> T:
+    _validate_retry_config(
+        max_attempts=max_attempts,
+        retry_delay_seconds=retry_delay_seconds,
+    )
     failures = 0
     while True:
         try:
@@ -82,6 +111,12 @@ async def poll_until_terminal_status_async(
     max_wait_seconds: Optional[float],
     max_status_failures: int = 5,
 ) -> str:
+    _validate_poll_interval(poll_interval_seconds)
+    _validate_retry_config(
+        max_attempts=1,
+        retry_delay_seconds=0,
+        max_status_failures=max_status_failures,
+    )
     start_time = time.monotonic()
     failures = 0
 
@@ -115,6 +150,10 @@ async def retry_operation_async(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> T:
+    _validate_retry_config(
+        max_attempts=max_attempts,
+        retry_delay_seconds=retry_delay_seconds,
+    )
     failures = 0
     while True:
         try:
@@ -139,6 +178,10 @@ def collect_paginated_results(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> None:
+    _validate_retry_config(
+        max_attempts=max_attempts,
+        retry_delay_seconds=retry_delay_seconds,
+    )
     start_time = time.monotonic()
     current_page_batch = 0
     total_page_batches = 0
@@ -177,6 +220,10 @@ async def collect_paginated_results_async(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> None:
+    _validate_retry_config(
+        max_attempts=max_attempts,
+        retry_delay_seconds=retry_delay_seconds,
+    )
     start_time = time.monotonic()
     current_page_batch = 0
     total_page_batches = 0
@@ -216,6 +263,12 @@ def wait_for_job_result(
     fetch_max_attempts: int,
     fetch_retry_delay_seconds: float,
 ) -> T:
+    _validate_retry_config(
+        max_attempts=fetch_max_attempts,
+        retry_delay_seconds=fetch_retry_delay_seconds,
+        max_status_failures=max_status_failures,
+    )
+    _validate_poll_interval(poll_interval_seconds)
     poll_until_terminal_status(
         operation_name=operation_name,
         get_status=get_status,
@@ -244,6 +297,12 @@ async def wait_for_job_result_async(
     fetch_max_attempts: int,
     fetch_retry_delay_seconds: float,
 ) -> T:
+    _validate_retry_config(
+        max_attempts=fetch_max_attempts,
+        retry_delay_seconds=fetch_retry_delay_seconds,
+        max_status_failures=max_status_failures,
+    )
+    _validate_poll_interval(poll_interval_seconds)
     await poll_until_terminal_status_async(
         operation_name=operation_name,
         get_status=get_status,

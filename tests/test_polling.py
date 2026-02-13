@@ -298,3 +298,46 @@ def test_wait_for_job_result_async_returns_fetched_value():
         assert result == {"ok": True}
 
     asyncio.run(run())
+
+
+def test_polling_helpers_validate_retry_and_interval_configuration():
+    with pytest.raises(HyperbrowserError, match="max_attempts must be at least 1"):
+        retry_operation(
+            operation_name="invalid-retry",
+            operation=lambda: "ok",
+            max_attempts=0,
+            retry_delay_seconds=0,
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="retry_delay_seconds must be non-negative"
+    ):
+        retry_operation(
+            operation_name="invalid-delay",
+            operation=lambda: "ok",
+            max_attempts=1,
+            retry_delay_seconds=-0.1,
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="max_status_failures must be at least 1"
+    ):
+        poll_until_terminal_status(
+            operation_name="invalid-status-failures",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.1,
+            max_wait_seconds=1.0,
+            max_status_failures=0,
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="poll_interval_seconds must be non-negative"
+    ):
+        poll_until_terminal_status(
+            operation_name="invalid-poll-interval",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=-0.1,
+            max_wait_seconds=1.0,
+        )
