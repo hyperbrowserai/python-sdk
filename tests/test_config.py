@@ -209,6 +209,11 @@ def test_client_config_rejects_empty_or_invalid_base_url():
     with pytest.raises(HyperbrowserError, match="must not include query parameters"):
         ClientConfig(api_key="test-key", base_url="https://example.local#frag")
 
+    with pytest.raises(
+        HyperbrowserError, match="base_url must not contain newline characters"
+    ):
+        ClientConfig(api_key="test-key", base_url="https://example.local/\napi")
+
 
 def test_client_config_normalizes_headers_to_internal_copy():
     headers = {"X-Correlation-Id": "abc123"}
@@ -313,3 +318,8 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
 
     with pytest.raises(HyperbrowserError, match="must not include query parameters"):
         ClientConfig.normalize_base_url("https://example.local?foo=bar")
+
+    with pytest.raises(
+        HyperbrowserError, match="base_url must not contain newline characters"
+    ):
+        ClientConfig.normalize_base_url("https://example.local/\napi")
