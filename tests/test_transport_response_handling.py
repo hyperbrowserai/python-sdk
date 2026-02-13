@@ -200,3 +200,44 @@ def test_async_transport_get_wraps_request_errors_with_url_context():
             await transport.close()
 
     asyncio.run(run())
+
+
+def test_sync_transport_delete_wraps_unexpected_errors_with_url_context():
+    transport = SyncTransport(api_key="test-key")
+    original_delete = transport.client.delete
+
+    def failing_delete(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    transport.client.delete = failing_delete  # type: ignore[assignment]
+    try:
+        with pytest.raises(
+            HyperbrowserError,
+            match="DELETE request to https://example.com/delete failed",
+        ):
+            transport.delete("https://example.com/delete")
+    finally:
+        transport.client.delete = original_delete  # type: ignore[assignment]
+        transport.close()
+
+
+def test_async_transport_put_wraps_unexpected_errors_with_url_context():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        original_put = transport.client.put
+
+        async def failing_put(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        transport.client.put = failing_put  # type: ignore[assignment]
+        try:
+            with pytest.raises(
+                HyperbrowserError,
+                match="PUT request to https://example.com/put failed",
+            ):
+                await transport.put("https://example.com/put", data={"ok": True})
+        finally:
+            transport.client.put = original_put  # type: ignore[assignment]
+            await transport.close()
+
+    asyncio.run(run())
