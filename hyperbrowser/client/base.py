@@ -26,9 +26,10 @@ class HyperbrowserBase:
             )
 
         if config is None:
+            api_key_from_constructor = api_key is not None
             resolved_api_key = (
                 api_key
-                if api_key is not None
+                if api_key_from_constructor
                 else os.environ.get("HYPERBROWSER_API_KEY")
             )
             if resolved_api_key is None:
@@ -38,6 +39,8 @@ class HyperbrowserBase:
             if not isinstance(resolved_api_key, str):
                 raise HyperbrowserError("api_key must be a string")
             if not resolved_api_key.strip():
+                if api_key_from_constructor:
+                    raise HyperbrowserError("api_key must not be empty")
                 raise HyperbrowserError(
                     "API key must be provided via `api_key` or HYPERBROWSER_API_KEY"
                 )

@@ -62,3 +62,17 @@ def test_sync_client_rejects_non_string_api_key():
 def test_async_client_rejects_non_string_api_key():
     with pytest.raises(HyperbrowserError, match="api_key must be a string"):
         AsyncHyperbrowser(api_key=123)  # type: ignore[arg-type]
+
+
+def test_sync_client_rejects_blank_constructor_api_key(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "env-key")
+
+    with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
+        Hyperbrowser(api_key="   ")
+
+
+def test_async_client_rejects_blank_constructor_api_key(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "env-key")
+
+    with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
+        AsyncHyperbrowser(api_key="\t")
