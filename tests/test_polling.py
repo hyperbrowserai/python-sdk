@@ -1161,6 +1161,24 @@ def test_retry_operation_does_not_retry_runtime_errors_marked_as_already_awaited
     assert attempts["count"] == 1
 
 
+def test_retry_operation_does_not_retry_async_generator_reuse_runtime_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise RuntimeError("anext(): asynchronous generator is already running")
+
+    with pytest.raises(RuntimeError, match="asynchronous generator is already running"):
+        retry_operation(
+            operation_name="sync retry async-generator-reuse runtime error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
 def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_marked_as_already_awaited():
     async def run() -> None:
         attempts = {"count": 0}
@@ -1172,6 +1190,31 @@ def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_marked_a
         with pytest.raises(RuntimeError, match="coroutine was already awaited"):
             await poll_until_terminal_status_async(
                 operation_name="async poll already-awaited runtime error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_poll_until_terminal_status_async_does_not_retry_async_generator_reuse_runtime_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise RuntimeError("anext(): asynchronous generator is already running")
+
+        with pytest.raises(
+            RuntimeError, match="asynchronous generator is already running"
+        ):
+            await poll_until_terminal_status_async(
+                operation_name="async poll async-generator-reuse runtime error",
                 get_status=get_status,
                 is_terminal_status=lambda value: value == "completed",
                 poll_interval_seconds=0.0001,

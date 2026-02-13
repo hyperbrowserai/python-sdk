@@ -128,6 +128,16 @@ def _is_reused_coroutine_runtime_error(exc: Exception) -> bool:
     return "coroutine" in normalized_message and "already awaited" in normalized_message
 
 
+def _is_async_generator_reuse_runtime_error(exc: Exception) -> bool:
+    if not isinstance(exc, RuntimeError):
+        return False
+    normalized_message = str(exc).lower()
+    return (
+        "asynchronous generator" in normalized_message
+        and "already running" in normalized_message
+    )
+
+
 def _is_async_loop_contract_runtime_error(exc: Exception) -> bool:
     if not isinstance(exc, RuntimeError):
         return False
@@ -147,6 +157,8 @@ def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, (StopIteration, StopAsyncIteration)):
         return False
     if _is_reused_coroutine_runtime_error(exc):
+        return False
+    if _is_async_generator_reuse_runtime_error(exc):
         return False
     if _is_async_loop_contract_runtime_error(exc):
         return False
