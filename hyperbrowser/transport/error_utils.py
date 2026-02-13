@@ -47,9 +47,12 @@ _INVALID_URL_SENTINELS = {
 
 def _safe_to_string(value: Any) -> str:
     try:
-        return str(value)
+        normalized_value = str(value)
     except Exception:
         return f"<unstringifiable {type(value).__name__}>"
+    if normalized_value.strip():
+        return normalized_value
+    return f"<{type(value).__name__}>"
 
 
 def _normalize_request_method(method: Any) -> str:

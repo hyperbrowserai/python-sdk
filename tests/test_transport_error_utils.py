@@ -153,6 +153,11 @@ class _UnstringifiableFallbackError(Exception):
         raise RuntimeError("cannot stringify fallback error")
 
 
+class _BlankFallbackError(Exception):
+    def __str__(self) -> str:
+        return "   "
+
+
 class _BrokenFallbackResponse:
     @property
     def text(self) -> str:
@@ -691,6 +696,12 @@ def test_extract_error_message_handles_broken_fallback_response_text():
     )
 
     assert message == "<unstringifiable _UnstringifiableFallbackError>"
+
+
+def test_extract_error_message_uses_placeholder_for_blank_fallback_error_text():
+    message = extract_error_message(_DummyResponse("   ", text="   "), _BlankFallbackError())
+
+    assert message == "<_BlankFallbackError>"
 
 
 def test_extract_error_message_extracts_errors_list_messages():
