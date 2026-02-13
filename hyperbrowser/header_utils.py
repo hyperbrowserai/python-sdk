@@ -31,6 +31,11 @@ def normalize_headers(
             or "\r" in value
         ):
             raise HyperbrowserError("headers must not contain newline characters")
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in f"{normalized_key}{value}"
+        ):
+            raise HyperbrowserError("headers must not contain control characters")
         canonical_header_name = normalized_key.lower()
         if canonical_header_name in seen_header_names:
             raise HyperbrowserError(

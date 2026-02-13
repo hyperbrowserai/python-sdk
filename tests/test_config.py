@@ -254,6 +254,13 @@ def test_client_config_rejects_newline_header_values():
         ClientConfig(api_key="test-key", headers={"X-Correlation-Id": "bad\nvalue"})
 
 
+def test_client_config_rejects_control_character_header_values():
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain control characters"
+    ):
+        ClientConfig(api_key="test-key", headers={"X-Correlation-Id": "bad\tvalue"})
+
+
 def test_client_config_normalizes_header_name_whitespace():
     config = ClientConfig(api_key="test-key", headers={"  X-Correlation-Id  ": "value"})
 

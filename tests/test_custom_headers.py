@@ -47,6 +47,13 @@ def test_sync_transport_rejects_header_newline_values():
         SyncTransport(api_key="test-key", headers={"X-Correlation-Id": "bad\nvalue"})
 
 
+def test_sync_transport_rejects_header_control_character_values():
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain control characters"
+    ):
+        SyncTransport(api_key="test-key", headers={"X-Correlation-Id": "bad\tvalue"})
+
+
 def test_async_transport_accepts_custom_headers():
     async def run() -> None:
         transport = AsyncTransport(
@@ -85,6 +92,13 @@ def test_async_transport_rejects_header_newline_values():
         HyperbrowserError, match="headers must not contain newline characters"
     ):
         AsyncTransport(api_key="test-key", headers={"X-Correlation-Id": "bad\nvalue"})
+
+
+def test_async_transport_rejects_header_control_character_values():
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain control characters"
+    ):
+        AsyncTransport(api_key="test-key", headers={"X-Correlation-Id": "bad\tvalue"})
 
 
 def test_sync_client_config_headers_are_applied_to_transport():

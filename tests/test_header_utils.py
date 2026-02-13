@@ -73,6 +73,23 @@ def test_parse_headers_env_json_rejects_non_mapping_payload():
         parse_headers_env_json('["bad"]')
 
 
+def test_normalize_headers_rejects_control_characters():
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain control characters"
+    ):
+        normalize_headers(
+            {"X-Trace-Id": "value\twith-tab"},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
+def test_parse_headers_env_json_rejects_control_characters():
+    with pytest.raises(
+        HyperbrowserError, match="headers must not contain control characters"
+    ):
+        parse_headers_env_json('{"X-Trace-Id":"bad\\u0000value"}')
+
+
 def test_merge_headers_replaces_existing_headers_case_insensitively():
     merged = merge_headers(
         {"User-Agent": "default-sdk", "x-api-key": "test-key"},
