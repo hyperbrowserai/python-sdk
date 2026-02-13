@@ -91,7 +91,7 @@ class HyperbrowserBase:
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
         decoded_path = normalized_path_only
-        for _ in range(3):
+        for _ in range(10):
             next_decoded_path = unquote(decoded_path)
             if next_decoded_path == decoded_path:
                 break
