@@ -1,6 +1,6 @@
 import json
 import httpx
-from typing import Optional
+from typing import Mapping, Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.version import __version__
@@ -10,7 +10,7 @@ from .base import APIResponse, SyncTransportStrategy
 class SyncTransport(SyncTransportStrategy):
     """Synchronous transport implementation using httpx"""
 
-    def __init__(self, api_key: str, headers: Optional[dict] = None):
+    def __init__(self, api_key: str, headers: Optional[Mapping[str, str]] = None):
         merged_headers = {
             "x-api-key": api_key,
             "User-Agent": f"hyperbrowser-python-sdk/{__version__}",

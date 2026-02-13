@@ -12,7 +12,7 @@ class ClientConfig:
 
     api_key: str
     base_url: str = "https://api.hyperbrowser.ai"
-    headers: Optional[Dict[str, str]] = None
+    headers: Optional[Mapping[str, str]] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.api_key, str):

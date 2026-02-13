@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, Type, TypeVar, Union
+from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -37,7 +37,7 @@ class SyncTransportStrategy(ABC):
     """Abstract base class for synchronous transport implementations"""
 
     @abstractmethod
-    def __init__(self, api_key: str, headers: Optional[dict] = None): ...
+    def __init__(self, api_key: str, headers: Optional[Mapping[str, str]] = None): ...
 
     @abstractmethod
     def close(self) -> None: ...
@@ -63,7 +63,7 @@ class AsyncTransportStrategy(ABC):
     """Abstract base class for asynchronous transport implementations"""
 
     @abstractmethod
-    def __init__(self, api_key: str, headers: Optional[dict] = None): ...
+    def __init__(self, api_key: str, headers: Optional[Mapping[str, str]] = None): ...
 
     @abstractmethod
     async def close(self) -> None: ...

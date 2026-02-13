@@ -1,4 +1,5 @@
 import asyncio
+from types import MappingProxyType
 
 import pytest
 
@@ -77,6 +78,33 @@ def test_async_client_constructor_headers_are_applied_to_transport():
         headers["X-Team-Trace"] = "mutated"
         try:
             assert client.transport.client.headers["X-Team-Trace"] == "team-2"
+        finally:
+            await client.close()
+
+    asyncio.run(run())
+
+
+def test_sync_client_constructor_accepts_mapping_headers():
+    source_headers = {"X-Team-Trace": "team-mapping-sync"}
+    mapping_headers = MappingProxyType(source_headers)
+    client = Hyperbrowser(api_key="test-key", headers=mapping_headers)
+    source_headers["X-Team-Trace"] = "mutated"
+    try:
+        assert client.transport.client.headers["X-Team-Trace"] == "team-mapping-sync"
+    finally:
+        client.close()
+
+
+def test_async_client_constructor_accepts_mapping_headers():
+    async def run() -> None:
+        source_headers = {"X-Team-Trace": "team-mapping-async"}
+        mapping_headers = MappingProxyType(source_headers)
+        client = AsyncHyperbrowser(api_key="test-key", headers=mapping_headers)
+        source_headers["X-Team-Trace"] = "mutated"
+        try:
+            assert (
+                client.transport.client.headers["X-Team-Trace"] == "team-mapping-async"
+            )
         finally:
             await client.close()
 

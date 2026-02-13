@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Mapping, Optional
 
 from ..config import ClientConfig
 from ..transport.async_transport import AsyncTransport
@@ -23,7 +23,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[Mapping[str, str]] = None,
         timeout: Optional[int] = 30,
     ):
         super().__init__(AsyncTransport, config, api_key, base_url, headers)

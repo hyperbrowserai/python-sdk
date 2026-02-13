@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Optional, Type, Union
+from typing import Mapping, Optional, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ..config import ClientConfig
@@ -15,7 +15,7 @@ class HyperbrowserBase:
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ):
         if config is not None and any(
             value is not None for value in (api_key, base_url, headers)
