@@ -88,6 +88,13 @@ class HyperbrowserBase:
             raise HyperbrowserError("path must be a relative API path")
         if parsed_path.fragment:
             raise HyperbrowserError("path must not include URL fragments")
+        if any(
+            character.isspace() or ord(character) < 32 or ord(character) == 127
+            for character in parsed_path.query
+        ):
+            raise HyperbrowserError(
+                "path query must not contain unencoded whitespace or control characters"
+            )
         normalized_path = f"/{stripped_path.lstrip('/')}"
         normalized_parts = urlparse(normalized_path)
         normalized_path_only = normalized_parts.path

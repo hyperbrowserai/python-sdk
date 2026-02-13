@@ -321,6 +321,16 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError, match="path must not contain encoded fragment delimiters"
         ):
             client._build_url("/api/%23segment")
+        with pytest.raises(
+            HyperbrowserError,
+            match="path query must not contain unencoded whitespace or control characters",
+        ):
+            client._build_url("/session?foo=bar baz")
+        with pytest.raises(
+            HyperbrowserError,
+            match="path query must not contain unencoded whitespace or control characters",
+        ):
+            client._build_url("/session?foo=bar\x00baz")
         nested_encoded_segment = "%2e"
         for _ in range(11):
             nested_encoded_segment = quote(nested_encoded_segment, safe="")
