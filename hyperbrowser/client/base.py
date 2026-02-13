@@ -88,6 +88,16 @@ class HyperbrowserBase:
             raise HyperbrowserError("path must be a relative API path")
         if parsed_path.fragment:
             raise HyperbrowserError("path must not include URL fragments")
+        raw_query_component = (
+            stripped_path.split("?", 1)[1] if "?" in stripped_path else ""
+        )
+        if any(
+            character.isspace() or ord(character) < 32 or ord(character) == 127
+            for character in raw_query_component
+        ):
+            raise HyperbrowserError(
+                "path query must not contain unencoded whitespace or control characters"
+            )
         if any(
             character.isspace() or ord(character) < 32 or ord(character) == 127
             for character in parsed_path.query

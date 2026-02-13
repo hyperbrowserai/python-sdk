@@ -330,6 +330,11 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
             HyperbrowserError,
             match="path query must not contain unencoded whitespace or control characters",
         ):
+            client._build_url("/session?foo=bar\tbaz")
+        with pytest.raises(
+            HyperbrowserError,
+            match="path query must not contain unencoded whitespace or control characters",
+        ):
             client._build_url("/session?foo=bar\x00baz")
         nested_encoded_segment = "%2e"
         for _ in range(11):
