@@ -1,4 +1,3 @@
-import asyncio
 import httpx
 from typing import Optional
 
@@ -30,14 +29,6 @@ class AsyncTransport(AsyncTransportStrategy):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
-
-    def __del__(self):
-        if not self._closed:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.client.aclose())
-            except Exception:
-                pass
 
     async def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:
