@@ -181,7 +181,9 @@ def test_extract_tool_runnable_preserves_hyperbrowser_schema_parse_errors(
 
     monkeypatch.setattr(tools_module.json, "loads", _raise_hyperbrowser_error)
 
-    with pytest.raises(HyperbrowserError, match="custom schema parse failure") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="custom schema parse failure"
+    ) as exc_info:
         WebsiteExtractTool.runnable(
             _SyncClient(),
             {
