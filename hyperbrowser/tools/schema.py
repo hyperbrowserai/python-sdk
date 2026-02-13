@@ -1,6 +1,15 @@
-from typing import Literal, List, Optional
+from typing import List, Literal, Optional, get_args
+
+from hyperbrowser.models.consts import BrowserUseLlm
 
 scrape_types = Literal["markdown", "screenshot"]
+
+BROWSER_USE_LLM_VALUES = list(get_args(BrowserUseLlm))
+BROWSER_USE_DEFAULT_LLM = (
+    "gemini-2.5-flash"
+    if "gemini-2.5-flash" in BROWSER_USE_LLM_VALUES
+    else BROWSER_USE_LLM_VALUES[0]
+)
 
 
 def get_scrape_options(formats: Optional[List[scrape_types]] = None):
@@ -134,22 +143,8 @@ EXTRACT_SCHEMA = {
 
 BROWSER_USE_LLM_SCHEMA = {
     "type": "string",
-    "enum": [
-        "gpt-4o",
-        "gpt-4o-mini",
-        "gpt-4.1",
-        "gpt-4.1-mini",
-        "gpt-5",
-        "gpt-5-mini",
-        "claude-sonnet-4-5",
-        "claude-sonnet-4-20250514",
-        "claude-3-7-sonnet-20250219",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "gemini-2.0-flash",
-        "gemini-2.5-flash",
-    ],
-    "default": "gemini-2.5-flash",
+    "enum": BROWSER_USE_LLM_VALUES,
+    "default": BROWSER_USE_DEFAULT_LLM,
 }
 
 BROWSER_USE_SCHEMA = {
@@ -161,15 +156,15 @@ BROWSER_USE_SCHEMA = {
         },
         "llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model (LLM) instance to use for generating actions. Defaults to gemini-2.5-flash.",
+            "description": f"The language model (LLM) instance to use for generating actions. Defaults to {BROWSER_USE_DEFAULT_LLM}.",
         },
         "planner_llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model to use specifically for planning future actions, can differ from the main LLM. Defaults to gemini-2.5-flash.",
+            "description": f"The language model to use specifically for planning future actions, can differ from the main LLM. Defaults to {BROWSER_USE_DEFAULT_LLM}.",
         },
         "page_extraction_llm": {
             **BROWSER_USE_LLM_SCHEMA,
-            "description": "The language model to use for extracting structured data from webpages. Defaults to gemini-2.5-flash.",
+            "description": f"The language model to use for extracting structured data from webpages. Defaults to {BROWSER_USE_DEFAULT_LLM}.",
         },
         "keep_browser_open": {
             "type": "boolean",
