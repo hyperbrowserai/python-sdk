@@ -87,6 +87,11 @@ class HyperbrowserBase:
         normalized_query_suffix = (
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
+        normalized_segments = [
+            segment for segment in normalized_path_only.split("/") if segment
+        ]
+        if any(segment in {".", ".."} for segment in normalized_segments):
+            raise HyperbrowserError("path must not contain relative path segments")
         normalized_base_url = ClientConfig.normalize_base_url(self.config.base_url)
         parsed_base_url = urlparse(normalized_base_url)
         base_has_api_suffix = parsed_base_url.path.rstrip("/").endswith("/api")
