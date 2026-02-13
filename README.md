@@ -31,6 +31,7 @@ export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON obj
 and not contain query parameters, URL fragments, backslashes, control characters,
 or whitespace/newline characters.
 `base_url` must not include embedded user credentials.
+If a port is provided in `base_url`, it must be a valid numeric port.
 Unsafe encoded host/path forms (for example encoded traversal segments or encoded host/path delimiters) are also rejected.
 The SDK normalizes trailing slashes automatically.
 If `base_url` already ends with `/api`, the SDK avoids adding a duplicate `/api` prefix.
