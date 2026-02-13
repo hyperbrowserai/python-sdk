@@ -1,7 +1,7 @@
-import os
 from typing import List
 
 from hyperbrowser.exceptions import HyperbrowserError
+from ...file_utils import ensure_existing_file_path
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
 
 
@@ -14,13 +14,11 @@ class ExtensionManager:
         payload = params.model_dump(exclude_none=True, by_alias=True)
         payload.pop("filePath", None)
 
-        # Check if file exists before trying to open it
-        if not os.path.exists(file_path):
-            raise HyperbrowserError(f"Extension file not found at path: {file_path}")
-        if not os.path.isfile(file_path):
-            raise HyperbrowserError(
-                f"Extension file path must point to a file: {file_path}"
-            )
+        ensure_existing_file_path(
+            file_path,
+            missing_file_message=f"Extension file not found at path: {file_path}",
+            not_file_message=f"Extension file path must point to a file: {file_path}",
+        )
 
         try:
             with open(file_path, "rb") as extension_file:
