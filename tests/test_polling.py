@@ -3014,6 +3014,37 @@ def test_wait_for_job_result_does_not_retry_broken_executor_status_errors():
     assert fetch_attempts["count"] == 0
 
 
+def test_wait_for_job_result_does_not_retry_executor_shutdown_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        raise RuntimeError("cannot schedule new futures after shutdown")
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(
+        RuntimeError, match="cannot schedule new futures after shutdown"
+    ):
+        wait_for_job_result(
+            operation_name="sync wait helper status executor-shutdown",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
 def test_wait_for_job_result_does_not_retry_timeout_status_errors():
     status_attempts = {"count": 0}
     fetch_attempts = {"count": 0}
@@ -3233,6 +3264,31 @@ def test_wait_for_job_result_does_not_retry_broken_executor_fetch_errors():
     with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
         wait_for_job_result(
             operation_name="sync wait helper fetch broken-executor",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_does_not_retry_executor_shutdown_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise RuntimeError("cannot schedule new futures after shutdown")
+
+    with pytest.raises(
+        RuntimeError, match="cannot schedule new futures after shutdown"
+    ):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch executor-shutdown",
             get_status=lambda: "completed",
             is_terminal_status=lambda value: value == "completed",
             fetch_result=fetch_result,
@@ -3568,6 +3624,40 @@ def test_wait_for_job_result_async_does_not_retry_broken_executor_status_errors(
     asyncio.run(run())
 
 
+def test_wait_for_job_result_async_does_not_retry_executor_shutdown_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(
+            RuntimeError, match="cannot schedule new futures after shutdown"
+        ):
+            await wait_for_job_result_async(
+                operation_name="async wait helper status executor-shutdown",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
 def test_wait_for_job_result_async_does_not_retry_timeout_status_errors():
     async def run() -> None:
         status_attempts = {"count": 0}
@@ -3806,6 +3896,34 @@ def test_wait_for_job_result_async_does_not_retry_broken_executor_fetch_errors()
         with pytest.raises(ConcurrentBrokenExecutor, match="executor is broken"):
             await wait_for_job_result_async(
                 operation_name="async wait helper fetch broken-executor",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_executor_shutdown_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+        with pytest.raises(
+            RuntimeError, match="cannot schedule new futures after shutdown"
+        ):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch executor-shutdown",
                 get_status=lambda: asyncio.sleep(0, result="completed"),
                 is_terminal_status=lambda value: value == "completed",
                 fetch_result=fetch_result,
