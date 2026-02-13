@@ -300,6 +300,41 @@ def test_wait_for_job_result_async_returns_fetched_value():
     asyncio.run(run())
 
 
+def test_wait_for_job_result_validates_configuration():
+    with pytest.raises(HyperbrowserError, match="max_attempts must be at least 1"):
+        wait_for_job_result(
+            operation_name="invalid-wait-config",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=lambda: {"ok": True},
+            poll_interval_seconds=0.1,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+            fetch_max_attempts=0,
+            fetch_retry_delay_seconds=0.1,
+        )
+
+
+def test_wait_for_job_result_async_validates_configuration():
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError, match="poll_interval_seconds must be non-negative"
+        ):
+            await wait_for_job_result_async(
+                operation_name="invalid-async-wait-config",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=lambda: asyncio.sleep(0, result={"ok": True}),
+                poll_interval_seconds=-0.1,
+                max_wait_seconds=1.0,
+                max_status_failures=1,
+                fetch_max_attempts=1,
+                fetch_retry_delay_seconds=0.1,
+            )
+
+    asyncio.run(run())
+
+
 def test_polling_helpers_validate_retry_and_interval_configuration():
     with pytest.raises(HyperbrowserError, match="max_attempts must be at least 1"):
         retry_operation(
