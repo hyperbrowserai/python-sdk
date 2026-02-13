@@ -1,8 +1,12 @@
 import asyncio
 from types import SimpleNamespace
 
+import hyperbrowser.client.managers.async_manager.agents.browser_use as async_browser_use_module
+import hyperbrowser.client.managers.async_manager.web.batch_fetch as async_batch_fetch_module
 import hyperbrowser.client.managers.async_manager.crawl as async_crawl_module
 import hyperbrowser.client.managers.async_manager.extract as async_extract_module
+import hyperbrowser.client.managers.sync_manager.agents.browser_use as sync_browser_use_module
+import hyperbrowser.client.managers.sync_manager.web.batch_fetch as sync_batch_fetch_module
 import hyperbrowser.client.managers.sync_manager.crawl as sync_crawl_module
 import hyperbrowser.client.managers.sync_manager.extract as sync_extract_module
 
@@ -248,5 +252,152 @@ def test_async_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypa
 
         assert result == {"ok": True}
         assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+
+    asyncio.run(run())
+
+
+def test_sync_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
+    monkeypatch,
+):
+    manager = sync_batch_fetch_module.BatchFetchManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_poll_until_terminal_status(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["poll_operation_name"] = operation_name
+        return "completed"
+
+    def fake_retry_operation(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["fetch_operation_name"] = operation_name
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        sync_batch_fetch_module,
+        "poll_until_terminal_status",
+        fake_poll_until_terminal_status,
+    )
+    monkeypatch.setattr(
+        sync_batch_fetch_module,
+        "retry_operation",
+        fake_retry_operation,
+    )
+
+    result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
+
+    assert result == {"ok": True}
+    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+
+
+def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
+    monkeypatch,
+):
+    async def run() -> None:
+        manager = async_batch_fetch_module.BatchFetchManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_poll_until_terminal_status_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["poll_operation_name"] = operation_name
+            return "completed"
+
+        async def fake_retry_operation_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["fetch_operation_name"] = operation_name
+            return {"ok": True}
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_batch_fetch_module,
+            "poll_until_terminal_status_async",
+            fake_poll_until_terminal_status_async,
+        )
+        monkeypatch.setattr(
+            async_batch_fetch_module,
+            "retry_operation_async",
+            fake_retry_operation_async,
+        )
+
+        result = await manager.start_and_wait(
+            params=object(),  # type: ignore[arg-type]
+            return_all_pages=False,
+        )
+
+        assert result == {"ok": True}
+        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
+
+    asyncio.run(run())
+
+
+def test_sync_browser_use_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    manager = sync_browser_use_module.BrowserUseManager(_DummyClient())
+    long_job_id = " \n" + ("x" * 500) + "\t"
+    captured = {}
+
+    monkeypatch.setattr(
+        manager,
+        "start",
+        lambda params: SimpleNamespace(job_id=long_job_id),
+    )
+
+    def fake_wait_for_job_result(**kwargs):
+        operation_name = kwargs["operation_name"]
+        _assert_valid_operation_name(operation_name)
+        captured["operation_name"] = operation_name
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        sync_browser_use_module,
+        "wait_for_job_result",
+        fake_wait_for_job_result,
+    )
+
+    result = manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+    assert result == {"ok": True}
+    assert captured["operation_name"].startswith("browser-use task job ")
+
+
+def test_async_browser_use_manager_bounds_operation_name_in_wait_helper(monkeypatch):
+    async def run() -> None:
+        manager = async_browser_use_module.BrowserUseManager(_DummyClient())
+        long_job_id = " \n" + ("x" * 500) + "\t"
+        captured = {}
+
+        async def fake_start(params):
+            return SimpleNamespace(job_id=long_job_id)
+
+        async def fake_wait_for_job_result_async(**kwargs):
+            operation_name = kwargs["operation_name"]
+            _assert_valid_operation_name(operation_name)
+            captured["operation_name"] = operation_name
+            return {"ok": True}
+
+        monkeypatch.setattr(manager, "start", fake_start)
+        monkeypatch.setattr(
+            async_browser_use_module,
+            "wait_for_job_result_async",
+            fake_wait_for_job_result_async,
+        )
+
+        result = await manager.start_and_wait(params=object())  # type: ignore[arg-type]
+
+        assert result == {"ok": True}
+        assert captured["operation_name"].startswith("browser-use task job ")
 
     asyncio.run(run())
