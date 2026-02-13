@@ -151,6 +151,29 @@ def test_client_constructor_rejects_invalid_env_headers(monkeypatch):
         Hyperbrowser(api_key="test-key")
 
 
+def test_client_constructor_with_explicit_headers_ignores_invalid_env_headers(
+    monkeypatch,
+):
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", "{invalid")
+    client = Hyperbrowser(
+        api_key="test-key",
+        headers={"X-Team-Trace": "constructor-value"},
+    )
+    try:
+        assert client.transport.client.headers["X-Team-Trace"] == "constructor-value"
+    finally:
+        client.close()
+
+
+def test_client_constructor_with_config_ignores_invalid_env_headers(monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_HEADERS", "{invalid")
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        assert client.transport.client.headers["x-api-key"] == "test-key"
+    finally:
+        client.close()
+
+
 def test_client_constructor_headers_override_environment_headers(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_HEADERS", '{"X-Team-Trace":"env-value"}')
     client = Hyperbrowser(
