@@ -2551,6 +2551,75 @@ def test_wait_for_job_result_does_not_retry_non_retryable_fetch_errors():
     assert fetch_attempts["count"] == 1
 
 
+def test_wait_for_job_result_does_not_retry_timeout_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise HyperbrowserTimeoutError("timed out internally")
+
+    with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch timeout",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_does_not_retry_stop_iteration_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise StopIteration("callback exhausted")
+
+    with pytest.raises(StopIteration, match="callback exhausted"):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch stop-iteration",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_does_not_retry_concurrent_cancelled_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        raise ConcurrentCancelledError()
+
+    with pytest.raises(ConcurrentCancelledError):
+        wait_for_job_result(
+            operation_name="sync wait helper fetch concurrent-cancelled",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert fetch_attempts["count"] == 1
+
+
 def test_wait_for_job_result_retries_rate_limit_fetch_errors():
     fetch_attempts = {"count": 0}
 
@@ -2769,6 +2838,84 @@ def test_wait_for_job_result_async_does_not_retry_non_retryable_fetch_errors():
                 poll_interval_seconds=0.0001,
                 max_wait_seconds=1.0,
                 max_status_failures=2,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_timeout_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise HyperbrowserTimeoutError("timed out internally")
+
+        with pytest.raises(HyperbrowserTimeoutError, match="timed out internally"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch timeout",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_stop_async_iteration_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise StopAsyncIteration("callback exhausted")
+
+        with pytest.raises(StopAsyncIteration, match="callback exhausted"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch stop-async-iteration",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_concurrent_cancelled_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            raise ConcurrentCancelledError()
+
+        with pytest.raises(ConcurrentCancelledError):
+            await wait_for_job_result_async(
+                operation_name="async wait helper fetch concurrent-cancelled",
+                get_status=lambda: asyncio.sleep(0, result="completed"),
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
                 fetch_max_attempts=5,
                 fetch_retry_delay_seconds=0.0001,
             )
