@@ -1,4 +1,5 @@
 import httpx
+import pytest
 
 from hyperbrowser.transport.error_utils import (
     extract_error_message,
@@ -255,6 +256,19 @@ def test_format_request_failure_message_normalizes_numeric_fallback_url_values()
     assert message == "Request GET unknown URL failed"
 
 
+@pytest.mark.parametrize("sentinel_url", ["none", "null", "undefined", "nan"])
+def test_format_request_failure_message_normalizes_sentinel_fallback_url_values(
+    sentinel_url: str,
+):
+    message = format_request_failure_message(
+        httpx.RequestError("network down"),
+        fallback_method="GET",
+        fallback_url=sentinel_url,
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
 def test_format_request_failure_message_supports_url_like_fallback_values():
     message = format_request_failure_message(
         httpx.RequestError("network down"),
@@ -278,6 +292,18 @@ def test_format_generic_request_failure_message_normalizes_numeric_url_values():
     message = format_generic_request_failure_message(
         method="GET",
         url=123,
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
+@pytest.mark.parametrize("sentinel_url", ["none", "null", "undefined", "nan"])
+def test_format_generic_request_failure_message_normalizes_sentinel_url_values(
+    sentinel_url: str,
+):
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=sentinel_url,
     )
 
     assert message == "Request GET unknown URL failed"
