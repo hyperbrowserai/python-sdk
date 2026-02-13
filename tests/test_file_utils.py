@@ -61,3 +61,12 @@ def test_ensure_existing_file_path_rejects_invalid_path_type():
             missing_file_message="missing",
             not_file_message="not-file",
         )
+
+
+def test_ensure_existing_file_path_rejects_non_string_fspath_results():
+    with pytest.raises(HyperbrowserError, match="file_path must resolve to a string"):
+        ensure_existing_file_path(
+            b"/tmp/bytes-path",  # type: ignore[arg-type]
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
