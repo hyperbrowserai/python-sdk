@@ -3,7 +3,7 @@ import httpx
 from typing import Mapping, Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.header_utils import normalize_headers
+from hyperbrowser.header_utils import merge_headers
 from hyperbrowser.version import __version__
 from .base import APIResponse, AsyncTransportStrategy
 from .error_utils import extract_error_message, extract_request_error_context
@@ -18,16 +18,14 @@ class AsyncTransport(AsyncTransportStrategy):
         normalized_api_key = api_key.strip()
         if not normalized_api_key:
             raise HyperbrowserError("api_key must not be empty")
-        merged_headers = {
-            "x-api-key": normalized_api_key,
-            "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
-        }
-        normalized_headers = normalize_headers(
+        merged_headers = merge_headers(
+            {
+                "x-api-key": normalized_api_key,
+                "User-Agent": f"hyperbrowser-python-sdk/{__version__}",
+            },
             headers,
             mapping_error_message="headers must be a mapping of string pairs",
         )
-        if normalized_headers:
-            merged_headers.update(normalized_headers)
         self.client = httpx.AsyncClient(headers=merged_headers)
         self._closed = False
 

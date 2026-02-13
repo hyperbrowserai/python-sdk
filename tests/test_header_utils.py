@@ -1,7 +1,11 @@
 import pytest
 
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.header_utils import normalize_headers, parse_headers_env_json
+from hyperbrowser.header_utils import (
+    merge_headers,
+    normalize_headers,
+    parse_headers_env_json,
+)
 
 
 def test_normalize_headers_trims_header_names():
@@ -67,3 +71,16 @@ def test_parse_headers_env_json_rejects_non_mapping_payload():
         match="HYPERBROWSER_HEADERS must be a JSON object of string pairs",
     ):
         parse_headers_env_json('["bad"]')
+
+
+def test_merge_headers_replaces_existing_headers_case_insensitively():
+    merged = merge_headers(
+        {"User-Agent": "default-sdk", "x-api-key": "test-key"},
+        {"user-agent": "custom-sdk", "X-API-KEY": "override-key"},
+        mapping_error_message="headers must be a mapping of string pairs",
+    )
+
+    assert merged["user-agent"] == "custom-sdk"
+    assert merged["X-API-KEY"] == "override-key"
+    assert "User-Agent" not in merged
+    assert "x-api-key" not in merged

@@ -41,6 +41,33 @@ def normalize_headers(
     return normalized_headers
 
 
+def merge_headers(
+    base_headers: Mapping[str, str],
+    override_headers: Optional[Mapping[str, str]],
+    *,
+    mapping_error_message: str,
+    pair_error_message: Optional[str] = None,
+) -> Dict[str, str]:
+    merged_headers = dict(base_headers)
+    normalized_overrides = normalize_headers(
+        override_headers,
+        mapping_error_message=mapping_error_message,
+        pair_error_message=pair_error_message,
+    )
+    if not normalized_overrides:
+        return merged_headers
+
+    existing_canonical_to_key = {key.lower(): key for key in merged_headers}
+    for override_key, override_value in normalized_overrides.items():
+        canonical_override_key = override_key.lower()
+        existing_key = existing_canonical_to_key.get(canonical_override_key)
+        if existing_key is not None:
+            del merged_headers[existing_key]
+        merged_headers[override_key] = override_value
+        existing_canonical_to_key[canonical_override_key] = override_key
+    return merged_headers
+
+
 def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
     if raw_headers is None:
         return None
