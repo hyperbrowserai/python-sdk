@@ -18,6 +18,7 @@ from hyperbrowser.exceptions import (
 T = TypeVar("T")
 _MAX_OPERATION_NAME_LENGTH = 200
 _FETCH_OPERATION_NAME_PREFIX = "Fetching "
+_FETCH_PREFIX_KEYWORD = "fetching"
 _TRUNCATED_OPERATION_NAME_SUFFIX = "..."
 _CLIENT_ERROR_STATUS_MIN = 400
 _CLIENT_ERROR_STATUS_MAX = 500
@@ -130,10 +131,13 @@ def build_operation_name(prefix: object, identifier: object) -> str:
 def build_fetch_operation_name(operation_name: object) -> str:
     normalized_operation_name = build_operation_name("", operation_name)
     normalized_lower_operation_name = normalized_operation_name.lower()
-    if normalized_lower_operation_name.startswith(
-        _FETCH_OPERATION_NAME_PREFIX.lower()
-    ) or normalized_lower_operation_name.startswith("fetching?"):
-        return normalized_operation_name
+    if normalized_lower_operation_name.startswith(_FETCH_PREFIX_KEYWORD):
+        next_character_index = len(_FETCH_PREFIX_KEYWORD)
+        if next_character_index == len(normalized_lower_operation_name):
+            return normalized_operation_name
+        next_character = normalized_lower_operation_name[next_character_index]
+        if next_character.isspace() or next_character == "?":
+            return normalized_operation_name
     return build_operation_name(
         _FETCH_OPERATION_NAME_PREFIX,
         normalized_operation_name,

@@ -57,12 +57,24 @@ def test_build_fetch_operation_name_is_idempotent_case_insensitive():
     assert build_fetch_operation_name(operation_name) == operation_name
 
 
+def test_build_fetch_operation_name_is_idempotent_for_bare_fetching_keyword():
+    operation_name = "Fetching"
+    assert build_fetch_operation_name(operation_name) == operation_name
+
+
 def test_build_fetch_operation_name_is_idempotent_for_sanitized_fetch_separator():
     operation_name = "Fetching\tcrawl job 123"
     normalized_operation_name = build_fetch_operation_name(operation_name)
 
     assert normalized_operation_name == "Fetching?crawl job 123"
     assert normalized_operation_name.count("Fetching") == 1
+
+
+def test_build_fetch_operation_name_prefixes_non_separator_fetching_variants():
+    operation_name = "FetchingTask"
+    normalized_operation_name = build_fetch_operation_name(operation_name)
+
+    assert normalized_operation_name == "Fetching FetchingTask"
 
 
 def test_build_fetch_operation_name_truncates_to_preserve_fetch_prefix():
