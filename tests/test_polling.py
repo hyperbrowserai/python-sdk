@@ -1397,6 +1397,73 @@ def test_async_polling_and_retry_helpers():
     asyncio.run(run())
 
 
+def test_async_helpers_accept_fraction_timing_values():
+    async def run() -> None:
+        status_values = iter(["pending", "completed"])
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll fraction timings",
+            get_status=lambda: asyncio.sleep(0, result=next(status_values)),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+            max_wait_seconds=Fraction(1, 1),  # type: ignore[arg-type]
+        )
+        assert status == "completed"
+
+        retry_attempts = {"count": 0}
+
+        async def retry_operation_callback() -> str:
+            retry_attempts["count"] += 1
+            if retry_attempts["count"] < 2:
+                raise ValueError("temporary")
+            return "ok"
+
+        retry_result = await retry_operation_async(
+            operation_name="async retry fraction delay",
+            operation=retry_operation_callback,
+            max_attempts=2,
+            retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+        )
+        assert retry_result == "ok"
+        assert retry_attempts["count"] == 2
+
+        pages = {
+            1: {"current": 1, "total": 2, "items": ["a"]},
+            2: {"current": 2, "total": 2, "items": ["b"]},
+        }
+        collected: list[str] = []
+
+        async def get_next_page(page_batch: int) -> dict:
+            return pages[page_batch]
+
+        await collect_paginated_results_async(
+            operation_name="async collect fraction delay",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: collected.extend(response["items"]),
+            max_wait_seconds=1.0,
+            max_attempts=2,
+            retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+        )
+        assert collected == ["a", "b"]
+
+        wait_status_values = iter(["running", "completed"])
+        wait_result = await wait_for_job_result_async(
+            operation_name="async wait helper fraction timings",
+            get_status=lambda: asyncio.sleep(0, result=next(wait_status_values)),
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=lambda: asyncio.sleep(0, result={"ok": True}),
+            poll_interval_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+            max_wait_seconds=Fraction(1, 1),  # type: ignore[arg-type]
+            max_status_failures=2,
+            fetch_max_attempts=2,
+            fetch_retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+        )
+        assert wait_result == {"ok": True}
+
+    asyncio.run(run())
+
+
 def test_retry_operation_async_rejects_non_awaitable_operation_result() -> None:
     async def run() -> None:
         with pytest.raises(
