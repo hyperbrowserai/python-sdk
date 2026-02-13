@@ -127,6 +127,22 @@ def test_scrape_tool_wraps_response_data_read_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_scrape_tool_wraps_attributeerror_from_declared_data_property():
+    class _BrokenDataResponse:
+        @property
+        def data(self):
+            raise AttributeError("data property exploded")
+
+    client = _SyncScrapeClient(_BrokenDataResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read scrape tool response data"
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
 def test_scrape_tool_supports_mapping_response_objects():
     client = _SyncScrapeClient({"data": {"markdown": "from response mapping"}})  # type: ignore[arg-type]
 
@@ -297,6 +313,23 @@ def test_scrape_tool_rejects_non_string_markdown_field():
         match="scrape tool response field 'markdown' must be a UTF-8 string",
     ):
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+
+def test_scrape_tool_wraps_attributeerror_from_declared_markdown_property():
+    class _BrokenMarkdownData:
+        @property
+        def markdown(self):
+            raise AttributeError("markdown property exploded")
+
+    client = _SyncScrapeClient(_Response(data=_BrokenMarkdownData()))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read scrape tool response field 'markdown'",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
 
 
 def test_scrape_tool_decodes_utf8_bytes_markdown_field():
@@ -490,6 +523,23 @@ def test_crawl_tool_wraps_page_field_read_failures():
         @property
         def markdown(self) -> str:
             raise RuntimeError("cannot read markdown")
+
+    client = _SyncCrawlClient(_Response(data=[_BrokenPage()]))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read crawl tool page field 'markdown' at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_crawl_tool_wraps_attributeerror_from_declared_page_fields():
+    class _BrokenPage:
+        @property
+        def markdown(self):
+            raise AttributeError("markdown property exploded")
 
     client = _SyncCrawlClient(_Response(data=[_BrokenPage()]))
 
@@ -706,6 +756,23 @@ def test_browser_use_tool_rejects_non_string_final_result():
         BrowserUseTool.runnable(client, {"task": "search docs"})
 
 
+def test_browser_use_tool_wraps_attributeerror_from_declared_final_result_property():
+    class _BrokenFinalResultData:
+        @property
+        def final_result(self):
+            raise AttributeError("final_result property exploded")
+
+    client = _SyncBrowserUseClient(_Response(data=_BrokenFinalResultData()))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read browser-use tool response field 'final_result'",
+    ) as exc_info:
+        BrowserUseTool.runnable(client, {"task": "search docs"})
+
+    assert exc_info.value.original_error is not None
+
+
 def test_browser_use_tool_decodes_utf8_bytes_final_result():
     client = _SyncBrowserUseClient(
         _Response(data=SimpleNamespace(final_result=b"done"))
@@ -743,6 +810,26 @@ def test_async_scrape_tool_wraps_response_data_read_failures():
         client = _AsyncScrapeClient(
             _Response(data_error=RuntimeError("broken async response data"))
         )
+        with pytest.raises(
+            HyperbrowserError, match="Failed to read scrape tool response data"
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
+def test_async_scrape_tool_wraps_attributeerror_from_declared_data_property():
+    class _BrokenDataResponse:
+        @property
+        def data(self):
+            raise AttributeError("data property exploded")
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(_BrokenDataResponse())  # type: ignore[arg-type]
         with pytest.raises(
             HyperbrowserError, match="Failed to read scrape tool response data"
         ) as exc_info:

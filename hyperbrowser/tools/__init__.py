@@ -1,3 +1,4 @@
+import inspect
 import json
 from collections.abc import Mapping as MappingABC
 from typing import Any, Dict, Mapping
@@ -35,6 +36,16 @@ _NON_OBJECT_CRAWL_PAGE_TYPES = (
     float,
     bool,
 )
+
+
+def _has_declared_attribute(value: Any, attribute_name: str) -> bool:
+    try:
+        inspect.getattr_static(value, attribute_name)
+        return True
+    except AttributeError:
+        return False
+    except Exception:
+        return False
 
 
 def _format_tool_param_key_for_error(key: str) -> str:
@@ -212,7 +223,12 @@ def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
             ) from exc
     try:
         return response.data
-    except AttributeError:
+    except AttributeError as exc:
+        if _has_declared_attribute(response, "data"):
+            raise HyperbrowserError(
+                f"Failed to read {tool_name} response data",
+                original_error=exc,
+            ) from exc
         raise HyperbrowserError(f"{tool_name} response must include 'data'")
     except HyperbrowserError:
         raise
@@ -260,7 +276,12 @@ def _read_optional_tool_response_field(
     else:
         try:
             field_value = getattr(response_data, field_name)
-        except AttributeError:
+        except AttributeError as exc:
+            if _has_declared_attribute(response_data, field_name):
+                raise HyperbrowserError(
+                    f"Failed to read {tool_name} response field '{field_name}'",
+                    original_error=exc,
+                ) from exc
             return ""
         except HyperbrowserError:
             raise
@@ -308,7 +329,12 @@ def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> An
             ) from exc
     try:
         return getattr(page, field_name)
-    except AttributeError:
+    except AttributeError as exc:
+        if _has_declared_attribute(page, field_name):
+            raise HyperbrowserError(
+                f"Failed to read crawl tool page field '{field_name}' at index {page_index}",
+                original_error=exc,
+            ) from exc
         return None
     except HyperbrowserError:
         raise
