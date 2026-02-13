@@ -48,6 +48,9 @@ def _validate_operation_name(operation_name: str) -> None:
 
 
 def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> bool:
+    _ensure_non_awaitable(
+        result, callback_name="is_terminal_status", operation_name=operation_name
+    )
     if not isinstance(result, bool):
         raise HyperbrowserError(
             f"is_terminal_status must return a boolean for {operation_name}"
@@ -56,6 +59,9 @@ def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> b
 
 
 def _ensure_status_string(status: object, *, operation_name: str) -> str:
+    _ensure_non_awaitable(
+        status, callback_name="get_status", operation_name=operation_name
+    )
     if not isinstance(status, str):
         raise HyperbrowserError(f"get_status must return a string for {operation_name}")
     return status
@@ -69,6 +75,17 @@ def _ensure_awaitable(
             f"{callback_name} must return an awaitable for {operation_name}"
         )
     return result
+
+
+def _ensure_non_awaitable(
+    result: object, *, callback_name: str, operation_name: str
+) -> None:
+    if inspect.isawaitable(result):
+        if inspect.iscoroutine(result):
+            result.close()
+        raise HyperbrowserError(
+            f"{callback_name} must return a non-awaitable result for {operation_name}"
+        )
 
 
 def _validate_retry_config(
@@ -165,6 +182,9 @@ def poll_until_terminal_status(
     while True:
         try:
             status = get_status()
+            _ensure_non_awaitable(
+                status, callback_name="get_status", operation_name=operation_name
+            )
             failures = 0
         except Exception as exc:
             failures += 1
@@ -206,7 +226,13 @@ def retry_operation(
     failures = 0
     while True:
         try:
-            return operation()
+            operation_result = operation()
+            _ensure_non_awaitable(
+                operation_result,
+                callback_name="operation",
+                operation_name=operation_name,
+            )
+            return operation_result
         except Exception as exc:
             failures += 1
             if failures >= max_attempts:
@@ -354,7 +380,17 @@ def collect_paginated_results(
         try:
             previous_page_batch = current_page_batch
             page_response = get_next_page(current_page_batch + 1)
-            on_page_success(page_response)
+            _ensure_non_awaitable(
+                page_response,
+                callback_name="get_next_page",
+                operation_name=operation_name,
+            )
+            callback_result = on_page_success(page_response)
+            _ensure_non_awaitable(
+                callback_result,
+                callback_name="on_page_success",
+                operation_name=operation_name,
+            )
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
             _validate_page_batch_values(
@@ -427,7 +463,12 @@ async def collect_paginated_results_async(
                 operation_name=operation_name,
             )
             page_response = await page_awaitable
-            on_page_success(page_response)
+            callback_result = on_page_success(page_response)
+            _ensure_non_awaitable(
+                callback_result,
+                callback_name="on_page_success",
+                operation_name=operation_name,
+            )
             current_page_batch = get_current_page_batch(page_response)
             total_page_batches = get_total_page_batches(page_response)
             _validate_page_batch_values(
