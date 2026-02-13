@@ -47,6 +47,11 @@ def test_build_fetch_operation_name_prefixes_when_within_length_limit():
     assert build_fetch_operation_name("crawl job 123") == "Fetching crawl job 123"
 
 
+def test_build_fetch_operation_name_is_idempotent_for_prefixed_inputs():
+    operation_name = "Fetching crawl job 123"
+    assert build_fetch_operation_name(operation_name) == operation_name
+
+
 def test_build_fetch_operation_name_truncates_to_preserve_fetch_prefix():
     operation_name = "x" * 200
     fetch_operation_name = build_fetch_operation_name(operation_name)
@@ -69,6 +74,12 @@ def test_build_fetch_operation_name_bounds_very_large_operation_names():
 
     assert operation_name.endswith("...")
     assert len(operation_name) == 200
+
+
+def test_build_fetch_operation_name_is_idempotent_for_bounded_prefixed_inputs():
+    bounded_prefixed_name = "Fetching " + ("x" * 188) + "..."
+    operation_name = build_fetch_operation_name(bounded_prefixed_name)
+    assert operation_name == bounded_prefixed_name
 
 
 def test_build_fetch_operation_name_handles_unstringifiable_input():
