@@ -142,6 +142,17 @@ def _truncate_error_message(message: str) -> str:
     return f"{sanitized_message[:_MAX_ERROR_MESSAGE_LENGTH]}... (truncated)"
 
 
+def _normalize_response_text_for_error_message(response_text: Any) -> str:
+    if isinstance(response_text, str):
+        return response_text
+    if isinstance(response_text, (bytes, bytearray, memoryview)):
+        try:
+            return memoryview(response_text).tobytes().decode("utf-8")
+        except (TypeError, ValueError, UnicodeDecodeError):
+            return ""
+    return _safe_to_string(response_text)
+
+
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if _depth > 10:
         return _safe_to_string(value)
@@ -191,7 +202,7 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
 def extract_error_message(response: httpx.Response, fallback_error: Exception) -> str:
     def _fallback_message() -> str:
         try:
-            response_text = response.text
+            response_text = _normalize_response_text_for_error_message(response.text)
         except Exception:
             response_text = ""
         if isinstance(response_text, str) and response_text.strip():

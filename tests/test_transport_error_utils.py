@@ -173,6 +173,18 @@ class _BrokenFallbackResponse:
         raise ValueError("invalid json")
 
 
+class _BytesFallbackResponse:
+    def __init__(self, response_text: bytes) -> None:
+        self._response_text = response_text
+
+    @property
+    def text(self) -> bytes:
+        return self._response_text
+
+    def json(self):
+        raise ValueError("invalid json")
+
+
 class _BrokenGetErrorDict(dict):
     def get(self, key, default=None):
         _ = key
@@ -732,6 +744,24 @@ def test_extract_error_message_uses_response_text_for_blank_string_payload():
     )
 
     assert message == "raw error body"
+
+
+def test_extract_error_message_uses_utf8_bytes_response_text_fallback():
+    message = extract_error_message(
+        _BytesFallbackResponse("raw bytes body".encode("utf-8")),  # type: ignore[arg-type]
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "raw bytes body"
+
+
+def test_extract_error_message_uses_fallback_for_invalid_bytes_response_text():
+    message = extract_error_message(
+        _BytesFallbackResponse(b"\xff\xfe"),  # type: ignore[arg-type]
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "fallback detail"
 
 
 def test_extract_error_message_uses_fallback_error_when_response_text_is_blank():
