@@ -52,11 +52,29 @@ class _SyncCrawlManager:
         return self._response
 
 
+class _AsyncCrawlManager:
+    def __init__(self, response: _Response):
+        self._response = response
+
+    async def start_and_wait(self, params: object) -> _Response:
+        _ = params
+        return self._response
+
+
 class _SyncBrowserUseManager:
     def __init__(self, response: _Response):
         self._response = response
 
     def start_and_wait(self, params: object) -> _Response:
+        _ = params
+        return self._response
+
+
+class _AsyncBrowserUseManager:
+    def __init__(self, response: _Response):
+        self._response = response
+
+    async def start_and_wait(self, params: object) -> _Response:
         _ = params
         return self._response
 
@@ -76,10 +94,22 @@ class _SyncCrawlClient:
         self.crawl = _SyncCrawlManager(response)
 
 
+class _AsyncCrawlClient:
+    def __init__(self, response: _Response):
+        self.crawl = _AsyncCrawlManager(response)
+
+
 class _SyncBrowserUseClient:
     def __init__(self, response: _Response):
         self.agents = SimpleNamespace(
             browser_use=_SyncBrowserUseManager(response),
+        )
+
+
+class _AsyncBrowserUseClient:
+    def __init__(self, response: _Response):
+        self.agents = SimpleNamespace(
+            browser_use=_AsyncBrowserUseManager(response),
         )
 
 
@@ -216,5 +246,30 @@ def test_async_scrape_tool_wraps_response_data_read_failures():
                 {"url": "https://example.com"},
             )
         assert exc_info.value.original_error is not None
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_rejects_non_list_response_data():
+    async def run() -> None:
+        client = _AsyncCrawlClient(_Response(data={"invalid": "payload"}))
+        with pytest.raises(
+            HyperbrowserError, match="crawl tool response data must be a list"
+        ):
+            await WebsiteCrawlTool.async_runnable(client, {"url": "https://example.com"})
+
+    asyncio.run(run())
+
+
+def test_async_browser_use_tool_rejects_non_string_final_result():
+    async def run() -> None:
+        client = _AsyncBrowserUseClient(
+            _Response(data=SimpleNamespace(final_result=123))
+        )
+        with pytest.raises(
+            HyperbrowserError,
+            match="browser-use tool response field 'final_result' must be a string",
+        ):
+            await BrowserUseTool.async_runnable(client, {"task": "search docs"})
 
     asyncio.run(run())
