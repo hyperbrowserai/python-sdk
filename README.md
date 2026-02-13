@@ -24,6 +24,9 @@ export HYPERBROWSER_API_KEY="your_api_key"
 export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
 ```
 
+`base_url` must start with `https://` (or `http://` for local testing).  
+The SDK normalizes trailing slashes automatically.
+
 You can also pass custom headers (for tracing/correlation) either via
 `ClientConfig` or directly to the client constructor.
 
