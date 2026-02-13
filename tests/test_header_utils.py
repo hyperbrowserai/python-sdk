@@ -124,6 +124,15 @@ def test_parse_headers_env_json_rejects_invalid_json():
         parse_headers_env_json("{invalid")
 
 
+def test_parse_headers_env_json_preserves_original_parse_error():
+    with pytest.raises(
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be valid JSON object"
+    ) as exc_info:
+        parse_headers_env_json("{invalid")
+
+    assert exc_info.value.original_error is not None
+
+
 def test_parse_headers_env_json_wraps_recursive_json_errors(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -134,8 +143,10 @@ def test_parse_headers_env_json_wraps_recursive_json_errors(
 
     with pytest.raises(
         HyperbrowserError, match="HYPERBROWSER_HEADERS must be valid JSON object"
-    ):
+    ) as exc_info:
         parse_headers_env_json('{"X-Trace-Id":"abc123"}')
+
+    assert exc_info.value.original_error is not None
 
 
 def test_parse_headers_env_json_rejects_non_mapping_payload():

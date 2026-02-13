@@ -127,7 +127,8 @@ def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str
         parsed_headers = json.loads(raw_headers)
     except (json.JSONDecodeError, ValueError, RecursionError, TypeError) as exc:
         raise HyperbrowserError(
-            "HYPERBROWSER_HEADERS must be valid JSON object"
+            "HYPERBROWSER_HEADERS must be valid JSON object",
+            original_error=exc,
         ) from exc
     if not isinstance(parsed_headers, Mapping):
         raise HyperbrowserError(

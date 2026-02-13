@@ -428,6 +428,15 @@ def test_client_config_normalize_base_url_validates_and_normalizes():
         HyperbrowserError, match="base_url must not include user credentials"
     ):
         ClientConfig.normalize_base_url("https://user:pass@example.local")
+
+
+def test_client_config_normalize_base_url_preserves_invalid_port_original_error():
+    with pytest.raises(
+        HyperbrowserError, match="base_url must contain a valid port number"
+    ) as exc_info:
+        ClientConfig.normalize_base_url("https://example.local:bad")
+
+    assert exc_info.value.original_error is not None
     with pytest.raises(
         HyperbrowserError, match="base_url path must not contain relative path segments"
     ):

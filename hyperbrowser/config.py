@@ -89,7 +89,8 @@ class ClientConfig:
             parsed_base_url.port
         except ValueError as exc:
             raise HyperbrowserError(
-                "base_url must contain a valid port number"
+                "base_url must contain a valid port number",
+                original_error=exc,
             ) from exc
 
         decoded_base_path = ClientConfig._decode_url_component_with_limit(
