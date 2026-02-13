@@ -24,7 +24,8 @@ export HYPERBROWSER_API_KEY="your_api_key"
 export HYPERBROWSER_BASE_URL="https://api.hyperbrowser.ai" # optional
 ```
 
-You can also pass custom headers (for tracing/correlation) via `ClientConfig`:
+You can also pass custom headers (for tracing/correlation) either via
+`ClientConfig` or directly to the client constructor.
 
 ```python
 from hyperbrowser import ClientConfig, Hyperbrowser
@@ -37,6 +38,18 @@ config = ClientConfig(
 with Hyperbrowser(config=config) as client:
     ...
 ```
+
+```python
+from hyperbrowser import Hyperbrowser
+
+with Hyperbrowser(
+    api_key="your_api_key",
+    headers={"X-Correlation-Id": "req-123"},
+) as client:
+    ...
+```
+
+> If you pass `config=...`, do not also pass `api_key`, `base_url`, or `headers`.
 
 ## Clients
 
