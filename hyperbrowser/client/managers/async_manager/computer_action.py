@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Union, List, Optional
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     SessionDetail,
     ComputerActionParams,
@@ -32,7 +33,9 @@ class ComputerActionManager:
             session = await self._client.sessions.get(session)
 
         if not session.computer_action_endpoint:
-            raise ValueError("Computer action endpoint not available for this session")
+            raise HyperbrowserError(
+                "Computer action endpoint not available for this session"
+            )
 
         if isinstance(params, BaseModel):
             payload = params.model_dump(by_alias=True, exclude_none=True)
