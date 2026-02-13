@@ -163,13 +163,25 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
         ):
             client._build_url("/api/%2E/session")
         with pytest.raises(
+            HyperbrowserError, match="path must not contain relative path segments"
+        ):
+            client._build_url("/%252e%252e/session")
+        with pytest.raises(
             HyperbrowserError, match="path must not contain backslashes"
         ):
             client._build_url("/api/%5Csession")
         with pytest.raises(
+            HyperbrowserError, match="path must not contain backslashes"
+        ):
+            client._build_url("/api/%255Csession")
+        with pytest.raises(
             HyperbrowserError, match="path must not contain newline characters"
         ):
             client._build_url("/api/%0Asegment")
+        with pytest.raises(
+            HyperbrowserError, match="path must not contain newline characters"
+        ):
+            client._build_url("/api/%250Asegment")
     finally:
         client.close()
 

@@ -90,7 +90,12 @@ class HyperbrowserBase:
         normalized_query_suffix = (
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
-        decoded_path = unquote(normalized_path_only)
+        decoded_path = normalized_path_only
+        for _ in range(3):
+            next_decoded_path = unquote(decoded_path)
+            if next_decoded_path == decoded_path:
+                break
+            decoded_path = next_decoded_path
         if "\\" in decoded_path:
             raise HyperbrowserError("path must not contain backslashes")
         if "\n" in decoded_path or "\r" in decoded_path:
