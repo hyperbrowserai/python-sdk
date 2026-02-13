@@ -2,6 +2,7 @@ import os
 from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
+from hyperbrowser.exceptions import HyperbrowserError
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
@@ -113,12 +114,19 @@ class SessionManager:
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
         if isinstance(file_input, (str, PathLike)):
-            with open(os.fspath(file_input), "rb") as file_obj:
-                files = {"file": file_obj}
-                response = await self._client.transport.post(
-                    self._client._build_url(f"/session/{id}/uploads"),
-                    files=files,
-                )
+            file_path = os.fspath(file_input)
+            try:
+                with open(file_path, "rb") as file_obj:
+                    files = {"file": file_obj}
+                    response = await self._client.transport.post(
+                        self._client._build_url(f"/session/{id}/uploads"),
+                        files=files,
+                    )
+            except OSError as exc:
+                raise HyperbrowserError(
+                    f"Failed to open upload file at path: {file_path}",
+                    original_error=exc,
+                ) from exc
         elif callable(getattr(file_input, "read", None)):
             files = {"file": file_input}
             response = await self._client.transport.post(

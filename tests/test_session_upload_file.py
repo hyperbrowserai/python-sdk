@@ -9,6 +9,7 @@ from hyperbrowser.client.managers.async_manager.session import (
 from hyperbrowser.client.managers.sync_manager.session import (
     SessionManager as SyncSessionManager,
 )
+from hyperbrowser.exceptions import HyperbrowserError
 
 
 class _FakeResponse:
@@ -154,5 +155,24 @@ def test_async_session_upload_file_rejects_non_callable_read_attribute():
     async def run():
         with pytest.raises(TypeError, match="file_input must be a file path"):
             await manager.upload_file("session_123", fake_file)
+
+    asyncio.run(run())
+
+
+def test_sync_session_upload_file_raises_hyperbrowser_error_for_missing_path(tmp_path):
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+    missing_path = tmp_path / "missing-file.txt"
+
+    with pytest.raises(HyperbrowserError, match="Failed to open upload file"):
+        manager.upload_file("session_123", missing_path)
+
+
+def test_async_session_upload_file_raises_hyperbrowser_error_for_missing_path(tmp_path):
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+    missing_path = tmp_path / "missing-file.txt"
+
+    async def run():
+        with pytest.raises(HyperbrowserError, match="Failed to open upload file"):
+            await manager.upload_file("session_123", missing_path)
 
     asyncio.run(run())
