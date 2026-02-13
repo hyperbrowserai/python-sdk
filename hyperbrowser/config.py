@@ -146,10 +146,18 @@ class ClientConfig:
                 "Failed to parse base_url credentials",
                 original_error=exc,
             ) from exc
+        if parsed_base_url_username is not None and not isinstance(
+            parsed_base_url_username, str
+        ):
+            raise HyperbrowserError("base_url parser returned invalid URL components")
+        if parsed_base_url_password is not None and not isinstance(
+            parsed_base_url_password, str
+        ):
+            raise HyperbrowserError("base_url parser returned invalid URL components")
         if parsed_base_url_username is not None or parsed_base_url_password is not None:
             raise HyperbrowserError("base_url must not include user credentials")
         try:
-            parsed_base_url.port
+            parsed_base_url_port = parsed_base_url.port
         except HyperbrowserError:
             raise
         except ValueError as exc:
@@ -162,6 +170,11 @@ class ClientConfig:
                 "base_url must contain a valid port number",
                 original_error=exc,
             ) from exc
+        if parsed_base_url_port is not None and (
+            isinstance(parsed_base_url_port, bool)
+            or not isinstance(parsed_base_url_port, int)
+        ):
+            raise HyperbrowserError("base_url parser returned invalid URL components")
 
         decoded_base_path = ClientConfig._decode_url_component_with_limit(
             parsed_base_url.path, component_label="base_url path"
