@@ -122,7 +122,9 @@ def test_tool_wrappers_wrap_param_key_read_failures():
 
     client = _Client()
 
-    with pytest.raises(HyperbrowserError, match="Failed to read tool params keys") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read tool params keys"
+    ) as exc_info:
         WebsiteScrapeTool.runnable(client, _BrokenKeyMapping())
 
     assert exc_info.value.original_error is not None
@@ -142,7 +144,9 @@ def test_tool_wrappers_wrap_param_value_read_failures():
 
     client = _Client()
 
-    with pytest.raises(HyperbrowserError, match="Failed to read tool param 'url'") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read tool param 'url'"
+    ) as exc_info:
         WebsiteScrapeTool.runnable(client, _BrokenValueMapping())
 
     assert exc_info.value.original_error is not None

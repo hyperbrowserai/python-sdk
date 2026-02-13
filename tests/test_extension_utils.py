@@ -319,7 +319,9 @@ def test_parse_extension_list_response_data_wraps_extension_value_read_failures(
         HyperbrowserError,
         match="Failed to read extension object value for key 'name' at index 0",
     ) as exc_info:
-        parse_extension_list_response_data({"extensions": [_BrokenValueLookupMapping()]})
+        parse_extension_list_response_data(
+            {"extensions": [_BrokenValueLookupMapping()]}
+        )
 
     assert exc_info.value.original_error is not None
 
@@ -340,7 +342,9 @@ def test_parse_extension_list_response_data_sanitizes_extension_value_read_keys(
         HyperbrowserError,
         match="Failed to read extension object value for key 'bad\\?key' at index 0",
     ) as exc_info:
-        parse_extension_list_response_data({"extensions": [_BrokenValueLookupMapping()]})
+        parse_extension_list_response_data(
+            {"extensions": [_BrokenValueLookupMapping()]}
+        )
 
     assert exc_info.value.original_error is not None
 
@@ -360,6 +364,8 @@ def test_parse_extension_list_response_data_preserves_hyperbrowser_value_read_er
     with pytest.raises(
         HyperbrowserError, match="custom extension value read failure"
     ) as exc_info:
-        parse_extension_list_response_data({"extensions": [_BrokenValueLookupMapping()]})
+        parse_extension_list_response_data(
+            {"extensions": [_BrokenValueLookupMapping()]}
+        )
 
     assert exc_info.value.original_error is None
