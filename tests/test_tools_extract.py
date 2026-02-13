@@ -148,7 +148,8 @@ def test_extract_tool_runnable_rejects_non_mapping_non_string_schema():
     }
 
     with pytest.raises(
-        HyperbrowserError, match="Extract tool `schema` must be an object or JSON string"
+        HyperbrowserError,
+        match="Extract tool `schema` must be an object or JSON string",
     ):
         WebsiteExtractTool.runnable(client, params)
 
@@ -164,7 +165,8 @@ def test_extract_tool_async_runnable_rejects_non_mapping_non_string_schema():
         await WebsiteExtractTool.async_runnable(client, params)
 
     with pytest.raises(
-        HyperbrowserError, match="Extract tool `schema` must be an object or JSON string"
+        HyperbrowserError,
+        match="Extract tool `schema` must be an object or JSON string",
     ):
         asyncio.run(run())
 
