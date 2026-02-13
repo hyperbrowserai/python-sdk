@@ -144,6 +144,31 @@ def test_poll_until_terminal_status_retries_rate_limit_errors():
     assert attempts["count"] == 3
 
 
+def test_poll_until_terminal_status_async_retries_rate_limit_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("rate limited", status_code=429)
+            return "completed"
+
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll rate limit retries",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+        assert status == "completed"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
 def test_poll_until_terminal_status_retries_server_errors():
     attempts = {"count": 0}
 
@@ -283,6 +308,26 @@ def test_retry_operation_retries_server_errors():
 
     result = retry_operation(
         operation_name="sync retry server error",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
+def test_retry_operation_retries_rate_limit_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("rate limited", status_code=429)
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry rate limit error",
         operation=operation,
         max_attempts=5,
         retry_delay_seconds=0.0001,
@@ -468,6 +513,29 @@ def test_retry_operation_async_retries_server_errors():
 
         result = await retry_operation_async(
             operation_name="async retry server error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_retries_rate_limit_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("rate limited", status_code=429)
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry rate limit error",
             operation=operation,
             max_attempts=5,
             retry_delay_seconds=0.0001,
@@ -1031,6 +1099,31 @@ def test_collect_paginated_results_retries_server_errors():
     assert attempts["count"] == 3
 
 
+def test_collect_paginated_results_retries_rate_limit_errors():
+    attempts = {"count": 0}
+    collected = []
+
+    def get_next_page(page: int) -> dict:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("rate limited", status_code=429)
+        return {"current": 1, "total": 1, "items": ["a"]}
+
+    collect_paginated_results(
+        operation_name="sync paginated rate limit retries",
+        get_next_page=get_next_page,
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: collected.extend(response["items"]),
+        max_wait_seconds=1.0,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert collected == ["a"]
+    assert attempts["count"] == 3
+
+
 def test_collect_paginated_results_raises_when_page_batch_stagnates():
     with pytest.raises(HyperbrowserPollingError, match="No pagination progress"):
         collect_paginated_results(
@@ -1250,6 +1343,34 @@ def test_collect_paginated_results_async_retries_server_errors():
     asyncio.run(run())
 
 
+def test_collect_paginated_results_async_retries_rate_limit_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+        collected = []
+
+        async def get_next_page(page: int) -> dict:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("rate limited", status_code=429)
+            return {"current": 1, "total": 1, "items": ["a"]}
+
+        await collect_paginated_results_async(
+            operation_name="async paginated rate limit retries",
+            get_next_page=get_next_page,
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: collected.extend(response["items"]),
+            max_wait_seconds=1.0,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert collected == ["a"]
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
 def test_wait_for_job_result_returns_fetched_value():
     status_values = iter(["running", "completed"])
 
@@ -1289,6 +1410,31 @@ def test_wait_for_job_result_does_not_retry_non_retryable_fetch_errors():
         )
 
     assert fetch_attempts["count"] == 1
+
+
+def test_wait_for_job_result_retries_rate_limit_fetch_errors():
+    fetch_attempts = {"count": 0}
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        if fetch_attempts["count"] < 3:
+            raise HyperbrowserError("rate limited", status_code=429)
+        return {"ok": True}
+
+    result = wait_for_job_result(
+        operation_name="sync wait helper rate limit retries",
+        get_status=lambda: "completed",
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=fetch_result,
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=2,
+        fetch_max_attempts=5,
+        fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+    assert fetch_attempts["count"] == 3
 
 
 def test_wait_for_job_result_async_returns_fetched_value():
@@ -1334,6 +1480,34 @@ def test_wait_for_job_result_async_does_not_retry_non_retryable_fetch_errors():
             )
 
         assert fetch_attempts["count"] == 1
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_retries_rate_limit_fetch_errors():
+    async def run() -> None:
+        fetch_attempts = {"count": 0}
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            if fetch_attempts["count"] < 3:
+                raise HyperbrowserError("rate limited", status_code=429)
+            return {"ok": True}
+
+        result = await wait_for_job_result_async(
+            operation_name="async wait helper rate limit retries",
+            get_status=lambda: asyncio.sleep(0, result="completed"),
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=2,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+        assert result == {"ok": True}
+        assert fetch_attempts["count"] == 3
 
     asyncio.run(run())
 
