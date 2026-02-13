@@ -772,6 +772,14 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             poll_interval_seconds=0.0,
             max_wait_seconds=1.0,
         )
+    with pytest.raises(HyperbrowserError, match="get_status must return a string"):
+        poll_until_terminal_status(
+            operation_name="invalid-status-value",
+            get_status=lambda: 123,  # type: ignore[return-value]
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+        )
 
     with pytest.raises(
         HyperbrowserError, match="max_wait_seconds must be non-negative"
@@ -875,6 +883,14 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
                 operation_name="invalid-terminal-callback-async",
                 get_status=lambda: asyncio.sleep(0, result="completed"),
                 is_terminal_status=lambda value: "yes",  # type: ignore[return-value]
+                poll_interval_seconds=0.0,
+                max_wait_seconds=1.0,
+            )
+        with pytest.raises(HyperbrowserError, match="get_status must return a string"):
+            await poll_until_terminal_status_async(
+                operation_name="invalid-status-value-async",
+                get_status=lambda: asyncio.sleep(0, result=123),  # type: ignore[arg-type]
+                is_terminal_status=lambda value: value == "completed",
                 poll_interval_seconds=0.0,
                 max_wait_seconds=1.0,
             )

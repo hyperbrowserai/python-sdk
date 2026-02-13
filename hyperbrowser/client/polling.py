@@ -54,6 +54,12 @@ def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> b
     return result
 
 
+def _ensure_status_string(status: object, *, operation_name: str) -> str:
+    if not isinstance(status, str):
+        raise HyperbrowserError(f"get_status must return a string for {operation_name}")
+    return status
+
+
 def _validate_retry_config(
     *,
     max_attempts: int,
@@ -147,7 +153,7 @@ def poll_until_terminal_status(
 
     while True:
         try:
-            status = get_status()
+            status = _ensure_status_string(get_status(), operation_name=operation_name)
             failures = 0
         except Exception as exc:
             failures += 1
@@ -220,7 +226,9 @@ async def poll_until_terminal_status_async(
 
     while True:
         try:
-            status = await get_status()
+            status = _ensure_status_string(
+                await get_status(), operation_name=operation_name
+            )
             failures = 0
         except Exception as exc:
             failures += 1
