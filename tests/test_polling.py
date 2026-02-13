@@ -2369,6 +2369,66 @@ def test_wait_for_job_result_returns_fetched_value():
     assert result == {"ok": True}
 
 
+def test_wait_for_job_result_does_not_retry_non_retryable_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        raise HyperbrowserError("client failure", status_code=400)
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    with pytest.raises(HyperbrowserError, match="client failure"):
+        wait_for_job_result(
+            operation_name="sync wait helper status client error",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+    assert status_attempts["count"] == 1
+    assert fetch_attempts["count"] == 0
+
+
+def test_wait_for_job_result_retries_rate_limit_status_errors():
+    status_attempts = {"count": 0}
+    fetch_attempts = {"count": 0}
+
+    def get_status() -> str:
+        status_attempts["count"] += 1
+        if status_attempts["count"] < 3:
+            raise HyperbrowserError("rate limited", status_code=429)
+        return "completed"
+
+    def fetch_result() -> dict:
+        fetch_attempts["count"] += 1
+        return {"ok": True}
+
+    result = wait_for_job_result(
+        operation_name="sync wait helper status rate-limit retries",
+        get_status=get_status,
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=fetch_result,
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=5,
+        fetch_max_attempts=5,
+        fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+    assert status_attempts["count"] == 3
+    assert fetch_attempts["count"] == 1
+
+
 def test_wait_for_job_result_does_not_retry_non_retryable_fetch_errors():
     fetch_attempts = {"count": 0}
 
@@ -2459,6 +2519,72 @@ def test_wait_for_job_result_async_returns_fetched_value():
         )
 
         assert result == {"ok": True}
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_does_not_retry_non_retryable_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            raise HyperbrowserError("client failure", status_code=404)
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        with pytest.raises(HyperbrowserError, match="client failure"):
+            await wait_for_job_result_async(
+                operation_name="async wait helper status client error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                fetch_result=fetch_result,
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+                fetch_max_attempts=5,
+                fetch_retry_delay_seconds=0.0001,
+            )
+
+        assert status_attempts["count"] == 1
+        assert fetch_attempts["count"] == 0
+
+    asyncio.run(run())
+
+
+def test_wait_for_job_result_async_retries_rate_limit_status_errors():
+    async def run() -> None:
+        status_attempts = {"count": 0}
+        fetch_attempts = {"count": 0}
+
+        async def get_status() -> str:
+            status_attempts["count"] += 1
+            if status_attempts["count"] < 3:
+                raise HyperbrowserError("rate limited", status_code=429)
+            return "completed"
+
+        async def fetch_result() -> dict:
+            fetch_attempts["count"] += 1
+            return {"ok": True}
+
+        result = await wait_for_job_result_async(
+            operation_name="async wait helper status rate-limit retries",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            fetch_result=fetch_result,
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+            fetch_max_attempts=5,
+            fetch_retry_delay_seconds=0.0001,
+        )
+
+        assert result == {"ok": True}
+        assert status_attempts["count"] == 3
+        assert fetch_attempts["count"] == 1
 
     asyncio.run(run())
 
