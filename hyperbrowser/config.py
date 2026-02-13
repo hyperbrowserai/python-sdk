@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from typing import Dict, Mapping, Optional
 import os
 
@@ -57,6 +57,27 @@ class ClientConfig:
         if parsed_base_url.query or parsed_base_url.fragment:
             raise HyperbrowserError(
                 "base_url must not include query parameters or fragments"
+            )
+
+        decoded_base_path = parsed_base_url.path
+        for _ in range(10):
+            next_decoded_base_path = unquote(decoded_base_path)
+            if next_decoded_base_path == decoded_base_path:
+                break
+            decoded_base_path = next_decoded_base_path
+        if "\\" in decoded_base_path:
+            raise HyperbrowserError("base_url must not contain backslashes")
+        if any(character.isspace() for character in decoded_base_path):
+            raise HyperbrowserError("base_url must not contain whitespace characters")
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in decoded_base_path
+        ):
+            raise HyperbrowserError("base_url must not contain control characters")
+        path_segments = [segment for segment in decoded_base_path.split("/") if segment]
+        if any(segment in {".", ".."} for segment in path_segments):
+            raise HyperbrowserError(
+                "base_url path must not contain relative path segments"
             )
         return normalized_base_url
 
