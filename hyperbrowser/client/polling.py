@@ -30,6 +30,11 @@ def _validate_poll_interval(poll_interval_seconds: float) -> None:
         raise HyperbrowserError("poll_interval_seconds must be non-negative")
 
 
+def _validate_max_wait_seconds(max_wait_seconds: Optional[float]) -> None:
+    if max_wait_seconds is not None and max_wait_seconds < 0:
+        raise HyperbrowserError("max_wait_seconds must be non-negative")
+
+
 def has_exceeded_max_wait(start_time: float, max_wait_seconds: Optional[float]) -> bool:
     return (
         max_wait_seconds is not None
@@ -47,6 +52,7 @@ def poll_until_terminal_status(
     max_status_failures: int = 5,
 ) -> str:
     _validate_poll_interval(poll_interval_seconds)
+    _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
         max_attempts=1,
         retry_delay_seconds=0,
@@ -112,6 +118,7 @@ async def poll_until_terminal_status_async(
     max_status_failures: int = 5,
 ) -> str:
     _validate_poll_interval(poll_interval_seconds)
+    _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
         max_attempts=1,
         retry_delay_seconds=0,
@@ -178,6 +185,7 @@ def collect_paginated_results(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> None:
+    _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
@@ -220,6 +228,7 @@ async def collect_paginated_results_async(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> None:
+    _validate_max_wait_seconds(max_wait_seconds)
     _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
@@ -269,6 +278,7 @@ def wait_for_job_result(
         max_status_failures=max_status_failures,
     )
     _validate_poll_interval(poll_interval_seconds)
+    _validate_max_wait_seconds(max_wait_seconds)
     poll_until_terminal_status(
         operation_name=operation_name,
         get_status=get_status,
@@ -303,6 +313,7 @@ async def wait_for_job_result_async(
         max_status_failures=max_status_failures,
     )
     _validate_poll_interval(poll_interval_seconds)
+    _validate_max_wait_seconds(max_wait_seconds)
     await poll_until_terminal_status_async(
         operation_name=operation_name,
         get_status=get_status,

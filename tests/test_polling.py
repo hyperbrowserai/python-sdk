@@ -376,3 +376,17 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             poll_interval_seconds=-0.1,
             max_wait_seconds=1.0,
         )
+
+    with pytest.raises(
+        HyperbrowserError, match="max_wait_seconds must be non-negative"
+    ):
+        collect_paginated_results(
+            operation_name="invalid-max-wait",
+            get_next_page=lambda page: {"current": 1, "total": 1, "items": []},
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=-1.0,
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
