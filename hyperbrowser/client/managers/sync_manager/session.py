@@ -107,11 +107,11 @@ class SessionManager:
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
         if isinstance(file_input, (str, PathLike)):
-            file_path = os.fspath(file_input)
-            ensure_existing_file_path(
-                file_path,
-                missing_file_message=f"Upload file not found at path: {file_path}",
-                not_file_message=f"Upload file path must point to a file: {file_path}",
+            raw_file_path = os.fspath(file_input)
+            file_path = ensure_existing_file_path(
+                raw_file_path,
+                missing_file_message=f"Upload file not found at path: {raw_file_path}",
+                not_file_message=f"Upload file path must point to a file: {raw_file_path}",
             )
             try:
                 with open(file_path, "rb") as file_obj:
