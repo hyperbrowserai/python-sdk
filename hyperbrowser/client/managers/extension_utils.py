@@ -15,4 +15,17 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
         raise HyperbrowserError(
             f"Expected list in 'extensions' key but got {type(response_data['extensions'])}"
         )
-    return [ExtensionResponse(**extension) for extension in response_data["extensions"]]
+    parsed_extensions: List[ExtensionResponse] = []
+    for index, extension in enumerate(response_data["extensions"]):
+        if not isinstance(extension, dict):
+            raise HyperbrowserError(
+                f"Expected extension object at index {index} but got {type(extension)}"
+            )
+        try:
+            parsed_extensions.append(ExtensionResponse(**extension))
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to parse extension at index {index}",
+                original_error=exc,
+            ) from exc
+    return parsed_extensions

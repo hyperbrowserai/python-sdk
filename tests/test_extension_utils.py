@@ -37,3 +37,22 @@ def test_parse_extension_list_response_data_rejects_missing_extensions_key():
 def test_parse_extension_list_response_data_rejects_non_list_extensions():
     with pytest.raises(HyperbrowserError, match="Expected list in 'extensions' key"):
         parse_extension_list_response_data({"extensions": "not-a-list"})
+
+
+def test_parse_extension_list_response_data_rejects_non_object_extension_items():
+    with pytest.raises(HyperbrowserError, match="Expected extension object at index 0"):
+        parse_extension_list_response_data({"extensions": ["not-an-object"]})
+
+
+def test_parse_extension_list_response_data_wraps_invalid_extension_payloads():
+    with pytest.raises(HyperbrowserError, match="Failed to parse extension at index 0"):
+        parse_extension_list_response_data(
+            {
+                "extensions": [
+                    {
+                        "id": "ext_123",
+                        # missing required fields: name/createdAt/updatedAt
+                    }
+                ]
+            }
+        )
