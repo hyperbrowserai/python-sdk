@@ -6722,3 +6722,31 @@ def test_poll_until_terminal_status_handles_unstringifiable_callback_errors():
             max_wait_seconds=1.0,
             max_status_failures=1,
         )
+
+
+def test_poll_until_terminal_status_uses_placeholder_for_blank_error_messages():
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match=r"Failed to poll blank-error poll after 1 attempts: <RuntimeError>",
+    ):
+        poll_until_terminal_status(
+            operation_name="blank-error poll",
+            get_status=lambda: (_ for _ in ()).throw(RuntimeError("   ")),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
+def test_retry_operation_uses_placeholder_for_blank_error_messages():
+    with pytest.raises(
+        HyperbrowserError,
+        match=r"blank-error retry failed after 1 attempts: <ValueError>",
+    ):
+        retry_operation(
+            operation_name="blank-error retry",
+            operation=lambda: (_ for _ in ()).throw(ValueError("")),
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )

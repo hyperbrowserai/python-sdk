@@ -32,9 +32,12 @@ class _NonRetryablePollingError(HyperbrowserError):
 
 def _safe_exception_text(exc: Exception) -> str:
     try:
-        return str(exc)
+        exception_message = str(exc)
     except Exception:
         return f"<unstringifiable {type(exc).__name__}>"
+    if exception_message.strip():
+        return exception_message
+    return f"<{type(exc).__name__}>"
 
 
 def _normalized_exception_text(exc: Exception) -> str:
