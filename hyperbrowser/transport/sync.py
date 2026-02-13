@@ -5,6 +5,7 @@ from typing import Mapping, Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.version import __version__
 from .base import APIResponse, SyncTransportStrategy
+from .error_utils import extract_error_message
 
 
 class SyncTransport(SyncTransportStrategy):
@@ -41,7 +42,7 @@ class SyncTransport(SyncTransportStrategy):
                     )
                 return APIResponse.from_status(response.status_code)
         except httpx.HTTPStatusError as e:
-            message = self._extract_error_message(response, fallback_error=e)
+            message = extract_error_message(response, fallback_error=e)
             raise HyperbrowserError(
                 message,
                 status_code=response.status_code,
@@ -53,26 +54,6 @@ class SyncTransport(SyncTransportStrategy):
 
     def close(self) -> None:
         self.client.close()
-
-    @staticmethod
-    def _extract_error_message(
-        response: httpx.Response, fallback_error: Exception
-    ) -> str:
-        try:
-            error_data = response.json()
-        except Exception:
-            return response.text or str(fallback_error)
-
-        if isinstance(error_data, dict):
-            return (
-                error_data.get("message")
-                or error_data.get("error")
-                or response.text
-                or str(fallback_error)
-            )
-        if isinstance(error_data, str):
-            return error_data
-        return response.text or str(fallback_error)
 
     def post(
         self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
