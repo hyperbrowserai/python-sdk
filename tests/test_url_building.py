@@ -71,6 +71,15 @@ def test_client_build_url_handles_nested_api_base_paths():
         client.close()
 
 
+def test_client_build_url_reflects_runtime_base_url_changes():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        client.config.base_url = "https://example.local/api"
+        assert client._build_url("/session") == "https://example.local/api/session"
+    finally:
+        client.close()
+
+
 def test_client_build_url_rejects_empty_or_non_string_paths():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
