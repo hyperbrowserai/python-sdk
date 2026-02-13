@@ -21,6 +21,10 @@ def test_client_build_url_normalizes_leading_slash():
             == "https://api.hyperbrowser.ai/api/session"
         )
         assert (
+            client._build_url("/api?foo=bar")
+            == "https://api.hyperbrowser.ai/api?foo=bar"
+        )
+        assert (
             client._build_url("//api/session")
             == "https://api.hyperbrowser.ai/api/session"
         )
@@ -49,6 +53,7 @@ def test_client_build_url_avoids_duplicate_api_when_base_url_already_has_api():
     try:
         assert client._build_url("/session") == "https://example.local/api/session"
         assert client._build_url("/api/session") == "https://example.local/api/session"
+        assert client._build_url("/api?foo=bar") == "https://example.local/api?foo=bar"
     finally:
         client.close()
 
@@ -115,6 +120,10 @@ def test_client_build_url_allows_query_values_containing_absolute_urls():
         assert (
             client._build_url("/web/fetch?target=https://example.com")
             == "https://api.hyperbrowser.ai/api/web/fetch?target=https://example.com"
+        )
+        assert (
+            client._build_url("/session?foo=bar")
+            == "https://api.hyperbrowser.ai/api/session?foo=bar"
         )
     finally:
         client.close()

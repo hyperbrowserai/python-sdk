@@ -82,16 +82,27 @@ class HyperbrowserBase:
         if parsed_path.fragment:
             raise HyperbrowserError("path must not include URL fragments")
         normalized_path = f"/{stripped_path.lstrip('/')}"
+        normalized_parts = urlparse(normalized_path)
+        normalized_path_only = normalized_parts.path
+        normalized_query_suffix = (
+            f"?{normalized_parts.query}" if normalized_parts.query else ""
+        )
         base_has_api_suffix = (
             urlparse(self.config.base_url).path.rstrip("/").endswith("/api")
         )
 
-        if normalized_path == "/api" or normalized_path.startswith("/api/"):
+        if normalized_path_only == "/api" or normalized_path_only.startswith("/api/"):
             if base_has_api_suffix:
-                deduped_path = normalized_path[len("/api") :]
-                return f"{self.config.base_url}{deduped_path}"
-            return f"{self.config.base_url}{normalized_path}"
+                deduped_path = normalized_path_only[len("/api") :]
+                return f"{self.config.base_url}{deduped_path}{normalized_query_suffix}"
+            return (
+                f"{self.config.base_url}{normalized_path_only}{normalized_query_suffix}"
+            )
 
         if base_has_api_suffix:
-            return f"{self.config.base_url}{normalized_path}"
-        return f"{self.config.base_url}/api{normalized_path}"
+            return (
+                f"{self.config.base_url}{normalized_path_only}{normalized_query_suffix}"
+            )
+        return (
+            f"{self.config.base_url}/api{normalized_path_only}{normalized_query_suffix}"
+        )
