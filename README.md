@@ -102,16 +102,33 @@ with Hyperbrowser(api_key="your_api_key") as client:
 ## Error handling
 
 SDK errors are raised as `HyperbrowserError`.
+Polling timeouts and repeated polling failures are surfaced as:
+
+- `HyperbrowserTimeoutError`
+- `HyperbrowserPollingError`
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.exceptions import (
+    HyperbrowserError,
+    HyperbrowserTimeoutError,
+)
+from hyperbrowser.models import StartScrapeJobParams
 
 try:
     with Hyperbrowser(api_key="invalid") as client:
         client.team.get_credit_info()
 except HyperbrowserError as exc:
     print(exc)
+
+try:
+    with Hyperbrowser(api_key="your_api_key") as client:
+        client.scrape.start_and_wait(
+            StartScrapeJobParams(url="https://example.com"),
+            max_wait_seconds=5,
+        )
+except HyperbrowserTimeoutError:
+    print("Scrape job timed out")
 ```
 
 ## Development
