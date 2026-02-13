@@ -1,3 +1,4 @@
+from collections.abc import Mapping as MappingABC
 from abc import ABC, abstractmethod
 from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
@@ -16,12 +17,26 @@ class APIResponse(Generic[T]):
         self.status_code = status_code
 
     @classmethod
-    def from_json(cls, json_data: dict, model: Type[T]) -> "APIResponse[T]":
+    def from_json(
+        cls, json_data: Mapping[str, object], model: Type[T]
+    ) -> "APIResponse[T]":
         """Create an APIResponse from JSON data with a specific model."""
+        model_name = getattr(model, "__name__", "response model")
+        if not isinstance(json_data, MappingABC):
+            actual_type_name = type(json_data).__name__
+            raise HyperbrowserError(
+                f"Failed to parse response data for {model_name}: "
+                f"expected a mapping but received {actual_type_name}"
+            )
         try:
             return cls(data=model(**json_data))
-        except Exception as e:
-            raise HyperbrowserError("Failed to parse response data", original_error=e)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to parse response data for {model_name}",
+                original_error=exc,
+            ) from exc
 
     @classmethod
     def from_status(cls, status_code: int) -> "APIResponse[None]":
