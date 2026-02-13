@@ -208,11 +208,7 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
             return None
         if len(normalized_status) > _MAX_STATUS_CODE_TEXT_LENGTH:
             return None
-        if normalized_status[0] in {"+", "-"}:
-            digits = normalized_status[1:]
-        else:
-            digits = normalized_status
-        if not digits or not digits.isascii() or not digits.isdigit():
+        if not normalized_status.isascii() or not normalized_status.isdigit():
             return None
         try:
             return int(normalized_status, 10)
