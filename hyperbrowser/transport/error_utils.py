@@ -60,6 +60,13 @@ def _safe_to_string(value: Any) -> str:
     return f"<{type(value).__name__}>"
 
 
+def _sanitize_error_message_text(message: str) -> str:
+    return "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in message
+    )
+
+
 def _normalize_request_method(method: Any) -> str:
     raw_method = method
     if isinstance(raw_method, bool):
@@ -129,9 +136,10 @@ def _normalize_request_url(url: Any) -> str:
 
 
 def _truncate_error_message(message: str) -> str:
-    if len(message) <= _MAX_ERROR_MESSAGE_LENGTH:
-        return message
-    return f"{message[:_MAX_ERROR_MESSAGE_LENGTH]}... (truncated)"
+    sanitized_message = _sanitize_error_message_text(message)
+    if len(sanitized_message) <= _MAX_ERROR_MESSAGE_LENGTH:
+        return sanitized_message
+    return f"{sanitized_message[:_MAX_ERROR_MESSAGE_LENGTH]}... (truncated)"
 
 
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:

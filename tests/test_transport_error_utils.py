@@ -765,6 +765,24 @@ def test_extract_error_message_sanitizes_control_characters_in_fallback_error_te
     assert message == "bad?fallback?text"
 
 
+def test_extract_error_message_sanitizes_control_characters_in_json_message():
+    message = extract_error_message(
+        _DummyResponse({"message": "bad\tjson\nmessage"}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "bad?json?message"
+
+
+def test_extract_error_message_sanitizes_control_characters_in_response_text_fallback():
+    message = extract_error_message(
+        _DummyResponse("   ", text="bad\tresponse\ntext"),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "bad?response?text"
+
+
 def test_extract_error_message_extracts_errors_list_messages():
     message = extract_error_message(
         _DummyResponse({"errors": [{"msg": "first issue"}, {"msg": "second issue"}]}),
