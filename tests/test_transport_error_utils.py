@@ -134,3 +134,20 @@ def test_extract_error_message_handles_recursive_dict_payloads():
 
     assert isinstance(message, str)
     assert message
+
+
+def test_extract_error_message_uses_fallback_for_blank_dict_message():
+    message = extract_error_message(
+        _DummyResponse({"message": "   "}), RuntimeError("fallback detail")
+    )
+
+    assert message == "fallback detail"
+
+
+def test_extract_error_message_uses_response_text_for_blank_string_payload():
+    message = extract_error_message(
+        _DummyResponse("   ", text="raw error body"),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "raw error body"

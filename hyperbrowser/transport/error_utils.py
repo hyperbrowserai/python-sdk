@@ -35,20 +35,29 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
 
 
 def extract_error_message(response: httpx.Response, fallback_error: Exception) -> str:
+    def _fallback_message() -> str:
+        return response.text or str(fallback_error)
+
     try:
         error_data: Any = response.json()
     except Exception:
-        return response.text or str(fallback_error)
+        return _fallback_message()
 
+    extracted_message: str
     if isinstance(error_data, dict):
         for key in ("message", "error", "detail"):
             message = error_data.get(key)
             if message is not None:
-                return _stringify_error_value(message)
-        return _stringify_error_value(error_data)
-    if isinstance(error_data, str):
-        return error_data
-    return _stringify_error_value(error_data)
+                extracted_message = _stringify_error_value(message)
+                break
+        else:
+            extracted_message = _stringify_error_value(error_data)
+    elif isinstance(error_data, str):
+        extracted_message = error_data
+    else:
+        extracted_message = _stringify_error_value(error_data)
+
+    return extracted_message if extracted_message.strip() else _fallback_message()
 
 
 def extract_request_error_context(error: httpx.RequestError) -> tuple[str, str]:
