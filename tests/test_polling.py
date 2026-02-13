@@ -363,6 +363,29 @@ def test_poll_until_terminal_status_fails_fast_when_terminal_callback_raises():
     assert attempts["count"] == 1
 
 
+def test_poll_until_terminal_status_cancels_future_terminal_callback_results():
+    loop = asyncio.new_event_loop()
+    try:
+        callback_future = loop.create_future()
+
+        with pytest.raises(
+            HyperbrowserError,
+            match="is_terminal_status must return a non-awaitable result",
+        ):
+            poll_until_terminal_status(
+                operation_name="sync terminal callback future",
+                get_status=lambda: "completed",
+                is_terminal_status=lambda value: callback_future,  # type: ignore[return-value]
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert callback_future.cancelled()
+    finally:
+        loop.close()
+
+
 def test_retry_operation_retries_and_returns_value():
     attempts = {"count": 0}
 
@@ -548,6 +571,26 @@ def test_retry_operation_rejects_awaitable_operation_result():
         )
 
     assert attempts["count"] == 1
+
+
+def test_retry_operation_cancels_future_operation_results():
+    loop = asyncio.new_event_loop()
+    try:
+        operation_future = loop.create_future()
+
+        with pytest.raises(
+            HyperbrowserError, match="operation must return a non-awaitable result"
+        ):
+            retry_operation(
+                operation_name="sync retry future callback",
+                operation=lambda: operation_future,  # type: ignore[return-value]
+                max_attempts=5,
+                retry_delay_seconds=0.0001,
+            )
+
+        assert operation_future.cancelled()
+    finally:
+        loop.close()
 
 
 def test_async_polling_and_retry_helpers():
