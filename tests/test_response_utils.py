@@ -133,6 +133,22 @@ class _BrokenMapping(Mapping[str, object]):
         return self._payload[key]
 
 
+class _BrokenValueLookupMapping(Mapping[str, object]):
+    def __init__(self, *, key: str, error: Exception):
+        self._key = key
+        self._error = error
+
+    def __iter__(self):
+        yield self._key
+
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, key: str) -> object:
+        _ = key
+        raise self._error
+
+
 def test_parse_response_model_parses_mapping_payloads():
     response_model = parse_response_model(
         {"success": True},
@@ -219,6 +235,54 @@ def test_parse_response_model_wraps_mapping_read_failures():
         )
 
     assert exc_info.value.original_error is not None
+
+
+def test_parse_response_model_wraps_mapping_value_read_failures():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read basic operation response value for key 'success'",
+    ) as exc_info:
+        parse_response_model(
+            _BrokenValueLookupMapping(
+                key="success",
+                error=RuntimeError("cannot read value"),
+            ),
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_response_model_sanitizes_key_display_in_value_read_failures():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read basic operation response value for key 'bad\\?key'",
+    ) as exc_info:
+        parse_response_model(
+            _BrokenValueLookupMapping(
+                key="bad\tkey",
+                error=RuntimeError("cannot read value"),
+            ),
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_parse_response_model_preserves_hyperbrowser_value_read_failures():
+    with pytest.raises(HyperbrowserError, match="custom read failure") as exc_info:
+        parse_response_model(
+            _BrokenValueLookupMapping(
+                key="success",
+                error=HyperbrowserError("custom read failure"),
+            ),
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+    assert exc_info.value.original_error is None
 
 
 def test_sync_team_manager_rejects_invalid_response_shape():
