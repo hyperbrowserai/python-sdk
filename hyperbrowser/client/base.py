@@ -87,24 +87,8 @@ class HyperbrowserBase:
         normalized_query_suffix = (
             f"?{normalized_parts.query}" if normalized_parts.query else ""
         )
-        if not isinstance(self.config.base_url, str):
-            raise HyperbrowserError("base_url must be a string")
-        normalized_base_url = self.config.base_url.strip().rstrip("/")
-        if not normalized_base_url:
-            raise HyperbrowserError("base_url must not be empty")
-
+        normalized_base_url = ClientConfig.normalize_base_url(self.config.base_url)
         parsed_base_url = urlparse(normalized_base_url)
-        if (
-            parsed_base_url.scheme not in {"https", "http"}
-            or not parsed_base_url.netloc
-        ):
-            raise HyperbrowserError(
-                "base_url must start with 'https://' or 'http://' and include a host"
-            )
-        if parsed_base_url.query or parsed_base_url.fragment:
-            raise HyperbrowserError(
-                "base_url must not include query parameters or fragments"
-            )
         base_has_api_suffix = parsed_base_url.path.rstrip("/").endswith("/api")
 
         if normalized_path_only == "/api" or normalized_path_only.startswith("/api/"):

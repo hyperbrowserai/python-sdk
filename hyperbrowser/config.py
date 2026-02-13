@@ -18,15 +18,24 @@ class ClientConfig:
     def __post_init__(self) -> None:
         if not isinstance(self.api_key, str):
             raise HyperbrowserError("api_key must be a string")
-        if not isinstance(self.base_url, str):
-            raise HyperbrowserError("base_url must be a string")
         self.api_key = self.api_key.strip()
         if not self.api_key:
             raise HyperbrowserError("api_key must not be empty")
-        self.base_url = self.base_url.strip().rstrip("/")
-        if not self.base_url:
+        self.base_url = self.normalize_base_url(self.base_url)
+        self.headers = normalize_headers(
+            self.headers,
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    @staticmethod
+    def normalize_base_url(base_url: str) -> str:
+        if not isinstance(base_url, str):
+            raise HyperbrowserError("base_url must be a string")
+        normalized_base_url = base_url.strip().rstrip("/")
+        if not normalized_base_url:
             raise HyperbrowserError("base_url must not be empty")
-        parsed_base_url = urlparse(self.base_url)
+
+        parsed_base_url = urlparse(normalized_base_url)
         if (
             parsed_base_url.scheme not in {"https", "http"}
             or not parsed_base_url.netloc
@@ -38,10 +47,7 @@ class ClientConfig:
             raise HyperbrowserError(
                 "base_url must not include query parameters or fragments"
             )
-        self.headers = normalize_headers(
-            self.headers,
-            mapping_error_message="headers must be a mapping of string pairs",
-        )
+        return normalized_base_url
 
     @classmethod
     def from_env(cls) -> "ClientConfig":
@@ -67,4 +73,4 @@ class ClientConfig:
             return "https://api.hyperbrowser.ai"
         if not raw_base_url.strip():
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must not be empty when set")
-        return raw_base_url
+        return ClientConfig.normalize_base_url(raw_base_url)

@@ -288,3 +288,24 @@ def test_client_config_resolve_base_url_from_env_defaults_and_rejects_blank():
         HyperbrowserError, match="HYPERBROWSER_BASE_URL must not be empty"
     ):
         ClientConfig.resolve_base_url_from_env("   ")
+    with pytest.raises(HyperbrowserError, match="include a host"):
+        ClientConfig.resolve_base_url_from_env("https://")
+
+
+def test_client_config_normalize_base_url_validates_and_normalizes():
+    assert (
+        ClientConfig.normalize_base_url(" https://example.local/custom/api/ ")
+        == "https://example.local/custom/api"
+    )
+
+    with pytest.raises(HyperbrowserError, match="base_url must be a string"):
+        ClientConfig.normalize_base_url(None)  # type: ignore[arg-type]
+
+    with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
+        ClientConfig.normalize_base_url("   ")
+
+    with pytest.raises(HyperbrowserError, match="base_url must start with"):
+        ClientConfig.normalize_base_url("example.local")
+
+    with pytest.raises(HyperbrowserError, match="must not include query parameters"):
+        ClientConfig.normalize_base_url("https://example.local?foo=bar")
