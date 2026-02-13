@@ -30,6 +30,7 @@ export HYPERBROWSER_HEADERS='{"X-Correlation-Id":"req-123"}' # optional JSON obj
 `base_url` must start with `https://` (or `http://` for local testing), include a host,
 and not contain query parameters, URL fragments, backslashes, control characters,
 or whitespace/newline characters.
+Unsafe encoded path forms (for example encoded traversal segments) are also rejected.
 The SDK normalizes trailing slashes automatically.
 If `base_url` already ends with `/api`, the SDK avoids adding a duplicate `/api` prefix.
 If `HYPERBROWSER_BASE_URL` is set, it must be non-empty.
