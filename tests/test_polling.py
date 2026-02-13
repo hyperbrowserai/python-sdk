@@ -182,6 +182,28 @@ def test_poll_until_terminal_status_retries_rate_limit_errors():
     assert attempts["count"] == 3
 
 
+def test_poll_until_terminal_status_retries_request_timeout_errors():
+    attempts = {"count": 0}
+
+    def get_status() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("request timeout", status_code=408)
+        return "completed"
+
+    status = poll_until_terminal_status(
+        operation_name="sync poll request-timeout retries",
+        get_status=get_status,
+        is_terminal_status=lambda value: value == "completed",
+        poll_interval_seconds=0.0001,
+        max_wait_seconds=1.0,
+        max_status_failures=5,
+    )
+
+    assert status == "completed"
+    assert attempts["count"] == 3
+
+
 def test_poll_until_terminal_status_async_retries_rate_limit_errors():
     async def run() -> None:
         attempts = {"count": 0}
@@ -194,6 +216,31 @@ def test_poll_until_terminal_status_async_retries_rate_limit_errors():
 
         status = await poll_until_terminal_status_async(
             operation_name="async poll rate limit retries",
+            get_status=get_status,
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0001,
+            max_wait_seconds=1.0,
+            max_status_failures=5,
+        )
+
+        assert status == "completed"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_poll_until_terminal_status_async_retries_request_timeout_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("request timeout", status_code=408)
+            return "completed"
+
+        status = await poll_until_terminal_status_async(
+            operation_name="async poll request-timeout retries",
             get_status=get_status,
             is_terminal_status=lambda value: value == "completed",
             poll_interval_seconds=0.0001,
@@ -428,6 +475,26 @@ def test_retry_operation_retries_rate_limit_errors():
 
     result = retry_operation(
         operation_name="sync retry rate limit error",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
+def test_retry_operation_retries_request_timeout_errors():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError("request timeout", status_code=408)
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry request-timeout error",
         operation=operation,
         max_attempts=5,
         retry_delay_seconds=0.0001,
@@ -737,6 +804,29 @@ def test_retry_operation_async_retries_rate_limit_errors():
 
         result = await retry_operation_async(
             operation_name="async retry rate limit error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_retries_request_timeout_errors():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError("request timeout", status_code=408)
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry request-timeout error",
             operation=operation,
             max_attempts=5,
             retry_delay_seconds=0.0001,
