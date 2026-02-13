@@ -26,17 +26,22 @@ class _NonRetryablePollingError(HyperbrowserError):
     pass
 
 
-def _validate_non_negative_real(value: float, *, field_name: str) -> None:
+def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise HyperbrowserError(f"{field_name} must be a number")
     try:
-        is_finite = math.isfinite(value)
+        normalized_value = float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise HyperbrowserError(f"{field_name} must be finite")
+    try:
+        is_finite = math.isfinite(normalized_value)
     except (TypeError, ValueError, OverflowError):
         is_finite = False
     if not is_finite:
         raise HyperbrowserError(f"{field_name} must be finite")
-    if value < 0:
+    if normalized_value < 0:
         raise HyperbrowserError(f"{field_name} must be non-negative")
+    return normalized_value
 
 
 def _validate_operation_name(operation_name: str) -> None:
@@ -259,12 +264,14 @@ def _validate_retry_config(
     max_attempts: int,
     retry_delay_seconds: float,
     max_status_failures: Optional[int] = None,
-) -> None:
+) -> float:
     if isinstance(max_attempts, bool) or not isinstance(max_attempts, int):
         raise HyperbrowserError("max_attempts must be an integer")
     if max_attempts < 1:
         raise HyperbrowserError("max_attempts must be at least 1")
-    _validate_non_negative_real(retry_delay_seconds, field_name="retry_delay_seconds")
+    normalized_retry_delay_seconds = _normalize_non_negative_real(
+        retry_delay_seconds, field_name="retry_delay_seconds"
+    )
     if max_status_failures is not None:
         if isinstance(max_status_failures, bool) or not isinstance(
             max_status_failures, int
@@ -272,18 +279,20 @@ def _validate_retry_config(
             raise HyperbrowserError("max_status_failures must be an integer")
         if max_status_failures < 1:
             raise HyperbrowserError("max_status_failures must be at least 1")
+    return normalized_retry_delay_seconds
 
 
-def _validate_poll_interval(poll_interval_seconds: float) -> None:
-    _validate_non_negative_real(
-        poll_interval_seconds, field_name="poll_interval_seconds"
+def _validate_poll_interval(poll_interval_seconds: float) -> float:
+    return _normalize_non_negative_real(
+        poll_interval_seconds,
+        field_name="poll_interval_seconds",
     )
 
 
-def _validate_max_wait_seconds(max_wait_seconds: Optional[float]) -> None:
+def _validate_max_wait_seconds(max_wait_seconds: Optional[float]) -> Optional[float]:
     if max_wait_seconds is None:
-        return
-    _validate_non_negative_real(max_wait_seconds, field_name="max_wait_seconds")
+        return None
+    return _normalize_non_negative_real(max_wait_seconds, field_name="max_wait_seconds")
 
 
 def _validate_page_batch_values(
@@ -335,9 +344,9 @@ def poll_until_terminal_status(
     max_status_failures: int = 5,
 ) -> str:
     _validate_operation_name(operation_name)
-    _validate_poll_interval(poll_interval_seconds)
-    _validate_max_wait_seconds(max_wait_seconds)
-    _validate_retry_config(
+    poll_interval_seconds = _validate_poll_interval(poll_interval_seconds)
+    max_wait_seconds = _validate_max_wait_seconds(max_wait_seconds)
+    _ = _validate_retry_config(
         max_attempts=1,
         retry_delay_seconds=0,
         max_status_failures=max_status_failures,
@@ -390,7 +399,7 @@ def retry_operation(
     retry_delay_seconds: float,
 ) -> T:
     _validate_operation_name(operation_name)
-    _validate_retry_config(
+    retry_delay_seconds = _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
     )
@@ -427,9 +436,9 @@ async def poll_until_terminal_status_async(
     max_status_failures: int = 5,
 ) -> str:
     _validate_operation_name(operation_name)
-    _validate_poll_interval(poll_interval_seconds)
-    _validate_max_wait_seconds(max_wait_seconds)
-    _validate_retry_config(
+    poll_interval_seconds = _validate_poll_interval(poll_interval_seconds)
+    max_wait_seconds = _validate_max_wait_seconds(max_wait_seconds)
+    _ = _validate_retry_config(
         max_attempts=1,
         retry_delay_seconds=0,
         max_status_failures=max_status_failures,
@@ -502,7 +511,7 @@ async def retry_operation_async(
     retry_delay_seconds: float,
 ) -> T:
     _validate_operation_name(operation_name)
-    _validate_retry_config(
+    retry_delay_seconds = _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
     )
@@ -552,8 +561,8 @@ def collect_paginated_results(
     retry_delay_seconds: float,
 ) -> None:
     _validate_operation_name(operation_name)
-    _validate_max_wait_seconds(max_wait_seconds)
-    _validate_retry_config(
+    max_wait_seconds = _validate_max_wait_seconds(max_wait_seconds)
+    retry_delay_seconds = _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
     )
@@ -658,8 +667,8 @@ async def collect_paginated_results_async(
     retry_delay_seconds: float,
 ) -> None:
     _validate_operation_name(operation_name)
-    _validate_max_wait_seconds(max_wait_seconds)
-    _validate_retry_config(
+    max_wait_seconds = _validate_max_wait_seconds(max_wait_seconds)
+    retry_delay_seconds = _validate_retry_config(
         max_attempts=max_attempts,
         retry_delay_seconds=retry_delay_seconds,
     )
@@ -766,13 +775,13 @@ def wait_for_job_result(
     fetch_retry_delay_seconds: float,
 ) -> T:
     _validate_operation_name(operation_name)
-    _validate_retry_config(
+    fetch_retry_delay_seconds = _validate_retry_config(
         max_attempts=fetch_max_attempts,
         retry_delay_seconds=fetch_retry_delay_seconds,
         max_status_failures=max_status_failures,
     )
-    _validate_poll_interval(poll_interval_seconds)
-    _validate_max_wait_seconds(max_wait_seconds)
+    poll_interval_seconds = _validate_poll_interval(poll_interval_seconds)
+    max_wait_seconds = _validate_max_wait_seconds(max_wait_seconds)
     poll_until_terminal_status(
         operation_name=operation_name,
         get_status=get_status,
@@ -802,13 +811,13 @@ async def wait_for_job_result_async(
     fetch_retry_delay_seconds: float,
 ) -> T:
     _validate_operation_name(operation_name)
-    _validate_retry_config(
+    fetch_retry_delay_seconds = _validate_retry_config(
         max_attempts=fetch_max_attempts,
         retry_delay_seconds=fetch_retry_delay_seconds,
         max_status_failures=max_status_failures,
     )
-    _validate_poll_interval(poll_interval_seconds)
-    _validate_max_wait_seconds(max_wait_seconds)
+    poll_interval_seconds = _validate_poll_interval(poll_interval_seconds)
+    max_wait_seconds = _validate_max_wait_seconds(max_wait_seconds)
     await poll_until_terminal_status_async(
         operation_name=operation_name,
         get_status=get_status,

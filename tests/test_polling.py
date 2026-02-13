@@ -106,6 +106,20 @@ def test_poll_until_terminal_status_retries_transient_status_errors():
     assert status == "completed"
 
 
+def test_poll_until_terminal_status_accepts_fraction_timing_values():
+    status_values = iter(["running", "completed"])
+
+    status = poll_until_terminal_status(
+        operation_name="sync poll fraction timings",
+        get_status=lambda: next(status_values),
+        is_terminal_status=lambda value: value == "completed",
+        poll_interval_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+        max_wait_seconds=Fraction(1, 1),  # type: ignore[arg-type]
+    )
+
+    assert status == "completed"
+
+
 def test_poll_until_terminal_status_does_not_retry_non_retryable_client_errors():
     attempts = {"count": 0}
 
@@ -802,6 +816,26 @@ def test_retry_operation_retries_and_returns_value():
     )
 
     assert result == "ok"
+
+
+def test_retry_operation_accepts_fraction_retry_delay():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise ValueError("transient")
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry fraction delay",
+        operation=operation,
+        max_attempts=3,
+        retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
 
 
 def test_retry_operation_raises_after_max_attempts():
@@ -2587,6 +2621,27 @@ def test_collect_paginated_results_collects_all_pages():
     assert collected == ["a", "b"]
 
 
+def test_collect_paginated_results_accepts_fraction_retry_delay():
+    page_map = {
+        1: {"current": 1, "total": 2, "items": ["a"]},
+        2: {"current": 2, "total": 2, "items": ["b"]},
+    }
+    collected = []
+
+    collect_paginated_results(
+        operation_name="sync paginated fraction delay",
+        get_next_page=lambda page: page_map[page],
+        get_current_page_batch=lambda response: response["current"],
+        get_total_page_batches=lambda response: response["total"],
+        on_page_success=lambda response: collected.extend(response["items"]),
+        max_wait_seconds=1.0,
+        max_attempts=2,
+        retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+    )
+
+    assert collected == ["a", "b"]
+
+
 def test_collect_paginated_results_rejects_awaitable_page_callback_result():
     async def async_get_page() -> dict:
         return {"current": 1, "total": 1, "items": []}
@@ -3819,6 +3874,24 @@ def test_wait_for_job_result_returns_fetched_value():
         max_status_failures=2,
         fetch_max_attempts=2,
         fetch_retry_delay_seconds=0.0001,
+    )
+
+    assert result == {"ok": True}
+
+
+def test_wait_for_job_result_accepts_fraction_timing_values():
+    status_values = iter(["running", "completed"])
+
+    result = wait_for_job_result(
+        operation_name="sync wait helper fraction timings",
+        get_status=lambda: next(status_values),
+        is_terminal_status=lambda value: value == "completed",
+        fetch_result=lambda: {"ok": True},
+        poll_interval_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
+        max_wait_seconds=Fraction(1, 1),  # type: ignore[arg-type]
+        max_status_failures=2,
+        fetch_max_attempts=2,
+        fetch_retry_delay_seconds=Fraction(1, 10000),  # type: ignore[arg-type]
     )
 
     assert result == {"ok": True}
