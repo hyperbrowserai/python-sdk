@@ -95,3 +95,24 @@ def test_async_update_profile_params_bool_warns_and_serializes():
 
     _, payload = client.transport.calls[0]
     assert payload == {"type": "profile", "params": {"persistChanges": True}}
+
+
+def test_async_update_profile_params_rejects_conflicting_arguments():
+    manager = AsyncSessionManager(_AsyncClient())
+
+    async def run() -> None:
+        with pytest.raises(TypeError, match="not both"):
+            await manager.update_profile_params(
+                "session-1",
+                UpdateSessionProfileParams(persist_changes=True),
+                persist_changes=True,
+            )
+
+    asyncio.run(run())
+
+
+def test_sync_update_profile_params_requires_argument_or_keyword():
+    manager = SyncSessionManager(_SyncClient())
+
+    with pytest.raises(TypeError, match="requires either"):
+        manager.update_profile_params("session-1")
