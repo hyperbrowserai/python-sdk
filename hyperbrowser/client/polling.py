@@ -121,12 +121,17 @@ def _invoke_non_retryable_callback(
         ) from exc
 
 
+def _is_reused_coroutine_runtime_error(exc: Exception) -> bool:
+    if not isinstance(exc, RuntimeError):
+        return False
+    normalized_message = str(exc).lower()
+    return "coroutine" in normalized_message and "already awaited" in normalized_message
+
+
 def _is_retryable_exception(exc: Exception) -> bool:
     if isinstance(exc, (StopIteration, StopAsyncIteration)):
         return False
-    if isinstance(
-        exc, RuntimeError
-    ) and "cannot reuse already awaited coroutine" in str(exc):
+    if _is_reused_coroutine_runtime_error(exc):
         return False
     if isinstance(exc, ConcurrentCancelledError):
         return False

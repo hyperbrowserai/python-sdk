@@ -1143,6 +1143,47 @@ def test_retry_operation_async_does_not_retry_reused_coroutines():
     asyncio.run(run())
 
 
+def test_retry_operation_does_not_retry_runtime_errors_marked_as_already_awaited():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise RuntimeError("coroutine was already awaited")
+
+    with pytest.raises(RuntimeError, match="coroutine was already awaited"):
+        retry_operation(
+            operation_name="sync retry already-awaited runtime error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
+def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_marked_as_already_awaited():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise RuntimeError("coroutine was already awaited")
+
+        with pytest.raises(RuntimeError, match="coroutine was already awaited"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll already-awaited runtime error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_async_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
     async def run() -> None:
         status = await poll_until_terminal_status_async(
