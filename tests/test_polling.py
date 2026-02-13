@@ -1184,6 +1184,47 @@ def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_marked_a
     asyncio.run(run())
 
 
+def test_retry_operation_does_not_retry_runtime_errors_for_loop_mismatch():
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        raise RuntimeError("Task got Future attached to a different loop")
+
+    with pytest.raises(RuntimeError, match="different loop"):
+        retry_operation(
+            operation_name="sync retry loop-mismatch runtime error",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+    assert attempts["count"] == 1
+
+
+def test_poll_until_terminal_status_async_does_not_retry_runtime_errors_for_closed_loop():
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def get_status() -> str:
+            attempts["count"] += 1
+            raise RuntimeError("Event loop is closed")
+
+        with pytest.raises(RuntimeError, match="Event loop is closed"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll closed-loop runtime error",
+                get_status=get_status,
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0001,
+                max_wait_seconds=1.0,
+                max_status_failures=5,
+            )
+
+        assert attempts["count"] == 1
+
+    asyncio.run(run())
+
+
 def test_async_poll_until_terminal_status_allows_immediate_terminal_on_zero_max_wait():
     async def run() -> None:
         status = await poll_until_terminal_status_async(
