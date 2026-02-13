@@ -1,4 +1,5 @@
 import asyncio
+import math
 
 import pytest
 
@@ -47,3 +48,15 @@ def test_sync_client_rejects_boolean_timeout():
 def test_async_client_rejects_boolean_timeout():
     with pytest.raises(HyperbrowserError, match="timeout must be a number"):
         AsyncHyperbrowser(api_key="test-key", timeout=False)
+
+
+@pytest.mark.parametrize("invalid_timeout", [math.inf, -math.inf, math.nan])
+def test_sync_client_rejects_non_finite_timeout(invalid_timeout: float):
+    with pytest.raises(HyperbrowserError, match="timeout must be finite"):
+        Hyperbrowser(api_key="test-key", timeout=invalid_timeout)
+
+
+@pytest.mark.parametrize("invalid_timeout", [math.inf, -math.inf, math.nan])
+def test_async_client_rejects_non_finite_timeout(invalid_timeout: float):
+    with pytest.raises(HyperbrowserError, match="timeout must be finite"):
+        AsyncHyperbrowser(api_key="test-key", timeout=invalid_timeout)
