@@ -107,6 +107,22 @@ def test_client_config_from_env_rejects_duplicate_header_names_after_normalizati
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_rejects_case_insensitive_duplicate_header_names(
+    monkeypatch,
+):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv(
+        "HYPERBROWSER_HEADERS",
+        '{"X-Correlation-Id":"one","x-correlation-id":"two"}',
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="duplicate header names are not allowed after normalization",
+    ):
+        ClientConfig.from_env()
+
+
 def test_client_config_from_env_ignores_blank_headers(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_HEADERS", "   ")
