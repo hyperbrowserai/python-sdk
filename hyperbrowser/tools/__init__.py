@@ -38,14 +38,18 @@ _NON_OBJECT_CRAWL_PAGE_TYPES = (
 )
 
 
-def _has_declared_attribute(value: Any, attribute_name: str) -> bool:
+def _has_declared_attribute(
+    value: Any, attribute_name: str, *, error_message: str
+) -> bool:
     try:
         inspect.getattr_static(value, attribute_name)
         return True
     except AttributeError:
         return False
-    except Exception:
-        return False
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(error_message, original_error=exc) from exc
 
 
 def _format_tool_param_key_for_error(key: str) -> str:
@@ -224,7 +228,11 @@ def _read_tool_response_data(response: Any, *, tool_name: str) -> Any:
     try:
         return response.data
     except AttributeError as exc:
-        if _has_declared_attribute(response, "data"):
+        if _has_declared_attribute(
+            response,
+            "data",
+            error_message=f"Failed to inspect {tool_name} response data field",
+        ):
             raise HyperbrowserError(
                 f"Failed to read {tool_name} response data",
                 original_error=exc,
@@ -277,7 +285,13 @@ def _read_optional_tool_response_field(
         try:
             field_value = getattr(response_data, field_name)
         except AttributeError as exc:
-            if _has_declared_attribute(response_data, field_name):
+            if _has_declared_attribute(
+                response_data,
+                field_name,
+                error_message=(
+                    f"Failed to inspect {tool_name} response field '{field_name}'"
+                ),
+            ):
                 raise HyperbrowserError(
                     f"Failed to read {tool_name} response field '{field_name}'",
                     original_error=exc,
@@ -330,7 +344,13 @@ def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> An
     try:
         return getattr(page, field_name)
     except AttributeError as exc:
-        if _has_declared_attribute(page, field_name):
+        if _has_declared_attribute(
+            page,
+            field_name,
+            error_message=(
+                f"Failed to inspect crawl tool page field '{field_name}' at index {page_index}"
+            ),
+        ):
             raise HyperbrowserError(
                 f"Failed to read crawl tool page field '{field_name}' at index {page_index}",
                 original_error=exc,

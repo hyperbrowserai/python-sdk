@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 import pytest
 
+import hyperbrowser.tools as tools_module
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.tools import (
     BrowserUseTool,
@@ -137,6 +138,26 @@ def test_scrape_tool_wraps_attributeerror_from_declared_data_property():
 
     with pytest.raises(
         HyperbrowserError, match="Failed to read scrape tool response data"
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_scrape_tool_wraps_declared_data_inspection_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _MissingDataResponse:
+        pass
+
+    def _raise_runtime_error(_obj: object, _attr: str):
+        raise RuntimeError("attribute inspection exploded")
+
+    monkeypatch.setattr(tools_module.inspect, "getattr_static", _raise_runtime_error)
+    client = _SyncScrapeClient(_MissingDataResponse())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to inspect scrape tool response data field"
     ) as exc_info:
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
@@ -326,6 +347,27 @@ def test_scrape_tool_wraps_attributeerror_from_declared_markdown_property():
     with pytest.raises(
         HyperbrowserError,
         match="Failed to read scrape tool response field 'markdown'",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_scrape_tool_wraps_declared_markdown_inspection_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _MissingMarkdownData:
+        pass
+
+    def _raise_runtime_error(_obj: object, _attr: str):
+        raise RuntimeError("attribute inspection exploded")
+
+    monkeypatch.setattr(tools_module.inspect, "getattr_static", _raise_runtime_error)
+    client = _SyncScrapeClient(_Response(data=_MissingMarkdownData()))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to inspect scrape tool response field 'markdown'",
     ) as exc_info:
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
@@ -546,6 +588,27 @@ def test_crawl_tool_wraps_attributeerror_from_declared_page_fields():
     with pytest.raises(
         HyperbrowserError,
         match="Failed to read crawl tool page field 'markdown' at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
+def test_crawl_tool_wraps_declared_page_field_inspection_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _MissingMarkdownPage:
+        pass
+
+    def _raise_runtime_error(_obj: object, _attr: str):
+        raise RuntimeError("attribute inspection exploded")
+
+    monkeypatch.setattr(tools_module.inspect, "getattr_static", _raise_runtime_error)
+    client = _SyncCrawlClient(_Response(data=[_MissingMarkdownPage()]))
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to inspect crawl tool page field 'markdown' at index 0",
     ) as exc_info:
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
