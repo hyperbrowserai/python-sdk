@@ -1,7 +1,13 @@
 from typing import Any, Dict, Optional, Type, TypeVar
 
-from .job_route_builders import build_job_route, build_job_status_route
-from .response_utils import parse_response_model
+from .job_request_utils import (
+    get_job,
+    get_job_async,
+    get_job_status,
+    get_job_status_async,
+    start_job,
+    start_job_async,
+)
 
 T = TypeVar("T")
 
@@ -14,12 +20,10 @@ def start_web_job(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.post(
-        client._build_url(route_prefix),
-        data=payload,
-    )
-    return parse_response_model(
-        response.data,
+    return start_job(
+        client=client,
+        route_prefix=route_prefix,
+        payload=payload,
         model=model,
         operation_name=operation_name,
     )
@@ -33,11 +37,10 @@ def get_web_job_status(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(build_job_status_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return get_job_status(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
         model=model,
         operation_name=operation_name,
     )
@@ -52,12 +55,11 @@ def get_web_job(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(build_job_route(route_prefix, job_id)),
+    return get_job(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
         params=params,
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )
@@ -71,12 +73,10 @@ async def start_web_job_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.post(
-        client._build_url(route_prefix),
-        data=payload,
-    )
-    return parse_response_model(
-        response.data,
+    return await start_job_async(
+        client=client,
+        route_prefix=route_prefix,
+        payload=payload,
         model=model,
         operation_name=operation_name,
     )
@@ -90,11 +90,10 @@ async def get_web_job_status_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(build_job_status_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return await get_job_status_async(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
         model=model,
         operation_name=operation_name,
     )
@@ -109,12 +108,11 @@ async def get_web_job_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(build_job_route(route_prefix, job_id)),
+    return await get_job_async(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
         params=params,
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )

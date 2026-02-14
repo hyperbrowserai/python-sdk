@@ -90,6 +90,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_web_pagination_internal_reuse.py",
     "tests/test_web_payload_helper_usage.py",
     "tests/test_web_fetch_search_usage.py",
+    "tests/test_web_request_internal_reuse.py",
     "tests/test_web_request_helper_usage.py",
     "tests/test_web_route_constants_usage.py",
 )
