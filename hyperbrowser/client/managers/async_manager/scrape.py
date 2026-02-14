@@ -10,7 +10,10 @@ from ...polling import (
     retry_operation_async,
     wait_for_job_result_async,
 )
-from ..serialization_utils import serialize_model_dump_to_dict
+from ..serialization_utils import (
+    serialize_model_dump_or_default,
+    serialize_model_dump_to_dict,
+)
 from ..response_utils import parse_response_model
 from ....models.scrape import (
     BatchScrapeJobResponse,
@@ -59,9 +62,9 @@ class BatchScrapeManager:
     async def get(
         self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
     ) -> BatchScrapeJobResponse:
-        params_obj = params or GetBatchScrapeJobParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
+        query_params = serialize_model_dump_or_default(
+            params,
+            default_factory=GetBatchScrapeJobParams,
             error_message="Failed to serialize batch scrape get params",
         )
         response = await self._client.transport.get(

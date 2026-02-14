@@ -9,7 +9,10 @@ from ...polling import (
     poll_until_terminal_status_async,
     retry_operation_async,
 )
-from ..serialization_utils import serialize_model_dump_to_dict
+from ..serialization_utils import (
+    serialize_model_dump_or_default,
+    serialize_model_dump_to_dict,
+)
 from ..response_utils import parse_response_model
 from ....models.crawl import (
     CrawlJobResponse,
@@ -52,9 +55,9 @@ class CrawlManager:
     async def get(
         self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
-        params_obj = params or GetCrawlJobParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
+        query_params = serialize_model_dump_or_default(
+            params,
+            default_factory=GetCrawlJobParams,
             error_message="Failed to serialize crawl get params",
         )
         response = await self._client.transport.get(

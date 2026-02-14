@@ -10,7 +10,10 @@ from hyperbrowser.models import (
 )
 
 from ..schema_utils import inject_web_output_schemas
-from .serialization_utils import serialize_model_dump_to_dict
+from .serialization_utils import (
+    serialize_model_dump_or_default,
+    serialize_model_dump_to_dict,
+)
 
 
 def build_web_fetch_payload(params: FetchParams) -> Dict[str, Any]:
@@ -50,9 +53,9 @@ def build_web_crawl_start_payload(params: StartWebCrawlJobParams) -> Dict[str, A
 def build_batch_fetch_get_params(
     params: Optional[GetBatchFetchJobParams] = None,
 ) -> Dict[str, Any]:
-    params_obj = params or GetBatchFetchJobParams()
-    return serialize_model_dump_to_dict(
-        params_obj,
+    return serialize_model_dump_or_default(
+        params,
+        default_factory=GetBatchFetchJobParams,
         error_message="Failed to serialize batch fetch get params",
     )
 
@@ -60,8 +63,8 @@ def build_batch_fetch_get_params(
 def build_web_crawl_get_params(
     params: Optional[GetWebCrawlJobParams] = None,
 ) -> Dict[str, Any]:
-    params_obj = params or GetWebCrawlJobParams()
-    return serialize_model_dump_to_dict(
-        params_obj,
+    return serialize_model_dump_or_default(
+        params,
+        default_factory=GetWebCrawlJobParams,
         error_message="Failed to serialize web crawl get params",
     )

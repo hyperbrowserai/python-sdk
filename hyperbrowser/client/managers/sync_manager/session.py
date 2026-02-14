@@ -3,6 +3,7 @@ from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
 from ..serialization_utils import (
+    serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
     serialize_optional_model_dump_to_dict,
 )
@@ -38,9 +39,9 @@ class SessionEventLogsManager:
         session_id: str,
         params: Optional[SessionEventLogListParams] = None,
     ) -> SessionEventLogListResponse:
-        params_obj = params or SessionEventLogListParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
+        query_params = serialize_model_dump_or_default(
+            params,
+            default_factory=SessionEventLogListParams,
             error_message="Failed to serialize session event log params",
         )
         response = self._client.transport.get(
@@ -77,9 +78,9 @@ class SessionManager:
         )
 
     def get(self, id: str, params: Optional[SessionGetParams] = None) -> SessionDetail:
-        params_obj = params or SessionGetParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
+        query_params = serialize_model_dump_or_default(
+            params,
+            default_factory=SessionGetParams,
             error_message="Failed to serialize session get params",
         )
         response = self._client.transport.get(
@@ -103,9 +104,9 @@ class SessionManager:
         )
 
     def list(self, params: Optional[SessionListParams] = None) -> SessionListResponse:
-        params_obj = params or SessionListParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
+        query_params = serialize_model_dump_or_default(
+            params,
+            default_factory=SessionListParams,
             error_message="Failed to serialize session list params",
         )
         response = self._client.transport.get(

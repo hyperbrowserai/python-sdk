@@ -9,7 +9,7 @@ from hyperbrowser.models.profile import (
 )
 from hyperbrowser.models.session import BasicResponse
 from ..serialization_utils import (
-    serialize_model_dump_to_dict,
+    serialize_model_dump_or_default,
     serialize_optional_model_dump_to_dict,
 )
 from ..response_utils import parse_response_model
@@ -59,9 +59,9 @@ class ProfileManager:
     async def list(
         self, params: Optional[ProfileListParams] = None
     ) -> ProfileListResponse:
-        params_obj = params or ProfileListParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
+        query_params = serialize_model_dump_or_default(
+            params,
+            default_factory=ProfileListParams,
             error_message="Failed to serialize profile list params",
         )
         response = await self._client.transport.get(

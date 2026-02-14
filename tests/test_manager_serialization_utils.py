@@ -3,6 +3,7 @@ from types import MappingProxyType
 import pytest
 
 from hyperbrowser.client.managers.serialization_utils import (
+    serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
     serialize_optional_model_dump_to_dict,
 )
@@ -99,3 +100,40 @@ def test_serialize_optional_model_dump_to_dict_serializes_non_none_values():
 
     assert payload == {"value": 1}
     assert model.calls == [(False, False)]
+
+
+def test_serialize_model_dump_or_default_uses_default_factory_when_none():
+    model = _ModelWithPayload({"value": 2})
+
+    payload = serialize_model_dump_or_default(
+        None,
+        default_factory=lambda: model,
+        error_message="serialize failure",
+    )
+
+    assert payload == {"value": 2}
+    assert model.calls == [(True, True)]
+
+
+def test_serialize_model_dump_or_default_uses_provided_model_when_present():
+    default_model = _ModelWithPayload({"unused": True})
+    provided_model = _ModelWithPayload({"value": 3})
+    default_factory_called = False
+
+    def _default_factory():
+        nonlocal default_factory_called
+        default_factory_called = True
+        return default_model
+
+    payload = serialize_model_dump_or_default(
+        provided_model,
+        default_factory=_default_factory,
+        error_message="serialize failure",
+        exclude_none=False,
+        by_alias=False,
+    )
+
+    assert payload == {"value": 3}
+    assert provided_model.calls == [(False, False)]
+    assert default_model.calls == []
+    assert default_factory_called is False
