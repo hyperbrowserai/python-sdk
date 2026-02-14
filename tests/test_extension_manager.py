@@ -221,12 +221,9 @@ def test_sync_extension_create_rejects_invalid_params_type():
         manager.create({"name": "bad", "filePath": "/tmp/ext.zip"})  # type: ignore[arg-type]
 
 
-def test_sync_extension_create_wraps_invalid_params_file_path_state(tmp_path):
+def test_sync_extension_create_rejects_subclass_params(tmp_path):
     class _BrokenParams(CreateExtensionParams):
-        def __getattribute__(self, item: str):
-            if item == "file_path":
-                raise RuntimeError("broken file_path state")
-            return super().__getattribute__(item)
+        pass
 
     manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
     params = _BrokenParams(
@@ -235,28 +232,7 @@ def test_sync_extension_create_wraps_invalid_params_file_path_state(tmp_path):
     )
 
     with pytest.raises(
-        HyperbrowserError, match="params.file_path is invalid"
-    ) as exc_info:
-        manager.create(params)
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_sync_extension_create_preserves_hyperbrowser_file_path_state_errors(tmp_path):
-    class _BrokenParams(CreateExtensionParams):
-        def __getattribute__(self, item: str):
-            if item == "file_path":
-                raise HyperbrowserError("custom file_path state failure")
-            return super().__getattribute__(item)
-
-    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
-    params = _BrokenParams(
-        name="bad-extension",
-        file_path=_create_test_extension_zip(tmp_path),
-    )
-
-    with pytest.raises(
-        HyperbrowserError, match="custom file_path state failure"
+        HyperbrowserError, match="params must be CreateExtensionParams"
     ) as exc_info:
         manager.create(params)
 
@@ -293,12 +269,9 @@ def test_async_extension_create_rejects_invalid_params_type():
     asyncio.run(run())
 
 
-def test_async_extension_create_wraps_invalid_params_file_path_state(tmp_path):
+def test_async_extension_create_rejects_subclass_params(tmp_path):
     class _BrokenParams(CreateExtensionParams):
-        def __getattribute__(self, item: str):
-            if item == "file_path":
-                raise RuntimeError("broken file_path state")
-            return super().__getattribute__(item)
+        pass
 
     manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
     params = _BrokenParams(
@@ -308,30 +281,7 @@ def test_async_extension_create_wraps_invalid_params_file_path_state(tmp_path):
 
     async def run():
         with pytest.raises(
-            HyperbrowserError, match="params.file_path is invalid"
-        ) as exc_info:
-            await manager.create(params)
-        assert isinstance(exc_info.value.original_error, RuntimeError)
-
-    asyncio.run(run())
-
-
-def test_async_extension_create_preserves_hyperbrowser_file_path_state_errors(tmp_path):
-    class _BrokenParams(CreateExtensionParams):
-        def __getattribute__(self, item: str):
-            if item == "file_path":
-                raise HyperbrowserError("custom file_path state failure")
-            return super().__getattribute__(item)
-
-    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
-    params = _BrokenParams(
-        name="bad-extension",
-        file_path=_create_test_extension_zip(tmp_path),
-    )
-
-    async def run():
-        with pytest.raises(
-            HyperbrowserError, match="custom file_path state failure"
+            HyperbrowserError, match="params must be CreateExtensionParams"
         ) as exc_info:
             await manager.create(params)
         assert exc_info.value.original_error is None

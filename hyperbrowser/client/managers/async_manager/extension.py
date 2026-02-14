@@ -12,7 +12,7 @@ class ExtensionManager:
         self._client = client
 
     async def create(self, params: CreateExtensionParams) -> ExtensionResponse:
-        if not isinstance(params, CreateExtensionParams):
+        if type(params) is not CreateExtensionParams:
             raise HyperbrowserError("params must be CreateExtensionParams")
         try:
             raw_file_path = params.file_path
