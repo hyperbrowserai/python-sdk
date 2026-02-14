@@ -134,6 +134,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_manager_transport_boundary.py` (manager transport boundary enforcement through shared request helpers),
   - `tests/test_mapping_keys_access_usage.py` (centralized key-iteration boundaries),
   - `tests/test_mapping_reader_usage.py` (shared mapping-read parser usage),
+  - `tests/test_model_request_function_transport_boundary.py` (model-request function-level transport boundary enforcement between parsed wrappers and raw helpers),
   - `tests/test_model_request_internal_reuse.py` (request-helper internal reuse of shared model request helper primitives),
   - `tests/test_model_request_wrapper_internal_reuse.py` (parsed model-request wrapper internal reuse of shared raw response-data helpers),
   - `tests/test_optional_serialization_helper_usage.py` (optional model serialization helper usage enforcement),
