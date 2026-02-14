@@ -78,6 +78,7 @@ This runs lint, format checks, compile checks, tests, and package build.
 - Preserve architectural guardrails with focused tests. Current guard suites include:
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
   - `tests/test_binary_file_open_helper_usage.py` (shared binary file open helper usage enforcement),
+  - `tests/test_browser_use_payload_helper_usage.py` (browser-use payload helper usage enforcement),
   - `tests/test_ci_workflow_quality_gates.py` (CI guard-stage + make-target enforcement),
   - `tests/test_computer_action_endpoint_helper_usage.py` (computer-action endpoint-normalization helper usage enforcement),
   - `tests/test_contributing_architecture_guard_listing.py` (`CONTRIBUTING.md` architecture-guard inventory completeness enforcement),

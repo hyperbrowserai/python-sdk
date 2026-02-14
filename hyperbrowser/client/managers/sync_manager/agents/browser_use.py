@@ -1,9 +1,8 @@
 from typing import Optional
 
 from ....polling import wait_for_job_result
-from ....schema_utils import resolve_schema_input
+from ...browser_use_payload_utils import build_browser_use_start_payload
 from ...response_utils import parse_response_model
-from ...serialization_utils import serialize_model_dump_to_dict
 from ...start_job_utils import build_started_job_context
 
 from .....models import (
@@ -21,14 +20,7 @@ class BrowserUseManager:
         self._client = client
 
     def start(self, params: StartBrowserUseTaskParams) -> StartBrowserUseTaskResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize browser-use start params",
-        )
-        if params.output_model_schema:
-            payload["outputModelSchema"] = resolve_schema_input(
-                params.output_model_schema
-            )
+        payload = build_browser_use_start_payload(params)
         response = self._client.transport.post(
             self._client._build_url("/task/browser-use"),
             data=payload,
