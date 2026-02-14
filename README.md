@@ -259,11 +259,13 @@ Ready-to-run examples are available in `examples/`:
 
 - `examples/async_batch_fetch.py`
 - `examples/async_browser_use_task.py`
+- `examples/async_claude_computer_use_task.py`
 - `examples/async_crawl.py`
 - `examples/async_cua_task.py`
 - `examples/async_extension_create.py`
 - `examples/async_extension_list.py`
 - `examples/async_extract.py`
+- `examples/async_gemini_computer_use_task.py`
 - `examples/async_hyper_agent_task.py`
 - `examples/async_profile_list.py`
 - `examples/async_scrape.py`
@@ -274,11 +276,13 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_web_search.py`
 - `examples/sync_batch_fetch.py`
 - `examples/sync_browser_use_task.py`
+- `examples/sync_claude_computer_use_task.py`
 - `examples/sync_crawl.py`
 - `examples/sync_cua_task.py`
 - `examples/sync_extension_create.py`
 - `examples/sync_extension_list.py`
 - `examples/sync_extract.py`
+- `examples/sync_gemini_computer_use_task.py`
 - `examples/sync_hyper_agent_task.py`
 - `examples/sync_profile_list.py`
 - `examples/sync_scrape.py`
