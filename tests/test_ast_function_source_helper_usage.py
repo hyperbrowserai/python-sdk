@@ -7,6 +7,7 @@ pytestmark = pytest.mark.architecture
 
 AST_FUNCTION_SOURCE_GUARD_MODULES = (
     "tests/test_agent_request_wrapper_internal_reuse.py",
+    "tests/test_extension_request_function_parse_boundary.py",
     "tests/test_job_request_route_builder_internal_reuse.py",
     "tests/test_job_request_wrapper_internal_reuse.py",
     "tests/test_model_request_function_parse_boundary.py",
