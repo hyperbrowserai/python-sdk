@@ -163,7 +163,9 @@ class Session(BaseModel):
                 ) from exc
         if isinstance(value, str):
             raise ValueError("timestamp string values must be plain strings")
-        return value
+        raise ValueError(
+            "timestamp values must be plain integers or plain numeric strings"
+        )
 
 
 class SessionDetail(Session):

@@ -84,3 +84,14 @@ def test_session_model_rejects_non_integer_timestamp_strings():
         ValidationError, match="timestamp string values must be integer-formatted"
     ):
         Session.model_validate(payload)
+
+
+def test_session_model_rejects_float_timestamps():
+    payload = _build_session_payload()
+    payload["startTime"] = 1.0
+
+    with pytest.raises(
+        ValidationError,
+        match="timestamp values must be plain integers or plain numeric strings",
+    ):
+        Session.model_validate(payload)
