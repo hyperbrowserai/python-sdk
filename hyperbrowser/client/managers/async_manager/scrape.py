@@ -2,12 +2,11 @@ from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
-    build_fetch_operation_name,
     poll_until_terminal_status_async,
 )
 from ..job_fetch_utils import (
     collect_paginated_results_with_defaults_async,
-    retry_operation_with_defaults_async,
+    fetch_job_result_with_defaults_async,
 )
 from ..page_params_utils import build_page_batch_params
 from ..job_pagination_utils import (
@@ -109,9 +108,9 @@ class BatchScrapeManager:
         )
 
         if not return_all_pages:
-            return await retry_operation_with_defaults_async(
-                operation_name=build_fetch_operation_name(operation_name),
-                operation=lambda: self.get(job_id),
+            return await fetch_job_result_with_defaults_async(
+                operation_name=operation_name,
+                fetch_result=lambda: self.get(job_id),
             )
 
         job_response = initialize_job_paginated_response(

@@ -19,6 +19,7 @@ def test_retry_and_paginated_fetch_primitives_are_centralized():
             or "retry_operation_async(" in module_text
             or "collect_paginated_results(" in module_text
             or "collect_paginated_results_async(" in module_text
+            or "build_fetch_operation_name(" in module_text
         ):
             violating_modules.append(module_path.as_posix())
 

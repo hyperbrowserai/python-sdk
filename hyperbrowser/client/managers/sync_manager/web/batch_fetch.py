@@ -18,10 +18,9 @@ from ...web_pagination_utils import (
 )
 from ...job_fetch_utils import (
     collect_paginated_results_with_defaults,
-    retry_operation_with_defaults,
+    fetch_job_result_with_defaults,
 )
 from ....polling import (
-    build_fetch_operation_name,
     poll_until_terminal_status,
 )
 from ...response_utils import parse_response_model
@@ -94,9 +93,9 @@ class BatchFetchManager:
         )
 
         if not return_all_pages:
-            return retry_operation_with_defaults(
-                operation_name=build_fetch_operation_name(operation_name),
-                operation=lambda: self.get(job_id),
+            return fetch_job_result_with_defaults(
+                operation_name=operation_name,
+                fetch_result=lambda: self.get(job_id),
             )
 
         job_response = initialize_paginated_job_response(

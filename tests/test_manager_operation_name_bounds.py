@@ -20,7 +20,6 @@ import hyperbrowser.client.managers.sync_manager.web.crawl as sync_web_crawl_mod
 import hyperbrowser.client.managers.sync_manager.crawl as sync_crawl_module
 import hyperbrowser.client.managers.sync_manager.extract as sync_extract_module
 import hyperbrowser.client.managers.sync_manager.scrape as sync_scrape_module
-from hyperbrowser.client.polling import build_fetch_operation_name
 import hyperbrowser.client.managers.async_manager.scrape as async_scrape_module
 
 
@@ -139,16 +138,14 @@ def test_sync_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypat
     )
     monkeypatch.setattr(
         sync_crawl_module,
-        "retry_operation_with_defaults",
+        "fetch_job_result_with_defaults",
         fake_retry_operation,
     )
 
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == build_fetch_operation_name(
-        captured["poll_operation_name"]
-    )
+    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
 
 def test_async_extract_manager_bounds_operation_name(monkeypatch):
@@ -258,7 +255,7 @@ def test_async_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypa
         )
         monkeypatch.setattr(
             async_crawl_module,
-            "retry_operation_with_defaults_async",
+            "fetch_job_result_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -268,9 +265,7 @@ def test_async_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypa
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == build_fetch_operation_name(
-            captured["poll_operation_name"]
-        )
+        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
     asyncio.run(run())
 
@@ -307,16 +302,14 @@ def test_sync_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
     )
     monkeypatch.setattr(
         sync_batch_fetch_module,
-        "retry_operation_with_defaults",
+        "fetch_job_result_with_defaults",
         fake_retry_operation,
     )
 
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == build_fetch_operation_name(
-        captured["poll_operation_name"]
-    )
+    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
 
 def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
@@ -350,7 +343,7 @@ def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
         )
         monkeypatch.setattr(
             async_batch_fetch_module,
-            "retry_operation_with_defaults_async",
+            "fetch_job_result_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -360,9 +353,7 @@ def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == build_fetch_operation_name(
-            captured["poll_operation_name"]
-        )
+        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
     asyncio.run(run())
 
@@ -483,16 +474,14 @@ def test_sync_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(monke
     )
     monkeypatch.setattr(
         sync_web_crawl_module,
-        "retry_operation_with_defaults",
+        "fetch_job_result_with_defaults",
         fake_retry_operation,
     )
 
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == build_fetch_operation_name(
-        captured["poll_operation_name"]
-    )
+    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
 
 def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
@@ -526,7 +515,7 @@ def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
         )
         monkeypatch.setattr(
             async_web_crawl_module,
-            "retry_operation_with_defaults_async",
+            "fetch_job_result_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -536,9 +525,7 @@ def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == build_fetch_operation_name(
-            captured["poll_operation_name"]
-        )
+        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
     asyncio.run(run())
 
@@ -657,16 +644,14 @@ def test_sync_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
     )
     monkeypatch.setattr(
         sync_scrape_module,
-        "retry_operation_with_defaults",
+        "fetch_job_result_with_defaults",
         fake_retry_operation,
     )
 
     result = manager.start_and_wait(params=object(), return_all_pages=False)  # type: ignore[arg-type]
 
     assert result == {"ok": True}
-    assert captured["fetch_operation_name"] == build_fetch_operation_name(
-        captured["poll_operation_name"]
-    )
+    assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
 
 def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
@@ -700,7 +685,7 @@ def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
         )
         monkeypatch.setattr(
             async_scrape_module,
-            "retry_operation_with_defaults_async",
+            "fetch_job_result_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -710,9 +695,7 @@ def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
         )
 
         assert result == {"ok": True}
-        assert captured["fetch_operation_name"] == build_fetch_operation_name(
-            captured["poll_operation_name"]
-        )
+        assert captured["fetch_operation_name"] == captured["poll_operation_name"]
 
     asyncio.run(run())
 

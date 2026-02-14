@@ -3,6 +3,7 @@ from typing import Awaitable, Callable, Optional, TypeVar
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 
 from ..polling import (
+    build_fetch_operation_name,
     collect_paginated_results,
     collect_paginated_results_async,
     retry_operation,
@@ -36,6 +37,28 @@ async def retry_operation_with_defaults_async(
         operation=operation,
         max_attempts=POLLING_ATTEMPTS,
         retry_delay_seconds=0.5,
+    )
+
+
+def fetch_job_result_with_defaults(
+    *,
+    operation_name: str,
+    fetch_result: Callable[[], T],
+) -> T:
+    return retry_operation_with_defaults(
+        operation_name=build_fetch_operation_name(operation_name),
+        operation=fetch_result,
+    )
+
+
+async def fetch_job_result_with_defaults_async(
+    *,
+    operation_name: str,
+    fetch_result: Callable[[], Awaitable[T]],
+) -> T:
+    return await retry_operation_with_defaults_async(
+        operation_name=build_fetch_operation_name(operation_name),
+        operation=fetch_result,
     )
 
 

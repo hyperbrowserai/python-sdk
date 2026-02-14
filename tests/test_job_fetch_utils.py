@@ -111,3 +111,51 @@ def test_collect_paginated_results_with_defaults_async_forwards_arguments() -> N
     assert captured_kwargs["max_wait_seconds"] == 25.0
     assert captured_kwargs["max_attempts"] == job_fetch_utils.POLLING_ATTEMPTS
     assert captured_kwargs["retry_delay_seconds"] == 0.5
+
+
+def test_fetch_job_result_with_defaults_uses_fetch_operation_name() -> None:
+    captured_kwargs = {}
+
+    def _fake_retry_operation_with_defaults(**kwargs):
+        nonlocal captured_kwargs
+        captured_kwargs = kwargs
+        return {"ok": True}
+
+    original_retry = job_fetch_utils.retry_operation_with_defaults
+    job_fetch_utils.retry_operation_with_defaults = _fake_retry_operation_with_defaults
+    try:
+        result = job_fetch_utils.fetch_job_result_with_defaults(
+            operation_name="crawl job abc",
+            fetch_result=lambda: {"payload": True},
+        )
+    finally:
+        job_fetch_utils.retry_operation_with_defaults = original_retry
+
+    assert result == {"ok": True}
+    assert captured_kwargs["operation_name"] == "Fetching crawl job abc"
+
+
+def test_fetch_job_result_with_defaults_async_uses_fetch_operation_name() -> None:
+    captured_kwargs = {}
+
+    async def _fake_retry_operation_with_defaults_async(**kwargs):
+        nonlocal captured_kwargs
+        captured_kwargs = kwargs
+        return {"ok": True}
+
+    original_retry = job_fetch_utils.retry_operation_with_defaults_async
+    job_fetch_utils.retry_operation_with_defaults_async = (
+        _fake_retry_operation_with_defaults_async
+    )
+    try:
+        result = asyncio.run(
+            job_fetch_utils.fetch_job_result_with_defaults_async(
+                operation_name="crawl job abc",
+                fetch_result=lambda: asyncio.sleep(0, result={"payload": True}),
+            )
+        )
+    finally:
+        job_fetch_utils.retry_operation_with_defaults_async = original_retry
+
+    assert result == {"ok": True}
+    assert captured_kwargs["operation_name"] == "Fetching crawl job abc"
