@@ -150,7 +150,7 @@ class SessionManager:
     async def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
-        if isinstance(file_input, (str, PathLike)):
+        if type(file_input) is str or isinstance(file_input, PathLike):
             try:
                 raw_file_path = os.fspath(file_input)
             except HyperbrowserError:
@@ -177,6 +177,8 @@ class SessionManager:
                     f"Failed to open upload file at path: {file_path}",
                     original_error=exc,
                 ) from exc
+        elif isinstance(file_input, str):
+            raise HyperbrowserError("file_input path must be a plain string path")
         else:
             try:
                 read_method = getattr(file_input, "read", None)

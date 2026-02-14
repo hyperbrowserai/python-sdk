@@ -141,6 +141,36 @@ def test_async_session_upload_file_rejects_invalid_input_type():
     asyncio.run(run())
 
 
+def test_sync_session_upload_file_rejects_string_subclass_path_input():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    class _PathString(str):
+        pass
+
+    with pytest.raises(
+        HyperbrowserError, match="file_input path must be a plain string path"
+    ) as exc_info:
+        manager.upload_file("session_123", _PathString("/tmp/file.txt"))
+
+    assert exc_info.value.original_error is None
+
+
+def test_async_session_upload_file_rejects_string_subclass_path_input():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    class _PathString(str):
+        pass
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="file_input path must be a plain string path"
+        ) as exc_info:
+            await manager.upload_file("session_123", _PathString("/tmp/file.txt"))
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
 def test_sync_session_upload_file_wraps_invalid_pathlike_state_errors():
     manager = SyncSessionManager(_FakeClient(_SyncTransport()))
 
