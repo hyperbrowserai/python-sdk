@@ -88,6 +88,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
   - `tests/test_plain_type_guard_usage.py` (`str`/`int` guardrail enforcement via plain-type checks),
+  - `tests/test_plain_type_identity_usage.py` (direct `type(... ) is str|int` guardrail enforcement via shared helpers),
   - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),
   - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`),
   - `tests/test_core_type_helper_usage.py` (core transport/config/header/file/polling/session/error/parsing manager+tool module enforcement of shared plain-type helper usage),
