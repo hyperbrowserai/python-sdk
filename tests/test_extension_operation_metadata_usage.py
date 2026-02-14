@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -19,4 +20,10 @@ def test_extension_managers_use_shared_operation_metadata():
         assert "operation_name=self._OPERATION_METADATA." in module_text
         assert "prefix=self._OPERATION_METADATA.open_file_error_prefix" in module_text
         assert 'operation_name="' not in module_text
-        assert 'prefix="Failed to open extension file at path"' not in module_text
+        assert (
+            re.search(
+                r'(?<!default_)prefix="Failed to open extension file at path"',
+                module_text,
+            )
+            is None
+        )

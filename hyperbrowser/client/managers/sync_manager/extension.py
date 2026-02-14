@@ -30,6 +30,7 @@ class ExtensionManager:
             open_error_message=build_open_file_error_message(
                 file_path,
                 prefix=self._OPERATION_METADATA.open_file_error_prefix,
+                default_prefix="Failed to open extension file at path",
             ),
         ) as extension_file:
             return create_extension_resource(

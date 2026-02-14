@@ -84,6 +84,7 @@ def open_upload_files_from_input(
             open_error_message=build_open_file_error_message(
                 file_path,
                 prefix=SESSION_OPERATION_METADATA.upload_open_file_error_prefix,
+                default_prefix="Failed to open upload file at path",
             ),
         ) as opened_file:
             yield {"file": opened_file}

@@ -90,11 +90,20 @@ def build_file_path_error_message(
     return f"{normalized_prefix}: {file_path_display}"
 
 
-def build_open_file_error_message(file_path: object, *, prefix: str) -> str:
+def build_open_file_error_message(
+    file_path: object,
+    *,
+    prefix: str,
+    default_prefix: Optional[str] = None,
+) -> str:
     return build_file_path_error_message(
         file_path,
         prefix=prefix,
-        default_prefix=_DEFAULT_OPEN_ERROR_MESSAGE_PREFIX,
+        default_prefix=(
+            _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+            if default_prefix is None
+            else default_prefix
+        ),
     )
 
 
