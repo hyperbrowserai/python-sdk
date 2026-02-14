@@ -239,6 +239,54 @@ def test_sync_extension_create_rejects_subclass_params(tmp_path):
     assert exc_info.value.original_error is None
 
 
+def test_sync_extension_create_wraps_param_serialization_errors(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
+    params = CreateExtensionParams(
+        name="serialize-extension",
+        file_path=_create_test_extension_zip(tmp_path),
+    )
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("broken model_dump")
+
+    monkeypatch.setattr(CreateExtensionParams, "model_dump", _raise_model_dump_error)
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize extension create params"
+    ) as exc_info:
+        manager.create(params)
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_sync_extension_create_preserves_hyperbrowser_param_serialization_errors(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
+    params = CreateExtensionParams(
+        name="serialize-extension",
+        file_path=_create_test_extension_zip(tmp_path),
+    )
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise HyperbrowserError("custom model_dump failure")
+
+    monkeypatch.setattr(CreateExtensionParams, "model_dump", _raise_model_dump_error)
+
+    with pytest.raises(
+        HyperbrowserError, match="custom model_dump failure"
+    ) as exc_info:
+        manager.create(params)
+
+    assert exc_info.value.original_error is None
+
+
 def test_async_extension_list_raises_for_invalid_payload_shape():
     class _InvalidAsyncTransport:
         async def get(self, url, params=None, follow_redirects=False):
@@ -282,6 +330,58 @@ def test_async_extension_create_rejects_subclass_params(tmp_path):
     async def run():
         with pytest.raises(
             HyperbrowserError, match="params must be CreateExtensionParams"
+        ) as exc_info:
+            await manager.create(params)
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
+def test_async_extension_create_wraps_param_serialization_errors(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
+    params = CreateExtensionParams(
+        name="serialize-extension",
+        file_path=_create_test_extension_zip(tmp_path),
+    )
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("broken model_dump")
+
+    monkeypatch.setattr(CreateExtensionParams, "model_dump", _raise_model_dump_error)
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="Failed to serialize extension create params"
+        ) as exc_info:
+            await manager.create(params)
+        assert isinstance(exc_info.value.original_error, RuntimeError)
+
+    asyncio.run(run())
+
+
+def test_async_extension_create_preserves_hyperbrowser_param_serialization_errors(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
+    params = CreateExtensionParams(
+        name="serialize-extension",
+        file_path=_create_test_extension_zip(tmp_path),
+    )
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise HyperbrowserError("custom model_dump failure")
+
+    monkeypatch.setattr(CreateExtensionParams, "model_dump", _raise_model_dump_error)
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="custom model_dump failure"
         ) as exc_info:
             await manager.create(params)
         assert exc_info.value.original_error is None

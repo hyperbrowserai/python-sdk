@@ -23,7 +23,17 @@ class ExtensionManager:
                 "params.file_path is invalid",
                 original_error=exc,
             ) from exc
-        payload = params.model_dump(exclude_none=True, by_alias=True)
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize extension create params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize extension create params")
         payload.pop("filePath", None)
 
         file_path = ensure_existing_file_path(
