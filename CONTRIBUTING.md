@@ -155,6 +155,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`),
   - `tests/test_profile_operation_metadata_usage.py` (profile manager operation-metadata usage enforcement),
   - `tests/test_profile_request_helper_usage.py` (profile manager request-helper usage enforcement),
+  - `tests/test_profile_request_route_builder_internal_reuse.py` (profile request-wrapper route-builder internal reuse enforcement for profile-id paths),
   - `tests/test_profile_route_builder_usage.py` (profile request-helper route-builder usage enforcement),
   - `tests/test_profile_route_constants_usage.py` (profile manager route-constant usage enforcement),
   - `tests/test_profile_team_request_internal_reuse.py` (profile/team request-helper internal reuse of shared model request helpers),

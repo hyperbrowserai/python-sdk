@@ -51,6 +51,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_profile_operation_metadata_usage.py",
     "tests/test_profile_request_helper_usage.py",
     "tests/test_profile_team_request_internal_reuse.py",
+    "tests/test_profile_request_route_builder_internal_reuse.py",
     "tests/test_profile_route_builder_usage.py",
     "tests/test_profile_route_constants_usage.py",
     "tests/test_type_utils_usage.py",
