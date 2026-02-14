@@ -1,6 +1,7 @@
 import pytest
 
 from tests.ast_import_utils import (
+    imports_symbol_from_module,
     imports_collect_function_sources,
     imports_imports_collect_function_sources,
 )
@@ -24,6 +25,38 @@ def test_imports_collect_function_sources_ignores_non_matching_imports():
     )
 
     assert imports_collect_function_sources(module_text) is False
+
+
+def test_imports_symbol_from_module_detects_expected_symbol():
+    module_text = (
+        "from tests.ast_import_utils import imports_collect_function_sources\n"
+        "imports_collect_function_sources('dummy')\n"
+    )
+
+    assert (
+        imports_symbol_from_module(
+            module_text,
+            module="tests.ast_import_utils",
+            symbol="imports_collect_function_sources",
+        )
+        is True
+    )
+
+
+def test_imports_symbol_from_module_ignores_unrelated_symbols():
+    module_text = (
+        "from tests.ast_import_utils import imports_collect_function_sources\n"
+        "from tests.ast_import_utils import imports_imports_collect_function_sources\n"
+    )
+
+    assert (
+        imports_symbol_from_module(
+            module_text,
+            module="tests.ast_import_utils",
+            symbol="missing_symbol",
+        )
+        is False
+    )
 
 
 def test_imports_collect_function_sources_supports_aliased_import():
