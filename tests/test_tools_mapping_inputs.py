@@ -301,6 +301,46 @@ def test_tool_wrappers_wrap_non_string_param_key_strip_results(runner):
 
 
 @pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_wrap_param_key_empty_check_length_failures(runner):
+    class _BrokenStripKey(str):
+        class _NormalizedKey(str):
+            def __len__(self):
+                raise RuntimeError("tool param key length exploded")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedKey("url")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize tool param key"
+    ) as exc_info:
+        runner({_BrokenStripKey("url"): "https://example.com"})
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_preserve_hyperbrowser_param_key_empty_check_length_failures(
+    runner,
+):
+    class _BrokenStripKey(str):
+        class _NormalizedKey(str):
+            def __len__(self):
+                raise HyperbrowserError("custom tool param key length failure")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedKey("url")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom tool param key length failure"
+    ) as exc_info:
+        runner({_BrokenStripKey("url"): "https://example.com"})
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
 def test_tool_wrappers_wrap_param_key_character_validation_failures(runner):
     class _BrokenIterKey(str):
         def strip(self, chars=None):  # type: ignore[override]

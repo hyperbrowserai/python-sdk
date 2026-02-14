@@ -146,6 +146,7 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
                 normalized_key = key.strip()
                 if not isinstance(normalized_key, str):
                     raise TypeError("normalized tool param key must be a string")
+                is_empty_key = len(normalized_key) == 0
             except HyperbrowserError:
                 raise
             except Exception as exc:
@@ -153,7 +154,7 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
                     "Failed to normalize tool param key",
                     original_error=exc,
                 ) from exc
-            if not normalized_key:
+            if is_empty_key:
                 raise HyperbrowserError("tool params keys must not be empty")
             try:
                 has_surrounding_whitespace = key != normalized_key
