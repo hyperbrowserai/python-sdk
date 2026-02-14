@@ -38,3 +38,25 @@ def test_session_model_rejects_string_subclass_timestamps():
         ValidationError, match="timestamp string values must be plain strings"
     ):
         Session.model_validate(payload)
+
+
+def test_session_model_rejects_boolean_timestamps():
+    payload = _build_session_payload()
+    payload["startTime"] = True
+
+    with pytest.raises(
+        ValidationError,
+        match="timestamp values must be integers or plain numeric strings",
+    ):
+        Session.model_validate(payload)
+
+
+def test_session_model_preserves_integer_timestamps():
+    payload = _build_session_payload()
+    payload["startTime"] = 1735689600
+    payload["endTime"] = 1735689660
+
+    model = Session.model_validate(payload)
+
+    assert model.start_time == 1735689600
+    assert model.end_time == 1735689660
