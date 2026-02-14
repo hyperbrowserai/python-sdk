@@ -5,6 +5,8 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     FetchOutputOptions,
     FetchParams,
+    GetBatchFetchJobParams,
+    GetWebCrawlJobParams,
     StartBatchFetchJobParams,
     StartWebCrawlJobParams,
     WebSearchParams,
@@ -85,6 +87,34 @@ def test_build_web_crawl_start_payload_returns_serialized_payload():
     assert payload["url"] == "https://example.com"
 
 
+def test_build_batch_fetch_get_params_returns_serialized_payload():
+    payload = web_payload_utils.build_batch_fetch_get_params(
+        GetBatchFetchJobParams(page=2, batch_size=50)
+    )
+
+    assert payload == {"page": 2, "batchSize": 50}
+
+
+def test_build_batch_fetch_get_params_uses_default_params():
+    payload = web_payload_utils.build_batch_fetch_get_params()
+
+    assert payload == {}
+
+
+def test_build_web_crawl_get_params_returns_serialized_payload():
+    payload = web_payload_utils.build_web_crawl_get_params(
+        GetWebCrawlJobParams(page=3, batch_size=25)
+    )
+
+    assert payload == {"page": 3, "batchSize": 25}
+
+
+def test_build_web_crawl_get_params_uses_default_params():
+    payload = web_payload_utils.build_web_crawl_get_params()
+
+    assert payload == {}
+
+
 def test_build_web_crawl_start_payload_invokes_schema_injection(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -153,5 +183,29 @@ def test_build_web_crawl_start_payload_preserves_hyperbrowser_model_dump_failure
 
     with pytest.raises(HyperbrowserError, match="custom dump failure") as exc_info:
         web_payload_utils.build_web_crawl_start_payload(_BrokenWebCrawlParams())  # type: ignore[arg-type]
+
+    assert exc_info.value.original_error is None
+
+
+def test_build_batch_fetch_get_params_wraps_runtime_model_dump_failures():
+    class _BrokenBatchFetchGetParams:
+        def model_dump(self, **kwargs):  # noqa: ARG002
+            raise RuntimeError("boom")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize batch fetch get params"
+    ) as exc_info:
+        web_payload_utils.build_batch_fetch_get_params(_BrokenBatchFetchGetParams())  # type: ignore[arg-type]
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_build_web_crawl_get_params_preserves_hyperbrowser_model_dump_failures():
+    class _BrokenWebCrawlGetParams:
+        def model_dump(self, **kwargs):  # noqa: ARG002
+            raise HyperbrowserError("custom dump failure")
+
+    with pytest.raises(HyperbrowserError, match="custom dump failure") as exc_info:
+        web_payload_utils.build_web_crawl_get_params(_BrokenWebCrawlGetParams())  # type: ignore[arg-type]
 
     assert exc_info.value.original_error is None

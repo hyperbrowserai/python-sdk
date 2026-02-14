@@ -34,11 +34,15 @@ def test_batch_fetch_managers_use_shared_start_payload_helper():
     for module_path in BATCH_FETCH_MANAGER_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
         assert "build_batch_fetch_start_payload(" in module_text
+        assert "build_batch_fetch_get_params(" in module_text
         assert "inject_web_output_schemas(" not in module_text
+        assert "serialize_model_dump_to_dict(" not in module_text
 
 
 def test_web_crawl_managers_use_shared_start_payload_helper():
     for module_path in WEB_CRAWL_MANAGER_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
         assert "build_web_crawl_start_payload(" in module_text
+        assert "build_web_crawl_get_params(" in module_text
         assert "inject_web_output_schemas(" not in module_text
+        assert "serialize_model_dump_to_dict(" not in module_text

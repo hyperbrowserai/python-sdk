@@ -8,8 +8,8 @@ from hyperbrowser.models import (
     BatchFetchJobResponse,
     POLLING_ATTEMPTS,
 )
-from ...serialization_utils import serialize_model_dump_to_dict
 from ...web_payload_utils import build_batch_fetch_start_payload
+from ...web_payload_utils import build_batch_fetch_get_params
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
@@ -51,11 +51,7 @@ class BatchFetchManager:
     def get(
         self, job_id: str, params: Optional[GetBatchFetchJobParams] = None
     ) -> BatchFetchJobResponse:
-        params_obj = params or GetBatchFetchJobParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
-            error_message="Failed to serialize batch fetch get params",
-        )
+        query_params = build_batch_fetch_get_params(params)
         response = self._client.transport.get(
             self._client._build_url(f"/web/batch-fetch/{job_id}"),
             params=query_params,

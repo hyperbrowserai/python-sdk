@@ -8,8 +8,8 @@ from hyperbrowser.models import (
     WebCrawlJobResponse,
     POLLING_ATTEMPTS,
 )
-from ...serialization_utils import serialize_model_dump_to_dict
 from ...web_payload_utils import build_web_crawl_start_payload
+from ...web_payload_utils import build_web_crawl_get_params
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
@@ -51,11 +51,7 @@ class WebCrawlManager:
     async def get(
         self, job_id: str, params: Optional[GetWebCrawlJobParams] = None
     ) -> WebCrawlJobResponse:
-        params_obj = params or GetWebCrawlJobParams()
-        query_params = serialize_model_dump_to_dict(
-            params_obj,
-            error_message="Failed to serialize web crawl get params",
-        )
+        query_params = build_web_crawl_get_params(params)
         response = await self._client.transport.get(
             self._client._build_url(f"/web/crawl/{job_id}"),
             params=query_params,
