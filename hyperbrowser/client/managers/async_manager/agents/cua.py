@@ -1,9 +1,9 @@
 from typing import Optional
 
 from ....polling import wait_for_job_result_async
+from ...agent_payload_utils import build_agent_start_payload
 from ...agent_status_utils import is_agent_terminal_status
 from ...response_utils import parse_response_model
-from ...serialization_utils import serialize_model_dump_to_dict
 from ...start_job_utils import build_started_job_context
 
 from .....models import (
@@ -21,7 +21,7 @@ class CuaManager:
         self._client = client
 
     async def start(self, params: StartCuaTaskParams) -> StartCuaTaskResponse:
-        payload = serialize_model_dump_to_dict(
+        payload = build_agent_start_payload(
             params,
             error_message="Failed to serialize CUA start params",
         )
