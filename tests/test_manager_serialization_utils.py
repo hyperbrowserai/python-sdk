@@ -1,0 +1,76 @@
+from types import MappingProxyType
+
+import pytest
+
+from hyperbrowser.client.managers.serialization_utils import (
+    serialize_model_dump_to_dict,
+)
+from hyperbrowser.exceptions import HyperbrowserError
+
+
+class _ModelWithPayload:
+    def __init__(self, payload):
+        self.payload = payload
+        self.calls = []
+
+    def model_dump(self, *, exclude_none, by_alias):
+        self.calls.append((exclude_none, by_alias))
+        return self.payload
+
+
+class _ModelWithRuntimeError:
+    def model_dump(self, *, exclude_none, by_alias):
+        _ = exclude_none
+        _ = by_alias
+        raise RuntimeError("broken model_dump")
+
+
+class _ModelWithHyperbrowserError:
+    def model_dump(self, *, exclude_none, by_alias):
+        _ = exclude_none
+        _ = by_alias
+        raise HyperbrowserError("custom failure")
+
+
+def test_serialize_model_dump_to_dict_returns_payload_and_forwards_flags():
+    model = _ModelWithPayload({"value": 1})
+
+    payload = serialize_model_dump_to_dict(
+        model,
+        error_message="serialize failure",
+        exclude_none=False,
+        by_alias=False,
+    )
+
+    assert payload == {"value": 1}
+    assert model.calls == [(False, False)]
+
+
+def test_serialize_model_dump_to_dict_wraps_runtime_errors():
+    with pytest.raises(HyperbrowserError, match="serialize failure") as exc_info:
+        serialize_model_dump_to_dict(
+            _ModelWithRuntimeError(),
+            error_message="serialize failure",
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_serialize_model_dump_to_dict_preserves_hyperbrowser_errors():
+    with pytest.raises(HyperbrowserError, match="custom failure") as exc_info:
+        serialize_model_dump_to_dict(
+            _ModelWithHyperbrowserError(),
+            error_message="serialize failure",
+        )
+
+    assert exc_info.value.original_error is None
+
+
+def test_serialize_model_dump_to_dict_rejects_non_dict_payloads():
+    with pytest.raises(HyperbrowserError, match="serialize failure") as exc_info:
+        serialize_model_dump_to_dict(
+            _ModelWithPayload(MappingProxyType({"value": 1})),
+            error_message="serialize failure",
+        )
+
+    assert exc_info.value.original_error is None
