@@ -1,4 +1,5 @@
-from typing import Mapping, Optional
+from types import TracebackType
+from typing import Mapping, Optional, Type
 
 from ..config import ClientConfig
 from ..transport.async_transport import AsyncTransport
@@ -44,8 +45,13 @@ class AsyncHyperbrowser(HyperbrowserBase):
     async def close(self) -> None:
         await self.transport.close()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AsyncHyperbrowser":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         await self.close()
