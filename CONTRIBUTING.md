@@ -148,6 +148,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_profile_team_request_internal_reuse.py` (profile/team request-helper internal reuse of shared model request helpers),
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
+  - `tests/test_request_helper_parse_import_boundary.py` (request-helper import boundary enforcement for direct response parsing imports),
   - `tests/test_schema_injection_helper_usage.py` (shared schema injection helper usage enforcement in payload builders),
   - `tests/test_session_operation_metadata_usage.py` (session manager operation-metadata usage enforcement),
   - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
