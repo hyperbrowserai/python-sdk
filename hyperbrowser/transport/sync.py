@@ -33,7 +33,7 @@ class SyncTransport(SyncTransportStrategy):
     def _normalize_response_status_code(self, response: httpx.Response) -> int:
         try:
             status_code = response.status_code
-            if isinstance(status_code, bool) or not isinstance(status_code, int):
+            if type(status_code) is not int:
                 raise TypeError("status code must be an integer")
             normalized_status_code = status_code
             if not (

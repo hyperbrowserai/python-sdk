@@ -106,6 +106,22 @@ class _NonIntegerStatusNoContentResponse:
         return {}
 
 
+class _IntegerSubclassStatusNoContentResponse:
+    content = b""
+    text = ""
+
+    class _StatusCode(int):
+        pass
+
+    status_code = _StatusCode(200)
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return {}
+
+
 class _BrokenStatusCodeHttpErrorResponse:
     content = b""
     text = "status error"
@@ -226,6 +242,19 @@ def test_sync_handle_response_with_non_integer_status_raises_hyperbrowser_error(
         ):
             transport._handle_response(
                 _NonIntegerStatusNoContentResponse(status_code)  # type: ignore[arg-type]
+            )
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_with_integer_subclass_status_raises_hyperbrowser_error():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to process response status code"
+        ):
+            transport._handle_response(
+                _IntegerSubclassStatusNoContentResponse()  # type: ignore[arg-type]
             )
     finally:
         transport.close()
@@ -413,6 +442,22 @@ def test_async_handle_response_with_non_integer_status_raises_hyperbrowser_error
             ):
                 await transport._handle_response(
                     _NonIntegerStatusNoContentResponse(status_code)  # type: ignore[arg-type]
+                )
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_with_integer_subclass_status_raises_hyperbrowser_error():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            with pytest.raises(
+                HyperbrowserError, match="Failed to process response status code"
+            ):
+                await transport._handle_response(
+                    _IntegerSubclassStatusNoContentResponse()  # type: ignore[arg-type]
                 )
         finally:
             await transport.close()

@@ -116,7 +116,7 @@ class APIResponse(Generic[T]):
     """
 
     def __init__(self, data: Optional[Union[dict, T]] = None, status_code: int = 200):
-        if isinstance(status_code, bool) or not isinstance(status_code, int):
+        if type(status_code) is not int:
             raise HyperbrowserError("status_code must be an integer")
         if not (_MIN_HTTP_STATUS_CODE <= status_code <= _MAX_HTTP_STATUS_CODE):
             raise HyperbrowserError("status_code must be between 100 and 599")

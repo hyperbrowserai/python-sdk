@@ -145,6 +145,10 @@ class _BrokenRenderedKeyValueMapping(Mapping[str, object]):
         raise KeyError(key)
 
 
+class _StatusCodeIntSubclass(int):
+    pass
+
+
 def test_api_response_from_json_parses_model_data() -> None:
     response = APIResponse.from_json(
         {"name": "job-1", "retries": 2}, _SampleResponseModel
@@ -345,6 +349,11 @@ def test_api_response_constructor_rejects_boolean_status_code() -> None:
         APIResponse(status_code=True)
 
 
+def test_api_response_constructor_rejects_integer_subclass_status_code() -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
+        APIResponse(status_code=_StatusCodeIntSubclass(200))
+
+
 @pytest.mark.parametrize("status_code", [99, 600])
 def test_api_response_constructor_rejects_out_of_range_status_code(
     status_code: int,
@@ -358,6 +367,11 @@ def test_api_response_constructor_rejects_out_of_range_status_code(
 def test_api_response_from_status_rejects_boolean_status_code() -> None:
     with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
         APIResponse.from_status(True)  # type: ignore[arg-type]
+
+
+def test_api_response_from_status_rejects_integer_subclass_status_code() -> None:
+    with pytest.raises(HyperbrowserError, match="status_code must be an integer"):
+        APIResponse.from_status(_StatusCodeIntSubclass(200))
 
 
 @pytest.mark.parametrize("status_code", [99, 600])
