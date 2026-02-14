@@ -22,6 +22,8 @@ EXPECTED_EXTRA_IMPORTERS = (
     "tests/test_ast_secondary_import_helper_usage.py",
     "tests/test_ast_symbol_import_helper_import_boundary.py",
     "tests/test_ast_symbol_import_helper_usage.py",
+    "tests/test_ast_tertiary_import_helper_import_boundary.py",
+    "tests/test_ast_tertiary_import_helper_usage.py",
     "tests/test_ast_import_utils.py",
     "tests/test_ast_import_utils_module_import_boundary.py",
 )

@@ -32,6 +32,8 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_ast_secondary_import_helper_usage.py",
     "tests/test_ast_symbol_import_helper_import_boundary.py",
     "tests/test_ast_symbol_import_helper_usage.py",
+    "tests/test_ast_tertiary_import_helper_import_boundary.py",
+    "tests/test_ast_tertiary_import_helper_usage.py",
     "tests/test_guardrail_ast_utils.py",
     "tests/test_helper_transport_usage_boundary.py",
     "tests/test_manager_model_dump_usage.py",

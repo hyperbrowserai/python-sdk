@@ -5,6 +5,7 @@ from tests.ast_import_utils import (
     imports_collect_function_sources,
     imports_from_module,
     imports_imports_imports_collect_function_sources,
+    imports_imports_imports_imports_collect_function_sources,
     imports_imports_collect_function_sources,
     imports_symbol_from_module,
 )
@@ -209,6 +210,42 @@ def test_imports_imports_imports_collect_function_sources_ignores_non_from_impor
     )
 
     assert imports_imports_imports_collect_function_sources(module_text) is False
+
+
+def test_imports_imports_imports_imports_collect_function_sources_detects_expected_import():
+    module_text = (
+        "from tests.ast_import_utils import imports_imports_imports_collect_function_sources\n"
+        "imports_imports_imports_collect_function_sources('dummy')\n"
+    )
+
+    assert imports_imports_imports_imports_collect_function_sources(module_text) is True
+
+
+def test_imports_imports_imports_imports_collect_function_sources_ignores_non_matching_imports():
+    module_text = (
+        "from tests.ast_import_utils import imports_imports_collect_function_sources\n"
+        "imports_imports_collect_function_sources('dummy')\n"
+    )
+
+    assert imports_imports_imports_imports_collect_function_sources(module_text) is False
+
+
+def test_imports_imports_imports_imports_collect_function_sources_supports_aliased_import():
+    module_text = (
+        "from tests.ast_import_utils import imports_imports_imports_collect_function_sources as helper\n"
+        "helper('dummy')\n"
+    )
+
+    assert imports_imports_imports_imports_collect_function_sources(module_text) is True
+
+
+def test_imports_imports_imports_imports_collect_function_sources_ignores_non_from_imports():
+    module_text = (
+        "import tests.ast_import_utils as import_utils\n"
+        "import_utils.imports_imports_imports_collect_function_sources('dummy')\n"
+    )
+
+    assert imports_imports_imports_imports_collect_function_sources(module_text) is False
 
 
 def test_calls_symbol_detects_direct_function_call():

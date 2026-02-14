@@ -13,6 +13,7 @@ AST_CALL_SYMBOL_GUARD_MODULES = (
     "tests/test_ast_module_import_helper_usage.py",
     "tests/test_ast_secondary_import_helper_usage.py",
     "tests/test_ast_symbol_import_helper_usage.py",
+    "tests/test_ast_tertiary_import_helper_usage.py",
 )
 
 
