@@ -94,7 +94,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_core_type_helper_usage.py` (core transport/config/header/file/polling/session/error/parsing manager+tool module enforcement of shared plain-type helper usage),
   - `tests/test_contributing_architecture_guard_listing.py` (`CONTRIBUTING.md` architecture-guard inventory completeness enforcement),
   - `tests/test_examples_syntax.py` (example script syntax guardrail),
-  - `tests/test_docs_python3_commands.py` (`README`/`CONTRIBUTING`/examples python3 command consistency enforcement).
+  - `tests/test_docs_python3_commands.py` (`README`/`CONTRIBUTING`/examples python3 command consistency enforcement),
+  - `tests/test_example_sync_async_parity.py` (sync/async example parity enforcement).
 
 ## Code quality conventions
 
