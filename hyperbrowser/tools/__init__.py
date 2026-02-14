@@ -53,10 +53,15 @@ def _has_declared_attribute(
 
 
 def _format_tool_param_key_for_error(key: str) -> str:
-    normalized_key = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in key
-    ).strip()
+    try:
+        normalized_key = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in key
+        ).strip()
+        if not isinstance(normalized_key, str):
+            raise TypeError("normalized tool key display must be a string")
+    except Exception:
+        return "<unreadable key>"
     if not normalized_key:
         return "<blank key>"
     if len(normalized_key) <= _MAX_KEY_DISPLAY_LENGTH:

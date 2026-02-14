@@ -349,6 +349,37 @@ def test_parse_extension_list_response_data_sanitizes_extension_value_read_keys(
     assert exc_info.value.original_error is not None
 
 
+def test_parse_extension_list_response_data_falls_back_for_unreadable_value_read_keys():
+    class _BrokenKey(str):
+        class _BrokenRenderedKey(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate rendered extension key")
+
+        def __str__(self) -> str:
+            return self._BrokenRenderedKey("name")
+
+    class _BrokenValueLookupMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield _BrokenKey("name")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read extension value")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read extension object value for key '<unreadable key>' at index 0",
+    ) as exc_info:
+        parse_extension_list_response_data(
+            {"extensions": [_BrokenValueLookupMapping()]}
+        )
+
+    assert exc_info.value.original_error is not None
+
+
 def test_parse_extension_list_response_data_preserves_hyperbrowser_value_read_errors():
     class _BrokenValueLookupMapping(Mapping[str, object]):
         def __iter__(self) -> Iterator[str]:

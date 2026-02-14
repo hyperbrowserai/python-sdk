@@ -21,11 +21,18 @@ def _safe_stringify_key(value: object) -> str:
 
 
 def _format_key_display(value: object) -> str:
-    normalized_key = _safe_stringify_key(value)
-    normalized_key = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in normalized_key
-    ).strip()
+    try:
+        normalized_key = _safe_stringify_key(value)
+        if not isinstance(normalized_key, str):
+            raise TypeError("normalized key display must be a string")
+        normalized_key = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in normalized_key
+        ).strip()
+        if not isinstance(normalized_key, str):
+            raise TypeError("normalized key display must be a string")
+    except Exception:
+        return "<unreadable key>"
     if not normalized_key:
         return "<blank key>"
     if len(normalized_key) <= _MAX_DISPLAYED_MISSING_KEY_LENGTH:

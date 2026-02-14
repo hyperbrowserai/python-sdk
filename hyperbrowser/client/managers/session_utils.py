@@ -11,10 +11,15 @@ _TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 
 
 def _format_recording_key_display(key: str) -> str:
-    normalized_key = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in key
-    ).strip()
+    try:
+        normalized_key = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in key
+        ).strip()
+        if not isinstance(normalized_key, str):
+            raise TypeError("normalized recording key display must be a string")
+    except Exception:
+        return "<unreadable key>"
     if not normalized_key:
         return "<blank key>"
     if len(normalized_key) <= _MAX_KEY_DISPLAY_LENGTH:

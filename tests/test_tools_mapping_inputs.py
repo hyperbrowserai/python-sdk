@@ -223,6 +223,39 @@ def test_tool_wrappers_preserve_hyperbrowser_param_value_read_failures():
 
 
 @pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_fall_back_for_unreadable_param_value_read_keys(runner):
+    class _BrokenKey(str):
+        def __new__(cls, value: str):
+            instance = super().__new__(cls, value)
+            instance._iteration_count = 0
+            return instance
+
+        def __iter__(self):
+            self._iteration_count += 1
+            if self._iteration_count > 1:
+                raise RuntimeError("cannot iterate param key")
+            return super().__iter__()
+
+    class _BrokenValueMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield _BrokenKey("url")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read value")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read tool param '<unreadable key>'"
+    ) as exc_info:
+        runner(_BrokenValueMapping())
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
 def test_tool_wrappers_wrap_param_key_strip_failures(runner):
     class _BrokenStripKey(str):
         def strip(self, chars=None):  # type: ignore[override]
