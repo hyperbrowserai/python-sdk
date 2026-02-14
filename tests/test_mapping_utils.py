@@ -150,6 +150,19 @@ def test_safe_key_display_for_error_returns_unreadable_key_on_failures():
     )
 
 
+def test_safe_key_display_for_error_rejects_string_subclass_display_results():
+    class _DisplayString(str):
+        pass
+
+    assert (
+        safe_key_display_for_error(
+            "field",
+            key_display=lambda key: _DisplayString(f"<{key}>"),
+        )
+        == "<unreadable key>"
+    )
+
+
 def test_read_string_mapping_keys_returns_string_keys():
     assert read_string_mapping_keys(
         {"a": 1, "b": 2},

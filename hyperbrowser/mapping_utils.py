@@ -6,7 +6,7 @@ from hyperbrowser.type_utils import is_plain_string
 
 
 def safe_key_display_for_error(
-    key: str, *, key_display: Callable[[str], str]
+    key: object, *, key_display: Callable[[object], object]
 ) -> str:
     try:
         key_text = key_display(key)
@@ -51,7 +51,7 @@ def read_string_key_mapping(
     read_keys_error: str,
     non_string_key_error_builder: Callable[[object], str],
     read_value_error_builder: Callable[[str], str],
-    key_display: Callable[[str], str],
+    key_display: Callable[[object], object],
 ) -> Dict[str, object]:
     mapping_keys = read_string_mapping_keys(
         mapping_value,
@@ -79,7 +79,7 @@ def copy_mapping_values_by_string_keys(
     keys: list[str],
     *,
     read_value_error_builder: Callable[[str], str],
-    key_display: Callable[[str], str],
+    key_display: Callable[[object], object],
 ) -> Dict[str, object]:
     normalized_mapping: Dict[str, object] = {}
     for key in keys:
