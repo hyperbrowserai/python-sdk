@@ -23,3 +23,10 @@ def test_readme_example_list_covers_all_python_example_scripts():
     }
 
     assert example_files == listed_examples
+
+
+def test_readme_example_list_is_sorted():
+    readme_text = Path("README.md").read_text(encoding="utf-8")
+    listed_examples = re.findall(r"- `([^`]*examples/[^`]*)`", readme_text)
+
+    assert listed_examples == sorted(listed_examples)
