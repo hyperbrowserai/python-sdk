@@ -7,6 +7,8 @@ from hyperbrowser.models.extract import (
     StartExtractJobResponse,
 )
 from ..extract_payload_utils import build_extract_start_payload
+from ..job_operation_metadata import EXTRACT_OPERATION_METADATA
+from ..job_route_constants import EXTRACT_JOB_ROUTE_PREFIX
 from ..polling_defaults import (
     DEFAULT_MAX_WAIT_SECONDS,
     DEFAULT_POLLING_RETRY_ATTEMPTS,
@@ -19,6 +21,9 @@ from ..response_utils import parse_response_model
 
 
 class ExtractManager:
+    _OPERATION_METADATA = EXTRACT_OPERATION_METADATA
+    _ROUTE_PREFIX = EXTRACT_JOB_ROUTE_PREFIX
+
     def __init__(self, client):
         self._client = client
 
@@ -26,33 +31,33 @@ class ExtractManager:
         payload = build_extract_start_payload(params)
 
         response = self._client.transport.post(
-            self._client._build_url("/extract"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
             response.data,
             model=StartExtractJobResponse,
-            operation_name="extract start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     def get_status(self, job_id: str) -> ExtractJobStatusResponse:
         response = self._client.transport.get(
-            self._client._build_url(f"/extract/{job_id}/status")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
         )
         return parse_response_model(
             response.data,
             model=ExtractJobStatusResponse,
-            operation_name="extract status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     def get(self, job_id: str) -> ExtractJobResponse:
         response = self._client.transport.get(
-            self._client._build_url(f"/extract/{job_id}")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}")
         )
         return parse_response_model(
             response.data,
             model=ExtractJobResponse,
-            operation_name="extract job",
+            operation_name=self._OPERATION_METADATA.job_operation_name,
         )
 
     def start_and_wait(
@@ -65,8 +70,8 @@ class ExtractManager:
         job_start_resp = self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start extract job",
-            operation_name_prefix="extract job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         return wait_for_job_result_with_defaults(

@@ -16,6 +16,14 @@ from ..job_pagination_utils import (
 )
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_wait_utils import wait_for_job_result_with_defaults_async
+from ..job_operation_metadata import (
+    BATCH_SCRAPE_OPERATION_METADATA,
+    SCRAPE_OPERATION_METADATA,
+)
+from ..job_route_constants import (
+    BATCH_SCRAPE_JOB_ROUTE_PREFIX,
+    SCRAPE_JOB_ROUTE_PREFIX,
+)
 from ..job_query_params_utils import build_batch_scrape_get_params
 from ..polling_defaults import (
     DEFAULT_MAX_WAIT_SECONDS,
@@ -42,6 +50,9 @@ from ....models.scrape import (
 
 
 class BatchScrapeManager:
+    _OPERATION_METADATA = BATCH_SCRAPE_OPERATION_METADATA
+    _ROUTE_PREFIX = BATCH_SCRAPE_JOB_ROUTE_PREFIX
+
     def __init__(self, client):
         self._client = client
 
@@ -50,23 +61,23 @@ class BatchScrapeManager:
     ) -> StartBatchScrapeJobResponse:
         payload = build_batch_scrape_start_payload(params)
         response = await self._client.transport.post(
-            self._client._build_url("/scrape/batch"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
             response.data,
             model=StartBatchScrapeJobResponse,
-            operation_name="batch scrape start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get_status(self, job_id: str) -> BatchScrapeJobStatusResponse:
         response = await self._client.transport.get(
-            self._client._build_url(f"/scrape/batch/{job_id}/status")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
         )
         return parse_response_model(
             response.data,
             model=BatchScrapeJobStatusResponse,
-            operation_name="batch scrape status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def get(
@@ -74,13 +85,13 @@ class BatchScrapeManager:
     ) -> BatchScrapeJobResponse:
         query_params = build_batch_scrape_get_params(params)
         response = await self._client.transport.get(
-            self._client._build_url(f"/scrape/batch/{job_id}"),
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}"),
             params=query_params,
         )
         return parse_response_model(
             response.data,
             model=BatchScrapeJobResponse,
-            operation_name="batch scrape job",
+            operation_name=self._OPERATION_METADATA.job_operation_name,
         )
 
     async def start_and_wait(
@@ -94,8 +105,8 @@ class BatchScrapeManager:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start batch scrape job",
-            operation_name_prefix="batch scrape job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         job_status = await poll_until_terminal_status_async(
@@ -142,6 +153,9 @@ class BatchScrapeManager:
 
 
 class ScrapeManager:
+    _OPERATION_METADATA = SCRAPE_OPERATION_METADATA
+    _ROUTE_PREFIX = SCRAPE_JOB_ROUTE_PREFIX
+
     def __init__(self, client):
         self._client = client
         self.batch = BatchScrapeManager(client)
@@ -149,33 +163,33 @@ class ScrapeManager:
     async def start(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
         payload = build_scrape_start_payload(params)
         response = await self._client.transport.post(
-            self._client._build_url("/scrape"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
             response.data,
             model=StartScrapeJobResponse,
-            operation_name="scrape start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get_status(self, job_id: str) -> ScrapeJobStatusResponse:
         response = await self._client.transport.get(
-            self._client._build_url(f"/scrape/{job_id}/status")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
         )
         return parse_response_model(
             response.data,
             model=ScrapeJobStatusResponse,
-            operation_name="scrape status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def get(self, job_id: str) -> ScrapeJobResponse:
         response = await self._client.transport.get(
-            self._client._build_url(f"/scrape/{job_id}")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}")
         )
         return parse_response_model(
             response.data,
             model=ScrapeJobResponse,
-            operation_name="scrape job",
+            operation_name=self._OPERATION_METADATA.job_operation_name,
         )
 
     async def start_and_wait(
@@ -188,8 +202,8 @@ class ScrapeManager:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start scrape job",
-            operation_name_prefix="scrape job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         return await wait_for_job_result_with_defaults_async(
