@@ -8,14 +8,25 @@ from hyperbrowser.models.profile import (
     ProfileResponse,
 )
 from hyperbrowser.models.session import BasicResponse
+from ..profile_operation_metadata import PROFILE_OPERATION_METADATA
+from ..profile_request_utils import (
+    create_profile_resource,
+    delete_profile_resource,
+    get_profile_resource,
+    list_profile_resources,
+)
+from ..profile_route_constants import PROFILE_ROUTE_PREFIX, PROFILES_ROUTE_PATH
 from ..serialization_utils import (
     serialize_model_dump_or_default,
     serialize_optional_model_dump_to_dict,
 )
-from ..response_utils import parse_response_model
 
 
 class ProfileManager:
+    _OPERATION_METADATA = PROFILE_OPERATION_METADATA
+    _ROUTE_PREFIX = PROFILE_ROUTE_PREFIX
+    _LIST_ROUTE_PATH = PROFILES_ROUTE_PATH
+
     def __init__(self, client):
         self._client = client
 
@@ -26,34 +37,30 @@ class ProfileManager:
             params,
             error_message="Failed to serialize profile create params",
         )
-        response = self._client.transport.post(
-            self._client._build_url("/profile"),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return create_profile_resource(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=CreateProfileResponse,
-            operation_name="create profile",
+            operation_name=self._OPERATION_METADATA.create_operation_name,
         )
 
     def get(self, id: str) -> ProfileResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"/profile/{id}"),
-        )
-        return parse_response_model(
-            response.data,
+        return get_profile_resource(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            profile_id=id,
             model=ProfileResponse,
-            operation_name="get profile",
+            operation_name=self._OPERATION_METADATA.get_operation_name,
         )
 
     def delete(self, id: str) -> BasicResponse:
-        response = self._client.transport.delete(
-            self._client._build_url(f"/profile/{id}"),
-        )
-        return parse_response_model(
-            response.data,
+        return delete_profile_resource(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            profile_id=id,
             model=BasicResponse,
-            operation_name="delete profile",
+            operation_name=self._OPERATION_METADATA.delete_operation_name,
         )
 
     def list(self, params: Optional[ProfileListParams] = None) -> ProfileListResponse:
@@ -62,12 +69,10 @@ class ProfileManager:
             default_factory=ProfileListParams,
             error_message="Failed to serialize profile list params",
         )
-        response = self._client.transport.get(
-            self._client._build_url("/profiles"),
+        return list_profile_resources(
+            client=self._client,
+            list_route_path=self._LIST_ROUTE_PATH,
             params=query_params,
-        )
-        return parse_response_model(
-            response.data,
             model=ProfileListResponse,
-            operation_name="list profiles",
+            operation_name=self._OPERATION_METADATA.list_operation_name,
         )

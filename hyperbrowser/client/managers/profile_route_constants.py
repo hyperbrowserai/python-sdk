@@ -1,0 +1,2 @@
+PROFILE_ROUTE_PREFIX = "/profile"
+PROFILES_ROUTE_PATH = "/profiles"
