@@ -2,6 +2,7 @@ import httpx
 import pytest
 from types import MappingProxyType
 
+import hyperbrowser.transport.error_utils as error_utils
 from hyperbrowser.transport.error_utils import (
     extract_error_message,
     extract_request_error_context,
@@ -162,6 +163,26 @@ class _BlankFallbackError(Exception):
 class _ControlFallbackError(Exception):
     def __str__(self) -> str:
         return "bad\tfallback\ntext"
+
+
+class _BrokenStripString(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        raise RuntimeError("strip exploded")
+
+
+class _BrokenLenString(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self
+
+    def __len__(self):
+        raise RuntimeError("len exploded")
+
+
+class _BrokenIterString(str):
+    def __iter__(self):
+        raise RuntimeError("iter exploded")
 
 
 class _BrokenFallbackResponse:
@@ -913,6 +934,58 @@ def test_extract_error_message_sanitizes_control_characters_in_fallback_error_te
     )
 
     assert message == "bad?fallback?text"
+
+
+def test_extract_error_message_falls_back_when_message_strip_fails():
+    message = extract_error_message(
+        _DummyResponse({"message": _BrokenStripString("broken message")}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "fallback detail"
+
+
+def test_extract_error_message_falls_back_when_message_length_check_fails():
+    message = extract_error_message(
+        _DummyResponse({"message": _BrokenLenString("broken message")}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "fallback detail"
+
+
+def test_extract_error_message_falls_back_when_response_text_strip_fails():
+    message = extract_error_message(
+        _DummyResponse("   ", text=_BrokenStripString("response body")),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "fallback detail"
+
+
+def test_extract_error_message_handles_response_text_sanitization_iteration_failures():
+    message = extract_error_message(
+        _DummyResponse("   ", text=_BrokenIterString("response body")),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "response body"
+
+
+def test_extract_error_message_handles_truncate_sanitization_runtime_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_sanitize_error(_message: str) -> str:
+        raise RuntimeError("sanitize exploded")
+
+    monkeypatch.setattr(error_utils, "_sanitize_error_message_text", _raise_sanitize_error)
+
+    message = extract_error_message(
+        _DummyResponse("   ", text="   "),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "fallback detail"
 
 
 def test_extract_error_message_handles_fallback_errors_with_broken_string_subclasses():

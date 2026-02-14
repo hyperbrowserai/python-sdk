@@ -66,10 +66,25 @@ def _safe_to_string(value: Any) -> str:
 
 
 def _sanitize_error_message_text(message: str) -> str:
-    return "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in message
-    )
+    try:
+        return "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in message
+        )
+    except Exception:
+        return _safe_to_string(message)
+
+
+def _has_non_blank_text(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        stripped_value = value.strip()
+        if not isinstance(stripped_value, str):
+            return False
+        return bool(stripped_value)
+    except Exception:
+        return False
 
 
 def _normalize_request_method(method: Any) -> str:
@@ -163,10 +178,13 @@ def _normalize_request_url(url: Any) -> str:
 
 
 def _truncate_error_message(message: str) -> str:
-    sanitized_message = _sanitize_error_message_text(message)
-    if len(sanitized_message) <= _MAX_ERROR_MESSAGE_LENGTH:
-        return sanitized_message
-    return f"{sanitized_message[:_MAX_ERROR_MESSAGE_LENGTH]}... (truncated)"
+    try:
+        sanitized_message = _sanitize_error_message_text(message)
+        if len(sanitized_message) <= _MAX_ERROR_MESSAGE_LENGTH:
+            return sanitized_message
+        return f"{sanitized_message[:_MAX_ERROR_MESSAGE_LENGTH]}... (truncated)"
+    except Exception:
+        return _safe_to_string(message)
 
 
 def _normalize_response_text_for_error_message(response_text: Any) -> str:
@@ -232,7 +250,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
             response_text = _normalize_response_text_for_error_message(response.text)
         except Exception:
             response_text = ""
-        if isinstance(response_text, str) and response_text.strip():
+        if _has_non_blank_text(response_text):
             return _truncate_error_message(response_text)
         return _truncate_error_message(_safe_to_string(fallback_error))
 
@@ -250,7 +268,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
                 continue
             if message is not None:
                 candidate_message = _stringify_error_value(message)
-                if candidate_message.strip():
+                if _has_non_blank_text(candidate_message):
                     extracted_message = candidate_message
                     break
         else:
@@ -260,7 +278,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
     else:
         extracted_message = _stringify_error_value(error_data)
 
-    if not extracted_message.strip():
+    if not _has_non_blank_text(extracted_message):
         return _fallback_message()
     return _truncate_error_message(extracted_message)
 
