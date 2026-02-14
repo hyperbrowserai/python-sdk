@@ -204,6 +204,26 @@ def test_extract_tool_runnable_normalizes_mapping_schema_values():
     assert client.extract.last_params.schema_ == {"type": "object", "properties": {}}
 
 
+def test_extract_tool_async_runnable_normalizes_mapping_schema_values():
+    client = _AsyncClient()
+    schema_mapping = MappingProxyType({"type": "object", "properties": {}})
+
+    async def run():
+        return await WebsiteExtractTool.async_runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": schema_mapping,
+            },
+        )
+
+    asyncio.run(run())
+
+    assert isinstance(client.extract.last_params, StartExtractJobParams)
+    assert isinstance(client.extract.last_params.schema_, dict)
+    assert client.extract.last_params.schema_ == {"type": "object", "properties": {}}
+
+
 def test_extract_tool_runnable_rejects_non_string_schema_keys():
     client = _SyncClient()
 
@@ -217,6 +237,24 @@ def test_extract_tool_runnable_rejects_non_string_schema_keys():
                 "schema": {1: "invalid-key"},  # type: ignore[dict-item]
             },
         )
+
+
+def test_extract_tool_async_runnable_rejects_non_string_schema_keys():
+    client = _AsyncClient()
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": {1: "invalid-key"},  # type: ignore[dict-item]
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` object keys must be strings"
+    ):
+        asyncio.run(run())
 
 
 def test_extract_tool_runnable_wraps_schema_key_read_failures():
@@ -242,6 +280,36 @@ def test_extract_tool_runnable_wraps_schema_key_read_failures():
                 "schema": _BrokenSchemaMapping(),
             },
         )
+
+    assert exc_info.value.original_error is not None
+
+
+def test_extract_tool_async_runnable_wraps_schema_key_read_failures():
+    class _BrokenSchemaMapping(Mapping[object, object]):
+        def __iter__(self):
+            raise RuntimeError("cannot iterate schema keys")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: object) -> object:
+            return key
+
+    client = _AsyncClient()
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": _BrokenSchemaMapping(),
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to read extract tool `schema` object keys"
+    ) as exc_info:
+        asyncio.run(run())
 
     assert exc_info.value.original_error is not None
 
@@ -275,6 +343,38 @@ def test_extract_tool_runnable_wraps_schema_value_read_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_extract_tool_async_runnable_wraps_schema_value_read_failures():
+    class _BrokenSchemaMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "type"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read schema value")
+
+    client = _AsyncClient()
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": _BrokenSchemaMapping(),
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read extract tool `schema` value for key 'type'",
+    ) as exc_info:
+        asyncio.run(run())
+
+    assert exc_info.value.original_error is not None
+
+
 def test_extract_tool_runnable_preserves_hyperbrowser_schema_value_read_failures():
     class _BrokenSchemaMapping(Mapping[str, object]):
         def __iter__(self):
@@ -299,6 +399,37 @@ def test_extract_tool_runnable_preserves_hyperbrowser_schema_value_read_failures
                 "schema": _BrokenSchemaMapping(),
             },
         )
+
+    assert exc_info.value.original_error is None
+
+
+def test_extract_tool_async_runnable_preserves_hyperbrowser_schema_value_read_failures():
+    class _BrokenSchemaMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield "type"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise HyperbrowserError("custom schema value failure")
+
+    client = _AsyncClient()
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": _BrokenSchemaMapping(),
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="custom schema value failure"
+    ) as exc_info:
+        asyncio.run(run())
 
     assert exc_info.value.original_error is None
 
