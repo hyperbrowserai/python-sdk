@@ -67,6 +67,10 @@ This runs lint, format checks, compile checks, tests, and package build.
 - Add tests for any bug fix or behavior change.
 - Keep sync/async behavior in parity where applicable.
 - Prefer deterministic unit tests over network-dependent tests.
+- Preserve architectural guardrails with focused tests. Current guard suites include:
+  - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
+  - `tests/test_mapping_reader_usage.py` (shared mapping-read parser usage),
+  - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage).
 
 ## Code quality conventions
 
