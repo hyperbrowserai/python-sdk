@@ -1,4 +1,5 @@
 from hyperbrowser.client.managers.session_route_constants import (
+    build_session_route,
     SESSION_DOWNLOADS_URL_ROUTE_SUFFIX,
     SESSION_EVENT_LOGS_ROUTE_SUFFIX,
     SESSION_EXTEND_ROUTE_SUFFIX,
@@ -25,3 +26,11 @@ def test_session_route_constants_match_expected_api_paths():
     assert SESSION_UPLOADS_ROUTE_SUFFIX == "/uploads"
     assert SESSION_EXTEND_ROUTE_SUFFIX == "/extend-session"
     assert SESSION_UPDATE_ROUTE_SUFFIX == "/update"
+
+
+def test_build_session_route_composes_session_path_with_suffix():
+    assert build_session_route("sess_123") == "/session/sess_123"
+    assert (
+        build_session_route("sess_123", SESSION_STOP_ROUTE_SUFFIX)
+        == "/session/sess_123/stop"
+    )

@@ -10,3 +10,10 @@ SESSION_DOWNLOADS_URL_ROUTE_SUFFIX = "/downloads-url"
 SESSION_UPLOADS_ROUTE_SUFFIX = "/uploads"
 SESSION_EXTEND_ROUTE_SUFFIX = "/extend-session"
 SESSION_UPDATE_ROUTE_SUFFIX = "/update"
+
+
+def build_session_route(
+    session_id: str,
+    route_suffix: str = "",
+) -> str:
+    return f"{SESSION_ROUTE_PREFIX}/{session_id}{route_suffix}"

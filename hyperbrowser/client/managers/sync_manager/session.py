@@ -16,6 +16,7 @@ from ..session_request_utils import (
 from ..session_upload_utils import open_upload_files_from_input
 from ..session_operation_metadata import SESSION_OPERATION_METADATA
 from ..session_route_constants import (
+    build_session_route,
     SESSION_DOWNLOADS_URL_ROUTE_SUFFIX,
     SESSION_EVENT_LOGS_ROUTE_SUFFIX,
     SESSION_EXTEND_ROUTE_SUFFIX,
@@ -65,7 +66,10 @@ class SessionEventLogsManager:
         )
         return get_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{session_id}{SESSION_EVENT_LOGS_ROUTE_SUFFIX}",
+            route_path=build_session_route(
+                session_id,
+                SESSION_EVENT_LOGS_ROUTE_SUFFIX,
+            ),
             params=query_params,
             model=SessionEventLogListResponse,
             operation_name=self._OPERATION_METADATA.event_logs_operation_name,
@@ -103,7 +107,7 @@ class SessionManager:
         )
         return get_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}",
+            route_path=build_session_route(id),
             params=query_params,
             model=SessionDetail,
             operation_name=self._OPERATION_METADATA.detail_operation_name,
@@ -112,7 +116,7 @@ class SessionManager:
     def stop(self, id: str) -> BasicResponse:
         return put_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_STOP_ROUTE_SUFFIX}",
+            route_path=build_session_route(id, SESSION_STOP_ROUTE_SUFFIX),
             model=BasicResponse,
             operation_name=self._OPERATION_METADATA.stop_operation_name,
         )
@@ -134,13 +138,13 @@ class SessionManager:
     def get_recording(self, id: str) -> List[SessionRecording]:
         return get_session_recordings(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_RECORDING_ROUTE_SUFFIX}",
+            route_path=build_session_route(id, SESSION_RECORDING_ROUTE_SUFFIX),
         )
 
     def get_recording_url(self, id: str) -> GetSessionRecordingUrlResponse:
         return get_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_RECORDING_URL_ROUTE_SUFFIX}",
+            route_path=build_session_route(id, SESSION_RECORDING_URL_ROUTE_SUFFIX),
             model=GetSessionRecordingUrlResponse,
             operation_name=self._OPERATION_METADATA.recording_url_operation_name,
         )
@@ -148,7 +152,10 @@ class SessionManager:
     def get_video_recording_url(self, id: str) -> GetSessionVideoRecordingUrlResponse:
         return get_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_VIDEO_RECORDING_URL_ROUTE_SUFFIX}",
+            route_path=build_session_route(
+                id,
+                SESSION_VIDEO_RECORDING_URL_ROUTE_SUFFIX,
+            ),
             model=GetSessionVideoRecordingUrlResponse,
             operation_name=self._OPERATION_METADATA.video_recording_url_operation_name,
         )
@@ -156,7 +163,7 @@ class SessionManager:
     def get_downloads_url(self, id: str) -> GetSessionDownloadsUrlResponse:
         return get_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_DOWNLOADS_URL_ROUTE_SUFFIX}",
+            route_path=build_session_route(id, SESSION_DOWNLOADS_URL_ROUTE_SUFFIX),
             model=GetSessionDownloadsUrlResponse,
             operation_name=self._OPERATION_METADATA.downloads_url_operation_name,
         )
@@ -167,7 +174,7 @@ class SessionManager:
         with open_upload_files_from_input(file_input) as files:
             return post_session_model(
                 client=self._client,
-                route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_UPLOADS_ROUTE_SUFFIX}",
+                route_path=build_session_route(id, SESSION_UPLOADS_ROUTE_SUFFIX),
                 files=files,
                 model=UploadFileResponse,
                 operation_name=self._OPERATION_METADATA.upload_file_operation_name,
@@ -176,7 +183,7 @@ class SessionManager:
     def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:
         return put_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_EXTEND_ROUTE_SUFFIX}",
+            route_path=build_session_route(id, SESSION_EXTEND_ROUTE_SUFFIX),
             data={"durationMinutes": duration_minutes},
             model=BasicResponse,
             operation_name=self._OPERATION_METADATA.extend_operation_name,
@@ -212,7 +219,7 @@ class SessionManager:
 
         return put_session_model(
             client=self._client,
-            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_UPDATE_ROUTE_SUFFIX}",
+            route_path=build_session_route(id, SESSION_UPDATE_ROUTE_SUFFIX),
             data={
                 "type": "profile",
                 "params": serialized_params,
