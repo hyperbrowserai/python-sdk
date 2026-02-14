@@ -5,6 +5,7 @@ from typing import Mapping, Optional, Type, Union
 from hyperbrowser.exceptions import HyperbrowserError
 from ..config import ClientConfig
 from ..transport.base import AsyncTransportStrategy, SyncTransportStrategy
+from ..type_utils import is_plain_string
 
 
 class HyperbrowserBase:
@@ -36,11 +37,11 @@ class HyperbrowserBase:
                 raise HyperbrowserError(
                     "API key must be provided via `api_key` or HYPERBROWSER_API_KEY"
                 )
-            if type(resolved_api_key) is not str:
+            if not is_plain_string(resolved_api_key):
                 raise HyperbrowserError("api_key must be a string")
             try:
                 normalized_resolved_api_key = resolved_api_key.strip()
-                if type(normalized_resolved_api_key) is not str:
+                if not is_plain_string(normalized_resolved_api_key):
                     raise TypeError("normalized api_key must be a string")
             except HyperbrowserError:
                 raise
@@ -128,11 +129,11 @@ class HyperbrowserBase:
                 original_error=exc,
             ) from exc
         if (
-            type(parsed_url_scheme) is not str
-            or type(parsed_url_netloc) is not str
-            or type(parsed_url_path) is not str
-            or type(parsed_url_query) is not str
-            or type(parsed_url_fragment) is not str
+            not is_plain_string(parsed_url_scheme)
+            or not is_plain_string(parsed_url_netloc)
+            or not is_plain_string(parsed_url_path)
+            or not is_plain_string(parsed_url_query)
+            or not is_plain_string(parsed_url_fragment)
         ):
             raise HyperbrowserError(
                 f"{component_label} parser returned invalid URL components"
@@ -146,11 +147,11 @@ class HyperbrowserBase:
         )
 
     def _build_url(self, path: str) -> str:
-        if type(path) is not str:
+        if not is_plain_string(path):
             raise HyperbrowserError("path must be a string")
         try:
             stripped_path = path.strip()
-            if type(stripped_path) is not str:
+            if not is_plain_string(stripped_path):
                 raise TypeError("normalized path must be a string")
             has_surrounding_whitespace = stripped_path != path
             is_empty_path = len(stripped_path) == 0
