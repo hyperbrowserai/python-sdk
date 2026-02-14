@@ -1,20 +1,22 @@
 """
-Synchronous scrape example.
+Asynchronous scrape example.
 
 Run:
     export HYPERBROWSER_API_KEY="your_api_key"
-    python3 examples/sync_scrape.py
+    python3 examples/async_scrape.py
 """
 
-from hyperbrowser import Hyperbrowser
+import asyncio
+
+from hyperbrowser import AsyncHyperbrowser
 from hyperbrowser.exceptions import HyperbrowserTimeoutError
 from hyperbrowser.models import ScrapeOptions, StartScrapeJobParams
 
 
-def main() -> None:
-    with Hyperbrowser() as client:
+async def main() -> None:
+    async with AsyncHyperbrowser() as client:
         try:
-            result = client.scrape.start_and_wait(
+            result = await client.scrape.start_and_wait(
                 StartScrapeJobParams(
                     url="https://hyperbrowser.ai",
                     scrape_options=ScrapeOptions(formats=["markdown"]),
@@ -35,4 +37,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -1,20 +1,18 @@
 """
-Asynchronous extract example.
+Synchronous extract example.
 
 Run:
     export HYPERBROWSER_API_KEY="your_api_key"
-    python3 examples/async_extract.py
+    python3 examples/sync_extract.py
 """
 
-import asyncio
-
-from hyperbrowser import AsyncHyperbrowser
+from hyperbrowser import Hyperbrowser
 from hyperbrowser.models import StartExtractJobParams
 
 
-async def main() -> None:
-    async with AsyncHyperbrowser() as client:
-        result = await client.extract.start_and_wait(
+def main() -> None:
+    with Hyperbrowser() as client:
+        result = client.extract.start_and_wait(
             StartExtractJobParams(
                 urls=["https://hyperbrowser.ai"],
                 prompt="Extract the main product value propositions as a list.",
@@ -28,4 +26,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
