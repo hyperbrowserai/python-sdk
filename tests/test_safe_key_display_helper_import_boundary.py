@@ -3,13 +3,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_safe_key_display_helper_usage import ALLOWED_SAFE_KEY_DISPLAY_CALL_FILES
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_SAFE_KEY_DISPLAY_IMPORTERS = (
-    "hyperbrowser/client/managers/list_parsing_utils.py",
-    "tests/test_mapping_utils.py",
-)
+EXPECTED_SAFE_KEY_DISPLAY_EXTRA_IMPORTERS = ("tests/test_mapping_utils.py",)
 
 
 def _imports_safe_key_display_helper(module_text: str) -> bool:
@@ -37,4 +36,12 @@ def test_safe_key_display_helper_imports_are_centralized():
         if _imports_safe_key_display_helper(module_text):
             discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_SAFE_KEY_DISPLAY_IMPORTERS)
+    expected_runtime_modules = sorted(
+        f"hyperbrowser/{path.as_posix()}"
+        for path in ALLOWED_SAFE_KEY_DISPLAY_CALL_FILES
+        if path != Path("mapping_utils.py")
+    )
+    expected_modules = sorted(
+        [*expected_runtime_modules, *EXPECTED_SAFE_KEY_DISPLAY_EXTRA_IMPORTERS]
+    )
+    assert discovered_modules == expected_modules
