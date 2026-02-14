@@ -17,6 +17,7 @@ from ..job_pagination_utils import (
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_start_payload_utils import build_crawl_start_payload
 from ..job_operation_metadata import CRAWL_OPERATION_METADATA
+from ..job_request_utils import get_job_async, get_job_status_async, start_job_async
 from ..job_route_constants import CRAWL_JOB_ROUTE_PREFIX
 from ..job_query_params_utils import build_crawl_get_params
 from ..polling_defaults import (
@@ -24,7 +25,6 @@ from ..polling_defaults import (
     DEFAULT_POLLING_RETRY_ATTEMPTS,
     DEFAULT_POLL_INTERVAL_SECONDS,
 )
-from ..response_utils import parse_response_model
 from ..start_job_utils import build_started_job_context
 from ....models.crawl import (
     CrawlJobResponse,
@@ -44,22 +44,19 @@ class CrawlManager:
 
     async def start(self, params: StartCrawlJobParams) -> StartCrawlJobResponse:
         payload = build_crawl_start_payload(params)
-        response = await self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return await start_job_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartCrawlJobResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get_status(self, job_id: str) -> CrawlJobStatusResponse:
-        response = await self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return await get_job_status_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             model=CrawlJobStatusResponse,
             operation_name=self._OPERATION_METADATA.status_operation_name,
         )
@@ -68,12 +65,11 @@ class CrawlManager:
         self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
         query_params = build_crawl_get_params(params)
-        response = await self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}"),
+        return await get_job_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             params=query_params,
-        )
-        return parse_response_model(
-            response.data,
             model=CrawlJobResponse,
             operation_name=self._OPERATION_METADATA.job_operation_name,
         )

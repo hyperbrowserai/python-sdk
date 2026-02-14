@@ -18,6 +18,7 @@ from ..job_operation_metadata import (
     BATCH_SCRAPE_OPERATION_METADATA,
     SCRAPE_OPERATION_METADATA,
 )
+from ..job_request_utils import get_job, get_job_status, start_job
 from ..job_route_constants import (
     BATCH_SCRAPE_JOB_ROUTE_PREFIX,
     SCRAPE_JOB_ROUTE_PREFIX,
@@ -32,7 +33,6 @@ from ..job_start_payload_utils import (
     build_batch_scrape_start_payload,
     build_scrape_start_payload,
 )
-from ..response_utils import parse_response_model
 from ..start_job_utils import build_started_job_context
 from ....models.scrape import (
     BatchScrapeJobResponse,
@@ -56,22 +56,19 @@ class BatchScrapeManager:
 
     def start(self, params: StartBatchScrapeJobParams) -> StartBatchScrapeJobResponse:
         payload = build_batch_scrape_start_payload(params)
-        response = self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return start_job(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartBatchScrapeJobResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     def get_status(self, job_id: str) -> BatchScrapeJobStatusResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return get_job_status(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             model=BatchScrapeJobStatusResponse,
             operation_name=self._OPERATION_METADATA.status_operation_name,
         )
@@ -80,12 +77,11 @@ class BatchScrapeManager:
         self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
     ) -> BatchScrapeJobResponse:
         query_params = build_batch_scrape_get_params(params)
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}"),
+        return get_job(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             params=query_params,
-        )
-        return parse_response_model(
-            response.data,
             model=BatchScrapeJobResponse,
             operation_name=self._OPERATION_METADATA.job_operation_name,
         )
@@ -158,32 +154,29 @@ class ScrapeManager:
 
     def start(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
         payload = build_scrape_start_payload(params)
-        response = self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return start_job(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartScrapeJobResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     def get_status(self, job_id: str) -> ScrapeJobStatusResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return get_job_status(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             model=ScrapeJobStatusResponse,
             operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     def get(self, job_id: str) -> ScrapeJobResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}")
-        )
-        return parse_response_model(
-            response.data,
+        return get_job(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
+            params=None,
             model=ScrapeJobResponse,
             operation_name=self._OPERATION_METADATA.job_operation_name,
         )

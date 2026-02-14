@@ -8,6 +8,7 @@ from hyperbrowser.models.extract import (
 )
 from ..extract_payload_utils import build_extract_start_payload
 from ..job_operation_metadata import EXTRACT_OPERATION_METADATA
+from ..job_request_utils import get_job_async, get_job_status_async, start_job_async
 from ..job_route_constants import EXTRACT_JOB_ROUTE_PREFIX
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_wait_utils import wait_for_job_result_with_defaults_async
@@ -17,7 +18,6 @@ from ..polling_defaults import (
     DEFAULT_POLL_INTERVAL_SECONDS,
 )
 from ..start_job_utils import build_started_job_context
-from ..response_utils import parse_response_model
 
 
 class ExtractManager:
@@ -29,33 +29,29 @@ class ExtractManager:
 
     async def start(self, params: StartExtractJobParams) -> StartExtractJobResponse:
         payload = build_extract_start_payload(params)
-
-        response = await self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return await start_job_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartExtractJobResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get_status(self, job_id: str) -> ExtractJobStatusResponse:
-        response = await self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return await get_job_status_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             model=ExtractJobStatusResponse,
             operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def get(self, job_id: str) -> ExtractJobResponse:
-        response = await self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}")
-        )
-        return parse_response_model(
-            response.data,
+        return await get_job_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
+            params=None,
             model=ExtractJobResponse,
             operation_name=self._OPERATION_METADATA.job_operation_name,
         )
