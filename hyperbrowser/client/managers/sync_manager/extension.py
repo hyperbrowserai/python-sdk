@@ -14,7 +14,15 @@ class ExtensionManager:
     def create(self, params: CreateExtensionParams) -> ExtensionResponse:
         if not isinstance(params, CreateExtensionParams):
             raise HyperbrowserError("params must be CreateExtensionParams")
-        raw_file_path = params.file_path
+        try:
+            raw_file_path = params.file_path
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "params.file_path is invalid",
+                original_error=exc,
+            ) from exc
         payload = params.model_dump(exclude_none=True, by_alias=True)
         payload.pop("filePath", None)
 
