@@ -56,12 +56,13 @@ def get_model_request(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(route_path),
+    response_data = get_model_response_data(
+        client=client,
+        route_path=route_path,
         params=params,
     )
     return parse_response_model(
-        response.data,
+        response_data,
         model=model,
         operation_name=operation_name,
     )
@@ -95,14 +96,26 @@ def delete_model_request(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.delete(
-        client._build_url(route_path),
+    response_data = delete_model_response_data(
+        client=client,
+        route_path=route_path,
     )
     return parse_response_model(
-        response.data,
+        response_data,
         model=model,
         operation_name=operation_name,
     )
+
+
+def delete_model_response_data(
+    *,
+    client: Any,
+    route_path: str,
+) -> Any:
+    response = client.transport.delete(
+        client._build_url(route_path),
+    )
+    return response.data
 
 
 def put_model_request(
@@ -189,12 +202,13 @@ async def get_model_request_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(route_path),
+    response_data = await get_model_response_data_async(
+        client=client,
+        route_path=route_path,
         params=params,
     )
     return parse_response_model(
-        response.data,
+        response_data,
         model=model,
         operation_name=operation_name,
     )
@@ -228,14 +242,26 @@ async def delete_model_request_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.delete(
-        client._build_url(route_path),
+    response_data = await delete_model_response_data_async(
+        client=client,
+        route_path=route_path,
     )
     return parse_response_model(
-        response.data,
+        response_data,
         model=model,
         operation_name=operation_name,
     )
+
+
+async def delete_model_response_data_async(
+    *,
+    client: Any,
+    route_path: str,
+) -> Any:
+    response = await client.transport.delete(
+        client._build_url(route_path),
+    )
+    return response.data
 
 
 async def put_model_request_async(

@@ -158,6 +158,40 @@ def test_get_model_request_gets_payload_and_parses_response():
     assert captured["parse_kwargs"]["operation_name"] == "read resource"
 
 
+def test_get_model_request_delegates_to_raw_data_helper():
+    captured = {}
+
+    def _fake_get_model_response_data(**kwargs):
+        captured["kwargs"] = kwargs
+        return {"id": "resource-2"}
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_get = model_request_utils.get_model_response_data
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.get_model_response_data = _fake_get_model_response_data
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = model_request_utils.get_model_request(
+            client=object(),
+            route_path="/resource/2",
+            params={"page": 1},
+            model=object,
+            operation_name="read resource",
+        )
+    finally:
+        model_request_utils.get_model_response_data = original_get
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["kwargs"]["route_path"] == "/resource/2"
+    assert captured["kwargs"]["params"] == {"page": 1}
+    assert captured["parse_data"] == {"id": "resource-2"}
+
+
 def test_get_model_response_data_gets_payload_without_parsing():
     captured = {}
 
@@ -186,6 +220,30 @@ def test_get_model_response_data_gets_payload_without_parsing():
     assert captured["url"] == "https://api.example.test/resource/raw"
     assert captured["params"] == {"page": 1}
     assert captured["follow_redirects"] is True
+
+
+def test_delete_model_response_data_deletes_resource_and_returns_raw_data():
+    captured = {}
+
+    class _SyncTransport:
+        def delete(self, url):
+            captured["url"] = url
+            return SimpleNamespace(data={"success": True})
+
+    class _Client:
+        transport = _SyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = model_request_utils.delete_model_response_data(
+        client=_Client(),
+        route_path="/resource/3",
+    )
+
+    assert result == {"success": True}
+    assert captured["url"] == "https://api.example.test/resource/3"
 
 
 def test_delete_model_request_deletes_resource_and_parses_response():
@@ -224,6 +282,38 @@ def test_delete_model_request_deletes_resource_and_parses_response():
     assert captured["url"] == "https://api.example.test/resource/3"
     assert captured["parse_data"] == {"success": True}
     assert captured["parse_kwargs"]["operation_name"] == "delete resource"
+
+
+def test_delete_model_request_delegates_to_raw_data_helper():
+    captured = {}
+
+    def _fake_delete_model_response_data(**kwargs):
+        captured["kwargs"] = kwargs
+        return {"success": True}
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_delete = model_request_utils.delete_model_response_data
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.delete_model_response_data = _fake_delete_model_response_data
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = model_request_utils.delete_model_request(
+            client=object(),
+            route_path="/resource/3",
+            model=object,
+            operation_name="delete resource",
+        )
+    finally:
+        model_request_utils.delete_model_response_data = original_delete
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["kwargs"]["route_path"] == "/resource/3"
+    assert captured["parse_data"] == {"success": True}
 
 
 def test_put_model_response_data_forwards_payload_and_returns_raw_data():
@@ -415,6 +505,44 @@ def test_get_model_request_async_gets_payload_and_parses_response():
     assert captured["parse_kwargs"]["operation_name"] == "read resource"
 
 
+def test_get_model_request_async_delegates_to_raw_data_helper():
+    captured = {}
+
+    async def _fake_get_model_response_data_async(**kwargs):
+        captured["kwargs"] = kwargs
+        return {"id": "resource-5"}
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_get = model_request_utils.get_model_response_data_async
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.get_model_response_data_async = (
+        _fake_get_model_response_data_async
+    )
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = asyncio.run(
+            model_request_utils.get_model_request_async(
+                client=object(),
+                route_path="/resource/5",
+                params={"page": 2},
+                model=object,
+                operation_name="read resource",
+            )
+        )
+    finally:
+        model_request_utils.get_model_response_data_async = original_get
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["kwargs"]["route_path"] == "/resource/5"
+    assert captured["kwargs"]["params"] == {"page": 2}
+    assert captured["parse_data"] == {"id": "resource-5"}
+
+
 def test_get_model_response_data_async_gets_payload_without_parsing():
     captured = {}
 
@@ -445,6 +573,32 @@ def test_get_model_response_data_async_gets_payload_without_parsing():
     assert captured["url"] == "https://api.example.test/resource/raw"
     assert captured["params"] == {"page": 2}
     assert captured["follow_redirects"] is True
+
+
+def test_delete_model_response_data_async_deletes_resource_and_returns_raw_data():
+    captured = {}
+
+    class _AsyncTransport:
+        async def delete(self, url):
+            captured["url"] = url
+            return SimpleNamespace(data={"success": True})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = asyncio.run(
+        model_request_utils.delete_model_response_data_async(
+            client=_Client(),
+            route_path="/resource/6",
+        )
+    )
+
+    assert result == {"success": True}
+    assert captured["url"] == "https://api.example.test/resource/6"
 
 
 def test_delete_model_request_async_deletes_resource_and_parses_response():
@@ -485,6 +639,42 @@ def test_delete_model_request_async_deletes_resource_and_parses_response():
     assert captured["url"] == "https://api.example.test/resource/6"
     assert captured["parse_data"] == {"success": True}
     assert captured["parse_kwargs"]["operation_name"] == "delete resource"
+
+
+def test_delete_model_request_async_delegates_to_raw_data_helper():
+    captured = {}
+
+    async def _fake_delete_model_response_data_async(**kwargs):
+        captured["kwargs"] = kwargs
+        return {"success": True}
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_delete = model_request_utils.delete_model_response_data_async
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.delete_model_response_data_async = (
+        _fake_delete_model_response_data_async
+    )
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = asyncio.run(
+            model_request_utils.delete_model_request_async(
+                client=object(),
+                route_path="/resource/6",
+                model=object,
+                operation_name="delete resource",
+            )
+        )
+    finally:
+        model_request_utils.delete_model_response_data_async = original_delete
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["kwargs"]["route_path"] == "/resource/6"
+    assert captured["parse_data"] == {"success": True}
 
 
 def test_put_model_response_data_async_forwards_payload_and_returns_raw_data():
