@@ -61,7 +61,7 @@ class ClientConfig:
     def _safe_unquote(value: str, *, component_label: str) -> str:
         try:
             decoded_value = unquote(value)
-            if not isinstance(decoded_value, str):
+            if type(decoded_value) is not str:
                 raise TypeError("decoded URL component must be a string")
             return decoded_value
         except HyperbrowserError:
