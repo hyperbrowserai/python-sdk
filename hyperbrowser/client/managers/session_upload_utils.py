@@ -8,6 +8,25 @@ from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 
 from ..file_utils import ensure_existing_file_path, open_binary_file
 
+_MAX_FILE_PATH_DISPLAY_LENGTH = 200
+
+
+def _format_upload_path_for_error(raw_file_path: object) -> str:
+    if not is_plain_string(raw_file_path):
+        return "<provided path>"
+    try:
+        normalized_path = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in raw_file_path
+        )
+    except Exception:
+        return "<provided path>"
+    if not is_plain_string(normalized_path):
+        return "<provided path>"
+    if len(normalized_path) <= _MAX_FILE_PATH_DISPLAY_LENGTH:
+        return normalized_path
+    return f"{normalized_path[:_MAX_FILE_PATH_DISPLAY_LENGTH]}..."
+
 
 def normalize_upload_file_input(
     file_input: Union[str, PathLike[str], IO],
@@ -22,10 +41,11 @@ def normalize_upload_file_input(
                 "file_input path is invalid",
                 original_error=exc,
             ) from exc
+        file_path_display = _format_upload_path_for_error(raw_file_path)
         file_path = ensure_existing_file_path(
             raw_file_path,
-            missing_file_message=f"Upload file not found at path: {raw_file_path}",
-            not_file_message=f"Upload file path must point to a file: {raw_file_path}",
+            missing_file_message=f"Upload file not found at path: {file_path_display}",
+            not_file_message=f"Upload file path must point to a file: {file_path_display}",
         )
         return file_path, None
 

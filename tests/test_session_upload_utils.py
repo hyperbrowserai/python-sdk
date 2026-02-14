@@ -71,6 +71,34 @@ def test_normalize_upload_file_input_uses_fspath_path_in_missing_file_errors():
     assert exc_info.value.original_error is None
 
 
+def test_normalize_upload_file_input_survives_string_subclass_fspath_in_error_messages():
+    class _PathString(str):
+        def __str__(self) -> str:  # type: ignore[override]
+            raise RuntimeError("broken stringify")
+
+    class _PathLike(PathLike[str]):
+        def __fspath__(self) -> str:
+            return _PathString("/tmp/nonexistent-subclass-path-for-upload-utils-test")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="file_path must resolve to a string path",
+    ) as exc_info:
+        normalize_upload_file_input(_PathLike())
+
+    assert exc_info.value.original_error is None
+
+
+def test_normalize_upload_file_input_rejects_control_character_paths_before_message_validation():
+    with pytest.raises(
+        HyperbrowserError,
+        match="file_path must not contain control characters",
+    ) as exc_info:
+        normalize_upload_file_input("bad\tpath.txt")
+
+    assert exc_info.value.original_error is None
+
+
 def test_normalize_upload_file_input_returns_open_file_like_object():
     file_obj = io.BytesIO(b"content")
 
