@@ -6,9 +6,8 @@ from hyperbrowser.models import (
     WebSearchParams,
     WebSearchResponse,
 )
-from ....schema_utils import inject_web_output_schemas
-from ...serialization_utils import serialize_model_dump_to_dict
 from ...response_utils import parse_response_model
+from ...web_payload_utils import build_web_fetch_payload, build_web_search_payload
 
 
 class WebManager:
@@ -18,13 +17,7 @@ class WebManager:
         self.crawl = WebCrawlManager(client)
 
     def fetch(self, params: FetchParams) -> FetchResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize web fetch params",
-        )
-        inject_web_output_schemas(
-            payload, params.outputs.formats if params.outputs else None
-        )
+        payload = build_web_fetch_payload(params)
 
         response = self._client.transport.post(
             self._client._build_url("/web/fetch"),
@@ -37,10 +30,7 @@ class WebManager:
         )
 
     def search(self, params: WebSearchParams) -> WebSearchResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize web search params",
-        )
+        payload = build_web_search_payload(params)
         response = self._client.transport.post(
             self._client._build_url("/web/search"),
             data=payload,
