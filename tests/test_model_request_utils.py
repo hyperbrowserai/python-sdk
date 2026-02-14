@@ -45,6 +45,48 @@ def test_post_model_request_posts_payload_and_parses_response():
     assert captured["parse_kwargs"]["operation_name"] == "create resource"
 
 
+def test_post_model_request_forwards_files_when_provided():
+    captured = {}
+
+    class _SyncTransport:
+        def post(self, url, data, files=None):
+            captured["url"] = url
+            captured["data"] = data
+            captured["files"] = files
+            return SimpleNamespace(data={"id": "resource-file"})
+
+    class _Client:
+        transport = _SyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = model_request_utils.post_model_request(
+            client=_Client(),
+            route_path="/resource",
+            data={"name": "value"},
+            files={"file": object()},
+            model=object,
+            operation_name="create resource",
+        )
+    finally:
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["url"] == "https://api.example.test/resource"
+    assert captured["files"] is not None
+    assert captured["parse_data"] == {"id": "resource-file"}
+
+
 def test_get_model_request_gets_payload_and_parses_response():
     captured = {}
 
@@ -165,6 +207,50 @@ def test_post_model_request_async_posts_payload_and_parses_response():
     assert captured["data"] == {"name": "value"}
     assert captured["parse_data"] == {"id": "resource-4"}
     assert captured["parse_kwargs"]["operation_name"] == "create resource"
+
+
+def test_post_model_request_async_forwards_files_when_provided():
+    captured = {}
+
+    class _AsyncTransport:
+        async def post(self, url, data, files=None):
+            captured["url"] = url
+            captured["data"] = data
+            captured["files"] = files
+            return SimpleNamespace(data={"id": "resource-file-async"})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = asyncio.run(
+            model_request_utils.post_model_request_async(
+                client=_Client(),
+                route_path="/resource",
+                data={"name": "value"},
+                files={"file": object()},
+                model=object,
+                operation_name="create resource",
+            )
+        )
+    finally:
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["url"] == "https://api.example.test/resource"
+    assert captured["files"] is not None
+    assert captured["parse_data"] == {"id": "resource-file-async"}
 
 
 def test_get_model_request_async_gets_payload_and_parses_response():

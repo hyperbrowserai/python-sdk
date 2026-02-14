@@ -56,6 +56,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_examples_naming_convention.py",
     "tests/test_extension_operation_metadata_usage.py",
     "tests/test_extension_request_helper_usage.py",
+    "tests/test_extension_request_internal_reuse.py",
     "tests/test_extension_route_constants_usage.py",
     "tests/test_job_pagination_helper_usage.py",
     "tests/test_job_fetch_helper_boundary.py",

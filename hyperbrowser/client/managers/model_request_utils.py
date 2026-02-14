@@ -10,13 +10,21 @@ def post_model_request(
     client: Any,
     route_path: str,
     data: Dict[str, Any],
+    files: Optional[Dict[str, Any]] = None,
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.post(
-        client._build_url(route_path),
-        data=data,
-    )
+    if files is None:
+        response = client.transport.post(
+            client._build_url(route_path),
+            data=data,
+        )
+    else:
+        response = client.transport.post(
+            client._build_url(route_path),
+            data=data,
+            files=files,
+        )
     return parse_response_model(
         response.data,
         model=model,
@@ -84,13 +92,21 @@ async def post_model_request_async(
     client: Any,
     route_path: str,
     data: Dict[str, Any],
+    files: Optional[Dict[str, Any]] = None,
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.post(
-        client._build_url(route_path),
-        data=data,
-    )
+    if files is None:
+        response = await client.transport.post(
+            client._build_url(route_path),
+            data=data,
+        )
+    else:
+        response = await client.transport.post(
+            client._build_url(route_path),
+            data=data,
+            files=files,
+        )
     return parse_response_model(
         response.data,
         model=model,

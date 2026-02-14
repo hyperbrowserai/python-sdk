@@ -5,34 +5,19 @@ from types import SimpleNamespace
 import hyperbrowser.client.managers.extension_request_utils as extension_request_utils
 
 
-def test_create_extension_resource_uses_post_and_parses_response():
+def test_create_extension_resource_delegates_to_post_model_request():
     captured = {}
 
-    class _SyncTransport:
-        def post(self, url, data=None, files=None):
-            captured["url"] = url
-            captured["data"] = data
-            captured["files"] = files
-            return SimpleNamespace(data={"id": "ext_1"})
-
-    class _Client:
-        transport = _SyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
-
-    def _fake_parse_response_model(data, **kwargs):
-        captured["parse_data"] = data
-        captured["parse_kwargs"] = kwargs
+    def _fake_post_model_request(**kwargs):
+        captured.update(kwargs)
         return {"parsed": True}
 
-    original_parse = extension_request_utils.parse_response_model
-    extension_request_utils.parse_response_model = _fake_parse_response_model
+    original = extension_request_utils.post_model_request
+    extension_request_utils.post_model_request = _fake_post_model_request
     try:
         file_stream = BytesIO(b"ext")
         result = extension_request_utils.create_extension_resource(
-            client=_Client(),
+            client=object(),
             route_path="/extensions/add",
             payload={"name": "ext"},
             file_stream=file_stream,
@@ -40,14 +25,13 @@ def test_create_extension_resource_uses_post_and_parses_response():
             operation_name="create extension",
         )
     finally:
-        extension_request_utils.parse_response_model = original_parse
+        extension_request_utils.post_model_request = original
 
     assert result == {"parsed": True}
-    assert captured["url"] == "https://api.example.test/extensions/add"
+    assert captured["route_path"] == "/extensions/add"
     assert captured["data"] == {"name": "ext"}
     assert captured["files"] == {"file": file_stream}
-    assert captured["parse_data"] == {"id": "ext_1"}
-    assert captured["parse_kwargs"]["operation_name"] == "create extension"
+    assert captured["operation_name"] == "create extension"
 
 
 def test_list_extension_resources_uses_get_and_extension_parser():
@@ -86,35 +70,20 @@ def test_list_extension_resources_uses_get_and_extension_parser():
     assert captured["parse_data"] == {"extensions": []}
 
 
-def test_create_extension_resource_async_uses_post_and_parses_response():
+def test_create_extension_resource_async_delegates_to_post_model_request_async():
     captured = {}
 
-    class _AsyncTransport:
-        async def post(self, url, data=None, files=None):
-            captured["url"] = url
-            captured["data"] = data
-            captured["files"] = files
-            return SimpleNamespace(data={"id": "ext_2"})
-
-    class _Client:
-        transport = _AsyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
-
-    def _fake_parse_response_model(data, **kwargs):
-        captured["parse_data"] = data
-        captured["parse_kwargs"] = kwargs
+    async def _fake_post_model_request_async(**kwargs):
+        captured.update(kwargs)
         return {"parsed": True}
 
-    original_parse = extension_request_utils.parse_response_model
-    extension_request_utils.parse_response_model = _fake_parse_response_model
+    original = extension_request_utils.post_model_request_async
+    extension_request_utils.post_model_request_async = _fake_post_model_request_async
     try:
         file_stream = BytesIO(b"ext")
         result = asyncio.run(
             extension_request_utils.create_extension_resource_async(
-                client=_Client(),
+                client=object(),
                 route_path="/extensions/add",
                 payload={"name": "ext"},
                 file_stream=file_stream,
@@ -123,14 +92,13 @@ def test_create_extension_resource_async_uses_post_and_parses_response():
             )
         )
     finally:
-        extension_request_utils.parse_response_model = original_parse
+        extension_request_utils.post_model_request_async = original
 
     assert result == {"parsed": True}
-    assert captured["url"] == "https://api.example.test/extensions/add"
+    assert captured["route_path"] == "/extensions/add"
     assert captured["data"] == {"name": "ext"}
     assert captured["files"] == {"file": file_stream}
-    assert captured["parse_data"] == {"id": "ext_2"}
-    assert captured["parse_kwargs"]["operation_name"] == "create extension"
+    assert captured["operation_name"] == "create extension"
 
 
 def test_list_extension_resources_async_uses_get_and_extension_parser():

@@ -1,7 +1,7 @@
 from typing import Any, IO, List, Type, TypeVar
 
 from .extension_utils import parse_extension_list_response_data
-from .response_utils import parse_response_model
+from .model_request_utils import post_model_request, post_model_request_async
 from hyperbrowser.models.extension import ExtensionResponse
 
 T = TypeVar("T")
@@ -16,13 +16,11 @@ def create_extension_resource(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.post(
-        client._build_url(route_path),
+    return post_model_request(
+        client=client,
+        route_path=route_path,
         data=payload,
         files={"file": file_stream},
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )
@@ -48,13 +46,11 @@ async def create_extension_resource_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.post(
-        client._build_url(route_path),
+    return await post_model_request_async(
+        client=client,
+        route_path=route_path,
         data=payload,
         files={"file": file_stream},
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )

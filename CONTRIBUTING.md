@@ -107,6 +107,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extension_create_helper_usage.py` (extension create-input normalization helper usage enforcement),
   - `tests/test_extension_operation_metadata_usage.py` (extension manager operation-metadata usage enforcement),
   - `tests/test_extension_request_helper_usage.py` (extension manager request-helper usage enforcement),
+  - `tests/test_extension_request_internal_reuse.py` (extension request-helper internal reuse of shared model request helpers),
   - `tests/test_extension_route_constants_usage.py` (extension manager route-constant usage enforcement),
   - `tests/test_extract_payload_helper_usage.py` (extract start-payload helper usage enforcement),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
