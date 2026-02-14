@@ -307,6 +307,13 @@ def test_format_file_path_for_error_falls_back_for_non_string_values():
     assert format_file_path_for_error(object()) == "<provided path>"
 
 
+def test_format_file_path_for_error_falls_back_for_string_subclass_values():
+    class _PathString(str):
+        pass
+
+    assert format_file_path_for_error(_PathString("/tmp/value")) == "<provided path>"
+
+
 def test_format_file_path_for_error_falls_back_for_fspath_failures():
     class _BrokenPathLike:
         def __fspath__(self) -> str:
@@ -321,6 +328,17 @@ def test_format_file_path_for_error_uses_pathlike_string_values():
             return "/tmp/path-value"
 
     assert format_file_path_for_error(_PathLike()) == "/tmp/path-value"
+
+
+def test_format_file_path_for_error_falls_back_for_pathlike_string_subclass_values():
+    class _PathLike:
+        class _PathString(str):
+            pass
+
+        def __fspath__(self) -> str:
+            return self._PathString("/tmp/path-value")
+
+    assert format_file_path_for_error(_PathLike()) == "<provided path>"
 
 
 def test_build_open_file_error_message_uses_prefix_and_sanitized_path():
