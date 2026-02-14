@@ -183,6 +183,10 @@ class SessionManager:
                     original_error=exc,
                 ) from exc
         else:
+            if file_obj is None:
+                raise HyperbrowserError(
+                    "file_input must be a file path or file-like object"
+                )
             files = {"file": file_obj}
             response = await self._client.transport.post(
                 self._client._build_url(f"/session/{id}/uploads"),
