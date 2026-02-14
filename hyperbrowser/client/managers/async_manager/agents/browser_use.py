@@ -16,6 +16,7 @@ from .....models import (
     StartBrowserUseTaskParams,
     StartBrowserUseTaskResponse,
 )
+from .....exceptions import HyperbrowserError
 
 
 class BrowserUseManager:
@@ -25,7 +26,17 @@ class BrowserUseManager:
     async def start(
         self, params: StartBrowserUseTaskParams
     ) -> StartBrowserUseTaskResponse:
-        payload = params.model_dump(exclude_none=True, by_alias=True)
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize browser-use start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize browser-use start params")
         if params.output_model_schema:
             payload["outputModelSchema"] = resolve_schema_input(
                 params.output_model_schema
