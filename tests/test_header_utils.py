@@ -60,6 +60,15 @@ class _NonStringLowerHeaderName(str):
         return object()
 
 
+class _StringSubclassStripResultHeaderName(str):
+    class _NormalizedKey(str):
+        pass
+
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self._NormalizedKey("X-Trace-Id")
+
+
 class _BrokenHeadersEnvString(str):
     def strip(self, chars=None):  # type: ignore[override]
         _ = chars
@@ -149,6 +158,18 @@ def test_normalize_headers_wraps_non_string_header_name_lower_results():
         )
 
     assert exc_info.value.original_error is not None
+
+
+def test_normalize_headers_wraps_string_subclass_header_name_strip_results():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize header name"
+    ) as exc_info:
+        normalize_headers(
+            {_StringSubclassStripResultHeaderName("X-Trace-Id"): "trace-1"},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_normalize_headers_rejects_overly_long_header_names():

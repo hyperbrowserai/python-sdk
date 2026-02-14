@@ -53,7 +53,7 @@ def normalize_headers(
             raise HyperbrowserError(effective_pair_error_message)
         try:
             normalized_key = key.strip()
-            if not isinstance(normalized_key, str):
+            if type(normalized_key) is not str:
                 raise TypeError("normalized header name must be a string")
         except HyperbrowserError:
             raise
@@ -104,7 +104,7 @@ def normalize_headers(
             raise HyperbrowserError("headers must not contain control characters")
         try:
             canonical_header_name = normalized_key.lower()
-            if not isinstance(canonical_header_name, str):
+            if type(canonical_header_name) is not str:
                 raise TypeError("canonical header name must be a string")
         except HyperbrowserError:
             raise
