@@ -144,8 +144,10 @@ class Session(BaseModel):
         """Convert string timestamps to integers."""
         if value is None:
             return None
-        if isinstance(value, str):
+        if type(value) is str:
             return int(value)
+        if isinstance(value, str):
+            raise ValueError("timestamp string values must be plain strings")
         return value
 
 
