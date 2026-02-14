@@ -83,7 +83,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
   - `tests/test_display_helper_usage.py` (display/key-format helper usage),
   - `tests/test_ci_workflow_quality_gates.py` (CI guard-stage + make-target enforcement),
-  - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement).
+  - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
+  - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement).
 
 ## Code quality conventions
 
