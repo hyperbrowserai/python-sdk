@@ -20,7 +20,7 @@ def _read_header_items(
     normalized_items: list[tuple[object, object]] = []
     for item in raw_items:
         try:
-            if not isinstance(item, tuple):
+            if type(item) is not tuple:
                 raise HyperbrowserError(mapping_error_message)
             if len(item) != 2:
                 raise HyperbrowserError(mapping_error_message)

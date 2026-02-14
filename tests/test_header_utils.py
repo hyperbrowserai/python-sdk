@@ -36,6 +36,10 @@ class _BrokenTupleItemMapping(dict):
         return [self._broken_item]
 
 
+class _TupleSubclass(tuple):
+    pass
+
+
 class _StringSubclassStripResultHeaderName(str):
     class _NormalizedKey(str):
         pass
@@ -381,6 +385,16 @@ def test_normalize_headers_rejects_malformed_mapping_items():
         )
 
 
+def test_normalize_headers_rejects_tuple_subclass_items():
+    with pytest.raises(
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ):
+        normalize_headers(
+            _BrokenTupleItemMapping(_TupleSubclass(("X-Trace-Id", "trace-1"))),
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+
 def test_merge_headers_rejects_malformed_override_mapping_items():
     with pytest.raises(
         HyperbrowserError, match="headers must be a mapping of string pairs"
@@ -401,7 +415,7 @@ def test_normalize_headers_wraps_broken_tuple_length_errors():
             mapping_error_message="headers must be a mapping of string pairs",
         )
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_merge_headers_wraps_broken_tuple_index_errors():
@@ -414,4 +428,4 @@ def test_merge_headers_wraps_broken_tuple_index_errors():
             mapping_error_message="headers must be a mapping of string pairs",
         )
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
