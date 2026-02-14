@@ -40,7 +40,7 @@ class HyperbrowserBase:
                 raise HyperbrowserError("api_key must be a string")
             try:
                 normalized_resolved_api_key = resolved_api_key.strip()
-                if not isinstance(normalized_resolved_api_key, str):
+                if type(normalized_resolved_api_key) is not str:
                     raise TypeError("normalized api_key must be a string")
             except HyperbrowserError:
                 raise

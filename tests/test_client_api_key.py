@@ -240,11 +240,10 @@ def test_client_wraps_non_string_api_key_strip_results(client_class):
 
 
 @pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
-def test_client_wraps_api_key_empty_check_length_failures(client_class):
+def test_client_wraps_api_key_string_subclass_strip_results(client_class):
     class _BrokenLengthApiKey(str):
         class _NormalizedKey(str):
-            def __len__(self):
-                raise RuntimeError("api key length exploded")
+            pass
 
         def strip(self, chars=None):  # type: ignore[override]
             _ = chars
@@ -253,23 +252,10 @@ def test_client_wraps_api_key_empty_check_length_failures(client_class):
     with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
         client_class(api_key=_BrokenLengthApiKey("test-key"))
 
-    assert isinstance(exc_info.value.original_error, RuntimeError)
+    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 @pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
-def test_client_preserves_hyperbrowser_api_key_empty_check_length_failures(
-    client_class,
-):
-    class _BrokenLengthApiKey(str):
-        class _NormalizedKey(str):
-            def __len__(self):
-                raise HyperbrowserError("custom length failure")
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedKey("test-key")
-
-    with pytest.raises(HyperbrowserError, match="custom length failure") as exc_info:
-        client_class(api_key=_BrokenLengthApiKey("test-key"))
-
-    assert exc_info.value.original_error is None
+def test_client_rejects_blank_api_key_input(client_class):
+    with pytest.raises(HyperbrowserError, match="api_key must not be empty"):
+        client_class(api_key="   ")

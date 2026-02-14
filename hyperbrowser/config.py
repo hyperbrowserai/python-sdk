@@ -36,7 +36,7 @@ class ClientConfig:
             raise HyperbrowserError("api_key must be a string")
         try:
             normalized_api_key = api_key.strip()
-            if not isinstance(normalized_api_key, str):
+            if type(normalized_api_key) is not str:
                 raise TypeError("normalized api_key must be a string")
         except HyperbrowserError:
             raise
