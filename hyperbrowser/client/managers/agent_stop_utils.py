@@ -2,6 +2,7 @@ from typing import Any
 
 from hyperbrowser.models import BasicResponse
 
+from .job_route_builders import build_job_action_route
 from .response_utils import parse_response_model
 
 
@@ -13,7 +14,9 @@ def stop_agent_task(
     operation_name: str,
 ) -> BasicResponse:
     response = client.transport.put(
-        client._build_url(f"{route_prefix}/{job_id}/stop"),
+        client._build_url(
+            build_job_action_route(route_prefix, job_id, "/stop"),
+        ),
     )
     return parse_response_model(
         response.data,
@@ -30,7 +33,9 @@ async def stop_agent_task_async(
     operation_name: str,
 ) -> BasicResponse:
     response = await client.transport.put(
-        client._build_url(f"{route_prefix}/{job_id}/stop"),
+        client._build_url(
+            build_job_action_route(route_prefix, job_id, "/stop"),
+        ),
     )
     return parse_response_model(
         response.data,

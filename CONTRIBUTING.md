@@ -80,6 +80,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_agent_helper_boundary.py` (agent manager boundary enforcement for shared request/response helpers),
   - `tests/test_agent_operation_metadata_usage.py` (shared agent operation-metadata usage enforcement),
   - `tests/test_agent_payload_helper_usage.py` (shared agent start-payload helper usage enforcement),
+  - `tests/test_agent_route_builder_usage.py` (shared agent read/stop route-builder usage enforcement),
   - `tests/test_agent_start_helper_usage.py` (shared agent start-request helper usage enforcement),
   - `tests/test_agent_stop_helper_usage.py` (shared agent stop-request helper usage enforcement),
   - `tests/test_agent_task_read_helper_usage.py` (shared agent task read-helper usage enforcement),

@@ -1,4 +1,5 @@
 from hyperbrowser.client.managers.job_route_builders import (
+    build_job_action_route,
     build_job_route,
     build_job_status_route,
 )
@@ -14,4 +15,11 @@ def test_build_job_status_route_composes_job_status_route_path():
     assert (
         build_job_status_route("/web/crawl", "job_456")
         == "/web/crawl/job_456/status"
+    )
+
+
+def test_build_job_action_route_composes_job_action_route_path():
+    assert (
+        build_job_action_route("/task/browser-use", "job_123", "/stop")
+        == "/task/browser-use/job_123/stop"
     )
