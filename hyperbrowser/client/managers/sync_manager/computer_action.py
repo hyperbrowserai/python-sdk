@@ -1,9 +1,10 @@
 from typing import Union, List, Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
+from ..computer_action_operation_metadata import COMPUTER_ACTION_OPERATION_METADATA
+from ..computer_action_request_utils import execute_computer_action_request
 from ..computer_action_utils import normalize_computer_action_endpoint
 from ..computer_action_payload_utils import build_computer_action_payload
-from ..response_utils import parse_response_model
 from hyperbrowser.models import (
     SessionDetail,
     ComputerActionParams,
@@ -26,6 +27,8 @@ from hyperbrowser.models import (
 
 
 class ComputerActionManager:
+    _OPERATION_METADATA = COMPUTER_ACTION_OPERATION_METADATA
+
     def __init__(self, client):
         self._client = client
 
@@ -45,14 +48,11 @@ class ComputerActionManager:
 
         payload = build_computer_action_payload(params)
 
-        response = self._client.transport.post(
-            normalized_computer_action_endpoint,
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
-            model=ComputerActionResponse,
-            operation_name="computer action",
+        return execute_computer_action_request(
+            client=self._client,
+            endpoint=normalized_computer_action_endpoint,
+            payload=payload,
+            operation_name=self._OPERATION_METADATA.operation_name,
         )
 
     def click(
