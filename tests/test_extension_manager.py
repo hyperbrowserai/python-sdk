@@ -163,6 +163,50 @@ def test_sync_extension_create_uses_sanitized_open_error_message(
     )
 
 
+def test_sync_extension_create_uses_metadata_open_file_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = SyncExtensionManager(_FakeClient(_SyncTransport()))
+    manager._OPERATION_METADATA = type(
+        "_Metadata",
+        (),
+        {
+            "create_operation_name": "create extension",
+            "open_file_error_prefix": "Custom extension open prefix",
+        },
+    )()
+    params = CreateExtensionParams(name="my-extension", file_path="/tmp/ignored.zip")
+    captured: dict[str, str] = {}
+
+    @contextmanager
+    def _open_binary_file_stub(file_path, *, open_error_message):  # type: ignore[no-untyped-def]
+        captured["file_path"] = file_path
+        captured["open_error_message"] = open_error_message
+        yield io.BytesIO(b"content")
+
+    monkeypatch.setattr(
+        sync_extension_module,
+        "normalize_extension_create_input",
+        lambda _: ("bad\tpath.zip", {"name": "my-extension"}),
+    )
+    monkeypatch.setattr(
+        sync_extension_module,
+        "open_binary_file",
+        _open_binary_file_stub,
+    )
+    monkeypatch.setattr(
+        sync_extension_module,
+        "create_extension_resource",
+        lambda **kwargs: SimpleNamespace(id="ext_sync_mock"),
+    )
+
+    response = manager.create(params)
+
+    assert response.id == "ext_sync_mock"
+    assert captured["file_path"] == "bad\tpath.zip"
+    assert captured["open_error_message"] == "Custom extension open prefix: bad?path.zip"
+
+
 def test_async_extension_create_does_not_mutate_params_and_closes_file(tmp_path):
     transport = _AsyncTransport()
     manager = AsyncExtensionManager(_FakeClient(transport))
@@ -226,6 +270,57 @@ def test_async_extension_create_uses_sanitized_open_error_message(
         captured["open_error_message"]
         == "Failed to open extension file at path: bad?path.zip"
     )
+
+
+def test_async_extension_create_uses_metadata_open_file_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = AsyncExtensionManager(_FakeClient(_AsyncTransport()))
+    manager._OPERATION_METADATA = type(
+        "_Metadata",
+        (),
+        {
+            "create_operation_name": "create extension",
+            "open_file_error_prefix": "Custom extension open prefix",
+        },
+    )()
+    params = CreateExtensionParams(name="my-extension", file_path="/tmp/ignored.zip")
+    captured: dict[str, str] = {}
+
+    @contextmanager
+    def _open_binary_file_stub(file_path, *, open_error_message):  # type: ignore[no-untyped-def]
+        captured["file_path"] = file_path
+        captured["open_error_message"] = open_error_message
+        yield io.BytesIO(b"content")
+
+    async def _create_extension_resource_async_stub(**kwargs):
+        _ = kwargs
+        return SimpleNamespace(id="ext_async_mock")
+
+    monkeypatch.setattr(
+        async_extension_module,
+        "normalize_extension_create_input",
+        lambda _: ("bad\tpath.zip", {"name": "my-extension"}),
+    )
+    monkeypatch.setattr(
+        async_extension_module,
+        "open_binary_file",
+        _open_binary_file_stub,
+    )
+    monkeypatch.setattr(
+        async_extension_module,
+        "create_extension_resource_async",
+        _create_extension_resource_async_stub,
+    )
+
+    async def run():
+        return await manager.create(params)
+
+    response = asyncio.run(run())
+
+    assert response.id == "ext_async_mock"
+    assert captured["file_path"] == "bad\tpath.zip"
+    assert captured["open_error_message"] == "Custom extension open prefix: bad?path.zip"
 
 
 def test_sync_extension_create_raises_hyperbrowser_error_when_file_missing(tmp_path):
