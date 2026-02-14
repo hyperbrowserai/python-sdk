@@ -21,6 +21,11 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/response_utils.py",
     "hyperbrowser/client/managers/extension_utils.py",
     "hyperbrowser/client/managers/list_parsing_utils.py",
+    "hyperbrowser/client/managers/sync_manager/computer_action.py",
+    "hyperbrowser/client/managers/async_manager/computer_action.py",
+    "hyperbrowser/client/managers/sync_manager/session.py",
+    "hyperbrowser/client/managers/async_manager/session.py",
+    "hyperbrowser/tools/__init__.py",
     "hyperbrowser/display_utils.py",
     "hyperbrowser/exceptions.py",
 )
