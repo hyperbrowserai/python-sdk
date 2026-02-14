@@ -258,6 +258,7 @@ Contributor workflow details are available in [CONTRIBUTING.md](CONTRIBUTING.md)
 Ready-to-run examples are available in `examples/`:
 
 - `examples/async_batch_fetch.py`
+- `examples/async_browser_use_task.py`
 - `examples/async_crawl.py`
 - `examples/async_extension_create.py`
 - `examples/async_extension_list.py`
@@ -271,6 +272,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_web_fetch.py`
 - `examples/async_web_search.py`
 - `examples/sync_batch_fetch.py`
+- `examples/sync_browser_use_task.py`
 - `examples/sync_crawl.py`
 - `examples/sync_extension_create.py`
 - `examples/sync_extension_list.py`
