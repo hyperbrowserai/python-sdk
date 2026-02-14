@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Union, List, Optional
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.type_utils import is_string_subclass_instance
 from ..response_utils import parse_response_model
 from ..serialization_utils import serialize_model_dump_to_dict
 from hyperbrowser.models import (
@@ -33,7 +34,7 @@ class ComputerActionManager:
     ) -> ComputerActionResponse:
         if type(session) is str:
             session = self._client.sessions.get(session)
-        elif type(session) is not str and str in type(session).__mro__:
+        elif is_string_subclass_instance(session):
             raise HyperbrowserError(
                 "session must be a plain string session ID or SessionDetail"
             )

@@ -3,6 +3,7 @@ from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.type_utils import is_string_subclass_instance
 from ...file_utils import ensure_existing_file_path
 from ..serialization_utils import serialize_model_dump_to_dict
 from ..session_utils import (
@@ -184,7 +185,7 @@ class SessionManager:
                     f"Failed to open upload file at path: {file_path}",
                     original_error=exc,
                 ) from exc
-        elif type(file_input) is not str and str in type(file_input).__mro__:
+        elif is_string_subclass_instance(file_input):
             raise HyperbrowserError("file_input path must be a plain string path")
         else:
             try:

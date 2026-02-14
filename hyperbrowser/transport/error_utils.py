@@ -5,6 +5,10 @@ from collections.abc import Mapping
 from typing import Any
 
 import httpx
+from hyperbrowser.type_utils import (
+    is_plain_string as _is_plain_string,
+    is_string_subclass_instance as _is_string_subclass_instance,
+)
 
 _HTTP_METHOD_TOKEN_PATTERN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Z]+$")
 _NUMERIC_LIKE_URL_PATTERN = re.compile(
@@ -44,16 +48,6 @@ _INVALID_URL_SENTINELS = {
     "+infinity",
     "-infinity",
 }
-
-
-def _is_plain_string(value: Any) -> bool:
-    return type(value) is str
-
-
-def _is_string_subclass_instance(value: Any) -> bool:
-    value_type = type(value)
-    return value_type is not str and str in value_type.__mro__
-
 
 def _safe_to_string(value: Any) -> str:
     try:

@@ -9,6 +9,7 @@ from hyperbrowser.mapping_utils import (
     copy_mapping_values_by_string_keys,
     read_string_mapping_keys,
 )
+from hyperbrowser.type_utils import is_string_subclass_instance
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
@@ -207,7 +208,7 @@ def _normalize_optional_text_field_value(
                 error_message,
                 original_error=exc,
             ) from exc
-    if type(field_value) is not str and str in type(field_value).__mro__:
+    if is_string_subclass_instance(field_value):
         raise HyperbrowserError(error_message)
     if isinstance(field_value, (bytes, bytearray, memoryview)):
         try:

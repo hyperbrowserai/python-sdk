@@ -14,6 +14,12 @@ from hyperbrowser.models.consts import (
     SessionRegion,
     SessionEventLogType,
 )
+from hyperbrowser.type_utils import (
+    is_int_subclass_instance,
+    is_plain_int,
+    is_plain_string,
+    is_string_subclass_instance,
+)
 
 SessionStatus = Literal["active", "closed", "error"]
 
@@ -149,20 +155,20 @@ class Session(BaseModel):
             raise ValueError(
                 "timestamp values must be integers or plain numeric strings"
             )
-        if value_type is int:
+        if is_plain_int(value):
             return value
-        if int in value_type.__mro__:
+        if is_int_subclass_instance(value):
             raise ValueError(
                 "timestamp values must be plain integers or plain numeric strings"
             )
-        if value_type is str:
+        if is_plain_string(value):
             try:
                 return int(value)
             except Exception as exc:
                 raise ValueError(
                     "timestamp string values must be integer-formatted"
                 ) from exc
-        if str in value_type.__mro__:
+        if is_string_subclass_instance(value):
             raise ValueError("timestamp string values must be plain strings")
         raise ValueError(
             "timestamp values must be plain integers or plain numeric strings"
