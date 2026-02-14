@@ -223,10 +223,24 @@ def _normalize_optional_text_field_value(
     if field_value is None:
         return ""
     if isinstance(field_value, str):
-        return field_value
+        try:
+            normalized_field_value = "".join(character for character in field_value)
+            if type(normalized_field_value) is not str:
+                raise TypeError("normalized text field must be a string")
+            return normalized_field_value
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                error_message,
+                original_error=exc,
+            ) from exc
     if isinstance(field_value, (bytes, bytearray, memoryview)):
         try:
-            return memoryview(field_value).tobytes().decode("utf-8")
+            normalized_field_value = memoryview(field_value).tobytes().decode("utf-8")
+            if type(normalized_field_value) is not str:
+                raise TypeError("normalized text field must be a string")
+            return normalized_field_value
         except (TypeError, ValueError, UnicodeDecodeError) as exc:
             raise HyperbrowserError(
                 error_message,

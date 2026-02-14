@@ -336,6 +336,24 @@ def test_scrape_tool_rejects_non_string_markdown_field():
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
 
+def test_scrape_tool_wraps_broken_string_subclass_markdown_field_values():
+    class _BrokenMarkdownValue(str):
+        def __iter__(self):
+            raise RuntimeError("markdown iteration exploded")
+
+    client = _SyncScrapeClient(
+        _Response(data=SimpleNamespace(markdown=_BrokenMarkdownValue("page")))
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="scrape tool response field 'markdown' must be a UTF-8 string",
+    ) as exc_info:
+        WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
 def test_scrape_tool_wraps_attributeerror_from_declared_markdown_property():
     class _BrokenMarkdownData:
         @property
@@ -758,6 +776,24 @@ def test_crawl_tool_rejects_non_string_page_urls():
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
 
+def test_crawl_tool_wraps_broken_string_subclass_page_url_values():
+    class _BrokenUrlValue(str):
+        def __iter__(self):
+            raise RuntimeError("url iteration exploded")
+
+    client = _SyncCrawlClient(
+        _Response(data=[SimpleNamespace(url=_BrokenUrlValue("https://example.com"), markdown="body")])
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="crawl tool page field 'url' must be a UTF-8 string at index 0",
+    ) as exc_info:
+        WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
+
+    assert exc_info.value.original_error is not None
+
+
 def test_crawl_tool_decodes_utf8_bytes_page_fields():
     client = _SyncCrawlClient(
         _Response(data=[SimpleNamespace(url=b"https://example.com", markdown=b"page")])
@@ -817,6 +853,24 @@ def test_browser_use_tool_rejects_non_string_final_result():
         match="browser-use tool response field 'final_result' must be a UTF-8 string",
     ):
         BrowserUseTool.runnable(client, {"task": "search docs"})
+
+
+def test_browser_use_tool_wraps_broken_string_subclass_final_result_values():
+    class _BrokenFinalResultValue(str):
+        def __iter__(self):
+            raise RuntimeError("final_result iteration exploded")
+
+    client = _SyncBrowserUseClient(
+        _Response(data=SimpleNamespace(final_result=_BrokenFinalResultValue("done")))
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="browser-use tool response field 'final_result' must be a UTF-8 string",
+    ) as exc_info:
+        BrowserUseTool.runnable(client, {"task": "search docs"})
+
+    assert exc_info.value.original_error is not None
 
 
 def test_browser_use_tool_wraps_attributeerror_from_declared_final_result_property():
