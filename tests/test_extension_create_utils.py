@@ -3,6 +3,7 @@ from types import MappingProxyType
 
 import pytest
 
+import hyperbrowser.client.managers.extension_create_utils as extension_create_utils
 from hyperbrowser.client.managers.extension_create_utils import (
     normalize_extension_create_input,
 )
@@ -126,6 +127,34 @@ def test_normalize_extension_create_input_rejects_control_character_path():
     with pytest.raises(
         HyperbrowserError,
         match="file_path must not contain control characters",
+    ) as exc_info:
+        normalize_extension_create_input(params)
+
+    assert exc_info.value.original_error is None
+
+
+def test_normalize_extension_create_input_survives_string_subclass_path_display(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _PathString(str):
+        def __str__(self) -> str:  # type: ignore[override]
+            raise RuntimeError("broken stringify")
+
+    class _PathLike:
+        def __fspath__(self) -> str:
+            return _PathString("/tmp/nonexistent-subclass-path-for-extension-test")
+
+    params = CreateExtensionParams(name="bad-extension", file_path="/tmp/placeholder.zip")
+    params.__dict__["file_path"] = _PathLike()
+    monkeypatch.setattr(
+        extension_create_utils,
+        "serialize_model_dump_to_dict",
+        lambda params, *, error_message: {"name": "bad-extension"},
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="file_path must resolve to a string path",
     ) as exc_info:
         normalize_extension_create_input(params)
 
