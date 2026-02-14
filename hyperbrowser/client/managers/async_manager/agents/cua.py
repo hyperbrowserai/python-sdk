@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ...agent_payload_utils import build_agent_start_payload
+from ...agent_route_constants import CUA_TASK_ROUTE_PREFIX
 from ...agent_status_utils import is_agent_terminal_status
 from ...agent_stop_utils import stop_agent_task_async
 from ...agent_task_read_utils import get_agent_task_async, get_agent_task_status_async
@@ -23,7 +24,7 @@ from ...polling_defaults import (
 
 
 class CuaManager:
-    _ROUTE_PREFIX = "/task/cua"
+    _ROUTE_PREFIX = CUA_TASK_ROUTE_PREFIX
 
     def __init__(self, client):
         self._client = client

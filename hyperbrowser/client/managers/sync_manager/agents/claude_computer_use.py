@@ -2,6 +2,7 @@ from typing import Optional
 
 from ...agent_payload_utils import build_agent_start_payload
 from ...agent_status_utils import is_agent_terminal_status
+from ...agent_route_constants import CLAUDE_COMPUTER_USE_TASK_ROUTE_PREFIX
 from ...agent_stop_utils import stop_agent_task
 from ...agent_task_read_utils import get_agent_task, get_agent_task_status
 from ...job_wait_utils import wait_for_job_result_with_defaults
@@ -23,7 +24,7 @@ from ...polling_defaults import (
 
 
 class ClaudeComputerUseManager:
-    _ROUTE_PREFIX = "/task/claude-computer-use"
+    _ROUTE_PREFIX = CLAUDE_COMPUTER_USE_TASK_ROUTE_PREFIX
 
     def __init__(self, client):
         self._client = client

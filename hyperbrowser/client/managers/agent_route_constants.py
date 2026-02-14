@@ -1,0 +1,5 @@
+BROWSER_USE_TASK_ROUTE_PREFIX = "/task/browser-use"
+HYPER_AGENT_TASK_ROUTE_PREFIX = "/task/hyper-agent"
+GEMINI_COMPUTER_USE_TASK_ROUTE_PREFIX = "/task/gemini-computer-use"
+CLAUDE_COMPUTER_USE_TASK_ROUTE_PREFIX = "/task/claude-computer-use"
+CUA_TASK_ROUTE_PREFIX = "/task/cua"

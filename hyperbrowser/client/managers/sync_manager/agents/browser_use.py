@@ -2,6 +2,7 @@ from typing import Optional
 
 from ...agent_status_utils import is_agent_terminal_status
 from ...browser_use_payload_utils import build_browser_use_start_payload
+from ...agent_route_constants import BROWSER_USE_TASK_ROUTE_PREFIX
 from ...agent_stop_utils import stop_agent_task
 from ...agent_task_read_utils import get_agent_task, get_agent_task_status
 from ...job_wait_utils import wait_for_job_result_with_defaults
@@ -23,7 +24,7 @@ from .....models import BasicResponse
 
 
 class BrowserUseManager:
-    _ROUTE_PREFIX = "/task/browser-use"
+    _ROUTE_PREFIX = BROWSER_USE_TASK_ROUTE_PREFIX
 
     def __init__(self, client):
         self._client = client

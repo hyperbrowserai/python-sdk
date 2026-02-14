@@ -25,7 +25,9 @@ ASYNC_MODULES = (
 def test_sync_agent_managers_use_shared_read_helpers():
     for module_path in SYNC_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
+        assert "agent_route_constants import" in module_text
         assert "_ROUTE_PREFIX = " in module_text
+        assert '_ROUTE_PREFIX = "/task/' not in module_text
         assert "_build_url(self._ROUTE_PREFIX)" in module_text
         assert "get_agent_task(" in module_text
         assert "get_agent_task_status(" in module_text
@@ -37,7 +39,9 @@ def test_sync_agent_managers_use_shared_read_helpers():
 def test_async_agent_managers_use_shared_read_helpers():
     for module_path in ASYNC_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
+        assert "agent_route_constants import" in module_text
         assert "_ROUTE_PREFIX = " in module_text
+        assert '_ROUTE_PREFIX = "/task/' not in module_text
         assert "_build_url(self._ROUTE_PREFIX)" in module_text
         assert "get_agent_task_async(" in module_text
         assert "get_agent_task_status_async(" in module_text

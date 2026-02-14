@@ -25,7 +25,9 @@ ASYNC_MODULES = (
 def test_sync_agent_managers_use_shared_stop_helper():
     for module_path in SYNC_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
+        assert "agent_route_constants import" in module_text
         assert "_ROUTE_PREFIX = " in module_text
+        assert '_ROUTE_PREFIX = "/task/' not in module_text
         assert "stop_agent_task(" in module_text
         assert "route_prefix=self._ROUTE_PREFIX" in module_text
         assert 'route_prefix="/task/' not in module_text
@@ -35,7 +37,9 @@ def test_sync_agent_managers_use_shared_stop_helper():
 def test_async_agent_managers_use_shared_stop_helper():
     for module_path in ASYNC_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
+        assert "agent_route_constants import" in module_text
         assert "_ROUTE_PREFIX = " in module_text
+        assert '_ROUTE_PREFIX = "/task/' not in module_text
         assert "stop_agent_task_async(" in module_text
         assert "route_prefix=self._ROUTE_PREFIX" in module_text
         assert 'route_prefix="/task/' not in module_text
