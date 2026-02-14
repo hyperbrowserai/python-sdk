@@ -282,6 +282,25 @@ def test_format_file_path_for_error_truncates_long_paths():
     assert display_path == "ab..."
 
 
+def test_format_file_path_for_error_uses_default_for_non_int_max_length():
+    display_path = format_file_path_for_error("abcdef", max_length="3")  # type: ignore[arg-type]
+
+    assert display_path == "abcdef"
+
+
+def test_format_file_path_for_error_uses_default_for_non_positive_max_length():
+    display_path = format_file_path_for_error("abcdef", max_length=0)
+    assert display_path == "abcdef"
+    display_path = format_file_path_for_error("abcdef", max_length=-10)
+    assert display_path == "abcdef"
+
+
+def test_format_file_path_for_error_uses_default_for_bool_max_length():
+    display_path = format_file_path_for_error("abcdef", max_length=False)  # type: ignore[arg-type]
+
+    assert display_path == "abcdef"
+
+
 def test_format_file_path_for_error_falls_back_for_non_string_values():
     assert format_file_path_for_error(object()) == "<provided path>"
 

@@ -4,7 +4,7 @@ from os import PathLike
 from typing import BinaryIO, Iterator, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.type_utils import is_plain_string
+from hyperbrowser.type_utils import is_plain_int, is_plain_string
 
 _MAX_FILE_PATH_DISPLAY_LENGTH = 200
 
@@ -14,6 +14,8 @@ def format_file_path_for_error(
     *,
     max_length: int = _MAX_FILE_PATH_DISPLAY_LENGTH,
 ) -> str:
+    if not is_plain_int(max_length) or max_length <= 0:
+        max_length = _MAX_FILE_PATH_DISPLAY_LENGTH
     try:
         path_value = (
             os.fspath(file_path)
