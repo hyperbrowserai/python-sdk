@@ -100,6 +100,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_ast_import_utils_module_import_boundary.py` (shared AST import-helper module import boundary enforcement across test modules),
   - `tests/test_ast_module_import_helper_import_boundary.py` (shared AST module-import helper import boundary enforcement across test modules),
   - `tests/test_ast_module_import_helper_usage.py` (shared AST module-import helper usage enforcement across AST boundary guard suites),
+  - `tests/test_ast_quaternary_import_helper_import_boundary.py` (shared AST quaternary import-helper import boundary enforcement across test modules),
+  - `tests/test_ast_quaternary_import_helper_usage.py` (shared AST quaternary import-helper usage enforcement across AST boundary guard suites),
   - `tests/test_ast_secondary_import_helper_usage.py` (shared AST secondary import-helper usage enforcement across AST boundary guard suites),
   - `tests/test_ast_symbol_import_helper_import_boundary.py` (shared AST symbol-import helper import boundary enforcement across test modules),
   - `tests/test_ast_symbol_import_helper_usage.py` (shared AST symbol-import helper usage enforcement across AST boundary guard suites),
