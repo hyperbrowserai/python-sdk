@@ -10,7 +10,7 @@ def _validate_error_message_text(message_value: str, *, field_name: str) -> None
         raise HyperbrowserError(f"{field_name} must be a string")
     try:
         normalized_message = message_value.strip()
-        if not isinstance(normalized_message, str):
+        if type(normalized_message) is not str:
             raise TypeError(f"normalized {field_name} must be a string")
         is_empty = len(normalized_message) == 0
     except HyperbrowserError:
@@ -67,7 +67,7 @@ def ensure_existing_file_path(
         raise HyperbrowserError("file_path must resolve to a string path")
     try:
         stripped_normalized_path = normalized_path.strip()
-        if not isinstance(stripped_normalized_path, str):
+        if type(stripped_normalized_path) is not str:
             raise TypeError("normalized file_path must be a string")
     except HyperbrowserError:
         raise

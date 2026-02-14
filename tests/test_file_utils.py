@@ -361,13 +361,39 @@ def test_ensure_existing_file_path_wraps_missing_message_strip_runtime_errors(
     assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
+def test_ensure_existing_file_path_wraps_missing_message_string_subclass_strip_results(
+    tmp_path: Path,
+):
+    class _BrokenMissingMessage(str):
+        class _NormalizedMessage(str):
+            pass
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedMessage("missing")
+
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize missing_file_message"
+    ) as exc_info:
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message=_BrokenMissingMessage("missing"),
+            not_file_message="not-file",
+        )
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
 def test_ensure_existing_file_path_wraps_missing_message_character_validation_failures(
     tmp_path: Path,
 ):
     class _BrokenMissingMessage(str):
         def strip(self, chars=None):  # type: ignore[override]
             _ = chars
-            return self
+            return "missing"
 
         def __iter__(self):
             raise RuntimeError("missing message iteration exploded")
@@ -433,6 +459,32 @@ def test_ensure_existing_file_path_wraps_not_file_message_strip_runtime_errors(
     assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
+def test_ensure_existing_file_path_wraps_not_file_message_string_subclass_strip_results(
+    tmp_path: Path,
+):
+    class _BrokenNotFileMessage(str):
+        class _NormalizedMessage(str):
+            pass
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedMessage("not-file")
+
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize not_file_message"
+    ) as exc_info:
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message=_BrokenNotFileMessage("not-file"),
+        )
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
 def test_ensure_existing_file_path_wraps_file_path_strip_runtime_errors():
     class _BrokenPath(str):
         def strip(self, chars=None):  # type: ignore[override]
@@ -447,6 +499,25 @@ def test_ensure_existing_file_path_wraps_file_path_strip_runtime_errors():
         )
 
     assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_ensure_existing_file_path_wraps_file_path_string_subclass_strip_results():
+    class _BrokenPath(str):
+        class _NormalizedPath(str):
+            pass
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedPath("/tmp/path.txt")
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        ensure_existing_file_path(
+            _BrokenPath("/tmp/path.txt"),
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_ensure_existing_file_path_wraps_file_path_contains_runtime_errors():
@@ -466,7 +537,7 @@ def test_ensure_existing_file_path_wraps_file_path_contains_runtime_errors():
             not_file_message="not-file",
         )
 
-    assert isinstance(exc_info.value.original_error, RuntimeError)
+    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_ensure_existing_file_path_wraps_file_path_character_iteration_runtime_errors():
@@ -489,4 +560,4 @@ def test_ensure_existing_file_path_wraps_file_path_character_iteration_runtime_e
             not_file_message="not-file",
         )
 
-    assert isinstance(exc_info.value.original_error, RuntimeError)
+    assert isinstance(exc_info.value.original_error, TypeError)
