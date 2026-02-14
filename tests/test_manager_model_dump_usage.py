@@ -1,6 +1,6 @@
-import ast
 from pathlib import Path
 
+from tests.guardrail_ast_utils import collect_attribute_call_lines, read_module_ast
 
 MANAGERS_DIR = (
     Path(__file__).resolve().parents[1] / "hyperbrowser" / "client" / "managers"
@@ -19,15 +19,8 @@ def test_manager_modules_use_shared_serialization_helper_only():
     offending_calls: list[str] = []
 
     for path in _manager_python_files():
-        source = path.read_text(encoding="utf-8")
-        module = ast.parse(source, filename=str(path))
-        for node in ast.walk(module):
-            if not isinstance(node, ast.Call):
-                continue
-            if not isinstance(node.func, ast.Attribute):
-                continue
-            if node.func.attr != "model_dump":
-                continue
-            offending_calls.append(f"{path.relative_to(MANAGERS_DIR)}:{node.lineno}")
+        module = read_module_ast(path)
+        for line in collect_attribute_call_lines(module, "model_dump"):
+            offending_calls.append(f"{path.relative_to(MANAGERS_DIR)}:{line}")
 
     assert offending_calls == []
