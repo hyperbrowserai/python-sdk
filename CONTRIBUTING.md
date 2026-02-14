@@ -85,6 +85,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_docs_python3_commands.py` (`README`/`CONTRIBUTING`/examples python3 command consistency enforcement),
   - `tests/test_example_run_instructions.py` (example run-instruction consistency enforcement),
   - `tests/test_example_sync_async_parity.py` (sync/async example parity enforcement),
+  - `tests/test_examples_naming_convention.py` (example sync/async prefix naming enforcement),
   - `tests/test_examples_syntax.py` (example script syntax guardrail),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
