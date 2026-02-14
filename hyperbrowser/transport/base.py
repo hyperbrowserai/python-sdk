@@ -51,6 +51,44 @@ def _format_mapping_key_for_error(key: str) -> str:
     return "<blank key>"
 
 
+def _normalize_transport_api_key(api_key: str) -> str:
+    if not isinstance(api_key, str):
+        raise HyperbrowserError("api_key must be a string")
+
+    try:
+        normalized_api_key = api_key.strip()
+        if not isinstance(normalized_api_key, str):
+            raise TypeError("normalized api_key must be a string")
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to normalize api_key",
+            original_error=exc,
+        ) from exc
+
+    if not normalized_api_key:
+        raise HyperbrowserError("api_key must not be empty")
+
+    try:
+        contains_control_character = any(
+            ord(character) < 32 or ord(character) == 127
+            for character in normalized_api_key
+        )
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to validate api_key characters",
+            original_error=exc,
+        ) from exc
+
+    if contains_control_character:
+        raise HyperbrowserError("api_key must not contain control characters")
+
+    return normalized_api_key
+
+
 class APIResponse(Generic[T]):
     """
     Wrapper for API responses to standardize sync/async handling.

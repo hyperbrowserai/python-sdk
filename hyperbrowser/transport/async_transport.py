@@ -4,7 +4,7 @@ from typing import Mapping, Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.header_utils import merge_headers
 from hyperbrowser.version import __version__
-from .base import APIResponse, AsyncTransportStrategy
+from .base import APIResponse, AsyncTransportStrategy, _normalize_transport_api_key
 from .error_utils import (
     extract_error_message,
     format_generic_request_failure_message,
@@ -19,16 +19,7 @@ class AsyncTransport(AsyncTransportStrategy):
     _MAX_HTTP_STATUS_CODE = 599
 
     def __init__(self, api_key: str, headers: Optional[Mapping[str, str]] = None):
-        if not isinstance(api_key, str):
-            raise HyperbrowserError("api_key must be a string")
-        normalized_api_key = api_key.strip()
-        if not normalized_api_key:
-            raise HyperbrowserError("api_key must not be empty")
-        if any(
-            ord(character) < 32 or ord(character) == 127
-            for character in normalized_api_key
-        ):
-            raise HyperbrowserError("api_key must not contain control characters")
+        normalized_api_key = _normalize_transport_api_key(api_key)
         merged_headers = merge_headers(
             {
                 "x-api-key": normalized_api_key,
