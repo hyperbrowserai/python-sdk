@@ -122,6 +122,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_display_blank_key_literal_boundary.py` (blank-key display literal centralization in `hyperbrowser/display_utils.py`),
   - `tests/test_display_helper_usage.py` (display/key-format helper usage),
   - `tests/test_display_key_format_import_boundary.py` (display key-format helper import boundary enforcement),
+  - `tests/test_display_normalize_import_boundary.py` (display normalization helper import boundary enforcement),
   - `tests/test_docs_python3_commands.py` (`README`/`CONTRIBUTING`/examples python3 command consistency enforcement),
   - `tests/test_example_run_instructions.py` (example run-instruction consistency enforcement),
   - `tests/test_example_sync_async_parity.py` (sync/async example parity enforcement),
