@@ -553,6 +553,29 @@ def test_post_model_request_to_endpoint_posts_and_parses_response():
     assert captured["parse_kwargs"]["operation_name"] == "endpoint create"
 
 
+def test_post_model_response_data_to_endpoint_posts_and_returns_raw_data():
+    captured = {}
+
+    class _SyncTransport:
+        def post(self, endpoint, data):
+            captured["endpoint"] = endpoint
+            captured["data"] = data
+            return SimpleNamespace(data={"id": "endpoint-resource-raw"})
+
+    class _Client:
+        transport = _SyncTransport()
+
+    result = model_request_utils.post_model_response_data_to_endpoint(
+        client=_Client(),
+        endpoint="https://api.example.test/resource",
+        data={"name": "value"},
+    )
+
+    assert result == {"id": "endpoint-resource-raw"}
+    assert captured["endpoint"] == "https://api.example.test/resource"
+    assert captured["data"] == {"name": "value"}
+
+
 def test_post_model_request_to_endpoint_async_posts_and_parses_response():
     captured = {}
 
@@ -590,3 +613,28 @@ def test_post_model_request_to_endpoint_async_posts_and_parses_response():
     assert captured["data"] == {"name": "value"}
     assert captured["parse_data"] == {"id": "endpoint-resource-async"}
     assert captured["parse_kwargs"]["operation_name"] == "endpoint create"
+
+
+def test_post_model_response_data_to_endpoint_async_posts_and_returns_raw_data():
+    captured = {}
+
+    class _AsyncTransport:
+        async def post(self, endpoint, data):
+            captured["endpoint"] = endpoint
+            captured["data"] = data
+            return SimpleNamespace(data={"id": "endpoint-resource-raw-async"})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+    result = asyncio.run(
+        model_request_utils.post_model_response_data_to_endpoint_async(
+            client=_Client(),
+            endpoint="https://api.example.test/resource",
+            data={"name": "value"},
+        )
+    )
+
+    assert result == {"id": "endpoint-resource-raw-async"}
+    assert captured["endpoint"] == "https://api.example.test/resource"
+    assert captured["data"] == {"name": "value"}

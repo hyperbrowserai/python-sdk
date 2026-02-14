@@ -279,15 +279,29 @@ def post_model_request_to_endpoint(
     model: Type[T],
     operation_name: str,
 ) -> T:
+    response_data = post_model_response_data_to_endpoint(
+        client=client,
+        endpoint=endpoint,
+        data=data,
+    )
+    return parse_response_model(
+        response_data,
+        model=model,
+        operation_name=operation_name,
+    )
+
+
+def post_model_response_data_to_endpoint(
+    *,
+    client: Any,
+    endpoint: str,
+    data: Dict[str, Any],
+) -> Any:
     response = client.transport.post(
         endpoint,
         data=data,
     )
-    return parse_response_model(
-        response.data,
-        model=model,
-        operation_name=operation_name,
-    )
+    return response.data
 
 
 async def post_model_request_to_endpoint_async(
@@ -298,12 +312,26 @@ async def post_model_request_to_endpoint_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
+    response_data = await post_model_response_data_to_endpoint_async(
+        client=client,
+        endpoint=endpoint,
+        data=data,
+    )
+    return parse_response_model(
+        response_data,
+        model=model,
+        operation_name=operation_name,
+    )
+
+
+async def post_model_response_data_to_endpoint_async(
+    *,
+    client: Any,
+    endpoint: str,
+    data: Dict[str, Any],
+) -> Any:
     response = await client.transport.post(
         endpoint,
         data=data,
     )
-    return parse_response_model(
-        response.data,
-        model=model,
-        operation_name=operation_name,
-    )
+    return response.data
