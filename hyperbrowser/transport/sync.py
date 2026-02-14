@@ -58,7 +58,7 @@ class SyncTransport(SyncTransportStrategy):
             try:
                 if not response.content:
                     return APIResponse.from_status(normalized_status_code)
-                return APIResponse(response.json())
+                return APIResponse(response.json(), status_code=normalized_status_code)
             except Exception as e:
                 if normalized_status_code >= 400:
                     try:

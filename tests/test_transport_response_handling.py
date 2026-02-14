@@ -37,6 +37,18 @@ class _BrokenJsonSuccessResponse:
         raise RuntimeError("broken json")
 
 
+class _JsonCreatedResponse:
+    status_code = 201
+    content = b'{"created": true}'
+    text = '{"created": true}'
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return {"created": True}
+
+
 class _BrokenJsonErrorResponse:
     status_code = 500
     content = b"{broken-json}"
@@ -147,6 +159,19 @@ def test_sync_handle_response_with_non_json_success_body_returns_status_only():
 
         assert api_response.status_code == 200
         assert api_response.data is None
+    finally:
+        transport.close()
+
+
+def test_sync_handle_response_preserves_non_200_success_status_codes():
+    transport = SyncTransport(api_key="test-key")
+    try:
+        api_response = transport._handle_response(
+            _JsonCreatedResponse()  # type: ignore[arg-type]
+        )
+
+        assert api_response.status_code == 201
+        assert api_response.data == {"created": True}
     finally:
         transport.close()
 
@@ -326,6 +351,22 @@ def test_async_handle_response_with_non_json_success_body_returns_status_only():
 
             assert api_response.status_code == 200
             assert api_response.data is None
+        finally:
+            await transport.close()
+
+    asyncio.run(run())
+
+
+def test_async_handle_response_preserves_non_200_success_status_codes():
+    async def run() -> None:
+        transport = AsyncTransport(api_key="test-key")
+        try:
+            api_response = await transport._handle_response(
+                _JsonCreatedResponse()  # type: ignore[arg-type]
+            )
+
+            assert api_response.status_code == 201
+            assert api_response.data == {"created": True}
         finally:
             await transport.close()
 
