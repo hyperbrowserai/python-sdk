@@ -21,6 +21,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_ast_function_source_import_boundary.py",
     "tests/test_ast_function_source_utils.py",
     "tests/test_ast_import_helper_import_boundary.py",
+    "tests/test_ast_import_helper_secondary_import_boundary.py",
     "tests/test_ast_import_helper_usage.py",
     "tests/test_ast_import_utils.py",
     "tests/test_guardrail_ast_utils.py",
