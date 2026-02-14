@@ -3,7 +3,7 @@ from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.type_utils import is_string_subclass_instance
+from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 from ...file_utils import ensure_existing_file_path
 from ..serialization_utils import serialize_model_dump_to_dict
 from ..session_utils import (
@@ -166,7 +166,7 @@ class SessionManager:
     async def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
-        if type(file_input) is str or isinstance(file_input, PathLike):
+        if is_plain_string(file_input) or isinstance(file_input, PathLike):
             try:
                 raw_file_path = os.fspath(file_input)
             except HyperbrowserError:

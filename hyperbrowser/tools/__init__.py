@@ -9,7 +9,7 @@ from hyperbrowser.mapping_utils import (
     copy_mapping_values_by_string_keys,
     read_string_mapping_keys,
 )
-from hyperbrowser.type_utils import is_string_subclass_instance
+from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
@@ -86,12 +86,12 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
     normalized_params = _to_param_dict(params)
     schema_value = normalized_params.get("schema")
     if schema_value is not None and not (
-        type(schema_value) is str or isinstance(schema_value, MappingABC)
+        is_plain_string(schema_value) or isinstance(schema_value, MappingABC)
     ):
         raise HyperbrowserError(
             "Extract tool `schema` must be an object or JSON string"
         )
-    if type(schema_value) is str:
+    if is_plain_string(schema_value):
         try:
             parsed_schema = json.loads(schema_value)
         except HyperbrowserError:
@@ -121,7 +121,7 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
     for key in param_keys:
         try:
             normalized_key = key.strip()
-            if type(normalized_key) is not str:
+            if not is_plain_string(normalized_key):
                 raise TypeError("normalized tool param key must be a string")
             is_empty_key = len(normalized_key) == 0
         except HyperbrowserError:
@@ -176,7 +176,7 @@ def _serialize_extract_tool_data(data: Any) -> str:
         return ""
     try:
         serialized_data = json.dumps(data, allow_nan=False)
-        if type(serialized_data) is not str:
+        if not is_plain_string(serialized_data):
             raise TypeError("serialized extract tool response data must be a string")
         return serialized_data
     except HyperbrowserError:
@@ -195,10 +195,10 @@ def _normalize_optional_text_field_value(
 ) -> str:
     if field_value is None:
         return ""
-    if type(field_value) is str:
+    if is_plain_string(field_value):
         try:
             normalized_field_value = "".join(character for character in field_value)
-            if type(normalized_field_value) is not str:
+            if not is_plain_string(normalized_field_value):
                 raise TypeError("normalized text field must be a string")
             return normalized_field_value
         except HyperbrowserError:
@@ -213,7 +213,7 @@ def _normalize_optional_text_field_value(
     if isinstance(field_value, (bytes, bytearray, memoryview)):
         try:
             normalized_field_value = memoryview(field_value).tobytes().decode("utf-8")
-            if type(normalized_field_value) is not str:
+            if not is_plain_string(normalized_field_value):
                 raise TypeError("normalized text field must be a string")
             return normalized_field_value
         except (TypeError, ValueError, UnicodeDecodeError) as exc:

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Union, List, Optional
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.type_utils import is_string_subclass_instance
+from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 from ..response_utils import parse_response_model
 from ..serialization_utils import serialize_model_dump_to_dict
 from hyperbrowser.models import (
@@ -32,7 +32,7 @@ class ComputerActionManager:
     async def _execute_request(
         self, session: Union[SessionDetail, str], params: ComputerActionParams
     ) -> ComputerActionResponse:
-        if type(session) is str:
+        if is_plain_string(session):
             session = await self._client.sessions.get(session)
         elif is_string_subclass_instance(session):
             raise HyperbrowserError(
@@ -53,11 +53,11 @@ class ComputerActionManager:
             raise HyperbrowserError(
                 "Computer action endpoint not available for this session"
             )
-        if type(computer_action_endpoint) is not str:
+        if not is_plain_string(computer_action_endpoint):
             raise HyperbrowserError("session computer_action_endpoint must be a string")
         try:
             normalized_computer_action_endpoint = computer_action_endpoint.strip()
-            if type(normalized_computer_action_endpoint) is not str:
+            if not is_plain_string(normalized_computer_action_endpoint):
                 raise TypeError("normalized computer_action_endpoint must be a string")
         except HyperbrowserError:
             raise
