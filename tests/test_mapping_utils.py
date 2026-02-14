@@ -25,6 +25,21 @@ class _BrokenKeysMapping(Mapping[object, object]):
         raise RuntimeError("broken keys")
 
 
+class _HyperbrowserKeysFailureMapping(Mapping[object, object]):
+    def __getitem__(self, key: object) -> object:
+        _ = key
+        return "value"
+
+    def __iter__(self) -> Iterator[object]:
+        return iter(())
+
+    def __len__(self) -> int:
+        return 0
+
+    def keys(self):  # type: ignore[override]
+        raise HyperbrowserError("custom keys failure")
+
+
 class _BrokenValueMapping(Mapping[object, object]):
     def __getitem__(self, key: object) -> object:
         _ = key
@@ -164,6 +179,35 @@ def test_read_string_mapping_keys_rejects_non_string_keys():
                 f"non-string key: {type(key).__name__}"
             ),
         )
+
+
+def test_read_string_mapping_keys_rejects_string_subclass_keys():
+    class _StringKey(str):
+        pass
+
+    with pytest.raises(HyperbrowserError, match="non-string key: _StringKey"):
+        read_string_mapping_keys(
+            {_StringKey("key"): "value"},
+            expected_mapping_error="expected mapping",
+            read_keys_error="failed keys",
+            non_string_key_error_builder=lambda key: (
+                f"non-string key: {type(key).__name__}"
+            ),
+        )
+
+
+def test_read_string_mapping_keys_preserves_hyperbrowser_key_read_failures():
+    with pytest.raises(HyperbrowserError, match="custom keys failure") as exc_info:
+        read_string_mapping_keys(
+            _HyperbrowserKeysFailureMapping(),
+            expected_mapping_error="expected mapping",
+            read_keys_error="failed keys",
+            non_string_key_error_builder=lambda key: (
+                f"non-string key: {type(key).__name__}"
+            ),
+        )
+
+    assert exc_info.value.original_error is None
 
 
 def test_copy_mapping_values_by_string_keys_returns_selected_values():
