@@ -3,25 +3,14 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_ast_function_source_helper_usage import (
+    AST_FUNCTION_SOURCE_GUARD_MODULES,
+)
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_AST_FUNCTION_SOURCE_IMPORTER_MODULES = (
-    "tests/test_agent_request_wrapper_internal_reuse.py",
-    "tests/test_ast_function_source_utils.py",
-    "tests/test_extension_request_function_parse_boundary.py",
-    "tests/test_job_request_route_builder_internal_reuse.py",
-    "tests/test_job_request_wrapper_internal_reuse.py",
-    "tests/test_model_request_function_parse_boundary.py",
-    "tests/test_model_request_function_transport_boundary.py",
-    "tests/test_model_request_wrapper_internal_reuse.py",
-    "tests/test_request_wrapper_internal_reuse.py",
-    "tests/test_session_recordings_follow_redirects_boundary.py",
-    "tests/test_session_request_function_parse_boundary.py",
-    "tests/test_session_request_wrapper_internal_reuse.py",
-    "tests/test_session_resource_wrapper_internal_reuse.py",
-    "tests/test_web_request_wrapper_internal_reuse.py",
-)
+EXPECTED_EXTRA_IMPORTER_MODULES = ("tests/test_ast_function_source_utils.py",)
 
 def _imports_collect_function_sources(module_text: str) -> bool:
     module_ast = ast.parse(module_text)
@@ -43,4 +32,7 @@ def test_ast_function_source_helper_imports_are_centralized():
             continue
         discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_AST_FUNCTION_SOURCE_IMPORTER_MODULES)
+    expected_modules = sorted(
+        [*AST_FUNCTION_SOURCE_GUARD_MODULES, *EXPECTED_EXTRA_IMPORTER_MODULES]
+    )
+    assert discovered_modules == expected_modules
