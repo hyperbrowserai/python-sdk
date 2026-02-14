@@ -80,6 +80,50 @@ class HyperbrowserBase:
         self.config = config
         self.transport = transport(config.api_key, headers=config.headers)
 
+    @staticmethod
+    def _parse_url_components(
+        url_value: str, *, component_label: str
+    ) -> tuple[str, str, str, str, str]:
+        try:
+            parsed_url = urlparse(url_value)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to parse {component_label}",
+                original_error=exc,
+            ) from exc
+        try:
+            parsed_url_scheme = parsed_url.scheme
+            parsed_url_netloc = parsed_url.netloc
+            parsed_url_path = parsed_url.path
+            parsed_url_query = parsed_url.query
+            parsed_url_fragment = parsed_url.fragment
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to parse {component_label} components",
+                original_error=exc,
+            ) from exc
+        if (
+            type(parsed_url_scheme) is not str
+            or type(parsed_url_netloc) is not str
+            or type(parsed_url_path) is not str
+            or type(parsed_url_query) is not str
+            or type(parsed_url_fragment) is not str
+        ):
+            raise HyperbrowserError(
+                f"{component_label} parser returned invalid URL components"
+            )
+        return (
+            parsed_url_scheme,
+            parsed_url_netloc,
+            parsed_url_path,
+            parsed_url_query,
+            parsed_url_fragment,
+        )
+
     def _build_url(self, path: str) -> str:
         if not isinstance(path, str):
             raise HyperbrowserError("path must be a string")
@@ -94,10 +138,16 @@ class HyperbrowserBase:
             raise HyperbrowserError("path must not contain backslashes")
         if "\n" in stripped_path or "\r" in stripped_path:
             raise HyperbrowserError("path must not contain newline characters")
-        parsed_path = urlparse(stripped_path)
-        if parsed_path.scheme:
+        (
+            parsed_path_scheme,
+            _parsed_path_netloc,
+            _parsed_path_path,
+            parsed_path_query,
+            parsed_path_fragment,
+        ) = self._parse_url_components(stripped_path, component_label="path")
+        if parsed_path_scheme:
             raise HyperbrowserError("path must be a relative API path")
-        if parsed_path.fragment:
+        if parsed_path_fragment:
             raise HyperbrowserError("path must not include URL fragments")
         raw_query_component = (
             stripped_path.split("?", 1)[1] if "?" in stripped_path else ""
@@ -115,17 +165,20 @@ class HyperbrowserBase:
             )
         if any(
             character.isspace() or ord(character) < 32 or ord(character) == 127
-            for character in parsed_path.query
+            for character in parsed_path_query
         ):
             raise HyperbrowserError(
                 "path query must not contain unencoded whitespace or control characters"
             )
         normalized_path = f"/{stripped_path.lstrip('/')}"
-        normalized_parts = urlparse(normalized_path)
-        normalized_path_only = normalized_parts.path
-        normalized_query_suffix = (
-            f"?{normalized_parts.query}" if normalized_parts.query else ""
-        )
+        (
+            _normalized_path_scheme,
+            _normalized_path_netloc,
+            normalized_path_only,
+            normalized_path_query,
+            _normalized_path_fragment,
+        ) = self._parse_url_components(normalized_path, component_label="normalized path")
+        normalized_query_suffix = f"?{normalized_path_query}" if normalized_path_query else ""
         decoded_path = ClientConfig._decode_url_component_with_limit(
             normalized_path_only, component_label="path"
         )
@@ -149,8 +202,14 @@ class HyperbrowserBase:
         if any(segment in {".", ".."} for segment in normalized_segments):
             raise HyperbrowserError("path must not contain relative path segments")
         normalized_base_url = ClientConfig.normalize_base_url(self.config.base_url)
-        parsed_base_url = urlparse(normalized_base_url)
-        base_has_api_suffix = parsed_base_url.path.rstrip("/").endswith("/api")
+        (
+            _base_url_scheme,
+            _base_url_netloc,
+            parsed_base_url_path,
+            _base_url_query,
+            _base_url_fragment,
+        ) = self._parse_url_components(normalized_base_url, component_label="base_url")
+        base_has_api_suffix = parsed_base_url_path.rstrip("/").endswith("/api")
 
         if normalized_path_only == "/api" or normalized_path_only.startswith("/api/"):
             if base_has_api_suffix:
