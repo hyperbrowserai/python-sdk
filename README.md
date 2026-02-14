@@ -262,6 +262,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_extract.py`
 - `examples/async_scrape.py`
 - `examples/async_session_list.py`
+- `examples/async_web_crawl.py`
 - `examples/async_web_fetch.py`
 - `examples/async_web_search.py`
 - `examples/sync_batch_fetch.py`
@@ -269,6 +270,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/sync_extract.py`
 - `examples/sync_scrape.py`
 - `examples/sync_session_list.py`
+- `examples/sync_web_crawl.py`
 - `examples/sync_web_fetch.py`
 - `examples/sync_web_search.py`
 
