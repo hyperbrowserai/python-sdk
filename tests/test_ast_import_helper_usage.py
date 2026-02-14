@@ -18,6 +18,9 @@ def test_ast_import_guard_modules_reuse_shared_import_helper():
         if "ast_import_utils import imports_collect_function_sources" not in module_text:
             violating_modules.append(module_path)
             continue
+        if "imports_collect_function_sources(" not in module_text:
+            violating_modules.append(module_path)
+            continue
         if "def _imports_collect_function_sources" in module_text:
             violating_modules.append(module_path)
 
