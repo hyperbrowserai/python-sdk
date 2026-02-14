@@ -106,7 +106,7 @@ def _normalize_request_method(method: Any) -> str:
         except Exception:
             return "UNKNOWN"
     try:
-        if not isinstance(raw_method, str):
+        if type(raw_method) is not str:
             return "UNKNOWN"
         stripped_method = raw_method.strip()
         if type(stripped_method) is not str or not stripped_method:
@@ -152,6 +152,8 @@ def _normalize_request_url(url: Any) -> str:
             return "unknown URL"
 
     try:
+        if type(raw_url) is not str:
+            return "unknown URL"
         normalized_url = raw_url.strip()
         if type(normalized_url) is not str or not normalized_url:
             return "unknown URL"

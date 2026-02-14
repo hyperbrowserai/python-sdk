@@ -316,6 +316,14 @@ class _MessageStringSubclass(str):
     pass
 
 
+class _MethodStringSubclass(str):
+    pass
+
+
+class _UrlStringSubclass(str):
+    pass
+
+
 def test_extract_request_error_context_uses_unknown_when_request_unset():
     method, url = extract_request_error_context(httpx.RequestError("network down"))
 
@@ -699,6 +707,15 @@ def test_format_generic_request_failure_message_supports_url_like_values():
     assert message == "Request GET https://example.com/path failed"
 
 
+def test_format_generic_request_failure_message_rejects_string_subclass_url_values():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=_UrlStringSubclass("https://example.com/path"),
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
 def test_format_generic_request_failure_message_supports_utf8_memoryview_urls():
     message = format_generic_request_failure_message(
         method="GET",
@@ -763,6 +780,15 @@ def test_format_generic_request_failure_message_supports_stringifiable_method_va
     )
 
     assert message == "Request DELETE https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_rejects_string_subclass_method_values():
+    message = format_generic_request_failure_message(
+        method=_MethodStringSubclass("delete"),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
 
 
 def test_format_generic_request_failure_message_supports_memoryview_method_values():
