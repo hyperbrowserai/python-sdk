@@ -9,7 +9,32 @@ on:
       - "cursor/**"
 
 jobs:
-  lint-test-build:
+  architecture-guards:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            poetry.lock
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          make install
+
+      - name: Architecture guard checks
+        run: make architecture-check
+
+  lint-test:
+    needs: architecture-guards
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -43,11 +68,29 @@ jobs:
       - name: Compile sources
         run: make compile
 
-      - name: Architecture guard checks
-        run: make architecture-check
-
       - name: Test
         run: make test
+
+  build:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            poetry.lock
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          make install
 
       - name: Build package
         run: make build
