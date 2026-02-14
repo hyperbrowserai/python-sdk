@@ -247,12 +247,16 @@ class SessionManager:
     ) -> BasicResponse:
         params_obj: UpdateSessionProfileParams
 
-        if isinstance(params, UpdateSessionProfileParams):
+        if type(params) is UpdateSessionProfileParams:
             if persist_changes is not None:
                 raise HyperbrowserError(
                     "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
                 )
             params_obj = params
+        elif isinstance(params, UpdateSessionProfileParams):
+            raise HyperbrowserError(
+                "update_profile_params() requires a plain UpdateSessionProfileParams object."
+            )
         elif isinstance(params, bool):
             if persist_changes is not None:
                 raise HyperbrowserError(

@@ -95,6 +95,16 @@ def test_sync_update_profile_params_rejects_conflicting_arguments():
         )
 
 
+def test_sync_update_profile_params_rejects_subclass_params():
+    class _Params(UpdateSessionProfileParams):
+        pass
+
+    manager = SyncSessionManager(_SyncClient())
+
+    with pytest.raises(HyperbrowserError, match="plain UpdateSessionProfileParams"):
+        manager.update_profile_params("session-1", _Params(persist_changes=True))
+
+
 def test_async_update_profile_params_bool_warns_and_serializes():
     AsyncSessionManager._has_warned_update_profile_params_boolean_deprecated = False
     client = _AsyncClient()
@@ -133,6 +143,22 @@ def test_async_update_profile_params_rejects_conflicting_arguments():
                 "session-1",
                 UpdateSessionProfileParams(persist_changes=True),
                 persist_changes=True,
+            )
+
+    asyncio.run(run())
+
+
+def test_async_update_profile_params_rejects_subclass_params():
+    class _Params(UpdateSessionProfileParams):
+        pass
+
+    manager = AsyncSessionManager(_AsyncClient())
+
+    async def run() -> None:
+        with pytest.raises(HyperbrowserError, match="plain UpdateSessionProfileParams"):
+            await manager.update_profile_params(
+                "session-1",
+                _Params(persist_changes=True),
             )
 
     asyncio.run(run())
