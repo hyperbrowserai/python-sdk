@@ -2,12 +2,23 @@ from typing import List
 
 from ...file_utils import open_binary_file
 from ..extension_create_utils import normalize_extension_create_input
-from ..extension_utils import parse_extension_list_response_data
-from ..response_utils import parse_response_model
+from ..extension_operation_metadata import EXTENSION_OPERATION_METADATA
+from ..extension_request_utils import (
+    create_extension_resource,
+    list_extension_resources,
+)
+from ..extension_route_constants import (
+    EXTENSION_CREATE_ROUTE_PATH,
+    EXTENSION_LIST_ROUTE_PATH,
+)
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
 
 
 class ExtensionManager:
+    _OPERATION_METADATA = EXTENSION_OPERATION_METADATA
+    _CREATE_ROUTE_PATH = EXTENSION_CREATE_ROUTE_PATH
+    _LIST_ROUTE_PATH = EXTENSION_LIST_ROUTE_PATH
+
     def __init__(self, client):
         self._client = client
 
@@ -18,19 +29,17 @@ class ExtensionManager:
             file_path,
             open_error_message=f"Failed to open extension file at path: {file_path}",
         ) as extension_file:
-            response = self._client.transport.post(
-                self._client._build_url("/extensions/add"),
-                data=payload,
-                files={"file": extension_file},
+            return create_extension_resource(
+                client=self._client,
+                route_path=self._CREATE_ROUTE_PATH,
+                payload=payload,
+                file_stream=extension_file,
+                model=ExtensionResponse,
+                operation_name=self._OPERATION_METADATA.create_operation_name,
             )
-        return parse_response_model(
-            response.data,
-            model=ExtensionResponse,
-            operation_name="create extension",
-        )
 
     def list(self) -> List[ExtensionResponse]:
-        response = self._client.transport.get(
-            self._client._build_url("/extensions/list"),
+        return list_extension_resources(
+            client=self._client,
+            route_path=self._LIST_ROUTE_PATH,
         )
-        return parse_extension_list_response_data(response.data)
