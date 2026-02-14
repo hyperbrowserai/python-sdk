@@ -263,3 +263,22 @@ def test_copy_mapping_values_by_string_keys_falls_back_for_unreadable_key_displa
             ),
             key_display=lambda key: key.encode("utf-8"),
         )
+
+
+def test_copy_mapping_values_by_string_keys_rejects_string_subclass_keys():
+    class _StringKey(str):
+        pass
+
+    with pytest.raises(
+        HyperbrowserError, match="mapping key list must contain plain strings"
+    ) as exc_info:
+        copy_mapping_values_by_string_keys(
+            {"key": "value"},
+            [_StringKey("key")],  # type: ignore[list-item]
+            read_value_error_builder=lambda key_display: (
+                f"failed value for '{key_display}'"
+            ),
+            key_display=lambda key: key,
+        )
+
+    assert exc_info.value.original_error is None

@@ -75,6 +75,8 @@ def copy_mapping_values_by_string_keys(
 ) -> Dict[str, object]:
     normalized_mapping: Dict[str, object] = {}
     for key in keys:
+        if type(key) is not str:
+            raise HyperbrowserError("mapping key list must contain plain strings")
         try:
             normalized_mapping[key] = mapping_value[key]
         except HyperbrowserError:
