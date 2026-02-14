@@ -36,30 +36,6 @@ class _BrokenTupleItemMapping(dict):
         return [self._broken_item]
 
 
-class _BrokenStripHeaderName(str):
-    def strip(self, chars=None):  # type: ignore[override]
-        _ = chars
-        raise RuntimeError("header strip exploded")
-
-
-class _BrokenLowerHeaderName(str):
-    def strip(self, chars=None):  # type: ignore[override]
-        _ = chars
-        return self
-
-    def lower(self):  # type: ignore[override]
-        raise RuntimeError("header lower exploded")
-
-
-class _NonStringLowerHeaderName(str):
-    def strip(self, chars=None):  # type: ignore[override]
-        _ = chars
-        return self
-
-    def lower(self):  # type: ignore[override]
-        return object()
-
-
 class _StringSubclassStripResultHeaderName(str):
     class _NormalizedKey(str):
         pass
@@ -118,67 +94,14 @@ def test_normalize_headers_rejects_empty_header_name():
         )
 
 
-def test_normalize_headers_wraps_header_name_strip_failures():
+def test_normalize_headers_rejects_string_subclass_header_names():
     with pytest.raises(
-        HyperbrowserError, match="Failed to normalize header name"
-    ) as exc_info:
-        normalize_headers(
-            {_BrokenStripHeaderName("X-Trace-Id"): "trace-1"},
-            mapping_error_message="headers must be a mapping of string pairs",
-        )
-
-    assert exc_info.value.original_error is not None
-
-
-def test_normalize_headers_preserves_hyperbrowser_header_name_strip_failures():
-    class _BrokenStripHeaderName(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom strip failure")
-
-    with pytest.raises(HyperbrowserError, match="custom strip failure") as exc_info:
-        normalize_headers(
-            {_BrokenStripHeaderName("X-Trace-Id"): "trace-1"},
-            mapping_error_message="headers must be a mapping of string pairs",
-        )
-
-    assert exc_info.value.original_error is None
-
-
-def test_normalize_headers_wraps_header_name_lower_failures():
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize header name"
-    ) as exc_info:
-        normalize_headers(
-            {_BrokenLowerHeaderName("X-Trace-Id"): "trace-1"},
-            mapping_error_message="headers must be a mapping of string pairs",
-        )
-
-    assert exc_info.value.original_error is not None
-
-
-def test_normalize_headers_wraps_non_string_header_name_lower_results():
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize header name"
-    ) as exc_info:
-        normalize_headers(
-            {_NonStringLowerHeaderName("X-Trace-Id"): "trace-1"},
-            mapping_error_message="headers must be a mapping of string pairs",
-        )
-
-    assert exc_info.value.original_error is not None
-
-
-def test_normalize_headers_wraps_string_subclass_header_name_strip_results():
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize header name"
-    ) as exc_info:
+        HyperbrowserError, match="headers must be a mapping of string pairs"
+    ):
         normalize_headers(
             {_StringSubclassStripResultHeaderName("X-Trace-Id"): "trace-1"},
             mapping_error_message="headers must be a mapping of string pairs",
         )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_normalize_headers_rejects_overly_long_header_names():

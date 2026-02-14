@@ -49,7 +49,7 @@ def normalize_headers(
     for key, value in _read_header_items(
         headers, mapping_error_message=mapping_error_message
     ):
-        if not isinstance(key, str) or not isinstance(value, str):
+        if type(key) is not str or not isinstance(value, str):
             raise HyperbrowserError(effective_pair_error_message)
         try:
             normalized_key = key.strip()
