@@ -14,6 +14,7 @@ from hyperbrowser.exceptions import (
     HyperbrowserPollingError,
     HyperbrowserTimeoutError,
 )
+from hyperbrowser.type_utils import is_plain_int, is_plain_string
 
 T = TypeVar("T")
 _MAX_OPERATION_NAME_LENGTH = 200
@@ -37,14 +38,14 @@ def _safe_exception_text(exc: Exception) -> str:
         exception_message = str(exc)
     except Exception:
         return f"<unstringifiable {type(exc).__name__}>"
-    if type(exception_message) is not str:
+    if not is_plain_string(exception_message):
         return f"<unstringifiable {type(exc).__name__}>"
     try:
         sanitized_exception_message = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in exception_message
         )
-        if type(sanitized_exception_message) is not str:
+        if not is_plain_string(sanitized_exception_message):
             return f"<unstringifiable {type(exc).__name__}>"
         if sanitized_exception_message.strip():
             if len(sanitized_exception_message) <= _MAX_EXCEPTION_TEXT_LENGTH:
@@ -68,11 +69,11 @@ def _normalized_exception_text(exc: Exception) -> str:
 
 
 def _coerce_operation_name_component(value: object, *, fallback: str) -> str:
-    if type(value) is str:
+    if is_plain_string(value):
         return value
     try:
         normalized_value = str(value)
-        if type(normalized_value) is not str:
+        if not is_plain_string(normalized_value):
             raise TypeError("operation name component must normalize to string")
         return normalized_value
     except Exception:
@@ -116,11 +117,11 @@ def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
 
 
 def _validate_operation_name(operation_name: str) -> None:
-    if type(operation_name) is not str:
+    if not is_plain_string(operation_name):
         raise HyperbrowserError("operation_name must be a string")
     try:
         normalized_operation_name = operation_name.strip()
-        if type(normalized_operation_name) is not str:
+        if not is_plain_string(normalized_operation_name):
             raise TypeError("normalized operation_name must be a string")
     except HyperbrowserError:
         raise
@@ -233,11 +234,11 @@ def build_fetch_operation_name(operation_name: object) -> str:
 
 
 def ensure_started_job_id(job_id: object, *, error_message: str) -> str:
-    if type(job_id) is not str:
+    if not is_plain_string(job_id):
         raise HyperbrowserError(error_message)
     try:
         normalized_job_id = job_id.strip()
-        if type(normalized_job_id) is not str:
+        if not is_plain_string(normalized_job_id):
             raise TypeError("normalized job_id must be a string")
         is_empty_job_id = len(normalized_job_id) == 0
     except HyperbrowserError:
@@ -264,7 +265,7 @@ def _ensure_status_string(status: object, *, operation_name: str) -> str:
     _ensure_non_awaitable(
         status, callback_name="get_status", operation_name=operation_name
     )
-    if type(status) is not str:
+    if not is_plain_string(status):
         raise _NonRetryablePollingError(
             f"get_status must return a string for {operation_name}"
         )
@@ -381,24 +382,24 @@ def _decode_ascii_bytes_like(value: object) -> Optional[str]:
 def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
     if isinstance(status_code, bool):
         return None
-    if type(status_code) is int:
+    if is_plain_int(status_code):
         return status_code
     status_text: Optional[str] = None
     if isinstance(status_code, memoryview):
         status_text = _decode_ascii_bytes_like(status_code)
     elif isinstance(status_code, (bytes, bytearray)):
         status_text = _decode_ascii_bytes_like(status_code)
-    elif type(status_code) is str:
+    elif is_plain_string(status_code):
         status_text = status_code
     else:
         status_text = _decode_ascii_bytes_like(status_code)
 
     if status_text is not None:
         try:
-            if type(status_text) is not str:
+            if not is_plain_string(status_text):
                 return None
             normalized_status = status_text.strip()
-            if type(normalized_status) is not str:
+            if not is_plain_string(normalized_status):
                 return None
             if not normalized_status:
                 return None
@@ -458,7 +459,7 @@ def _validate_retry_config(
     retry_delay_seconds: float,
     max_status_failures: Optional[int] = None,
 ) -> float:
-    if type(max_attempts) is not int:
+    if not is_plain_int(max_attempts):
         raise HyperbrowserError("max_attempts must be an integer")
     if max_attempts < 1:
         raise HyperbrowserError("max_attempts must be at least 1")
@@ -466,7 +467,7 @@ def _validate_retry_config(
         retry_delay_seconds, field_name="retry_delay_seconds"
     )
     if max_status_failures is not None:
-        if type(max_status_failures) is not int:
+        if not is_plain_int(max_status_failures):
             raise HyperbrowserError("max_status_failures must be an integer")
         if max_status_failures < 1:
             raise HyperbrowserError("max_status_failures must be at least 1")
@@ -492,11 +493,11 @@ def _validate_page_batch_values(
     current_page_batch: int,
     total_page_batches: int,
 ) -> None:
-    if type(current_page_batch) is not int:
+    if not is_plain_int(current_page_batch):
         raise HyperbrowserPollingError(
             f"Invalid current page batch for {operation_name}: expected integer"
         )
-    if type(total_page_batches) is not int:
+    if not is_plain_int(total_page_batches):
         raise HyperbrowserPollingError(
             f"Invalid total page batches for {operation_name}: expected integer"
         )
