@@ -165,6 +165,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
   - `tests/test_request_helper_parse_import_boundary.py` (request-helper import boundary enforcement for direct response parsing imports),
+  - `tests/test_request_helper_parse_import_boundary_inventory.py` (request-helper parse-import boundary inventory synchronization enforcement),
   - `tests/test_request_helper_transport_boundary.py` (request-helper transport boundary enforcement through shared model request helpers),
   - `tests/test_request_wrapper_internal_reuse.py` (request-wrapper internal reuse of shared model request helpers across profile/team/extension/computer-action modules),
   - `tests/test_response_parse_usage_boundary.py` (centralized `parse_response_model(...)` usage boundary enforcement),
