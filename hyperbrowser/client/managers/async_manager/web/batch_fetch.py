@@ -9,6 +9,7 @@ from hyperbrowser.models import (
     POLLING_ATTEMPTS,
 )
 from ...serialization_utils import serialize_model_dump_to_dict
+from ...web_payload_utils import build_batch_fetch_start_payload
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
@@ -18,7 +19,6 @@ from ....polling import (
     retry_operation_async,
 )
 from ...response_utils import parse_response_model
-from ....schema_utils import inject_web_output_schemas
 
 
 class BatchFetchManager:
@@ -28,13 +28,7 @@ class BatchFetchManager:
     async def start(
         self, params: StartBatchFetchJobParams
     ) -> StartBatchFetchJobResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize batch fetch start params",
-        )
-        inject_web_output_schemas(
-            payload, params.outputs.formats if params.outputs else None
-        )
+        payload = build_batch_fetch_start_payload(params)
 
         response = await self._client.transport.post(
             self._client._build_url("/web/batch-fetch"),

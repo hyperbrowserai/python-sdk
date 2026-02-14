@@ -1,6 +1,11 @@
 from typing import Any, Dict
 
-from hyperbrowser.models import FetchParams, WebSearchParams
+from hyperbrowser.models import (
+    FetchParams,
+    StartBatchFetchJobParams,
+    StartWebCrawlJobParams,
+    WebSearchParams,
+)
 
 from ..schema_utils import inject_web_output_schemas
 from .serialization_utils import serialize_model_dump_to_dict
@@ -20,3 +25,21 @@ def build_web_search_payload(params: WebSearchParams) -> Dict[str, Any]:
         params,
         error_message="Failed to serialize web search params",
     )
+
+
+def build_batch_fetch_start_payload(params: StartBatchFetchJobParams) -> Dict[str, Any]:
+    payload = serialize_model_dump_to_dict(
+        params,
+        error_message="Failed to serialize batch fetch start params",
+    )
+    inject_web_output_schemas(payload, params.outputs.formats if params.outputs else None)
+    return payload
+
+
+def build_web_crawl_start_payload(params: StartWebCrawlJobParams) -> Dict[str, Any]:
+    payload = serialize_model_dump_to_dict(
+        params,
+        error_message="Failed to serialize web crawl start params",
+    )
+    inject_web_output_schemas(payload, params.outputs.formats if params.outputs else None)
+    return payload
