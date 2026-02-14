@@ -14,9 +14,12 @@ from ..job_pagination_utils import (
 )
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_wait_utils import wait_for_job_result_with_defaults
+from ..job_start_payload_utils import (
+    build_batch_scrape_start_payload,
+    build_scrape_start_payload,
+)
 from ..serialization_utils import (
     serialize_model_dump_or_default,
-    serialize_model_dump_to_dict,
 )
 from ..response_utils import parse_response_model
 from ..start_job_utils import build_started_job_context
@@ -38,10 +41,7 @@ class BatchScrapeManager:
         self._client = client
 
     def start(self, params: StartBatchScrapeJobParams) -> StartBatchScrapeJobResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize batch scrape start params",
-        )
+        payload = build_batch_scrape_start_payload(params)
         response = self._client.transport.post(
             self._client._build_url("/scrape/batch"),
             data=payload,
@@ -152,10 +152,7 @@ class ScrapeManager:
         self.batch = BatchScrapeManager(client)
 
     def start(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize scrape start params",
-        )
+        payload = build_scrape_start_payload(params)
         response = self._client.transport.post(
             self._client._build_url("/scrape"),
             data=payload,

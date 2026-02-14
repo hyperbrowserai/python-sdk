@@ -13,9 +13,9 @@ from ..job_pagination_utils import (
     initialize_job_paginated_response,
 )
 from ..job_status_utils import is_default_terminal_job_status
+from ..job_start_payload_utils import build_crawl_start_payload
 from ..serialization_utils import (
     serialize_model_dump_or_default,
-    serialize_model_dump_to_dict,
 )
 from ..response_utils import parse_response_model
 from ..start_job_utils import build_started_job_context
@@ -33,10 +33,7 @@ class CrawlManager:
         self._client = client
 
     def start(self, params: StartCrawlJobParams) -> StartCrawlJobResponse:
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize crawl start params",
-        )
+        payload = build_crawl_start_payload(params)
         response = self._client.transport.post(
             self._client._build_url("/crawl"),
             data=payload,
