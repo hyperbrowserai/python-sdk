@@ -1,7 +1,8 @@
-import ast
 from pathlib import Path
 
 import pytest
+
+from tests.ast_import_utils import imports_collect_function_sources
 
 pytestmark = pytest.mark.architecture
 
@@ -23,23 +24,11 @@ AST_FUNCTION_SOURCE_GUARD_MODULES = (
     "tests/test_web_request_wrapper_internal_reuse.py",
 )
 
-def _imports_collect_function_sources(module_text: str) -> bool:
-    module_ast = ast.parse(module_text)
-    for node in module_ast.body:
-        if not isinstance(node, ast.ImportFrom):
-            continue
-        if node.module != "tests.ast_function_source_utils":
-            continue
-        if any(alias.name == "collect_function_sources" for alias in node.names):
-            return True
-    return False
-
-
 def test_ast_guard_modules_reuse_shared_collect_function_sources_helper():
     violating_modules: list[str] = []
     for module_path in AST_FUNCTION_SOURCE_GUARD_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
-        if not _imports_collect_function_sources(module_text):
+        if not imports_collect_function_sources(module_text):
             violating_modules.append(module_path)
             continue
         if "collect_function_sources(" not in module_text:
@@ -62,7 +51,7 @@ def test_ast_guard_inventory_stays_in_sync_with_helper_imports():
         if normalized_path in excluded_modules:
             continue
         module_text = module_path.read_text(encoding="utf-8")
-        if not _imports_collect_function_sources(module_text):
+        if not imports_collect_function_sources(module_text):
             continue
         discovered_modules.append(normalized_path)
 
