@@ -34,6 +34,27 @@ def test_ensure_existing_file_path_rejects_non_string_missing_message(tmp_path: 
         )
 
 
+def test_ensure_existing_file_path_rejects_string_subclass_missing_message(
+    tmp_path: Path,
+):
+    class _MissingMessage(str):
+        pass
+
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError, match="missing_file_message must be a string"
+    ) as exc_info:
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message=_MissingMessage("missing"),
+            not_file_message="not-file",
+        )
+
+    assert exc_info.value.original_error is None
+
+
 def test_ensure_existing_file_path_rejects_blank_missing_message(tmp_path: Path):
     file_path = tmp_path / "file.txt"
     file_path.write_text("content")
@@ -75,6 +96,27 @@ def test_ensure_existing_file_path_rejects_non_string_not_file_message(tmp_path:
             missing_file_message="missing",
             not_file_message=123,  # type: ignore[arg-type]
         )
+
+
+def test_ensure_existing_file_path_rejects_string_subclass_not_file_message(
+    tmp_path: Path,
+):
+    class _NotFileMessage(str):
+        pass
+
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with pytest.raises(
+        HyperbrowserError, match="not_file_message must be a string"
+    ) as exc_info:
+        ensure_existing_file_path(
+            str(file_path),
+            missing_file_message="missing",
+            not_file_message=_NotFileMessage("not-file"),
+        )
+
+    assert exc_info.value.original_error is None
 
 
 def test_ensure_existing_file_path_rejects_blank_not_file_message(tmp_path: Path):
@@ -352,153 +394,6 @@ def test_ensure_existing_file_path_preserves_hyperbrowser_fspath_errors():
         )
 
     assert exc_info.value.original_error is None
-
-
-def test_ensure_existing_file_path_wraps_missing_message_strip_runtime_errors(
-    tmp_path: Path,
-):
-    class _BrokenMissingMessage(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("missing message strip exploded")
-
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize missing_file_message"
-    ) as exc_info:
-        ensure_existing_file_path(
-            str(file_path),
-            missing_file_message=_BrokenMissingMessage("missing"),
-            not_file_message="not-file",
-        )
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_ensure_existing_file_path_wraps_missing_message_string_subclass_strip_results(
-    tmp_path: Path,
-):
-    class _BrokenMissingMessage(str):
-        class _NormalizedMessage(str):
-            pass
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedMessage("missing")
-
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize missing_file_message"
-    ) as exc_info:
-        ensure_existing_file_path(
-            str(file_path),
-            missing_file_message=_BrokenMissingMessage("missing"),
-            not_file_message="not-file",
-        )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-def test_ensure_existing_file_path_wraps_missing_message_character_validation_failures(
-    tmp_path: Path,
-):
-    class _BrokenMissingMessage(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return "missing"
-
-        def __iter__(self):
-            raise RuntimeError("missing message iteration exploded")
-
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to validate missing_file_message characters"
-    ) as exc_info:
-        ensure_existing_file_path(
-            str(file_path),
-            missing_file_message=_BrokenMissingMessage("missing"),
-            not_file_message="not-file",
-        )
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_ensure_existing_file_path_preserves_hyperbrowser_missing_message_strip_errors(
-    tmp_path: Path,
-):
-    class _BrokenMissingMessage(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom missing message strip failure")
-
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom missing message strip failure"
-    ) as exc_info:
-        ensure_existing_file_path(
-            str(file_path),
-            missing_file_message=_BrokenMissingMessage("missing"),
-            not_file_message="not-file",
-        )
-
-    assert exc_info.value.original_error is None
-
-
-def test_ensure_existing_file_path_wraps_not_file_message_strip_runtime_errors(
-    tmp_path: Path,
-):
-    class _BrokenNotFileMessage(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("not-file message strip exploded")
-
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize not_file_message"
-    ) as exc_info:
-        ensure_existing_file_path(
-            str(file_path),
-            missing_file_message="missing",
-            not_file_message=_BrokenNotFileMessage("not-file"),
-        )
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_ensure_existing_file_path_wraps_not_file_message_string_subclass_strip_results(
-    tmp_path: Path,
-):
-    class _BrokenNotFileMessage(str):
-        class _NormalizedMessage(str):
-            pass
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedMessage("not-file")
-
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize not_file_message"
-    ) as exc_info:
-        ensure_existing_file_path(
-            str(file_path),
-            missing_file_message="missing",
-            not_file_message=_BrokenNotFileMessage("not-file"),
-        )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_ensure_existing_file_path_rejects_string_subclass_path_inputs_before_strip():

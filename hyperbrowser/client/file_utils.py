@@ -6,7 +6,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 
 
 def _validate_error_message_text(message_value: str, *, field_name: str) -> None:
-    if not isinstance(message_value, str):
+    if type(message_value) is not str:
         raise HyperbrowserError(f"{field_name} must be a string")
     try:
         normalized_message = message_value.strip()
@@ -24,8 +24,7 @@ def _validate_error_message_text(message_value: str, *, field_name: str) -> None
         raise HyperbrowserError(f"{field_name} must not be empty")
     try:
         contains_control_character = any(
-            ord(character) < 32 or ord(character) == 127
-            for character in message_value
+            ord(character) < 32 or ord(character) == 127 for character in message_value
         )
     except HyperbrowserError:
         raise
