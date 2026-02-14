@@ -6,6 +6,7 @@ from hyperbrowser.display_utils import (
 )
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
+from hyperbrowser.type_utils import is_plain_string
 
 T = TypeVar("T")
 _MAX_OPERATION_NAME_DISPLAY_LENGTH = 120
@@ -32,11 +33,11 @@ def parse_response_model(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    if type(operation_name) is not str:
+    if not is_plain_string(operation_name):
         raise HyperbrowserError("operation_name must be a non-empty string")
     try:
         normalized_operation_name_input = operation_name.strip()
-        if type(normalized_operation_name_input) is not str:
+        if not is_plain_string(normalized_operation_name_input):
             raise TypeError("normalized operation_name must be a string")
         is_empty_operation_name = len(normalized_operation_name_input) == 0
     except HyperbrowserError:

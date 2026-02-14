@@ -2,6 +2,7 @@ from typing import Any, Callable, List, TypeVar
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
+from hyperbrowser.type_utils import is_plain_string
 
 T = TypeVar("T")
 
@@ -13,7 +14,7 @@ def _safe_key_display_for_error(
 ) -> str:
     try:
         key_text = key_display(key)
-        if type(key_text) is not str:
+        if not is_plain_string(key_text):
             raise TypeError("key display must be a string")
         return key_text
     except Exception:

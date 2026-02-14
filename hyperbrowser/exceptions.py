@@ -1,6 +1,8 @@
 # exceptions.py
 from typing import Optional, Any
 
+from hyperbrowser.type_utils import is_plain_string
+
 _MAX_EXCEPTION_DISPLAY_LENGTH = 2000
 _TRUNCATED_EXCEPTION_DISPLAY_SUFFIX = "... (truncated)"
 
@@ -21,14 +23,14 @@ def _safe_exception_text(value: Any, *, fallback: str) -> str:
         text_value = str(value)
     except Exception:
         return fallback
-    if type(text_value) is not str:
+    if not is_plain_string(text_value):
         return fallback
     try:
         sanitized_value = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in text_value
         )
-        if type(sanitized_value) is not str:
+        if not is_plain_string(sanitized_value):
             return fallback
         if sanitized_value.strip():
             return _truncate_exception_text(sanitized_value)

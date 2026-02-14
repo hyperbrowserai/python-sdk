@@ -1,3 +1,5 @@
+from hyperbrowser.type_utils import is_plain_string
+
 _TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
 
 
@@ -7,7 +9,7 @@ def normalize_display_text(value: str, *, max_length: int) -> str:
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in value
         ).strip()
-        if type(sanitized_value) is not str:
+        if not is_plain_string(sanitized_value):
             return ""
         if not sanitized_value:
             return ""

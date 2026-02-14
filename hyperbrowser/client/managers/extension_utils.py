@@ -4,6 +4,7 @@ from typing import Any, List
 from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import ExtensionResponse
+from hyperbrowser.type_utils import is_plain_string
 from .list_parsing_utils import parse_mapping_list_items
 
 _MAX_DISPLAYED_MISSING_KEYS = 20
@@ -17,7 +18,7 @@ def _get_type_name(value: Any) -> str:
 def _safe_stringify_key(value: object) -> str:
     try:
         normalized_key = str(value)
-        if type(normalized_key) is not str:
+        if not is_plain_string(normalized_key):
             raise TypeError("normalized key must be a string")
         return normalized_key
     except Exception:
@@ -27,7 +28,7 @@ def _safe_stringify_key(value: object) -> str:
 def _format_key_display(value: object) -> str:
     try:
         normalized_key = _safe_stringify_key(value)
-        if type(normalized_key) is not str:
+        if not is_plain_string(normalized_key):
             raise TypeError("normalized key display must be a string")
     except Exception:
         return "<unreadable key>"

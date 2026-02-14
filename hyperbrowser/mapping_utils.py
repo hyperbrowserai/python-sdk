@@ -2,6 +2,7 @@ from collections.abc import Mapping as MappingABC
 from typing import Any, Callable, Dict, List
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.type_utils import is_plain_string
 
 
 def read_string_mapping_keys(
@@ -24,7 +25,7 @@ def read_string_mapping_keys(
         ) from exc
     normalized_keys: List[str] = []
     for key in mapping_keys:
-        if type(key) is str:
+        if is_plain_string(key):
             normalized_keys.append(key)
             continue
         raise HyperbrowserError(non_string_key_error_builder(key))
@@ -55,7 +56,7 @@ def read_string_key_mapping(
         except Exception as exc:
             try:
                 key_text = key_display(key)
-                if type(key_text) is not str:
+                if not is_plain_string(key_text):
                     raise TypeError("mapping key display must be a string")
             except Exception:
                 key_text = "<unreadable key>"
@@ -75,7 +76,7 @@ def copy_mapping_values_by_string_keys(
 ) -> Dict[str, object]:
     normalized_mapping: Dict[str, object] = {}
     for key in keys:
-        if type(key) is not str:
+        if not is_plain_string(key):
             raise HyperbrowserError("mapping key list must contain plain strings")
         try:
             normalized_mapping[key] = mapping_value[key]
@@ -84,7 +85,7 @@ def copy_mapping_values_by_string_keys(
         except Exception as exc:
             try:
                 key_text = key_display(key)
-                if type(key_text) is not str:
+                if not is_plain_string(key_text):
                     raise TypeError("mapping key display must be a string")
             except Exception:
                 key_text = "<unreadable key>"
