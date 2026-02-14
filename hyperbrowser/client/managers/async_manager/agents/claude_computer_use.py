@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ...agent_payload_utils import build_agent_start_payload
+from ...agent_operation_metadata import CLAUDE_COMPUTER_USE_OPERATION_METADATA
 from ...agent_route_constants import CLAUDE_COMPUTER_USE_TASK_ROUTE_PREFIX
 from ...agent_status_utils import is_agent_terminal_status
 from ...agent_stop_utils import stop_agent_task_async
@@ -24,6 +25,7 @@ from ...polling_defaults import (
 
 
 class ClaudeComputerUseManager:
+    _OPERATION_METADATA = CLAUDE_COMPUTER_USE_OPERATION_METADATA
     _ROUTE_PREFIX = CLAUDE_COMPUTER_USE_TASK_ROUTE_PREFIX
 
     def __init__(self, client):
@@ -43,7 +45,7 @@ class ClaudeComputerUseManager:
         return parse_response_model(
             response.data,
             model=StartClaudeComputerUseTaskResponse,
-            operation_name="claude computer use start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get(self, job_id: str) -> ClaudeComputerUseTaskResponse:
@@ -52,7 +54,7 @@ class ClaudeComputerUseManager:
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=ClaudeComputerUseTaskResponse,
-            operation_name="claude computer use task",
+            operation_name=self._OPERATION_METADATA.task_operation_name,
         )
 
     async def get_status(self, job_id: str) -> ClaudeComputerUseTaskStatusResponse:
@@ -61,7 +63,7 @@ class ClaudeComputerUseManager:
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=ClaudeComputerUseTaskStatusResponse,
-            operation_name="claude computer use task status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def stop(self, job_id: str) -> BasicResponse:
@@ -69,7 +71,7 @@ class ClaudeComputerUseManager:
             client=self._client,
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
-            operation_name="claude computer use task stop",
+            operation_name=self._OPERATION_METADATA.stop_operation_name,
         )
 
     async def start_and_wait(
@@ -82,8 +84,8 @@ class ClaudeComputerUseManager:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start Claude Computer Use task job",
-            operation_name_prefix="Claude Computer Use task job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         return await wait_for_job_result_with_defaults_async(

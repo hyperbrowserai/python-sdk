@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ...agent_payload_utils import build_agent_start_payload
+from ...agent_operation_metadata import CUA_OPERATION_METADATA
 from ...agent_route_constants import CUA_TASK_ROUTE_PREFIX
 from ...agent_status_utils import is_agent_terminal_status
 from ...agent_stop_utils import stop_agent_task
@@ -24,6 +25,7 @@ from ...polling_defaults import (
 
 
 class CuaManager:
+    _OPERATION_METADATA = CUA_OPERATION_METADATA
     _ROUTE_PREFIX = CUA_TASK_ROUTE_PREFIX
 
     def __init__(self, client):
@@ -41,7 +43,7 @@ class CuaManager:
         return parse_response_model(
             response.data,
             model=StartCuaTaskResponse,
-            operation_name="cua start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     def get(self, job_id: str) -> CuaTaskResponse:
@@ -50,7 +52,7 @@ class CuaManager:
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=CuaTaskResponse,
-            operation_name="cua task",
+            operation_name=self._OPERATION_METADATA.task_operation_name,
         )
 
     def get_status(self, job_id: str) -> CuaTaskStatusResponse:
@@ -59,7 +61,7 @@ class CuaManager:
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=CuaTaskStatusResponse,
-            operation_name="cua task status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     def stop(self, job_id: str) -> BasicResponse:
@@ -67,7 +69,7 @@ class CuaManager:
             client=self._client,
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
-            operation_name="cua task stop",
+            operation_name=self._OPERATION_METADATA.stop_operation_name,
         )
 
     def start_and_wait(
@@ -80,8 +82,8 @@ class CuaManager:
         job_start_resp = self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start CUA task job",
-            operation_name_prefix="CUA task job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         return wait_for_job_result_with_defaults(

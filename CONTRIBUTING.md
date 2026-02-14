@@ -77,6 +77,7 @@ This runs lint, format checks, compile checks, tests, and package build.
 - Prefer deterministic unit tests over network-dependent tests.
 - Preserve architectural guardrails with focused tests. Current guard suites include:
   - `tests/test_agent_examples_coverage.py` (agent task example coverage enforcement),
+  - `tests/test_agent_operation_metadata_usage.py` (shared agent operation-metadata usage enforcement),
   - `tests/test_agent_payload_helper_usage.py` (shared agent start-payload helper usage enforcement),
   - `tests/test_agent_stop_helper_usage.py` (shared agent stop-request helper usage enforcement),
   - `tests/test_agent_task_read_helper_usage.py` (shared agent task read-helper usage enforcement),

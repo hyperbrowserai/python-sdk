@@ -2,6 +2,7 @@ from typing import Optional
 
 from ...agent_status_utils import is_agent_terminal_status
 from ...browser_use_payload_utils import build_browser_use_start_payload
+from ...agent_operation_metadata import BROWSER_USE_OPERATION_METADATA
 from ...agent_route_constants import BROWSER_USE_TASK_ROUTE_PREFIX
 from ...agent_stop_utils import stop_agent_task_async
 from ...agent_task_read_utils import get_agent_task_async, get_agent_task_status_async
@@ -24,6 +25,7 @@ from ...polling_defaults import (
 
 
 class BrowserUseManager:
+    _OPERATION_METADATA = BROWSER_USE_OPERATION_METADATA
     _ROUTE_PREFIX = BROWSER_USE_TASK_ROUTE_PREFIX
 
     def __init__(self, client):
@@ -40,7 +42,7 @@ class BrowserUseManager:
         return parse_response_model(
             response.data,
             model=StartBrowserUseTaskResponse,
-            operation_name="browser-use start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get(self, job_id: str) -> BrowserUseTaskResponse:
@@ -49,7 +51,7 @@ class BrowserUseManager:
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=BrowserUseTaskResponse,
-            operation_name="browser-use task",
+            operation_name=self._OPERATION_METADATA.task_operation_name,
         )
 
     async def get_status(self, job_id: str) -> BrowserUseTaskStatusResponse:
@@ -58,7 +60,7 @@ class BrowserUseManager:
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=BrowserUseTaskStatusResponse,
-            operation_name="browser-use task status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def stop(self, job_id: str) -> BasicResponse:
@@ -66,7 +68,7 @@ class BrowserUseManager:
             client=self._client,
             route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
-            operation_name="browser-use task stop",
+            operation_name=self._OPERATION_METADATA.stop_operation_name,
         )
 
     async def start_and_wait(
@@ -79,8 +81,8 @@ class BrowserUseManager:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start browser-use task job",
-            operation_name_prefix="browser-use task job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         return await wait_for_job_result_with_defaults_async(
