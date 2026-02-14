@@ -1,13 +1,13 @@
 from collections.abc import Mapping
 from typing import Any, List
 
+from hyperbrowser.display_utils import normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import ExtensionResponse
 from .list_parsing_utils import parse_mapping_list_items
 
 _MAX_DISPLAYED_MISSING_KEYS = 20
 _MAX_DISPLAYED_MISSING_KEY_LENGTH = 120
-_TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 
 
 def _get_type_name(value: Any) -> str:
@@ -29,24 +29,15 @@ def _format_key_display(value: object) -> str:
         normalized_key = _safe_stringify_key(value)
         if type(normalized_key) is not str:
             raise TypeError("normalized key display must be a string")
-        normalized_key = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in normalized_key
-        ).strip()
-        if type(normalized_key) is not str:
-            raise TypeError("normalized key display must be a string")
     except Exception:
         return "<unreadable key>"
+    normalized_key = normalize_display_text(
+        normalized_key,
+        max_length=_MAX_DISPLAYED_MISSING_KEY_LENGTH,
+    )
     if not normalized_key:
         return "<blank key>"
-    if len(normalized_key) <= _MAX_DISPLAYED_MISSING_KEY_LENGTH:
-        return normalized_key
-    available_key_length = _MAX_DISPLAYED_MISSING_KEY_LENGTH - len(
-        _TRUNCATED_KEY_DISPLAY_SUFFIX
-    )
-    if available_key_length <= 0:
-        return _TRUNCATED_KEY_DISPLAY_SUFFIX
-    return f"{normalized_key[:available_key_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
+    return normalized_key
 
 
 def _summarize_mapping_keys(mapping: Mapping[object, object]) -> str:

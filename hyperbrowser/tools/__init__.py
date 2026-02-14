@@ -3,6 +3,7 @@ import json
 from collections.abc import Mapping as MappingABC
 from typing import Any, Callable, Dict, Mapping
 
+from hyperbrowser.display_utils import normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
@@ -26,7 +27,6 @@ from .anthropic import (
 )
 
 _MAX_KEY_DISPLAY_LENGTH = 120
-_TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 _NON_OBJECT_CRAWL_PAGE_TYPES = (
     str,
     bytes,
@@ -53,23 +53,13 @@ def _has_declared_attribute(
 
 
 def _format_tool_param_key_for_error(key: str) -> str:
-    try:
-        normalized_key = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in key
-        ).strip()
-        if type(normalized_key) is not str:
-            raise TypeError("normalized tool key display must be a string")
-    except Exception:
-        return "<unreadable key>"
+    normalized_key = normalize_display_text(
+        key,
+        max_length=_MAX_KEY_DISPLAY_LENGTH,
+    )
     if not normalized_key:
         return "<blank key>"
-    if len(normalized_key) <= _MAX_KEY_DISPLAY_LENGTH:
-        return normalized_key
-    available_length = _MAX_KEY_DISPLAY_LENGTH - len(_TRUNCATED_KEY_DISPLAY_SUFFIX)
-    if available_length <= 0:
-        return _TRUNCATED_KEY_DISPLAY_SUFFIX
-    return f"{normalized_key[:available_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
+    return normalized_key
 
 
 def _copy_mapping_values_by_keys(

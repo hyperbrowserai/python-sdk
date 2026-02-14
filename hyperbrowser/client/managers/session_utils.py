@@ -1,5 +1,6 @@
 from typing import Any, List, Type, TypeVar
 
+from hyperbrowser.display_utils import normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.session import SessionRecording
 from .list_parsing_utils import parse_mapping_list_items
@@ -7,27 +8,16 @@ from .response_utils import parse_response_model
 
 T = TypeVar("T")
 _MAX_KEY_DISPLAY_LENGTH = 120
-_TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 
 
 def _format_recording_key_display(key: str) -> str:
-    try:
-        normalized_key = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in key
-        ).strip()
-        if type(normalized_key) is not str:
-            raise TypeError("normalized recording key display must be a string")
-    except Exception:
-        return "<unreadable key>"
+    normalized_key = normalize_display_text(
+        key,
+        max_length=_MAX_KEY_DISPLAY_LENGTH,
+    )
     if not normalized_key:
         return "<blank key>"
-    if len(normalized_key) <= _MAX_KEY_DISPLAY_LENGTH:
-        return normalized_key
-    available_length = _MAX_KEY_DISPLAY_LENGTH - len(_TRUNCATED_KEY_DISPLAY_SUFFIX)
-    if available_length <= 0:
-        return _TRUNCATED_KEY_DISPLAY_SUFFIX
-    return f"{normalized_key[:available_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
+    return normalized_key
 
 
 def parse_session_response_model(
