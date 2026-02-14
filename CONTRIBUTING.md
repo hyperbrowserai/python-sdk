@@ -88,7 +88,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
   - `tests/test_plain_type_guard_usage.py` (`str`/`int` guardrail enforcement via plain-type checks),
-  - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`).
+  - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),
+  - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`).
 
 ## Code quality conventions
 

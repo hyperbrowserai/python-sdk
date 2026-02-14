@@ -53,3 +53,13 @@ def collect_list_keys_call_lines(module: ast.AST) -> list[int]:
             continue
         lines.append(node.lineno)
     return lines
+
+
+def collect_while_true_lines(module: ast.AST) -> list[int]:
+    lines: list[int] = []
+    for node in ast.walk(module):
+        if not isinstance(node, ast.While):
+            continue
+        if isinstance(node.test, ast.Constant) and node.test.value is True:
+            lines.append(node.lineno)
+    return lines
