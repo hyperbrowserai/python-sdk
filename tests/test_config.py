@@ -33,6 +33,90 @@ def test_client_config_from_env_rejects_control_character_api_key(monkeypatch):
         ClientConfig.from_env()
 
 
+def test_client_config_from_env_wraps_api_key_env_read_runtime_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    original_get = config_module.os.environ.get
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_API_KEY":
+            raise RuntimeError("api key env read exploded")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(config_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="api key env read exploded",
+    ) as exc_info:
+        ClientConfig.from_env()
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_from_env_wraps_base_url_env_read_runtime_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    original_get = config_module.os.environ.get
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_BASE_URL":
+            raise RuntimeError("base url env read exploded")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(config_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="base url env read exploded",
+    ) as exc_info:
+        ClientConfig.from_env()
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_from_env_wraps_headers_env_read_runtime_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    original_get = config_module.os.environ.get
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai")
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_HEADERS":
+            raise RuntimeError("headers env read exploded")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(config_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="headers env read exploded",
+    ) as exc_info:
+        ClientConfig.from_env()
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_from_env_preserves_hyperbrowser_env_read_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _broken_read_env(env_name: str):
+        if env_name == "HYPERBROWSER_API_KEY":
+            raise HyperbrowserError("custom env read failure")
+        return None
+
+    monkeypatch.setattr(
+        ClientConfig, "_read_env_value", staticmethod(_broken_read_env)
+    )
+
+    with pytest.raises(HyperbrowserError, match="custom env read failure") as exc_info:
+        ClientConfig.from_env()
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_from_env_reads_api_key_and_base_url(monkeypatch):
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
     monkeypatch.setenv("HYPERBROWSER_BASE_URL", "https://example.local")

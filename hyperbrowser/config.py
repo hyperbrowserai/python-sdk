@@ -305,7 +305,7 @@ class ClientConfig:
 
     @classmethod
     def from_env(cls) -> "ClientConfig":
-        api_key = os.environ.get("HYPERBROWSER_API_KEY")
+        api_key = cls._read_env_value("HYPERBROWSER_API_KEY")
         if api_key is None:
             raise HyperbrowserError(
                 "HYPERBROWSER_API_KEY environment variable is required"
@@ -316,10 +316,22 @@ class ClientConfig:
         )
 
         base_url = cls.resolve_base_url_from_env(
-            os.environ.get("HYPERBROWSER_BASE_URL")
+            cls._read_env_value("HYPERBROWSER_BASE_URL")
         )
-        headers = cls.parse_headers_from_env(os.environ.get("HYPERBROWSER_HEADERS"))
+        headers = cls.parse_headers_from_env(cls._read_env_value("HYPERBROWSER_HEADERS"))
         return cls(api_key=api_key, base_url=base_url, headers=headers)
+
+    @staticmethod
+    def _read_env_value(env_name: str) -> Optional[str]:
+        try:
+            return os.environ.get(env_name)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read {env_name} environment variable",
+                original_error=exc,
+            ) from exc
 
     @staticmethod
     def parse_headers_from_env(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
