@@ -250,6 +250,15 @@ class _BrokenMethodLength(str):
         raise RuntimeError("method length exploded")
 
 
+class _StringSubclassMethodStripResult(str):
+    class _StripResult(str):
+        pass
+
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self._StripResult("get")
+
+
 class _BrokenStripUrl(str):
     def strip(self, chars=None):  # type: ignore[override]
         _ = chars
@@ -275,6 +284,15 @@ class _BrokenUrlIteration(str):
 
     def __iter__(self):
         raise RuntimeError("url iteration exploded")
+
+
+class _StringSubclassUrlStripResult(str):
+    class _StripResult(str):
+        pass
+
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self._StripResult("https://example.com/path")
 
 
 class _StringifiesToBrokenSubclass:
@@ -771,6 +789,15 @@ def test_format_generic_request_failure_message_normalizes_method_length_failure
     assert message == "Request UNKNOWN https://example.com/path failed"
 
 
+def test_format_generic_request_failure_message_normalizes_method_strip_string_subclass_results():
+    message = format_generic_request_failure_message(
+        method=_StringSubclassMethodStripResult("get"),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
 def test_format_generic_request_failure_message_normalizes_url_strip_failures():
     message = format_generic_request_failure_message(
         method="GET",
@@ -793,6 +820,15 @@ def test_format_generic_request_failure_message_normalizes_url_iteration_failure
     message = format_generic_request_failure_message(
         method="GET",
         url=_BrokenUrlIteration("https://example.com/path"),
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
+def test_format_generic_request_failure_message_normalizes_url_strip_string_subclass_results():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=_StringSubclassUrlStripResult("https://example.com/path"),
     )
 
     assert message == "Request GET unknown URL failed"

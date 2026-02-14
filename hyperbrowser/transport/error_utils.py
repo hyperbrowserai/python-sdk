@@ -80,7 +80,7 @@ def _has_non_blank_text(value: Any) -> bool:
         return False
     try:
         stripped_value = value.strip()
-        if not isinstance(stripped_value, str):
+        if type(stripped_value) is not str:
             return False
         return bool(stripped_value)
     except Exception:
@@ -107,13 +107,13 @@ def _normalize_request_method(method: Any) -> str:
         if not isinstance(raw_method, str):
             return "UNKNOWN"
         stripped_method = raw_method.strip()
-        if not isinstance(stripped_method, str) or not stripped_method:
+        if type(stripped_method) is not str or not stripped_method:
             return "UNKNOWN"
         normalized_method = stripped_method.upper()
-        if not isinstance(normalized_method, str):
+        if type(normalized_method) is not str:
             return "UNKNOWN"
         lowered_method = normalized_method.lower()
-        if not isinstance(lowered_method, str):
+        if type(lowered_method) is not str:
             return "UNKNOWN"
     except Exception:
         return "UNKNOWN"
@@ -151,10 +151,10 @@ def _normalize_request_url(url: Any) -> str:
 
     try:
         normalized_url = raw_url.strip()
-        if not isinstance(normalized_url, str) or not normalized_url:
+        if type(normalized_url) is not str or not normalized_url:
             return "unknown URL"
         lowered_url = normalized_url.lower()
-        if not isinstance(lowered_url, str):
+        if type(lowered_url) is not str:
             return "unknown URL"
     except Exception:
         return "unknown URL"
