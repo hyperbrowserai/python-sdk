@@ -19,6 +19,6 @@ def test_web_managers_use_shared_route_constants():
         assert "web_route_constants import" in module_text
         assert "_ROUTE_PREFIX = " in module_text
         assert '_ROUTE_PREFIX = "/web/' not in module_text
-        assert "_build_url(self._ROUTE_PREFIX)" in module_text
+        assert "route_prefix=self._ROUTE_PREFIX" in module_text
         assert '_build_url("/web/' not in module_text
         assert '_build_url(f"/web/' not in module_text

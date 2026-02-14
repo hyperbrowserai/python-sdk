@@ -31,7 +31,7 @@ from ...polling_defaults import (
     DEFAULT_POLLING_RETRY_ATTEMPTS,
     DEFAULT_POLL_INTERVAL_SECONDS,
 )
-from ...response_utils import parse_response_model
+from ...web_request_utils import get_web_job, get_web_job_status, start_web_job
 from ...start_job_utils import build_started_job_context
 
 
@@ -44,23 +44,19 @@ class BatchFetchManager:
 
     def start(self, params: StartBatchFetchJobParams) -> StartBatchFetchJobResponse:
         payload = build_batch_fetch_start_payload(params)
-
-        response = self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return start_web_job(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartBatchFetchJobResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     def get_status(self, job_id: str) -> BatchFetchJobStatusResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return get_web_job_status(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             model=BatchFetchJobStatusResponse,
             operation_name=self._OPERATION_METADATA.status_operation_name,
         )
@@ -69,12 +65,11 @@ class BatchFetchManager:
         self, job_id: str, params: Optional[GetBatchFetchJobParams] = None
     ) -> BatchFetchJobResponse:
         query_params = build_batch_fetch_get_params(params)
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}"),
+        return get_web_job(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            job_id=job_id,
             params=query_params,
-        )
-        return parse_response_model(
-            response.data,
             model=BatchFetchJobResponse,
             operation_name=self._OPERATION_METADATA.job_operation_name,
         )
