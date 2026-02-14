@@ -187,6 +187,28 @@ def test_normalize_extension_create_input_uses_metadata_not_file_prefix(
     assert exc_info.value.original_error is None
 
 
+def test_normalize_extension_create_input_sanitizes_control_chars_in_metadata_not_file_prefix(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    params = CreateExtensionParams(name="dir-extension", file_path=tmp_path)
+    monkeypatch.setattr(
+        extension_create_utils,
+        "EXTENSION_OPERATION_METADATA",
+        SimpleNamespace(
+            missing_file_message_prefix="Custom extension missing prefix",
+            not_file_message_prefix="Custom\tnot-file prefix",
+        ),
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Custom\\?not-file prefix:",
+    ) as exc_info:
+        normalize_extension_create_input(params)
+
+    assert exc_info.value.original_error is None
+
+
 def test_normalize_extension_create_input_uses_default_not_file_prefix_when_metadata_invalid(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ):

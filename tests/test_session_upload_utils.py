@@ -176,6 +176,33 @@ def test_normalize_upload_file_input_uses_default_not_file_prefix_when_metadata_
     assert exc_info.value.original_error is None
 
 
+def test_normalize_upload_file_input_sanitizes_control_chars_in_metadata_not_file_prefix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        session_upload_utils,
+        "SESSION_OPERATION_METADATA",
+        type(
+            "_Metadata",
+            (),
+            {
+                "upload_missing_file_message_prefix": "Custom missing prefix",
+                "upload_not_file_message_prefix": "Custom\tnot-file prefix",
+                "upload_open_file_error_prefix": "Custom open prefix",
+            },
+        )(),
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Custom\\?not-file prefix:",
+    ) as exc_info:
+        normalize_upload_file_input(tmp_path)
+
+    assert exc_info.value.original_error is None
+
+
 def test_normalize_upload_file_input_returns_open_file_like_object():
     file_obj = io.BytesIO(b"content")
 
