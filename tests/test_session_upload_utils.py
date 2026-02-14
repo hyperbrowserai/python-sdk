@@ -149,6 +149,33 @@ def test_normalize_upload_file_input_uses_default_missing_prefix_when_metadata_i
     assert exc_info.value.original_error is None
 
 
+def test_normalize_upload_file_input_uses_default_not_file_prefix_when_metadata_invalid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        session_upload_utils,
+        "SESSION_OPERATION_METADATA",
+        type(
+            "_Metadata",
+            (),
+            {
+                "upload_missing_file_message_prefix": "Custom missing prefix",
+                "upload_not_file_message_prefix": 123,
+                "upload_open_file_error_prefix": "Custom open prefix",
+            },
+        )(),
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Upload file path must point to a file:",
+    ) as exc_info:
+        normalize_upload_file_input(tmp_path)
+
+    assert exc_info.value.original_error is None
+
+
 def test_normalize_upload_file_input_returns_open_file_like_object():
     file_obj = io.BytesIO(b"content")
 
