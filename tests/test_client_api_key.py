@@ -201,58 +201,12 @@ def test_client_wraps_headers_env_read_runtime_errors(
 
 
 @pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
-def test_client_wraps_api_key_strip_runtime_errors(client_class):
-    class _BrokenStripApiKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("api key strip exploded")
+def test_client_rejects_string_subclass_api_key_input(client_class):
+    class _ApiKey(str):
+        pass
 
-    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
-        client_class(api_key=_BrokenStripApiKey("test-key"))
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
-def test_client_preserves_hyperbrowser_api_key_strip_errors(client_class):
-    class _BrokenStripApiKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom strip failure")
-
-    with pytest.raises(HyperbrowserError, match="custom strip failure") as exc_info:
-        client_class(api_key=_BrokenStripApiKey("test-key"))
-
-    assert exc_info.value.original_error is None
-
-
-@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
-def test_client_wraps_non_string_api_key_strip_results(client_class):
-    class _NonStringStripResultApiKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return object()
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
-        client_class(api_key=_NonStringStripResultApiKey("test-key"))
-
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
-def test_client_wraps_api_key_string_subclass_strip_results(client_class):
-    class _BrokenLengthApiKey(str):
-        class _NormalizedKey(str):
-            pass
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedKey("test-key")
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
-        client_class(api_key=_BrokenLengthApiKey("test-key"))
-
-    assert isinstance(exc_info.value.original_error, TypeError)
+    with pytest.raises(HyperbrowserError, match="api_key must be a string"):
+        client_class(api_key=_ApiKey("test-key"))
 
 
 @pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])

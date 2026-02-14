@@ -36,7 +36,7 @@ class HyperbrowserBase:
                 raise HyperbrowserError(
                     "API key must be provided via `api_key` or HYPERBROWSER_API_KEY"
                 )
-            if not isinstance(resolved_api_key, str):
+            if type(resolved_api_key) is not str:
                 raise HyperbrowserError("api_key must be a string")
             try:
                 normalized_resolved_api_key = resolved_api_key.strip()
