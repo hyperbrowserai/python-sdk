@@ -61,10 +61,13 @@ def _normalized_exception_text(exc: Exception) -> str:
 
 
 def _coerce_operation_name_component(value: object, *, fallback: str) -> str:
-    if isinstance(value, str):
+    if isinstance(value, str) and type(value) is str:
         return value
     try:
-        return str(value)
+        normalized_value = str(value)
+        if type(normalized_value) is not str:
+            raise TypeError("operation name component must normalize to string")
+        return normalized_value
     except Exception:
         return fallback
 

@@ -216,6 +216,19 @@ def test_build_operation_name_falls_back_for_unstringifiable_identifiers():
     assert operation_name == "crawl job unknown"
 
 
+def test_build_operation_name_falls_back_for_broken_string_subclass_identifiers():
+    class _BrokenStringIdentifier(str):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify string identifier")
+
+    operation_name = build_operation_name(
+        "crawl job ",
+        _BrokenStringIdentifier("123"),
+    )
+
+    assert operation_name == "crawl job unknown"
+
+
 def test_build_operation_name_falls_back_for_unstringifiable_prefixes():
     class _BadPrefix:
         def __str__(self) -> str:
@@ -227,6 +240,29 @@ def test_build_operation_name_falls_back_for_unstringifiable_prefixes():
     )
 
     assert operation_name == "identifier"
+
+
+def test_build_operation_name_falls_back_for_broken_string_subclass_prefixes():
+    class _BrokenStringPrefix(str):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify string prefix")
+
+    operation_name = build_operation_name(
+        _BrokenStringPrefix("crawl job "),
+        "identifier",
+    )
+
+    assert operation_name == "identifier"
+
+
+def test_build_fetch_operation_name_falls_back_for_broken_string_subclass_input():
+    class _BrokenOperationName(str):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot stringify fetch operation name")
+
+    operation_name = build_fetch_operation_name(_BrokenOperationName("crawl job"))
+
+    assert operation_name == "Fetching unknown"
 
 
 def test_build_operation_name_sanitizes_control_characters_in_prefix():
