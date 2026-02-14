@@ -1,11 +1,12 @@
 import os
+from contextlib import contextmanager
 from os import PathLike
-from typing import IO, Optional, Tuple, Union
+from typing import Dict, IO, Iterator, Optional, Tuple, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 
-from ..file_utils import ensure_existing_file_path
+from ..file_utils import ensure_existing_file_path, open_binary_file
 
 
 def normalize_upload_file_input(
@@ -56,3 +57,20 @@ def normalize_upload_file_input(
         raise HyperbrowserError("file_input file-like object must be open")
 
     return None, file_input
+
+
+@contextmanager
+def open_upload_files_from_input(
+    file_input: Union[str, PathLike[str], IO],
+) -> Iterator[Dict[str, IO]]:
+    file_path, file_obj = normalize_upload_file_input(file_input)
+    if file_path is not None:
+        with open_binary_file(
+            file_path,
+            open_error_message=f"Failed to open upload file at path: {file_path}",
+        ) as opened_file:
+            yield {"file": opened_file}
+        return
+    if file_obj is None:
+        raise HyperbrowserError("file_input must be a file path or file-like object")
+    yield {"file": file_obj}

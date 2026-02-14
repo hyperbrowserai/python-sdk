@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 
+import hyperbrowser.client.managers.session_upload_utils as session_upload_utils
 from hyperbrowser.client.managers.session_upload_utils import (
+    open_upload_files_from_input,
     normalize_upload_file_input,
 )
 from hyperbrowser.exceptions import HyperbrowserError
@@ -134,3 +136,38 @@ def test_normalize_upload_file_input_preserves_hyperbrowser_closed_state_errors(
         normalize_upload_file_input(_BrokenFileLike())  # type: ignore[arg-type]
 
     assert exc_info.value.original_error is None
+
+
+def test_open_upload_files_from_input_opens_and_closes_path_input(tmp_path: Path):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("content")
+
+    with open_upload_files_from_input(str(file_path)) as files:
+        assert "file" in files
+        assert files["file"].closed is False
+        assert files["file"].read() == b"content"
+
+    assert files["file"].closed is True
+
+
+def test_open_upload_files_from_input_reuses_file_like_object():
+    file_obj = io.BytesIO(b"content")
+
+    with open_upload_files_from_input(file_obj) as files:
+        assert files == {"file": file_obj}
+
+
+def test_open_upload_files_from_input_rejects_missing_normalized_file_object(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        session_upload_utils,
+        "normalize_upload_file_input",
+        lambda file_input: (None, None),
+    )
+
+    with pytest.raises(
+        HyperbrowserError, match="file_input must be a file path or file-like object"
+    ):
+        with open_upload_files_from_input(io.BytesIO(b"content")):
+            pass

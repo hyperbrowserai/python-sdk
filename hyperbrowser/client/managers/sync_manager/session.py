@@ -1,15 +1,13 @@
 from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
-from hyperbrowser.exceptions import HyperbrowserError
-from ...file_utils import open_binary_file
 from ..serialization_utils import (
     serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
     serialize_optional_model_dump_to_dict,
 )
 from ..session_profile_update_utils import resolve_update_profile_params
-from ..session_upload_utils import normalize_upload_file_input
+from ..session_upload_utils import open_upload_files_from_input
 from ..session_utils import (
     parse_session_recordings_response_data,
     parse_session_response_model,
@@ -160,23 +158,7 @@ class SessionManager:
     def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
-        file_path, file_obj = normalize_upload_file_input(file_input)
-        if file_path is not None:
-            with open_binary_file(
-                file_path,
-                open_error_message=f"Failed to open upload file at path: {file_path}",
-            ) as file_obj:
-                files = {"file": file_obj}
-                response = self._client.transport.post(
-                    self._client._build_url(f"/session/{id}/uploads"),
-                    files=files,
-                )
-        else:
-            if file_obj is None:
-                raise HyperbrowserError(
-                    "file_input must be a file path or file-like object"
-                )
-            files = {"file": file_obj}
+        with open_upload_files_from_input(file_input) as files:
             response = self._client.transport.post(
                 self._client._build_url(f"/session/{id}/uploads"),
                 files=files,
