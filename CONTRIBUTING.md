@@ -197,6 +197,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_request_helper_transport_boundary.py` (request-helper transport boundary enforcement through shared model request helpers),
   - `tests/test_request_wrapper_internal_reuse.py` (request-wrapper internal reuse of shared model request helpers across profile/team/extension/computer-action modules),
   - `tests/test_response_parse_usage_boundary.py` (centralized `parse_response_model(...)` usage boundary enforcement),
+  - `tests/test_safe_key_display_helper_usage.py` (safe mapping-key display helper usage centralization),
   - `tests/test_schema_injection_helper_usage.py` (shared schema injection helper usage enforcement in payload builders),
   - `tests/test_session_operation_metadata_import_boundary.py` (session operation-metadata import boundary enforcement),
   - `tests/test_session_operation_metadata_usage.py` (session manager operation-metadata usage enforcement),
