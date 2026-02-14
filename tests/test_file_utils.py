@@ -4,6 +4,7 @@ import pytest
 
 import hyperbrowser.client.file_utils as file_utils
 from hyperbrowser.client.file_utils import (
+    build_file_path_error_message,
     build_open_file_error_message,
     ensure_existing_file_path,
     format_file_path_for_error,
@@ -329,6 +330,36 @@ def test_build_open_file_error_message_uses_prefix_and_sanitized_path():
     )
 
     assert message == "Failed to open upload file at path: bad?path.txt"
+
+
+def test_build_file_path_error_message_uses_prefix_and_sanitized_path():
+    message = build_file_path_error_message(
+        "bad\tpath.txt",
+        prefix="Upload file not found at path",
+        default_prefix="Upload file not found at path",
+    )
+
+    assert message == "Upload file not found at path: bad?path.txt"
+
+
+def test_build_file_path_error_message_uses_default_for_non_string_prefix():
+    message = build_file_path_error_message(
+        "/tmp/path.txt",
+        prefix=123,  # type: ignore[arg-type]
+        default_prefix="Upload file not found at path",
+    )
+
+    assert message == "Upload file not found at path: /tmp/path.txt"
+
+
+def test_build_file_path_error_message_uses_open_default_when_default_prefix_invalid():
+    message = build_file_path_error_message(
+        "/tmp/path.txt",
+        prefix=123,  # type: ignore[arg-type]
+        default_prefix="   ",
+    )
+
+    assert message == "Failed to open file at path: /tmp/path.txt"
 
 
 def test_build_open_file_error_message_uses_default_prefix_for_non_string():

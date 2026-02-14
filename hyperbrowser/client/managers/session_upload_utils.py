@@ -7,9 +7,9 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 
 from ..file_utils import (
+    build_file_path_error_message,
     build_open_file_error_message,
     ensure_existing_file_path,
-    format_file_path_for_error,
     open_binary_file,
 )
 
@@ -27,11 +27,18 @@ def normalize_upload_file_input(
                 "file_input path is invalid",
                 original_error=exc,
             ) from exc
-        file_path_display = format_file_path_for_error(raw_file_path)
         file_path = ensure_existing_file_path(
             raw_file_path,
-            missing_file_message=f"Upload file not found at path: {file_path_display}",
-            not_file_message=f"Upload file path must point to a file: {file_path_display}",
+            missing_file_message=build_file_path_error_message(
+                raw_file_path,
+                prefix="Upload file not found at path",
+                default_prefix="Upload file not found at path",
+            ),
+            not_file_message=build_file_path_error_message(
+                raw_file_path,
+                prefix="Upload file path must point to a file",
+                default_prefix="Upload file path must point to a file",
+            ),
         )
         return file_path, None
 

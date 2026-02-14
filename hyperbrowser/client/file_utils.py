@@ -10,6 +10,34 @@ _MAX_FILE_PATH_DISPLAY_LENGTH = 200
 _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX = "Failed to open file at path"
 
 
+def _normalize_error_prefix(prefix: object, *, default_prefix: str) -> str:
+    normalized_default_prefix = default_prefix
+    if not is_plain_string(normalized_default_prefix):
+        normalized_default_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+    else:
+        try:
+            stripped_default_prefix = normalized_default_prefix.strip()
+        except Exception:
+            stripped_default_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+        if not is_plain_string(stripped_default_prefix) or not stripped_default_prefix:
+            normalized_default_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+        else:
+            normalized_default_prefix = stripped_default_prefix
+    if not is_plain_string(prefix):
+        return normalized_default_prefix
+    try:
+        sanitized_prefix = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in prefix
+        )
+        stripped_prefix = sanitized_prefix.strip()
+    except Exception:
+        stripped_prefix = normalized_default_prefix
+    if not is_plain_string(stripped_prefix) or not stripped_prefix:
+        return normalized_default_prefix
+    return stripped_prefix
+
+
 def format_file_path_for_error(
     file_path: object,
     *,
@@ -44,25 +72,23 @@ def format_file_path_for_error(
     return f"{sanitized_path[:truncated_length]}..."
 
 
-def build_open_file_error_message(file_path: object, *, prefix: str) -> str:
-    normalized_prefix = prefix
-    if not is_plain_string(normalized_prefix):
-        normalized_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
-    else:
-        try:
-            sanitized_prefix = "".join(
-                "?" if ord(character) < 32 or ord(character) == 127 else character
-                for character in normalized_prefix
-            )
-            stripped_prefix = sanitized_prefix.strip()
-        except Exception:
-            stripped_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
-        if not is_plain_string(stripped_prefix) or not stripped_prefix:
-            normalized_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
-        else:
-            normalized_prefix = stripped_prefix
+def build_file_path_error_message(
+    file_path: object,
+    *,
+    prefix: str,
+    default_prefix: str,
+) -> str:
+    normalized_prefix = _normalize_error_prefix(prefix, default_prefix=default_prefix)
     file_path_display = format_file_path_for_error(file_path)
     return f"{normalized_prefix}: {file_path_display}"
+
+
+def build_open_file_error_message(file_path: object, *, prefix: str) -> str:
+    return build_file_path_error_message(
+        file_path,
+        prefix=prefix,
+        default_prefix=_DEFAULT_OPEN_ERROR_MESSAGE_PREFIX,
+    )
 
 
 def _normalize_file_path_text(file_path: Union[str, PathLike[str]]) -> str:
