@@ -46,6 +46,15 @@ _INVALID_URL_SENTINELS = {
 }
 
 
+def _is_plain_string(value: Any) -> bool:
+    return type(value) is str
+
+
+def _is_string_subclass_instance(value: Any) -> bool:
+    value_type = type(value)
+    return value_type is not str and str in value_type.__mro__
+
+
 def _safe_to_string(value: Any) -> str:
     try:
         normalized_value = str(value)
@@ -78,7 +87,7 @@ def _sanitize_error_message_text(message: str) -> str:
 
 
 def _has_non_blank_text(value: Any) -> bool:
-    if type(value) is not str:
+    if not _is_plain_string(value):
         return False
     try:
         stripped_value = value.strip()
@@ -100,10 +109,9 @@ def _normalize_request_method(method: Any) -> str:
             raw_method = memoryview(raw_method).tobytes().decode("ascii")
         except (TypeError, ValueError, UnicodeDecodeError):
             return "UNKNOWN"
-    elif isinstance(raw_method, str):
-        if type(raw_method) is not str:
-            return "UNKNOWN"
-    elif type(raw_method) is not str:
+    elif _is_string_subclass_instance(raw_method):
+        return "UNKNOWN"
+    elif not _is_plain_string(raw_method):
         try:
             raw_method = str(raw_method)
         except Exception:
@@ -148,10 +156,9 @@ def _normalize_request_url(url: Any) -> str:
             raw_url = memoryview(raw_url).tobytes().decode("utf-8")
         except (TypeError, ValueError, UnicodeDecodeError):
             return "unknown URL"
-    elif isinstance(raw_url, str):
-        if type(raw_url) is not str:
-            return "unknown URL"
-    elif type(raw_url) is not str:
+    elif _is_string_subclass_instance(raw_url):
+        return "unknown URL"
+    elif not _is_plain_string(raw_url):
         try:
             raw_url = str(raw_url)
         except Exception:
@@ -197,7 +204,7 @@ def _truncate_error_message(message: str) -> str:
 
 
 def _normalize_response_text_for_error_message(response_text: Any) -> str:
-    if type(response_text) is str:
+    if _is_plain_string(response_text):
         try:
             normalized_response_text = "".join(character for character in response_text)
             if type(normalized_response_text) is not str:
@@ -205,7 +212,7 @@ def _normalize_response_text_for_error_message(response_text: Any) -> str:
             return normalized_response_text
         except Exception:
             return _safe_to_string(response_text)
-    if isinstance(response_text, str):
+    if _is_string_subclass_instance(response_text):
         return _safe_to_string(response_text)
     if isinstance(response_text, (bytes, bytearray, memoryview)):
         try:
@@ -218,7 +225,7 @@ def _normalize_response_text_for_error_message(response_text: Any) -> str:
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if _depth > 10:
         return _safe_to_string(value)
-    if type(value) is str:
+    if _is_plain_string(value):
         try:
             normalized_value = "".join(character for character in value)
             if type(normalized_value) is not str:
@@ -226,7 +233,7 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
             return normalized_value
         except Exception:
             return _safe_to_string(value)
-    if isinstance(value, str):
+    if _is_string_subclass_instance(value):
         return _safe_to_string(value)
     if isinstance(value, Mapping):
         for key in ("message", "error", "detail", "errors", "msg", "title", "reason"):
