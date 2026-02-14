@@ -4,6 +4,7 @@ import pytest
 
 import hyperbrowser.client.file_utils as file_utils
 from hyperbrowser.client.file_utils import (
+    build_open_file_error_message,
     ensure_existing_file_path,
     format_file_path_for_error,
     open_binary_file,
@@ -319,6 +320,33 @@ def test_format_file_path_for_error_uses_pathlike_string_values():
             return "/tmp/path-value"
 
     assert format_file_path_for_error(_PathLike()) == "/tmp/path-value"
+
+
+def test_build_open_file_error_message_uses_prefix_and_sanitized_path():
+    message = build_open_file_error_message(
+        "bad\tpath.txt",
+        prefix="Failed to open upload file at path",
+    )
+
+    assert message == "Failed to open upload file at path: bad?path.txt"
+
+
+def test_build_open_file_error_message_uses_default_prefix_for_non_string():
+    message = build_open_file_error_message(
+        "/tmp/path.txt",
+        prefix=123,  # type: ignore[arg-type]
+    )
+
+    assert message == "Failed to open file at path: /tmp/path.txt"
+
+
+def test_build_open_file_error_message_uses_default_prefix_for_blank_string():
+    message = build_open_file_error_message(
+        "/tmp/path.txt",
+        prefix="   ",
+    )
+
+    assert message == "Failed to open file at path: /tmp/path.txt"
 
 
 def test_ensure_existing_file_path_wraps_invalid_path_os_errors(monkeypatch):

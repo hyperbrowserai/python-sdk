@@ -7,6 +7,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_int, is_plain_string
 
 _MAX_FILE_PATH_DISPLAY_LENGTH = 200
+_DEFAULT_OPEN_ERROR_MESSAGE_PREFIX = "Failed to open file at path"
 
 
 def format_file_path_for_error(
@@ -41,6 +42,23 @@ def format_file_path_for_error(
     if truncated_length <= 0:
         return "..."
     return f"{sanitized_path[:truncated_length]}..."
+
+
+def build_open_file_error_message(file_path: object, *, prefix: str) -> str:
+    normalized_prefix = prefix
+    if not is_plain_string(normalized_prefix):
+        normalized_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+    else:
+        try:
+            stripped_prefix = normalized_prefix.strip()
+        except Exception:
+            stripped_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+        if not is_plain_string(stripped_prefix) or not stripped_prefix:
+            normalized_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
+        else:
+            normalized_prefix = stripped_prefix
+    file_path_display = format_file_path_for_error(file_path)
+    return f"{normalized_prefix}: {file_path_display}"
 
 
 def _normalize_file_path_text(file_path: Union[str, PathLike[str]]) -> str:

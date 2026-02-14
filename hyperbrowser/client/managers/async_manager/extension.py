@@ -1,6 +1,6 @@
 from typing import List
 
-from ...file_utils import open_binary_file
+from ...file_utils import build_open_file_error_message, open_binary_file
 from ..extension_create_utils import normalize_extension_create_input
 from ..extension_operation_metadata import EXTENSION_OPERATION_METADATA
 from ..extension_request_utils import (
@@ -27,7 +27,10 @@ class ExtensionManager:
 
         with open_binary_file(
             file_path,
-            open_error_message=f"Failed to open extension file at path: {file_path}",
+            open_error_message=build_open_file_error_message(
+                file_path,
+                prefix="Failed to open extension file at path",
+            ),
         ) as extension_file:
             return await create_extension_resource_async(
                 client=self._client,

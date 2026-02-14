@@ -7,6 +7,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 
 from ..file_utils import (
+    build_open_file_error_message,
     ensure_existing_file_path,
     format_file_path_for_error,
     open_binary_file,
@@ -72,7 +73,10 @@ def open_upload_files_from_input(
     if file_path is not None:
         with open_binary_file(
             file_path,
-            open_error_message=f"Failed to open upload file at path: {file_path}",
+            open_error_message=build_open_file_error_message(
+                file_path,
+                prefix="Failed to open upload file at path",
+            ),
         ) as opened_file:
             yield {"file": opened_file}
         return
