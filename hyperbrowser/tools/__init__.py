@@ -207,7 +207,7 @@ def _normalize_optional_text_field_value(
                 error_message,
                 original_error=exc,
             ) from exc
-    if isinstance(field_value, str):
+    if type(field_value) is not str and str in type(field_value).__mro__:
         raise HyperbrowserError(error_message)
     if isinstance(field_value, (bytes, bytearray, memoryview)):
         try:

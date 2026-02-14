@@ -33,7 +33,7 @@ class ComputerActionManager:
     ) -> ComputerActionResponse:
         if type(session) is str:
             session = self._client.sessions.get(session)
-        elif isinstance(session, str):
+        elif type(session) is not str and str in type(session).__mro__:
             raise HyperbrowserError(
                 "session must be a plain string session ID or SessionDetail"
             )

@@ -184,7 +184,7 @@ class SessionManager:
                     f"Failed to open upload file at path: {file_path}",
                     original_error=exc,
                 ) from exc
-        elif isinstance(file_input, str):
+        elif type(file_input) is not str and str in type(file_input).__mro__:
             raise HyperbrowserError("file_input path must be a plain string path")
         else:
             try:
