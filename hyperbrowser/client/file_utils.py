@@ -7,52 +7,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string
 
 
-def _validate_error_message_text(message_value: str, *, field_name: str) -> None:
-    if not is_plain_string(message_value):
-        raise HyperbrowserError(f"{field_name} must be a string")
-    try:
-        normalized_message = message_value.strip()
-        if not is_plain_string(normalized_message):
-            raise TypeError(f"normalized {field_name} must be a string")
-        is_empty = len(normalized_message) == 0
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            f"Failed to normalize {field_name}",
-            original_error=exc,
-        ) from exc
-    if is_empty:
-        raise HyperbrowserError(f"{field_name} must not be empty")
-    try:
-        contains_control_character = any(
-            ord(character) < 32 or ord(character) == 127 for character in message_value
-        )
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            f"Failed to validate {field_name} characters",
-            original_error=exc,
-        ) from exc
-    if contains_control_character:
-        raise HyperbrowserError(f"{field_name} must not contain control characters")
-
-
-def ensure_existing_file_path(
-    file_path: Union[str, PathLike[str]],
-    *,
-    missing_file_message: str,
-    not_file_message: str,
-) -> str:
-    _validate_error_message_text(
-        missing_file_message,
-        field_name="missing_file_message",
-    )
-    _validate_error_message_text(
-        not_file_message,
-        field_name="not_file_message",
-    )
+def _normalize_file_path_text(file_path: Union[str, PathLike[str]]) -> str:
     try:
         normalized_path = os.fspath(file_path)
     except HyperbrowserError:
@@ -105,6 +60,56 @@ def ensure_existing_file_path(
         raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
     if contains_control_character:
         raise HyperbrowserError("file_path must not contain control characters")
+    return normalized_path
+
+
+def _validate_error_message_text(message_value: str, *, field_name: str) -> None:
+    if not is_plain_string(message_value):
+        raise HyperbrowserError(f"{field_name} must be a string")
+    try:
+        normalized_message = message_value.strip()
+        if not is_plain_string(normalized_message):
+            raise TypeError(f"normalized {field_name} must be a string")
+        is_empty = len(normalized_message) == 0
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            f"Failed to normalize {field_name}",
+            original_error=exc,
+        ) from exc
+    if is_empty:
+        raise HyperbrowserError(f"{field_name} must not be empty")
+    try:
+        contains_control_character = any(
+            ord(character) < 32 or ord(character) == 127 for character in message_value
+        )
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            f"Failed to validate {field_name} characters",
+            original_error=exc,
+        ) from exc
+    if contains_control_character:
+        raise HyperbrowserError(f"{field_name} must not contain control characters")
+
+
+def ensure_existing_file_path(
+    file_path: Union[str, PathLike[str]],
+    *,
+    missing_file_message: str,
+    not_file_message: str,
+) -> str:
+    _validate_error_message_text(
+        missing_file_message,
+        field_name="missing_file_message",
+    )
+    _validate_error_message_text(
+        not_file_message,
+        field_name="not_file_message",
+    )
+    normalized_path = _normalize_file_path_text(file_path)
     try:
         path_exists = bool(os.path.exists(normalized_path))
     except HyperbrowserError:
@@ -138,19 +143,7 @@ def open_binary_file(
         open_error_message,
         field_name="open_error_message",
     )
-    try:
-        normalized_path = os.fspath(file_path)
-    except HyperbrowserError:
-        raise
-    except TypeError as exc:
-        raise HyperbrowserError(
-            "file_path must be a string or os.PathLike object",
-            original_error=exc,
-        ) from exc
-    except Exception as exc:
-        raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
-    if not is_plain_string(normalized_path):
-        raise HyperbrowserError("file_path must resolve to a string path")
+    normalized_path = _normalize_file_path_text(file_path)
     try:
         with open(normalized_path, "rb") as file_obj:
             yield file_obj

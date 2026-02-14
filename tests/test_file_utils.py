@@ -528,6 +528,71 @@ def test_open_binary_file_rejects_non_string_fspath_results():
             pass
 
 
+def test_open_binary_file_rejects_string_subclass_fspath_results():
+    class _PathLike:
+        class _PathString(str):
+            pass
+
+        def __fspath__(self):
+            return self._PathString("/tmp/subclass-path")
+
+    with pytest.raises(HyperbrowserError, match="file_path must resolve to a string"):
+        with open_binary_file(
+            _PathLike(),  # type: ignore[arg-type]
+            open_error_message="open failed",
+        ):
+            pass
+
+
+def test_open_binary_file_rejects_empty_string_paths():
+    with pytest.raises(HyperbrowserError, match="file_path must not be empty"):
+        with open_binary_file(
+            "",
+            open_error_message="open failed",
+        ):
+            pass
+    with pytest.raises(HyperbrowserError, match="file_path must not be empty"):
+        with open_binary_file(
+            "   ",
+            open_error_message="open failed",
+        ):
+            pass
+
+
+def test_open_binary_file_rejects_surrounding_whitespace():
+    with pytest.raises(
+        HyperbrowserError,
+        match="file_path must not contain leading or trailing whitespace",
+    ):
+        with open_binary_file(
+            " /tmp/file.txt",
+            open_error_message="open failed",
+        ):
+            pass
+
+
+def test_open_binary_file_rejects_null_byte_paths():
+    with pytest.raises(
+        HyperbrowserError, match="file_path must not contain null bytes"
+    ):
+        with open_binary_file(
+            "bad\x00path.txt",
+            open_error_message="open failed",
+        ):
+            pass
+
+
+def test_open_binary_file_rejects_control_character_paths():
+    with pytest.raises(
+        HyperbrowserError, match="file_path must not contain control characters"
+    ):
+        with open_binary_file(
+            "bad\tpath.txt",
+            open_error_message="open failed",
+        ):
+            pass
+
+
 def test_open_binary_file_wraps_open_errors(tmp_path: Path):
     missing_path = tmp_path / "missing.bin"
 
