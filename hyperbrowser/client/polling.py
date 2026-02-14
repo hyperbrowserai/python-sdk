@@ -37,22 +37,27 @@ def _safe_exception_text(exc: Exception) -> str:
         exception_message = str(exc)
     except Exception:
         return f"<unstringifiable {type(exc).__name__}>"
-    sanitized_exception_message = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in exception_message
-    )
-    if sanitized_exception_message.strip():
-        if len(sanitized_exception_message) <= _MAX_EXCEPTION_TEXT_LENGTH:
-            return sanitized_exception_message
-        available_message_length = _MAX_EXCEPTION_TEXT_LENGTH - len(
-            _TRUNCATED_EXCEPTION_TEXT_SUFFIX
+    if not isinstance(exception_message, str):
+        return f"<unstringifiable {type(exc).__name__}>"
+    try:
+        sanitized_exception_message = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in exception_message
         )
-        if available_message_length <= 0:
-            return _TRUNCATED_EXCEPTION_TEXT_SUFFIX
-        return (
-            f"{sanitized_exception_message[:available_message_length]}"
-            f"{_TRUNCATED_EXCEPTION_TEXT_SUFFIX}"
-        )
+        if sanitized_exception_message.strip():
+            if len(sanitized_exception_message) <= _MAX_EXCEPTION_TEXT_LENGTH:
+                return sanitized_exception_message
+            available_message_length = _MAX_EXCEPTION_TEXT_LENGTH - len(
+                _TRUNCATED_EXCEPTION_TEXT_SUFFIX
+            )
+            if available_message_length <= 0:
+                return _TRUNCATED_EXCEPTION_TEXT_SUFFIX
+            return (
+                f"{sanitized_exception_message[:available_message_length]}"
+                f"{_TRUNCATED_EXCEPTION_TEXT_SUFFIX}"
+            )
+    except Exception:
+        return f"<unstringifiable {type(exc).__name__}>"
     return f"<{type(exc).__name__}>"
 
 

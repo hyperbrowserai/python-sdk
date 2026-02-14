@@ -6744,6 +6744,32 @@ def test_poll_until_terminal_status_handles_unstringifiable_runtime_errors():
         )
 
 
+def test_poll_until_terminal_status_handles_runtime_errors_with_broken_string_subclasses():
+    class _BrokenRenderedRuntimeError(RuntimeError):
+        class _BrokenString(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate rendered runtime message")
+
+        def __str__(self) -> str:
+            return self._BrokenString("broken runtime message")
+
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match=(
+            r"Failed to poll sync poll after 1 attempts: "
+            r"<unstringifiable _BrokenRenderedRuntimeError>"
+        ),
+    ):
+        poll_until_terminal_status(
+            operation_name="sync poll",
+            get_status=lambda: (_ for _ in ()).throw(_BrokenRenderedRuntimeError()),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
 def test_retry_operation_handles_unstringifiable_value_errors():
     class _UnstringifiableValueError(ValueError):
         def __str__(self) -> str:
@@ -6759,6 +6785,30 @@ def test_retry_operation_handles_unstringifiable_value_errors():
         retry_operation(
             operation_name="sync retry",
             operation=lambda: (_ for _ in ()).throw(_UnstringifiableValueError()),
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
+
+
+def test_retry_operation_handles_value_errors_with_broken_string_subclasses():
+    class _BrokenRenderedValueError(ValueError):
+        class _BrokenString(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate rendered value message")
+
+        def __str__(self) -> str:
+            return self._BrokenString("broken value message")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            r"sync retry failed after 1 attempts: "
+            r"<unstringifiable _BrokenRenderedValueError>"
+        ),
+    ):
+        retry_operation(
+            operation_name="sync retry",
+            operation=lambda: (_ for _ in ()).throw(_BrokenRenderedValueError()),
             max_attempts=1,
             retry_delay_seconds=0.0,
         )
@@ -6781,6 +6831,34 @@ def test_poll_until_terminal_status_handles_unstringifiable_callback_errors():
             get_status=lambda: "running",
             is_terminal_status=lambda value: (_ for _ in ()).throw(
                 _UnstringifiableCallbackError()
+            ),
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
+def test_poll_until_terminal_status_handles_callback_errors_with_broken_string_subclasses():
+    class _BrokenRenderedCallbackError(RuntimeError):
+        class _BrokenString(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate rendered callback message")
+
+        def __str__(self) -> str:
+            return self._BrokenString("broken callback message")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            r"is_terminal_status failed for callback poll: "
+            r"<unstringifiable _BrokenRenderedCallbackError>"
+        ),
+    ):
+        poll_until_terminal_status(
+            operation_name="callback poll",
+            get_status=lambda: "running",
+            is_terminal_status=lambda value: (_ for _ in ()).throw(
+                _BrokenRenderedCallbackError()
             ),
             poll_interval_seconds=0.0,
             max_wait_seconds=1.0,
