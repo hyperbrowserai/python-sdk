@@ -3,17 +3,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_display_helper_usage import ALLOWED_KEY_FORMAT_CALL_FILES
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_KEY_FORMAT_HELPER_IMPORTERS = (
-    "hyperbrowser/client/managers/extension_utils.py",
-    "hyperbrowser/client/managers/response_utils.py",
-    "hyperbrowser/client/managers/session_utils.py",
-    "hyperbrowser/tools/__init__.py",
-    "hyperbrowser/transport/base.py",
-    "tests/test_display_utils.py",
-)
+EXPECTED_EXTRA_IMPORTERS = ("tests/test_display_utils.py",)
 
 
 def _imports_format_string_key_for_error(module_text: str) -> bool:
@@ -39,4 +34,10 @@ def test_format_string_key_for_error_imports_are_centralized():
         if _imports_format_string_key_for_error(module_text):
             discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_KEY_FORMAT_HELPER_IMPORTERS)
+    expected_modules = sorted(
+        [
+            *(f"hyperbrowser/{path.as_posix()}" for path in ALLOWED_KEY_FORMAT_CALL_FILES),
+            *EXPECTED_EXTRA_IMPORTERS,
+        ]
+    )
+    assert discovered_modules == expected_modules
