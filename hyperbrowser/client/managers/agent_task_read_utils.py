@@ -1,7 +1,11 @@
 from typing import Any, Type, TypeVar
 
-from .job_route_builders import build_job_route, build_job_status_route
-from .response_utils import parse_response_model
+from .job_request_utils import (
+    get_job,
+    get_job_async,
+    get_job_status,
+    get_job_status_async,
+)
 
 T = TypeVar("T")
 
@@ -14,11 +18,11 @@ def get_agent_task(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(build_job_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return get_job(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
+        params=None,
         model=model,
         operation_name=operation_name,
     )
@@ -32,11 +36,10 @@ def get_agent_task_status(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(build_job_status_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return get_job_status(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
         model=model,
         operation_name=operation_name,
     )
@@ -50,11 +53,11 @@ async def get_agent_task_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(build_job_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return await get_job_async(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
+        params=None,
         model=model,
         operation_name=operation_name,
     )
@@ -68,11 +71,10 @@ async def get_agent_task_status_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(build_job_status_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return await get_job_status_async(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
         model=model,
         operation_name=operation_name,
     )

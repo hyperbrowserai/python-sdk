@@ -1,6 +1,6 @@
 from typing import Any, Dict, Type, TypeVar
 
-from .response_utils import parse_response_model
+from .job_request_utils import start_job, start_job_async
 
 T = TypeVar("T")
 
@@ -13,12 +13,10 @@ def start_agent_task(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.post(
-        client._build_url(route_prefix),
-        data=payload,
-    )
-    return parse_response_model(
-        response.data,
+    return start_job(
+        client=client,
+        route_prefix=route_prefix,
+        payload=payload,
         model=model,
         operation_name=operation_name,
     )
@@ -32,12 +30,10 @@ async def start_agent_task_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.post(
-        client._build_url(route_prefix),
-        data=payload,
-    )
-    return parse_response_model(
-        response.data,
+    return await start_job_async(
+        client=client,
+        route_prefix=route_prefix,
+        payload=payload,
         model=model,
         operation_name=operation_name,
     )

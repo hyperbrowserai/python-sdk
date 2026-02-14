@@ -10,11 +10,19 @@ def test_job_request_helpers_use_route_builders():
         encoding="utf-8"
     )
     assert (
-        "job_route_builders import build_job_route, build_job_status_route"
+        "build_job_action_route" in module_text
+    )
+    assert (
+        "job_route_builders import" in module_text
+    )
+    assert (
+        "build_job_route(route_prefix, job_id)" in module_text
+    )
+    assert "build_job_status_route(route_prefix, job_id)" in module_text
+    assert (
+        'build_job_action_route(route_prefix, job_id, action_suffix)'
         in module_text
     )
-    assert "build_job_route(route_prefix, job_id)" in module_text
-    assert "build_job_status_route(route_prefix, job_id)" in module_text
     assert 'f"{route_prefix}/{job_id}"' not in module_text
     assert 'f"{route_prefix}/{job_id}/status"' not in module_text
 

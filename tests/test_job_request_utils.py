@@ -256,3 +256,85 @@ def test_get_job_async_builds_job_url_and_passes_query_params():
     assert captured["params"] == {"batchSize": 10}
     assert captured["parse_data"] == {"data": []}
     assert captured["parse_kwargs"]["operation_name"] == "crawl job"
+
+
+def test_put_job_action_builds_action_url_and_parses_response():
+    captured = {}
+
+    class _SyncTransport:
+        def put(self, url):
+            captured["url"] = url
+            return SimpleNamespace(data={"success": True})
+
+    class _Client:
+        transport = _SyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_parse = job_request_utils.parse_response_model
+    job_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = job_request_utils.put_job_action(
+            client=_Client(),
+            route_prefix="/task/cua",
+            job_id="job-7",
+            action_suffix="/stop",
+            model=object,
+            operation_name="cua task stop",
+        )
+    finally:
+        job_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["url"] == "https://api.example.test/task/cua/job-7/stop"
+    assert captured["parse_data"] == {"success": True}
+    assert captured["parse_kwargs"]["operation_name"] == "cua task stop"
+
+
+def test_put_job_action_async_builds_action_url_and_parses_response():
+    captured = {}
+
+    class _AsyncTransport:
+        async def put(self, url):
+            captured["url"] = url
+            return SimpleNamespace(data={"success": True})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_parse = job_request_utils.parse_response_model
+    job_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = asyncio.run(
+            job_request_utils.put_job_action_async(
+                client=_Client(),
+                route_prefix="/task/hyper-agent",
+                job_id="job-8",
+                action_suffix="/stop",
+                model=object,
+                operation_name="hyper-agent task stop",
+            )
+        )
+    finally:
+        job_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["url"] == "https://api.example.test/task/hyper-agent/job-8/stop"
+    assert captured["parse_data"] == {"success": True}
+    assert captured["parse_kwargs"]["operation_name"] == "hyper-agent task stop"

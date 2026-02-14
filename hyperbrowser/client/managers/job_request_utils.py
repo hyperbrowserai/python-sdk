@@ -1,6 +1,10 @@
 from typing import Any, Dict, Optional, Type, TypeVar
 
-from .job_route_builders import build_job_route, build_job_status_route
+from .job_route_builders import (
+    build_job_action_route,
+    build_job_route,
+    build_job_status_route,
+)
 from .response_utils import parse_response_model
 
 T = TypeVar("T")
@@ -112,6 +116,44 @@ async def get_job_async(
     response = await client.transport.get(
         client._build_url(build_job_route(route_prefix, job_id)),
         params=params,
+    )
+    return parse_response_model(
+        response.data,
+        model=model,
+        operation_name=operation_name,
+    )
+
+
+def put_job_action(
+    *,
+    client: Any,
+    route_prefix: str,
+    job_id: str,
+    action_suffix: str,
+    model: Type[T],
+    operation_name: str,
+) -> T:
+    response = client.transport.put(
+        client._build_url(build_job_action_route(route_prefix, job_id, action_suffix)),
+    )
+    return parse_response_model(
+        response.data,
+        model=model,
+        operation_name=operation_name,
+    )
+
+
+async def put_job_action_async(
+    *,
+    client: Any,
+    route_prefix: str,
+    job_id: str,
+    action_suffix: str,
+    model: Type[T],
+    operation_name: str,
+) -> T:
+    response = await client.transport.put(
+        client._build_url(build_job_action_route(route_prefix, job_id, action_suffix)),
     )
     return parse_response_model(
         response.data,

@@ -2,8 +2,7 @@ from typing import Any
 
 from hyperbrowser.models import BasicResponse
 
-from .job_route_builders import build_job_action_route
-from .response_utils import parse_response_model
+from .job_request_utils import put_job_action, put_job_action_async
 
 
 def stop_agent_task(
@@ -13,13 +12,11 @@ def stop_agent_task(
     job_id: str,
     operation_name: str,
 ) -> BasicResponse:
-    response = client.transport.put(
-        client._build_url(
-            build_job_action_route(route_prefix, job_id, "/stop"),
-        ),
-    )
-    return parse_response_model(
-        response.data,
+    return put_job_action(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
+        action_suffix="/stop",
         model=BasicResponse,
         operation_name=operation_name,
     )
@@ -32,13 +29,11 @@ async def stop_agent_task_async(
     job_id: str,
     operation_name: str,
 ) -> BasicResponse:
-    response = await client.transport.put(
-        client._build_url(
-            build_job_action_route(route_prefix, job_id, "/stop"),
-        ),
-    )
-    return parse_response_model(
-        response.data,
+    return await put_job_action_async(
+        client=client,
+        route_prefix=route_prefix,
+        job_id=job_id,
+        action_suffix="/stop",
         model=BasicResponse,
         operation_name=operation_name,
     )

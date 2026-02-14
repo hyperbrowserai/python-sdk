@@ -1,61 +1,57 @@
 import asyncio
-from types import SimpleNamespace
 
 import hyperbrowser.client.managers.agent_stop_utils as agent_stop_utils
 
 
-def test_stop_agent_task_builds_endpoint_and_parses_response():
-    captured_path = {}
+def test_stop_agent_task_delegates_to_put_job_action():
+    captured = {}
 
-    class _SyncTransport:
-        def put(self, url):
-            captured_path["url"] = url
-            return SimpleNamespace(data={"success": True})
+    def _fake_put_job_action(**kwargs):
+        captured.update(kwargs)
+        return {"parsed": True}
 
-    class _Client:
-        transport = _SyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
-
-    result = agent_stop_utils.stop_agent_task(
-        client=_Client(),
-        route_prefix="/task/cua",
-        job_id="job-123",
-        operation_name="cua task stop",
-    )
-
-    assert captured_path["url"] == "https://api.example.test/task/cua/job-123/stop"
-    assert result.success is True
-
-
-def test_stop_agent_task_async_builds_endpoint_and_parses_response():
-    captured_path = {}
-
-    class _AsyncTransport:
-        async def put(self, url):
-            captured_path["url"] = url
-            return SimpleNamespace(data={"success": True})
-
-    class _Client:
-        transport = _AsyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
-
-    result = asyncio.run(
-        agent_stop_utils.stop_agent_task_async(
-            client=_Client(),
-            route_prefix="/task/hyper-agent",
-            job_id="job-999",
-            operation_name="hyper agent task stop",
+    original_put_job_action = agent_stop_utils.put_job_action
+    agent_stop_utils.put_job_action = _fake_put_job_action
+    try:
+        result = agent_stop_utils.stop_agent_task(
+            client=object(),
+            route_prefix="/task/cua",
+            job_id="job-123",
+            operation_name="cua task stop",
         )
-    )
+    finally:
+        agent_stop_utils.put_job_action = original_put_job_action
 
-    assert (
-        captured_path["url"]
-        == "https://api.example.test/task/hyper-agent/job-999/stop"
-    )
-    assert result.success is True
+    assert result == {"parsed": True}
+    assert captured["route_prefix"] == "/task/cua"
+    assert captured["job_id"] == "job-123"
+    assert captured["action_suffix"] == "/stop"
+    assert captured["operation_name"] == "cua task stop"
+
+
+def test_stop_agent_task_async_delegates_to_put_job_action_async():
+    captured = {}
+
+    async def _fake_put_job_action_async(**kwargs):
+        captured.update(kwargs)
+        return {"parsed": True}
+
+    original_put_job_action_async = agent_stop_utils.put_job_action_async
+    agent_stop_utils.put_job_action_async = _fake_put_job_action_async
+    try:
+        result = asyncio.run(
+            agent_stop_utils.stop_agent_task_async(
+                client=object(),
+                route_prefix="/task/hyper-agent",
+                job_id="job-999",
+                operation_name="hyper agent task stop",
+            )
+        )
+    finally:
+        agent_stop_utils.put_job_action_async = original_put_job_action_async
+
+    assert result == {"parsed": True}
+    assert captured["route_prefix"] == "/task/hyper-agent"
+    assert captured["job_id"] == "job-999"
+    assert captured["action_suffix"] == "/stop"
+    assert captured["operation_name"] == "hyper agent task stop"
