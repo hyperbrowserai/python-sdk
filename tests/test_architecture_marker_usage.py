@@ -53,6 +53,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_display_helper_usage.py",
     "tests/test_display_key_format_import_boundary.py",
     "tests/test_display_normalize_import_boundary.py",
+    "tests/test_display_utils_import_boundary.py",
     "tests/test_file_open_default_prefix_literal_boundary.py",
     "tests/test_file_message_default_constant_import_boundary.py",
     "tests/test_file_message_default_constant_usage.py",
