@@ -3,12 +3,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_mapping_utils_import_boundary import EXPECTED_MAPPING_EXTRA_IMPORTERS
 from tests.test_tool_mapping_reader_usage import TOOLS_MODULE
 
 pytestmark = pytest.mark.architecture
-
-
-EXPECTED_COPY_HELPER_EXTRA_IMPORTERS = ("tests/test_mapping_utils.py",)
 
 
 def _imports_copy_mapping_values_by_string_keys(module_text: str) -> bool:
@@ -37,6 +35,6 @@ def test_copy_mapping_values_by_string_keys_imports_are_centralized():
             discovered_modules.append(module_path.as_posix())
 
     expected_modules = sorted(
-        [TOOLS_MODULE.as_posix(), *EXPECTED_COPY_HELPER_EXTRA_IMPORTERS]
+        [TOOLS_MODULE.as_posix(), *EXPECTED_MAPPING_EXTRA_IMPORTERS]
     )
     assert discovered_modules == expected_modules
