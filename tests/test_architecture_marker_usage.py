@@ -16,6 +16,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_agent_terminal_status_helper_usage.py",
     "tests/test_guardrail_ast_utils.py",
     "tests/test_manager_model_dump_usage.py",
+    "tests/test_manager_parse_boundary.py",
     "tests/test_manager_transport_boundary.py",
     "tests/test_mapping_reader_usage.py",
     "tests/test_mapping_keys_access_usage.py",
