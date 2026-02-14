@@ -233,16 +233,17 @@ except HyperbrowserTimeoutError:
 
 ```bash
 pip install -e . pytest ruff build
-python -m ruff check .
-python -m ruff format --check .
-python -m pytest -q
-python -m build
+python3 -m ruff check .
+python3 -m ruff format --check .
+python3 -m pytest -q
+python3 -m build
 ```
 
 Or use Make targets:
 
 ```bash
 make install
+make architecture-check
 make check
 make ci
 ```
