@@ -23,6 +23,8 @@ from ...polling_defaults import (
 
 
 class HyperAgentManager:
+    _ROUTE_PREFIX = "/task/hyper-agent"
+
     def __init__(self, client):
         self._client = client
 
@@ -34,7 +36,7 @@ class HyperAgentManager:
             error_message="Failed to serialize HyperAgent start params",
         )
         response = await self._client.transport.post(
-            self._client._build_url("/task/hyper-agent"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -46,7 +48,7 @@ class HyperAgentManager:
     async def get(self, job_id: str) -> HyperAgentTaskResponse:
         return await get_agent_task_async(
             client=self._client,
-            route_prefix="/task/hyper-agent",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=HyperAgentTaskResponse,
             operation_name="hyper agent task",
@@ -55,7 +57,7 @@ class HyperAgentManager:
     async def get_status(self, job_id: str) -> HyperAgentTaskStatusResponse:
         return await get_agent_task_status_async(
             client=self._client,
-            route_prefix="/task/hyper-agent",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=HyperAgentTaskStatusResponse,
             operation_name="hyper agent task status",
@@ -64,7 +66,7 @@ class HyperAgentManager:
     async def stop(self, job_id: str) -> BasicResponse:
         return await stop_agent_task_async(
             client=self._client,
-            route_prefix="/task/hyper-agent",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             operation_name="hyper agent task stop",
         )

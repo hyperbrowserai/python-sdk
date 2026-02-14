@@ -23,6 +23,8 @@ from ...polling_defaults import (
 
 
 class ClaudeComputerUseManager:
+    _ROUTE_PREFIX = "/task/claude-computer-use"
+
     def __init__(self, client):
         self._client = client
 
@@ -34,7 +36,7 @@ class ClaudeComputerUseManager:
             error_message="Failed to serialize Claude Computer Use start params",
         )
         response = await self._client.transport.post(
-            self._client._build_url("/task/claude-computer-use"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -46,7 +48,7 @@ class ClaudeComputerUseManager:
     async def get(self, job_id: str) -> ClaudeComputerUseTaskResponse:
         return await get_agent_task_async(
             client=self._client,
-            route_prefix="/task/claude-computer-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=ClaudeComputerUseTaskResponse,
             operation_name="claude computer use task",
@@ -55,7 +57,7 @@ class ClaudeComputerUseManager:
     async def get_status(self, job_id: str) -> ClaudeComputerUseTaskStatusResponse:
         return await get_agent_task_status_async(
             client=self._client,
-            route_prefix="/task/claude-computer-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=ClaudeComputerUseTaskStatusResponse,
             operation_name="claude computer use task status",
@@ -64,7 +66,7 @@ class ClaudeComputerUseManager:
     async def stop(self, job_id: str) -> BasicResponse:
         return await stop_agent_task_async(
             client=self._client,
-            route_prefix="/task/claude-computer-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             operation_name="claude computer use task stop",
         )

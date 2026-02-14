@@ -25,14 +25,22 @@ ASYNC_MODULES = (
 def test_sync_agent_managers_use_shared_read_helpers():
     for module_path in SYNC_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
+        assert "_ROUTE_PREFIX = " in module_text
+        assert "_build_url(self._ROUTE_PREFIX)" in module_text
         assert "get_agent_task(" in module_text
         assert "get_agent_task_status(" in module_text
+        assert "route_prefix=self._ROUTE_PREFIX" in module_text
+        assert 'route_prefix="/task/' not in module_text
         assert '_build_url(f"/task/' not in module_text
 
 
 def test_async_agent_managers_use_shared_read_helpers():
     for module_path in ASYNC_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
+        assert "_ROUTE_PREFIX = " in module_text
+        assert "_build_url(self._ROUTE_PREFIX)" in module_text
         assert "get_agent_task_async(" in module_text
         assert "get_agent_task_status_async(" in module_text
+        assert "route_prefix=self._ROUTE_PREFIX" in module_text
+        assert 'route_prefix="/task/' not in module_text
         assert '_build_url(f"/task/' not in module_text

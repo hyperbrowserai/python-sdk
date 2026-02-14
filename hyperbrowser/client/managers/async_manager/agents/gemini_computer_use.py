@@ -23,6 +23,8 @@ from ...polling_defaults import (
 
 
 class GeminiComputerUseManager:
+    _ROUTE_PREFIX = "/task/gemini-computer-use"
+
     def __init__(self, client):
         self._client = client
 
@@ -34,7 +36,7 @@ class GeminiComputerUseManager:
             error_message="Failed to serialize Gemini Computer Use start params",
         )
         response = await self._client.transport.post(
-            self._client._build_url("/task/gemini-computer-use"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -46,7 +48,7 @@ class GeminiComputerUseManager:
     async def get(self, job_id: str) -> GeminiComputerUseTaskResponse:
         return await get_agent_task_async(
             client=self._client,
-            route_prefix="/task/gemini-computer-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=GeminiComputerUseTaskResponse,
             operation_name="gemini computer use task",
@@ -55,7 +57,7 @@ class GeminiComputerUseManager:
     async def get_status(self, job_id: str) -> GeminiComputerUseTaskStatusResponse:
         return await get_agent_task_status_async(
             client=self._client,
-            route_prefix="/task/gemini-computer-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=GeminiComputerUseTaskStatusResponse,
             operation_name="gemini computer use task status",
@@ -64,7 +66,7 @@ class GeminiComputerUseManager:
     async def stop(self, job_id: str) -> BasicResponse:
         return await stop_agent_task_async(
             client=self._client,
-            route_prefix="/task/gemini-computer-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             operation_name="gemini computer use task stop",
         )

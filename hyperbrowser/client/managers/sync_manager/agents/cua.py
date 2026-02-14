@@ -23,6 +23,8 @@ from ...polling_defaults import (
 
 
 class CuaManager:
+    _ROUTE_PREFIX = "/task/cua"
+
     def __init__(self, client):
         self._client = client
 
@@ -32,7 +34,7 @@ class CuaManager:
             error_message="Failed to serialize CUA start params",
         )
         response = self._client.transport.post(
-            self._client._build_url("/task/cua"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -44,7 +46,7 @@ class CuaManager:
     def get(self, job_id: str) -> CuaTaskResponse:
         return get_agent_task(
             client=self._client,
-            route_prefix="/task/cua",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=CuaTaskResponse,
             operation_name="cua task",
@@ -53,7 +55,7 @@ class CuaManager:
     def get_status(self, job_id: str) -> CuaTaskStatusResponse:
         return get_agent_task_status(
             client=self._client,
-            route_prefix="/task/cua",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=CuaTaskStatusResponse,
             operation_name="cua task status",
@@ -62,7 +64,7 @@ class CuaManager:
     def stop(self, job_id: str) -> BasicResponse:
         return stop_agent_task(
             client=self._client,
-            route_prefix="/task/cua",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             operation_name="cua task stop",
         )

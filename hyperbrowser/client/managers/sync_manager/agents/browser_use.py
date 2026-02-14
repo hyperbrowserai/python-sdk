@@ -23,13 +23,15 @@ from .....models import BasicResponse
 
 
 class BrowserUseManager:
+    _ROUTE_PREFIX = "/task/browser-use"
+
     def __init__(self, client):
         self._client = client
 
     def start(self, params: StartBrowserUseTaskParams) -> StartBrowserUseTaskResponse:
         payload = build_browser_use_start_payload(params)
         response = self._client.transport.post(
-            self._client._build_url("/task/browser-use"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -41,7 +43,7 @@ class BrowserUseManager:
     def get(self, job_id: str) -> BrowserUseTaskResponse:
         return get_agent_task(
             client=self._client,
-            route_prefix="/task/browser-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=BrowserUseTaskResponse,
             operation_name="browser-use task",
@@ -50,7 +52,7 @@ class BrowserUseManager:
     def get_status(self, job_id: str) -> BrowserUseTaskStatusResponse:
         return get_agent_task_status(
             client=self._client,
-            route_prefix="/task/browser-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             model=BrowserUseTaskStatusResponse,
             operation_name="browser-use task status",
@@ -59,7 +61,7 @@ class BrowserUseManager:
     def stop(self, job_id: str) -> BasicResponse:
         return stop_agent_task(
             client=self._client,
-            route_prefix="/task/browser-use",
+            route_prefix=self._ROUTE_PREFIX,
             job_id=job_id,
             operation_name="browser-use task stop",
         )
