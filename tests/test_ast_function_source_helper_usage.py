@@ -36,3 +36,21 @@ def test_ast_guard_modules_reuse_shared_collect_function_sources_helper():
             violating_modules.append(module_path)
 
     assert violating_modules == []
+
+
+def test_ast_guard_inventory_stays_in_sync_with_helper_imports():
+    excluded_modules = {
+        "tests/test_ast_function_source_helper_usage.py",
+        "tests/test_ast_function_source_utils.py",
+    }
+    discovered_modules: list[str] = []
+    for module_path in sorted(Path("tests").glob("test_*.py")):
+        normalized_path = module_path.as_posix()
+        if normalized_path in excluded_modules:
+            continue
+        module_text = module_path.read_text(encoding="utf-8")
+        if "ast_function_source_utils import collect_function_sources" not in module_text:
+            continue
+        discovered_modules.append(normalized_path)
+
+    assert sorted(AST_FUNCTION_SOURCE_GUARD_MODULES) == discovered_modules
