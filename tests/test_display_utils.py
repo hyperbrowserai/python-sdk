@@ -46,6 +46,11 @@ def test_normalize_display_text_uses_default_length_for_non_positive_max_length(
     assert normalize_display_text("value", max_length=-10) == "value"
 
 
+def test_normalize_display_text_uses_default_length_for_bool_max_length():
+    assert normalize_display_text("value", max_length=False) == "value"
+    assert normalize_display_text("value", max_length=True) == "value"
+
+
 def test_format_string_key_for_error_returns_normalized_key():
     assert format_string_key_for_error(" \nkey\t ", max_length=20) == "?key?"
 
@@ -57,6 +62,11 @@ def test_format_string_key_for_error_uses_default_length_for_non_int_max_length(
 def test_format_string_key_for_error_uses_default_length_for_non_positive_max_length():
     assert format_string_key_for_error("key", max_length=0) == "key"
     assert format_string_key_for_error("key", max_length=-5) == "key"
+
+
+def test_format_string_key_for_error_uses_default_length_for_bool_max_length():
+    assert format_string_key_for_error("key", max_length=False) == "key"
+    assert format_string_key_for_error("key", max_length=True) == "key"
 
 
 def test_format_string_key_for_error_returns_blank_fallback_for_empty_keys():

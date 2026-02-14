@@ -5,7 +5,7 @@ _DEFAULT_BLANK_KEY_FALLBACK = "<blank key>"
 _DEFAULT_MAX_DISPLAY_LENGTH = 200
 
 
-def normalize_display_text(value: object, *, max_length: int) -> str:
+def normalize_display_text(value: object, *, max_length: object) -> str:
     if not is_plain_string(value):
         return ""
     if not is_plain_int(max_length) or max_length <= 0:
@@ -29,7 +29,7 @@ def normalize_display_text(value: object, *, max_length: int) -> str:
         return ""
 
 
-def _normalize_blank_key_fallback(*, fallback: object, max_length: int) -> str:
+def _normalize_blank_key_fallback(*, fallback: object, max_length: object) -> str:
     normalized_fallback = normalize_display_text(fallback, max_length=max_length)
     if normalized_fallback:
         return normalized_fallback
@@ -39,7 +39,7 @@ def _normalize_blank_key_fallback(*, fallback: object, max_length: int) -> str:
 def format_string_key_for_error(
     key: object,
     *,
-    max_length: int,
+    max_length: object,
     blank_fallback: object = _DEFAULT_BLANK_KEY_FALLBACK,
 ) -> str:
     normalized_key = normalize_display_text(key, max_length=max_length)
