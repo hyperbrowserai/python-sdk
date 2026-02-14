@@ -143,7 +143,15 @@ class SessionManager:
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
         if isinstance(file_input, (str, PathLike)):
-            raw_file_path = os.fspath(file_input)
+            try:
+                raw_file_path = os.fspath(file_input)
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "file_input path is invalid",
+                    original_error=exc,
+                ) from exc
             file_path = ensure_existing_file_path(
                 raw_file_path,
                 missing_file_message=f"Upload file not found at path: {raw_file_path}",

@@ -1,5 +1,6 @@
 import asyncio
 import io
+from os import PathLike
 from pathlib import Path
 import pytest
 
@@ -136,6 +137,38 @@ def test_async_session_upload_file_rejects_invalid_input_type():
     async def run():
         with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
             await manager.upload_file("session_123", 123)  # type: ignore[arg-type]
+
+    asyncio.run(run())
+
+
+def test_sync_session_upload_file_wraps_invalid_pathlike_state_errors():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    class _BrokenPathLike(PathLike[str]):
+        def __fspath__(self) -> str:
+            raise RuntimeError("broken fspath")
+
+    with pytest.raises(
+        HyperbrowserError, match="file_input path is invalid"
+    ) as exc_info:
+        manager.upload_file("session_123", _BrokenPathLike())
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_async_session_upload_file_wraps_invalid_pathlike_state_errors():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    class _BrokenPathLike(PathLike[str]):
+        def __fspath__(self) -> str:
+            raise RuntimeError("broken fspath")
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="file_input path is invalid"
+        ) as exc_info:
+            await manager.upload_file("session_123", _BrokenPathLike())
+        assert isinstance(exc_info.value.original_error, RuntimeError)
 
     asyncio.run(run())
 
