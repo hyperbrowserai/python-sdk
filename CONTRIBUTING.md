@@ -187,6 +187,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_web_payload_helper_usage.py` (web manager payload-helper usage enforcement),
   - `tests/test_web_request_helper_usage.py` (web manager request-helper usage enforcement),
   - `tests/test_web_request_internal_reuse.py` (web request helper internal reuse of shared job request helpers),
+  - `tests/test_web_request_wrapper_internal_reuse.py` (web request-wrapper internal reuse of shared job request helpers),
   - `tests/test_web_route_constants_usage.py` (web manager route-constant usage enforcement).
 
 ## Code quality conventions
