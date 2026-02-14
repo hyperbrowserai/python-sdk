@@ -53,3 +53,48 @@ def test_hyperbrowser_error_str_truncates_oversized_original_error_message():
     rendered_error = str(error)
     assert "Caused by ValueError:" in rendered_error
     assert rendered_error.endswith("... (truncated)")
+
+
+def test_hyperbrowser_error_str_handles_message_string_subclass_iteration_failures():
+    class _BrokenMessage:
+        class _BrokenString(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate error message")
+
+        def __str__(self) -> str:
+            return self._BrokenString("request failed")
+
+    error = HyperbrowserError(_BrokenMessage())  # type: ignore[arg-type]
+
+    assert str(error) == "Hyperbrowser error"
+
+
+def test_hyperbrowser_error_str_handles_status_string_subclass_iteration_failures():
+    class _BrokenStatus:
+        class _BrokenString(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate status text")
+
+        def __str__(self) -> str:
+            return self._BrokenString("status\tvalue")
+
+    error = HyperbrowserError("request failed", status_code=_BrokenStatus())  # type: ignore[arg-type]
+
+    assert str(error) == "request failed - Status: <unknown status>"
+
+
+def test_hyperbrowser_error_str_handles_original_error_string_subclass_iteration_failures():
+    class _BrokenOriginalError(Exception):
+        class _BrokenString(str):
+            def __iter__(self):
+                raise RuntimeError("cannot iterate original error text")
+
+        def __str__(self) -> str:
+            return self._BrokenString("bad\tcause")
+
+    error = HyperbrowserError("request failed", original_error=_BrokenOriginalError())
+
+    assert (
+        str(error)
+        == "request failed - Caused by _BrokenOriginalError: <unstringifiable _BrokenOriginalError>"
+    )

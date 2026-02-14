@@ -21,12 +21,17 @@ def _safe_exception_text(value: Any, *, fallback: str) -> str:
         text_value = str(value)
     except Exception:
         return fallback
-    sanitized_value = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in text_value
-    )
-    if sanitized_value.strip():
-        return _truncate_exception_text(sanitized_value)
+    if not isinstance(text_value, str):
+        return fallback
+    try:
+        sanitized_value = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in text_value
+        )
+        if sanitized_value.strip():
+            return _truncate_exception_text(sanitized_value)
+    except Exception:
+        return fallback
     return fallback
 
 
