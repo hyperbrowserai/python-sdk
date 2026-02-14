@@ -261,6 +261,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_extract.py`
 - `examples/sync_web_search.py`
 - `examples/async_web_search.py`
+- `examples/sync_session_list.py`
 
 ## License
 
