@@ -36,6 +36,7 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/job_fetch_utils.py",
     "hyperbrowser/client/managers/job_poll_utils.py",
     "hyperbrowser/client/managers/job_pagination_utils.py",
+    "hyperbrowser/client/managers/job_query_params_utils.py",
     "hyperbrowser/client/managers/job_start_payload_utils.py",
     "hyperbrowser/client/managers/page_params_utils.py",
     "hyperbrowser/client/managers/job_wait_utils.py",

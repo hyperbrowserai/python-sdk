@@ -16,13 +16,11 @@ from ..job_pagination_utils import (
 )
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_start_payload_utils import build_crawl_start_payload
+from ..job_query_params_utils import build_crawl_get_params
 from ..polling_defaults import (
     DEFAULT_MAX_WAIT_SECONDS,
     DEFAULT_POLLING_RETRY_ATTEMPTS,
     DEFAULT_POLL_INTERVAL_SECONDS,
-)
-from ..serialization_utils import (
-    serialize_model_dump_or_default,
 )
 from ..response_utils import parse_response_model
 from ..start_job_utils import build_started_job_context
@@ -64,11 +62,7 @@ class CrawlManager:
     async def get(
         self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
-        query_params = serialize_model_dump_or_default(
-            params,
-            default_factory=GetCrawlJobParams,
-            error_message="Failed to serialize crawl get params",
-        )
+        query_params = build_crawl_get_params(params)
         response = await self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
             params=query_params,

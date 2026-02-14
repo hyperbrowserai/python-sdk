@@ -14,6 +14,7 @@ from ..job_pagination_utils import (
 )
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_wait_utils import wait_for_job_result_with_defaults
+from ..job_query_params_utils import build_batch_scrape_get_params
 from ..polling_defaults import (
     DEFAULT_MAX_WAIT_SECONDS,
     DEFAULT_POLLING_RETRY_ATTEMPTS,
@@ -22,9 +23,6 @@ from ..polling_defaults import (
 from ..job_start_payload_utils import (
     build_batch_scrape_start_payload,
     build_scrape_start_payload,
-)
-from ..serialization_utils import (
-    serialize_model_dump_or_default,
 )
 from ..response_utils import parse_response_model
 from ..start_job_utils import build_started_job_context
@@ -70,11 +68,7 @@ class BatchScrapeManager:
     def get(
         self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
     ) -> BatchScrapeJobResponse:
-        query_params = serialize_model_dump_or_default(
-            params,
-            default_factory=GetBatchScrapeJobParams,
-            error_message="Failed to serialize batch scrape get params",
-        )
+        query_params = build_batch_scrape_get_params(params)
         response = self._client.transport.get(
             self._client._build_url(f"/scrape/batch/{job_id}"),
             params=query_params,

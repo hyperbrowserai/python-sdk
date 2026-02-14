@@ -45,6 +45,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_job_poll_helper_boundary.py",
     "tests/test_job_poll_helper_usage.py",
     "tests/test_job_start_payload_helper_usage.py",
+    "tests/test_job_query_params_helper_usage.py",
     "tests/test_job_wait_helper_boundary.py",
     "tests/test_job_wait_helper_usage.py",
     "tests/test_example_sync_async_parity.py",
