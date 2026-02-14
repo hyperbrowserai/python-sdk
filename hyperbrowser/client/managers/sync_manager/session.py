@@ -268,11 +268,23 @@ class SessionManager:
                 "update_profile_params() requires either UpdateSessionProfileParams or a boolean persist_changes."
             )
 
+        try:
+            serialized_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize update_profile_params payload",
+                original_error=exc,
+            ) from exc
+        if type(serialized_params) is not dict:
+            raise HyperbrowserError("Failed to serialize update_profile_params payload")
+
         response = self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={
                 "type": "profile",
-                "params": params_obj.model_dump(exclude_none=True, by_alias=True),
+                "params": serialized_params,
             },
         )
         return parse_session_response_model(

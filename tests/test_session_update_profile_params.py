@@ -105,6 +105,52 @@ def test_sync_update_profile_params_rejects_subclass_params():
         manager.update_profile_params("session-1", _Params(persist_changes=True))
 
 
+def test_sync_update_profile_params_wraps_serialization_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = SyncSessionManager(_SyncClient())
+    params = UpdateSessionProfileParams(persist_changes=True)
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("broken model_dump")
+
+    monkeypatch.setattr(
+        UpdateSessionProfileParams, "model_dump", _raise_model_dump_error
+    )
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize update_profile_params payload"
+    ) as exc_info:
+        manager.update_profile_params("session-1", params)
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_sync_update_profile_params_preserves_hyperbrowser_serialization_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = SyncSessionManager(_SyncClient())
+    params = UpdateSessionProfileParams(persist_changes=True)
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise HyperbrowserError("custom model_dump failure")
+
+    monkeypatch.setattr(
+        UpdateSessionProfileParams, "model_dump", _raise_model_dump_error
+    )
+
+    with pytest.raises(
+        HyperbrowserError, match="custom model_dump failure"
+    ) as exc_info:
+        manager.update_profile_params("session-1", params)
+
+    assert exc_info.value.original_error is None
+
+
 def test_async_update_profile_params_bool_warns_and_serializes():
     AsyncSessionManager._has_warned_update_profile_params_boolean_deprecated = False
     client = _AsyncClient()
@@ -160,6 +206,56 @@ def test_async_update_profile_params_rejects_subclass_params():
                 "session-1",
                 _Params(persist_changes=True),
             )
+
+    asyncio.run(run())
+
+
+def test_async_update_profile_params_wraps_serialization_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = AsyncSessionManager(_AsyncClient())
+    params = UpdateSessionProfileParams(persist_changes=True)
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("broken model_dump")
+
+    monkeypatch.setattr(
+        UpdateSessionProfileParams, "model_dump", _raise_model_dump_error
+    )
+
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to serialize update_profile_params payload"
+        ) as exc_info:
+            await manager.update_profile_params("session-1", params)
+        assert isinstance(exc_info.value.original_error, RuntimeError)
+
+    asyncio.run(run())
+
+
+def test_async_update_profile_params_preserves_hyperbrowser_serialization_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = AsyncSessionManager(_AsyncClient())
+    params = UpdateSessionProfileParams(persist_changes=True)
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise HyperbrowserError("custom model_dump failure")
+
+    monkeypatch.setattr(
+        UpdateSessionProfileParams, "model_dump", _raise_model_dump_error
+    )
+
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError, match="custom model_dump failure"
+        ) as exc_info:
+            await manager.update_profile_params("session-1", params)
+        assert exc_info.value.original_error is None
 
     asyncio.run(run())
 
