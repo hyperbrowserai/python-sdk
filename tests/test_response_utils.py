@@ -256,11 +256,10 @@ def test_parse_response_model_wraps_non_string_operation_name_strip_results():
     assert isinstance(exc_info.value.original_error, TypeError)
 
 
-def test_parse_response_model_wraps_operation_name_empty_check_length_failures():
+def test_parse_response_model_wraps_operation_name_string_subclass_strip_results():
     class _BrokenOperationName(str):
         class _NormalizedName(str):
-            def __len__(self):
-                raise RuntimeError("operation name length exploded")
+            pass
 
         def strip(self, chars=None):  # type: ignore[override]
             _ = chars
@@ -273,29 +272,18 @@ def test_parse_response_model_wraps_operation_name_empty_check_length_failures()
             operation_name=_BrokenOperationName("basic operation"),
         )
 
-    assert isinstance(exc_info.value.original_error, RuntimeError)
+    assert isinstance(exc_info.value.original_error, TypeError)
 
 
-def test_parse_response_model_preserves_hyperbrowser_operation_name_empty_check_length_failures():
-    class _BrokenOperationName(str):
-        class _NormalizedName(str):
-            def __len__(self):
-                raise HyperbrowserError("custom operation name length failure")
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedName("basic operation")
-
+def test_parse_response_model_rejects_blank_operation_names():
     with pytest.raises(
-        HyperbrowserError, match="custom operation name length failure"
-    ) as exc_info:
+        HyperbrowserError, match="operation_name must be a non-empty string"
+    ):
         parse_response_model(
             {"success": True},
             model=BasicResponse,
-            operation_name=_BrokenOperationName("basic operation"),
+            operation_name="   ",
         )
-
-    assert exc_info.value.original_error is None
 
 
 def test_parse_response_model_truncates_operation_name_in_errors():

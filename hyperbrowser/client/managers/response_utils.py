@@ -16,7 +16,7 @@ def _normalize_operation_name_for_error(operation_name: str) -> str:
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in operation_name
         ).strip()
-        if not isinstance(normalized_name, str):
+        if type(normalized_name) is not str:
             raise TypeError("normalized operation name must be a string")
     except Exception:
         return "operation"
@@ -38,7 +38,7 @@ def _normalize_response_key_for_error(key: str) -> str:
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in key
         ).strip()
-        if not isinstance(normalized_key, str):
+        if type(normalized_key) is not str:
             raise TypeError("normalized response key must be a string")
     except Exception:
         return "<unreadable key>"
@@ -62,7 +62,7 @@ def parse_response_model(
         raise HyperbrowserError("operation_name must be a non-empty string")
     try:
         normalized_operation_name_input = operation_name.strip()
-        if not isinstance(normalized_operation_name_input, str):
+        if type(normalized_operation_name_input) is not str:
             raise TypeError("normalized operation_name must be a string")
         is_empty_operation_name = len(normalized_operation_name_input) == 0
     except HyperbrowserError:
