@@ -100,6 +100,29 @@ def test_normalize_upload_file_input_rejects_control_character_paths_before_mess
     assert exc_info.value.original_error is None
 
 
+def test_normalize_upload_file_input_uses_metadata_missing_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        session_upload_utils,
+        "SESSION_OPERATION_METADATA",
+        type(
+            "_Metadata",
+            (),
+            {
+                "upload_missing_file_message_prefix": "Custom missing prefix",
+                "upload_not_file_message_prefix": "Custom not-file prefix",
+                "upload_open_file_error_prefix": "Custom open prefix",
+            },
+        )(),
+    )
+
+    with pytest.raises(HyperbrowserError, match="Custom missing prefix:") as exc_info:
+        normalize_upload_file_input("/tmp/nonexistent-upload-prefix-test.txt")
+
+    assert exc_info.value.original_error is None
+
+
 def test_normalize_upload_file_input_returns_open_file_like_object():
     file_obj = io.BytesIO(b"content")
 
@@ -204,6 +227,19 @@ def test_open_upload_files_from_input_uses_sanitized_open_error_message(
     )
     monkeypatch.setattr(
         session_upload_utils,
+        "SESSION_OPERATION_METADATA",
+        type(
+            "_Metadata",
+            (),
+            {
+                "upload_missing_file_message_prefix": "Custom missing prefix",
+                "upload_not_file_message_prefix": "Custom not-file prefix",
+                "upload_open_file_error_prefix": "Custom open prefix",
+            },
+        )(),
+    )
+    monkeypatch.setattr(
+        session_upload_utils,
         "open_binary_file",
         _open_binary_file_stub,
     )
@@ -212,10 +248,7 @@ def test_open_upload_files_from_input_uses_sanitized_open_error_message(
         assert files["file"].read() == b"content"
 
     assert captured["file_path"] == "bad\tpath.txt"
-    assert (
-        captured["open_error_message"]
-        == "Failed to open upload file at path: bad?path.txt"
-    )
+    assert captured["open_error_message"] == "Custom open prefix: bad?path.txt"
 
 
 def test_open_upload_files_from_input_rejects_missing_normalized_file_object(
