@@ -3,6 +3,7 @@ import re
 from typing import Dict, Mapping, Optional, cast
 
 from .exceptions import HyperbrowserError
+from .type_utils import is_plain_string
 
 _INVALID_HEADER_NAME_CHARACTER_PATTERN = re.compile(r"[^!#$%&'*+\-.^_`|~0-9A-Za-z]")
 _MAX_HEADER_NAME_LENGTH = 256
@@ -49,11 +50,11 @@ def normalize_headers(
     for key, value in _read_header_items(
         headers, mapping_error_message=mapping_error_message
     ):
-        if type(key) is not str or type(value) is not str:
+        if not is_plain_string(key) or not is_plain_string(value):
             raise HyperbrowserError(effective_pair_error_message)
         try:
             normalized_key = key.strip()
-            if type(normalized_key) is not str:
+            if not is_plain_string(normalized_key):
                 raise TypeError("normalized header name must be a string")
         except HyperbrowserError:
             raise
@@ -104,7 +105,7 @@ def normalize_headers(
             raise HyperbrowserError("headers must not contain control characters")
         try:
             canonical_header_name = normalized_key.lower()
-            if type(canonical_header_name) is not str:
+            if not is_plain_string(canonical_header_name):
                 raise TypeError("canonical header name must be a string")
         except HyperbrowserError:
             raise
@@ -157,11 +158,11 @@ def merge_headers(
 def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
     if raw_headers is None:
         return None
-    if type(raw_headers) is not str:
+    if not is_plain_string(raw_headers):
         raise HyperbrowserError("HYPERBROWSER_HEADERS must be a string")
     try:
         normalized_raw_headers = raw_headers.strip()
-        if type(normalized_raw_headers) is not str:
+        if not is_plain_string(normalized_raw_headers):
             raise TypeError("normalized headers payload must be a string")
         is_empty_headers_payload = len(normalized_raw_headers) == 0
     except HyperbrowserError:
