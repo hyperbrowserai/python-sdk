@@ -11,6 +11,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_agent_operation_metadata_usage.py",
     "tests/test_agent_payload_helper_usage.py",
     "tests/test_agent_request_internal_reuse.py",
+    "tests/test_agent_request_wrapper_internal_reuse.py",
     "tests/test_agent_route_builder_usage.py",
     "tests/test_agent_start_helper_usage.py",
     "tests/test_agent_task_read_helper_usage.py",

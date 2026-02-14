@@ -81,6 +81,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_agent_operation_metadata_usage.py` (shared agent operation-metadata usage enforcement),
   - `tests/test_agent_payload_helper_usage.py` (shared agent start-payload helper usage enforcement),
   - `tests/test_agent_request_internal_reuse.py` (shared agent helper internal reuse of shared job request helpers),
+  - `tests/test_agent_request_wrapper_internal_reuse.py` (agent request-wrapper internal reuse of shared job request helpers),
   - `tests/test_agent_route_builder_usage.py` (shared agent read/stop route-builder usage enforcement),
   - `tests/test_agent_start_helper_usage.py` (shared agent start-request helper usage enforcement),
   - `tests/test_agent_stop_helper_usage.py` (shared agent stop-request helper usage enforcement),
