@@ -50,6 +50,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_model_request_wrapper_internal_reuse.py",
     "tests/test_tool_mapping_reader_usage.py",
     "tests/test_display_helper_usage.py",
+    "tests/test_file_message_default_constant_import_boundary.py",
     "tests/test_file_message_default_constant_usage.py",
     "tests/test_file_message_prefix_literal_boundary.py",
     "tests/test_file_open_error_helper_import_boundary.py",
