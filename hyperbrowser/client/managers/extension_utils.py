@@ -5,7 +5,7 @@ from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import ExtensionResponse
 from hyperbrowser.type_utils import is_plain_string
-from .list_parsing_utils import parse_mapping_list_items
+from .list_parsing_utils import parse_mapping_list_items, read_plain_list_items
 
 _MAX_DISPLAYED_MISSING_KEYS = 20
 _MAX_DISPLAYED_MISSING_KEY_LENGTH = 120
@@ -84,20 +84,14 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
             "Failed to read 'extensions' value from response",
             original_error=exc,
         ) from exc
-    if type(extensions_value) is not list:
-        raise HyperbrowserError(
+    extension_items = read_plain_list_items(
+        extensions_value,
+        expected_list_error=(
             "Expected list in 'extensions' key but got "
             f"{_get_type_name(extensions_value)}"
-        )
-    try:
-        extension_items = list(extensions_value)
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            "Failed to iterate 'extensions' list from response",
-            original_error=exc,
-        ) from exc
+        ),
+        read_list_error="Failed to iterate 'extensions' list from response",
+    )
     return parse_mapping_list_items(
         extension_items,
         item_label="extension",

@@ -3,7 +3,10 @@ from typing import Iterator
 
 import pytest
 
-from hyperbrowser.client.managers.list_parsing_utils import parse_mapping_list_items
+from hyperbrowser.client.managers.list_parsing_utils import (
+    parse_mapping_list_items,
+    read_plain_list_items,
+)
 from hyperbrowser.exceptions import HyperbrowserError
 
 
@@ -141,3 +144,32 @@ def test_parse_mapping_list_items_wraps_parse_failures():
         )
 
     assert isinstance(exc_info.value.original_error, ZeroDivisionError)
+
+
+def test_read_plain_list_items_returns_list_values():
+    assert read_plain_list_items(
+        ["a", "b"],
+        expected_list_error="expected list",
+        read_list_error="failed list iteration",
+    ) == ["a", "b"]
+
+
+def test_read_plain_list_items_rejects_non_list_values():
+    with pytest.raises(HyperbrowserError, match="expected list"):
+        read_plain_list_items(
+            ("a", "b"),
+            expected_list_error="expected list",
+            read_list_error="failed list iteration",
+        )
+
+
+def test_read_plain_list_items_rejects_list_subclass_values():
+    class _ListSubclass(list):
+        pass
+
+    with pytest.raises(HyperbrowserError, match="expected list"):
+        read_plain_list_items(
+            _ListSubclass(["a"]),  # type: ignore[arg-type]
+            expected_list_error="expected list",
+            read_list_error="failed list iteration",
+        )

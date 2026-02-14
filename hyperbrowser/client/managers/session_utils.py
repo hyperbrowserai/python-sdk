@@ -1,9 +1,8 @@
 from typing import Any, List, Type, TypeVar
 
 from hyperbrowser.display_utils import format_string_key_for_error
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.session import SessionRecording
-from .list_parsing_utils import parse_mapping_list_items
+from .list_parsing_utils import parse_mapping_list_items, read_plain_list_items
 from .response_utils import parse_response_model
 
 T = TypeVar("T")
@@ -30,19 +29,11 @@ def parse_session_response_model(
 def parse_session_recordings_response_data(
     response_data: Any,
 ) -> List[SessionRecording]:
-    if type(response_data) is not list:
-        raise HyperbrowserError(
-            "Expected session recording response to be a list of objects"
-        )
-    try:
-        recording_items = list(response_data)
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            "Failed to iterate session recording response list",
-            original_error=exc,
-        ) from exc
+    recording_items = read_plain_list_items(
+        response_data,
+        expected_list_error="Expected session recording response to be a list of objects",
+        read_list_error="Failed to iterate session recording response list",
+    )
     return parse_mapping_list_items(
         recording_items,
         item_label="session recording",

@@ -6,6 +6,22 @@ from hyperbrowser.mapping_utils import read_string_key_mapping, safe_key_display
 T = TypeVar("T")
 
 
+def read_plain_list_items(
+    items_value: Any,
+    *,
+    expected_list_error: str,
+    read_list_error: str,
+) -> List[Any]:
+    if type(items_value) is not list:
+        raise HyperbrowserError(expected_list_error)
+    try:
+        return list(items_value)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(read_list_error, original_error=exc) from exc
+
+
 def parse_mapping_list_items(
     items: List[Any],
     *,
