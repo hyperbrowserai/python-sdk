@@ -64,3 +64,26 @@ def test_format_string_key_for_error_uses_default_fallback_for_invalid_blank_fal
         format_string_key_for_error("   ", max_length=20, blank_fallback=123)
         == "<blank key>"
     )
+
+
+def test_format_string_key_for_error_rejects_string_subclass_keys():
+    class _StringSubclass(str):
+        pass
+
+    assert format_string_key_for_error(_StringSubclass("key"), max_length=20) == (
+        "<blank key>"
+    )
+
+
+def test_format_string_key_for_error_rejects_string_subclass_blank_fallbacks():
+    class _StringSubclass(str):
+        pass
+
+    assert (
+        format_string_key_for_error(
+            "   ",
+            max_length=20,
+            blank_fallback=_StringSubclass("<custom>"),
+        )
+        == "<blank key>"
+    )
