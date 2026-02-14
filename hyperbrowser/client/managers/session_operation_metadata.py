@@ -11,6 +11,9 @@ class SessionOperationMetadata:
     video_recording_url_operation_name: str
     downloads_url_operation_name: str
     upload_file_operation_name: str
+    upload_missing_file_message_prefix: str
+    upload_not_file_message_prefix: str
+    upload_open_file_error_prefix: str
     extend_operation_name: str
     update_profile_operation_name: str
 
@@ -24,6 +27,9 @@ SESSION_OPERATION_METADATA = SessionOperationMetadata(
     video_recording_url_operation_name="session video recording url",
     downloads_url_operation_name="session downloads url",
     upload_file_operation_name="session upload file",
+    upload_missing_file_message_prefix="Upload file not found at path",
+    upload_not_file_message_prefix="Upload file path must point to a file",
+    upload_open_file_error_prefix="Failed to open upload file at path",
     extend_operation_name="session extend",
     update_profile_operation_name="session update profile",
 )
