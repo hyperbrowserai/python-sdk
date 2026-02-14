@@ -3,6 +3,7 @@ from typing import Mapping, Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.header_utils import merge_headers
+from hyperbrowser.type_utils import is_plain_int
 from hyperbrowser.version import __version__
 from .base import APIResponse, AsyncTransportStrategy, _normalize_transport_api_key
 from .error_utils import (
@@ -34,7 +35,7 @@ class AsyncTransport(AsyncTransportStrategy):
     def _normalize_response_status_code(self, response: httpx.Response) -> int:
         try:
             status_code = response.status_code
-            if type(status_code) is not int:
+            if not is_plain_int(status_code):
                 raise TypeError("status code must be an integer")
             normalized_status_code = status_code
             if not (
