@@ -3,11 +3,11 @@ from typing import Optional
 from ...agent_payload_utils import build_agent_start_payload
 from ...agent_operation_metadata import CUA_OPERATION_METADATA
 from ...agent_route_constants import CUA_TASK_ROUTE_PREFIX
+from ...agent_start_utils import start_agent_task_async
 from ...agent_status_utils import is_agent_terminal_status
 from ...agent_stop_utils import stop_agent_task_async
 from ...agent_task_read_utils import get_agent_task_async, get_agent_task_status_async
 from ...job_wait_utils import wait_for_job_result_with_defaults_async
-from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
 
 from .....models import (
@@ -36,12 +36,10 @@ class CuaManager:
             params,
             error_message="Failed to serialize CUA start params",
         )
-        response = await self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return await start_agent_task_async(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartCuaTaskResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )

@@ -4,10 +4,10 @@ from ...agent_status_utils import is_agent_terminal_status
 from ...browser_use_payload_utils import build_browser_use_start_payload
 from ...agent_operation_metadata import BROWSER_USE_OPERATION_METADATA
 from ...agent_route_constants import BROWSER_USE_TASK_ROUTE_PREFIX
+from ...agent_start_utils import start_agent_task
 from ...agent_stop_utils import stop_agent_task
 from ...agent_task_read_utils import get_agent_task, get_agent_task_status
 from ...job_wait_utils import wait_for_job_result_with_defaults
-from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
 
 from .....models import (
@@ -33,12 +33,10 @@ class BrowserUseManager:
 
     def start(self, params: StartBrowserUseTaskParams) -> StartBrowserUseTaskResponse:
         payload = build_browser_use_start_payload(params)
-        response = self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
-            data=payload,
-        )
-        return parse_response_model(
-            response.data,
+        return start_agent_task(
+            client=self._client,
+            route_prefix=self._ROUTE_PREFIX,
+            payload=payload,
             model=StartBrowserUseTaskResponse,
             operation_name=self._OPERATION_METADATA.start_operation_name,
         )
