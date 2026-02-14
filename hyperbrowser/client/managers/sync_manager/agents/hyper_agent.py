@@ -1,8 +1,9 @@
 from typing import Optional
 
-from ....polling import build_operation_name, ensure_started_job_id, wait_for_job_result
+from ....polling import wait_for_job_result
 from ...response_utils import parse_response_model
 from ...serialization_utils import serialize_model_dump_to_dict
+from ...start_job_utils import build_started_job_context
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -71,11 +72,11 @@ class HyperAgentManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> HyperAgentTaskResponse:
         job_start_resp = self.start(params)
-        job_id = ensure_started_job_id(
-            job_start_resp.job_id,
-            error_message="Failed to start HyperAgent task",
+        job_id, operation_name = build_started_job_context(
+            started_job_id=job_start_resp.job_id,
+            start_error_message="Failed to start HyperAgent task",
+            operation_name_prefix="HyperAgent task ",
         )
-        operation_name = build_operation_name("HyperAgent task ", job_id)
 
         return wait_for_job_result(
             operation_name=operation_name,

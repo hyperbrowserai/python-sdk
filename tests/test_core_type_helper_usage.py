@@ -34,6 +34,7 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/session_profile_update_utils.py",
     "hyperbrowser/client/managers/web_pagination_utils.py",
     "hyperbrowser/client/managers/web_payload_utils.py",
+    "hyperbrowser/client/managers/start_job_utils.py",
     "hyperbrowser/tools/__init__.py",
     "hyperbrowser/display_utils.py",
     "hyperbrowser/exceptions.py",

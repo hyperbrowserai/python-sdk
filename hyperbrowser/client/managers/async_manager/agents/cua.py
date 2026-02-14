@@ -1,12 +1,9 @@
 from typing import Optional
 
-from ....polling import (
-    build_operation_name,
-    ensure_started_job_id,
-    wait_for_job_result_async,
-)
+from ....polling import wait_for_job_result_async
 from ...response_utils import parse_response_model
 from ...serialization_utils import serialize_model_dump_to_dict
+from ...start_job_utils import build_started_job_context
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -75,11 +72,11 @@ class CuaManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> CuaTaskResponse:
         job_start_resp = await self.start(params)
-        job_id = ensure_started_job_id(
-            job_start_resp.job_id,
-            error_message="Failed to start CUA task job",
+        job_id, operation_name = build_started_job_context(
+            started_job_id=job_start_resp.job_id,
+            start_error_message="Failed to start CUA task job",
+            operation_name_prefix="CUA task job ",
         )
-        operation_name = build_operation_name("CUA task job ", job_id)
 
         return await wait_for_job_result_async(
             operation_name=operation_name,

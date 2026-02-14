@@ -3,9 +3,7 @@ from typing import Optional
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
-    build_operation_name,
     collect_paginated_results,
-    ensure_started_job_id,
     poll_until_terminal_status,
     retry_operation,
     wait_for_job_result,
@@ -20,6 +18,7 @@ from ..serialization_utils import (
     serialize_model_dump_to_dict,
 )
 from ..response_utils import parse_response_model
+from ..start_job_utils import build_started_job_context
 from ....models.scrape import (
     BatchScrapeJobResponse,
     BatchScrapeJobStatusResponse,
@@ -89,11 +88,11 @@ class BatchScrapeManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BatchScrapeJobResponse:
         job_start_resp = self.start(params)
-        job_id = ensure_started_job_id(
-            job_start_resp.job_id,
-            error_message="Failed to start batch scrape job",
+        job_id, operation_name = build_started_job_context(
+            started_job_id=job_start_resp.job_id,
+            start_error_message="Failed to start batch scrape job",
+            operation_name_prefix="batch scrape job ",
         )
-        operation_name = build_operation_name("batch scrape job ", job_id)
 
         job_status = poll_until_terminal_status(
             operation_name=operation_name,
@@ -194,11 +193,11 @@ class ScrapeManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> ScrapeJobResponse:
         job_start_resp = self.start(params)
-        job_id = ensure_started_job_id(
-            job_start_resp.job_id,
-            error_message="Failed to start scrape job",
+        job_id, operation_name = build_started_job_context(
+            started_job_id=job_start_resp.job_id,
+            start_error_message="Failed to start scrape job",
+            operation_name_prefix="scrape job ",
         )
-        operation_name = build_operation_name("scrape job ", job_id)
 
         return wait_for_job_result(
             operation_name=operation_name,

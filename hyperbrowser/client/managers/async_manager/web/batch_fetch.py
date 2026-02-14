@@ -17,13 +17,12 @@ from ...web_pagination_utils import (
 )
 from ....polling import (
     build_fetch_operation_name,
-    build_operation_name,
     collect_paginated_results_async,
-    ensure_started_job_id,
     poll_until_terminal_status_async,
     retry_operation_async,
 )
 from ...response_utils import parse_response_model
+from ...start_job_utils import build_started_job_context
 
 
 class BatchFetchManager:
@@ -78,11 +77,11 @@ class BatchFetchManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BatchFetchJobResponse:
         job_start_resp = await self.start(params)
-        job_id = ensure_started_job_id(
-            job_start_resp.job_id,
-            error_message="Failed to start batch fetch job",
+        job_id, operation_name = build_started_job_context(
+            started_job_id=job_start_resp.job_id,
+            start_error_message="Failed to start batch fetch job",
+            operation_name_prefix="batch fetch job ",
         )
-        operation_name = build_operation_name("batch fetch job ", job_id)
 
         job_status = await poll_until_terminal_status_async(
             operation_name=operation_name,

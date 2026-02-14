@@ -107,6 +107,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
   - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
+  - `tests/test_start_job_context_helper_usage.py` (shared started-job context helper usage enforcement),
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
   - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),
   - `tests/test_web_pagination_internal_reuse.py` (web pagination helper internal reuse of shared job pagination helpers),
