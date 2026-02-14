@@ -60,9 +60,20 @@ class CrawlManager:
         self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
         params_obj = params or GetCrawlJobParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize crawl get params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize crawl get params")
         response = self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_response_model(
             response.data,

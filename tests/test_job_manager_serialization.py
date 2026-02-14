@@ -29,9 +29,13 @@ from hyperbrowser.client.managers.sync_manager.scrape import (
     ScrapeManager as SyncScrapeManager,
 )
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.models.crawl import StartCrawlJobParams
+from hyperbrowser.models.crawl import GetCrawlJobParams, StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
-from hyperbrowser.models.scrape import StartBatchScrapeJobParams, StartScrapeJobParams
+from hyperbrowser.models.scrape import (
+    GetBatchScrapeJobParams,
+    StartBatchScrapeJobParams,
+    StartScrapeJobParams,
+)
 
 
 class _SyncTransport:
@@ -172,6 +176,49 @@ ASYNC_CASES: tuple[_AsyncCase, ...] = (
         "/extract",
         {"urls": ["https://example.com"], "prompt": "extract data"},
         "Failed to serialize extract start params",
+    ),
+)
+
+_SyncGetCase = Tuple[
+    str,
+    Type[Any],
+    Type[Any],
+    Callable[[], Any],
+    str,
+]
+_AsyncGetCase = _SyncGetCase
+
+SYNC_GET_CASES: tuple[_SyncGetCase, ...] = (
+    (
+        "batch-scrape-get",
+        SyncBatchScrapeManager,
+        GetBatchScrapeJobParams,
+        lambda: GetBatchScrapeJobParams(page=1),
+        "Failed to serialize batch scrape get params",
+    ),
+    (
+        "crawl-get",
+        SyncCrawlManager,
+        GetCrawlJobParams,
+        lambda: GetCrawlJobParams(page=1),
+        "Failed to serialize crawl get params",
+    ),
+)
+
+ASYNC_GET_CASES: tuple[_AsyncGetCase, ...] = (
+    (
+        "batch-scrape-get",
+        AsyncBatchScrapeManager,
+        GetBatchScrapeJobParams,
+        lambda: GetBatchScrapeJobParams(page=1),
+        "Failed to serialize batch scrape get params",
+    ),
+    (
+        "crawl-get",
+        AsyncCrawlManager,
+        GetCrawlJobParams,
+        lambda: GetCrawlJobParams(page=1),
+        "Failed to serialize crawl get params",
     ),
 )
 
@@ -417,6 +464,182 @@ def test_async_job_start_rejects_non_dict_serialized_params(
     async def run() -> None:
         with pytest.raises(HyperbrowserError, match=expected_error) as exc_info:
             await manager.start(params)
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "_, manager_class, params_class, build_params, expected_error",
+    SYNC_GET_CASES,
+    ids=[case[0] for case in SYNC_GET_CASES],
+)
+def test_sync_job_get_wraps_param_serialization_errors(
+    _: str,
+    manager_class: Type[Any],
+    params_class: Type[Any],
+    build_params: Callable[[], Any],
+    expected_error: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = manager_class(_SyncClient())
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("broken model_dump")
+
+    monkeypatch.setattr(params_class, "model_dump", _raise_model_dump_error)
+
+    with pytest.raises(HyperbrowserError, match=expected_error) as exc_info:
+        manager.get("job_123", build_params())
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize(
+    "_, manager_class, params_class, build_params, expected_error",
+    SYNC_GET_CASES,
+    ids=[case[0] for case in SYNC_GET_CASES],
+)
+def test_sync_job_get_preserves_hyperbrowser_serialization_errors(
+    _: str,
+    manager_class: Type[Any],
+    params_class: Type[Any],
+    build_params: Callable[[], Any],
+    expected_error: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = manager_class(_SyncClient())
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise HyperbrowserError("custom model_dump failure")
+
+    monkeypatch.setattr(params_class, "model_dump", _raise_model_dump_error)
+
+    with pytest.raises(
+        HyperbrowserError, match="custom model_dump failure"
+    ) as exc_info:
+        manager.get("job_123", build_params())
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize(
+    "_, manager_class, params_class, build_params, expected_error",
+    SYNC_GET_CASES,
+    ids=[case[0] for case in SYNC_GET_CASES],
+)
+def test_sync_job_get_rejects_non_dict_serialized_params(
+    _: str,
+    manager_class: Type[Any],
+    params_class: Type[Any],
+    build_params: Callable[[], Any],
+    expected_error: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = manager_class(_SyncClient())
+
+    monkeypatch.setattr(
+        params_class,
+        "model_dump",
+        lambda *args, **kwargs: MappingProxyType({"page": 1}),
+    )
+
+    with pytest.raises(HyperbrowserError, match=expected_error) as exc_info:
+        manager.get("job_123", build_params())
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize(
+    "_, manager_class, params_class, build_params, expected_error",
+    ASYNC_GET_CASES,
+    ids=[case[0] for case in ASYNC_GET_CASES],
+)
+def test_async_job_get_wraps_param_serialization_errors(
+    _: str,
+    manager_class: Type[Any],
+    params_class: Type[Any],
+    build_params: Callable[[], Any],
+    expected_error: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = manager_class(_AsyncClient())
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("broken model_dump")
+
+    monkeypatch.setattr(params_class, "model_dump", _raise_model_dump_error)
+
+    async def run() -> None:
+        with pytest.raises(HyperbrowserError, match=expected_error) as exc_info:
+            await manager.get("job_123", build_params())
+        assert isinstance(exc_info.value.original_error, RuntimeError)
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "_, manager_class, params_class, build_params, expected_error",
+    ASYNC_GET_CASES,
+    ids=[case[0] for case in ASYNC_GET_CASES],
+)
+def test_async_job_get_preserves_hyperbrowser_serialization_errors(
+    _: str,
+    manager_class: Type[Any],
+    params_class: Type[Any],
+    build_params: Callable[[], Any],
+    expected_error: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = manager_class(_AsyncClient())
+
+    def _raise_model_dump_error(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise HyperbrowserError("custom model_dump failure")
+
+    monkeypatch.setattr(params_class, "model_dump", _raise_model_dump_error)
+
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserError, match="custom model_dump failure"
+        ) as exc_info:
+            await manager.get("job_123", build_params())
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "_, manager_class, params_class, build_params, expected_error",
+    ASYNC_GET_CASES,
+    ids=[case[0] for case in ASYNC_GET_CASES],
+)
+def test_async_job_get_rejects_non_dict_serialized_params(
+    _: str,
+    manager_class: Type[Any],
+    params_class: Type[Any],
+    build_params: Callable[[], Any],
+    expected_error: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manager = manager_class(_AsyncClient())
+
+    monkeypatch.setattr(
+        params_class,
+        "model_dump",
+        lambda *args, **kwargs: MappingProxyType({"page": 1}),
+    )
+
+    async def run() -> None:
+        with pytest.raises(HyperbrowserError, match=expected_error) as exc_info:
+            await manager.get("job_123", build_params())
         assert exc_info.value.original_error is None
 
     asyncio.run(run())

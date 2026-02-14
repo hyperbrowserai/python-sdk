@@ -67,9 +67,20 @@ class BatchScrapeManager:
         self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
     ) -> BatchScrapeJobResponse:
         params_obj = params or GetBatchScrapeJobParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize batch scrape get params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize batch scrape get params")
         response = await self._client.transport.get(
             self._client._build_url(f"/scrape/batch/{job_id}"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_response_model(
             response.data,
