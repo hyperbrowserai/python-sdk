@@ -48,7 +48,7 @@ def _normalize_error_prefix(prefix: object, *, default_prefix: object) -> str:
 def format_file_path_for_error(
     file_path: object,
     *,
-    max_length: int = _MAX_FILE_PATH_DISPLAY_LENGTH,
+    max_length: object = _MAX_FILE_PATH_DISPLAY_LENGTH,
 ) -> str:
     if not is_plain_int(max_length) or max_length <= 0:
         max_length = _MAX_FILE_PATH_DISPLAY_LENGTH
