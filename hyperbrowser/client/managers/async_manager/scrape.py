@@ -1,6 +1,5 @@
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
@@ -11,6 +10,7 @@ from ...polling import (
     retry_operation_async,
     wait_for_job_result_async,
 )
+from ..serialization_utils import serialize_model_dump_to_dict
 from ..response_utils import parse_response_model
 from ....models.scrape import (
     BatchScrapeJobResponse,
@@ -32,17 +32,10 @@ class BatchScrapeManager:
     async def start(
         self, params: StartBatchScrapeJobParams
     ) -> StartBatchScrapeJobResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize batch scrape start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize batch scrape start params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize batch scrape start params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/scrape/batch"),
             data=payload,
@@ -67,17 +60,10 @@ class BatchScrapeManager:
         self, job_id: str, params: Optional[GetBatchScrapeJobParams] = None
     ) -> BatchScrapeJobResponse:
         params_obj = params or GetBatchScrapeJobParams()
-        try:
-            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize batch scrape get params",
-                original_error=exc,
-            ) from exc
-        if type(query_params) is not dict:
-            raise HyperbrowserError("Failed to serialize batch scrape get params")
+        query_params = serialize_model_dump_to_dict(
+            params_obj,
+            error_message="Failed to serialize batch scrape get params",
+        )
         response = await self._client.transport.get(
             self._client._build_url(f"/scrape/batch/{job_id}"),
             params=query_params,
@@ -166,17 +152,10 @@ class ScrapeManager:
         self.batch = BatchScrapeManager(client)
 
     async def start(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize scrape start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize scrape start params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize scrape start params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/scrape"),
             data=payload,

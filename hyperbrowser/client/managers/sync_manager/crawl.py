@@ -1,6 +1,5 @@
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
@@ -10,6 +9,7 @@ from ...polling import (
     poll_until_terminal_status,
     retry_operation,
 )
+from ..serialization_utils import serialize_model_dump_to_dict
 from ..response_utils import parse_response_model
 from ....models.crawl import (
     CrawlJobResponse,
@@ -25,17 +25,10 @@ class CrawlManager:
         self._client = client
 
     def start(self, params: StartCrawlJobParams) -> StartCrawlJobResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize crawl start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize crawl start params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize crawl start params",
+        )
         response = self._client.transport.post(
             self._client._build_url("/crawl"),
             data=payload,
@@ -60,17 +53,10 @@ class CrawlManager:
         self, job_id: str, params: Optional[GetCrawlJobParams] = None
     ) -> CrawlJobResponse:
         params_obj = params or GetCrawlJobParams()
-        try:
-            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize crawl get params",
-                original_error=exc,
-            ) from exc
-        if type(query_params) is not dict:
-            raise HyperbrowserError("Failed to serialize crawl get params")
+        query_params = serialize_model_dump_to_dict(
+            params_obj,
+            error_message="Failed to serialize crawl get params",
+        )
         response = self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
             params=query_params,
