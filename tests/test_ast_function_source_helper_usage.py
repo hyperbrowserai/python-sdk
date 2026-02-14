@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.ast_import_utils import imports_collect_function_sources
+from tests.ast_import_utils import calls_symbol, imports_collect_function_sources
 
 pytestmark = pytest.mark.architecture
 
@@ -31,7 +31,7 @@ def test_ast_guard_modules_reuse_shared_collect_function_sources_helper():
         if not imports_collect_function_sources(module_text):
             violating_modules.append(module_path)
             continue
-        if "collect_function_sources(" not in module_text:
+        if not calls_symbol(module_text, "collect_function_sources"):
             violating_modules.append(module_path)
             continue
         if "def _collect_function_sources" in module_text:

@@ -1,6 +1,7 @@
 import pytest
 
 from tests.ast_import_utils import (
+    calls_symbol,
     imports_symbol_from_module,
     imports_collect_function_sources,
     imports_imports_collect_function_sources,
@@ -111,3 +112,30 @@ def test_imports_imports_collect_function_sources_ignores_non_from_imports():
     )
 
     assert imports_imports_collect_function_sources(module_text) is False
+
+
+def test_calls_symbol_detects_direct_function_call():
+    module_text = (
+        "from tests.ast_function_source_utils import collect_function_sources\n"
+        "collect_function_sources('tests/test_job_request_wrapper_internal_reuse.py')\n"
+    )
+
+    assert calls_symbol(module_text, "collect_function_sources") is True
+
+
+def test_calls_symbol_detects_attribute_function_call():
+    module_text = (
+        "import tests.ast_import_utils as import_utils\n"
+        "import_utils.imports_collect_function_sources('dummy')\n"
+    )
+
+    assert calls_symbol(module_text, "imports_collect_function_sources") is True
+
+
+def test_calls_symbol_ignores_non_call_symbol_usage():
+    module_text = (
+        "imports_collect_function_sources = 'not a function call'\n"
+        "print(imports_collect_function_sources)\n"
+    )
+
+    assert calls_symbol(module_text, "imports_collect_function_sources") is False

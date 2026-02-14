@@ -13,6 +13,19 @@ def imports_symbol_from_module(module_text: str, module: str, symbol: str) -> bo
     return False
 
 
+def calls_symbol(module_text: str, symbol: str) -> bool:
+    module_ast = ast.parse(module_text)
+    for node in ast.walk(module_ast):
+        if not isinstance(node, ast.Call):
+            continue
+        called_function = node.func
+        if isinstance(called_function, ast.Name) and called_function.id == symbol:
+            return True
+        if isinstance(called_function, ast.Attribute) and called_function.attr == symbol:
+            return True
+    return False
+
+
 def imports_collect_function_sources(module_text: str) -> bool:
     return imports_symbol_from_module(
         module_text,
