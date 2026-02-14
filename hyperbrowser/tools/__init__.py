@@ -58,7 +58,7 @@ def _format_tool_param_key_for_error(key: str) -> str:
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in key
         ).strip()
-        if not isinstance(normalized_key, str):
+        if type(normalized_key) is not str:
             raise TypeError("normalized tool key display must be a string")
     except Exception:
         return "<unreadable key>"
@@ -86,7 +86,7 @@ def _normalize_extract_schema_mapping(
         ) from exc
     normalized_schema: Dict[str, Any] = {}
     for key in schema_keys:
-        if not isinstance(key, str):
+        if type(key) is not str:
             raise HyperbrowserError("Extract tool `schema` object keys must be strings")
         try:
             normalized_schema[key] = schema_value[key]

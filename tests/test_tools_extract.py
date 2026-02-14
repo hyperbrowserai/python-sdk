@@ -257,6 +257,45 @@ def test_extract_tool_async_runnable_rejects_non_string_schema_keys():
         asyncio.run(run())
 
 
+def test_extract_tool_runnable_rejects_string_subclass_schema_keys():
+    class _SchemaKey(str):
+        pass
+
+    client = _SyncClient()
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` object keys must be strings"
+    ):
+        WebsiteExtractTool.runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": {_SchemaKey("type"): "object"},
+            },
+        )
+
+
+def test_extract_tool_async_runnable_rejects_string_subclass_schema_keys():
+    class _SchemaKey(str):
+        pass
+
+    client = _AsyncClient()
+
+    async def run():
+        await WebsiteExtractTool.async_runnable(
+            client,
+            {
+                "urls": ["https://example.com"],
+                "schema": {_SchemaKey("type"): "object"},
+            },
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Extract tool `schema` object keys must be strings"
+    ):
+        asyncio.run(run())
+
+
 def test_extract_tool_runnable_wraps_schema_key_read_failures():
     class _BrokenSchemaMapping(Mapping[object, object]):
         def __iter__(self):
