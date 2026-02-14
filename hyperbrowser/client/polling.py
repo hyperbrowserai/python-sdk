@@ -104,19 +104,58 @@ def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
 def _validate_operation_name(operation_name: str) -> None:
     if not isinstance(operation_name, str):
         raise HyperbrowserError("operation_name must be a string")
-    if not operation_name.strip():
+    try:
+        normalized_operation_name = operation_name.strip()
+        if type(normalized_operation_name) is not str:
+            raise TypeError("normalized operation_name must be a string")
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to normalize operation_name",
+            original_error=exc,
+        ) from exc
+    if not normalized_operation_name:
         raise HyperbrowserError("operation_name must not be empty")
-    if operation_name != operation_name.strip():
+    try:
+        has_surrounding_whitespace = operation_name != normalized_operation_name
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to normalize operation_name",
+            original_error=exc,
+        ) from exc
+    if has_surrounding_whitespace:
         raise HyperbrowserError(
             "operation_name must not contain leading or trailing whitespace"
         )
-    if len(operation_name) > _MAX_OPERATION_NAME_LENGTH:
+    try:
+        operation_name_length = len(operation_name)
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to validate operation_name length",
+            original_error=exc,
+        ) from exc
+    if operation_name_length > _MAX_OPERATION_NAME_LENGTH:
         raise HyperbrowserError(
             f"operation_name must be {_MAX_OPERATION_NAME_LENGTH} characters or fewer"
         )
-    if any(
-        ord(character) < 32 or ord(character) == 127 for character in operation_name
-    ):
+    try:
+        contains_control_character = any(
+            ord(character) < 32 or ord(character) == 127
+            for character in operation_name
+        )
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to validate operation_name characters",
+            original_error=exc,
+        ) from exc
+    if contains_control_character:
         raise HyperbrowserError("operation_name must not contain control characters")
 
 

@@ -6847,3 +6847,146 @@ def test_retry_operation_sanitizes_control_characters_in_errors():
             max_attempts=1,
             retry_delay_seconds=0.0,
         )
+
+
+def _run_retry_operation_sync_with_name(operation_name: str) -> None:
+    retry_operation(
+        operation_name=operation_name,
+        operation=lambda: "ok",
+        max_attempts=1,
+        retry_delay_seconds=0.0,
+    )
+
+
+def _run_retry_operation_async_with_name(operation_name: str) -> None:
+    async def _run() -> None:
+        async def _operation() -> str:
+            return "ok"
+
+        await retry_operation_async(
+            operation_name=operation_name,
+            operation=lambda: _operation(),
+            max_attempts=1,
+            retry_delay_seconds=0.0,
+        )
+
+    asyncio.run(_run())
+
+
+@pytest.mark.parametrize(
+    "runner",
+    [_run_retry_operation_sync_with_name, _run_retry_operation_async_with_name],
+)
+def test_retry_operation_wraps_operation_name_strip_runtime_errors(runner):
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("operation_name strip exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize operation_name"
+    ) as exc_info:
+        runner(_BrokenOperationName("poll operation"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize(
+    "runner",
+    [_run_retry_operation_sync_with_name, _run_retry_operation_async_with_name],
+)
+def test_retry_operation_preserves_operation_name_strip_hyperbrowser_errors(runner):
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise HyperbrowserError("custom operation_name strip failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom operation_name strip failure"
+    ) as exc_info:
+        runner(_BrokenOperationName("poll operation"))
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize(
+    "runner",
+    [_run_retry_operation_sync_with_name, _run_retry_operation_async_with_name],
+)
+def test_retry_operation_wraps_non_string_operation_name_strip_results(runner):
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return object()
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize operation_name"
+    ) as exc_info:
+        runner(_BrokenOperationName("poll operation"))
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
+@pytest.mark.parametrize(
+    "runner",
+    [_run_retry_operation_sync_with_name, _run_retry_operation_async_with_name],
+)
+def test_retry_operation_wraps_operation_name_length_runtime_errors(runner):
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return "poll operation"
+
+        def __len__(self):
+            raise RuntimeError("operation_name length exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to validate operation_name length"
+    ) as exc_info:
+        runner(_BrokenOperationName("poll operation"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize(
+    "runner",
+    [_run_retry_operation_sync_with_name, _run_retry_operation_async_with_name],
+)
+def test_retry_operation_wraps_operation_name_character_validation_failures(runner):
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return "poll operation"
+
+        def __iter__(self):
+            raise RuntimeError("operation_name iteration exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to validate operation_name characters"
+    ) as exc_info:
+        runner(_BrokenOperationName("poll operation"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize(
+    "runner",
+    [_run_retry_operation_sync_with_name, _run_retry_operation_async_with_name],
+)
+def test_retry_operation_preserves_operation_name_character_validation_hyperbrowser_errors(
+    runner,
+):
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return "poll operation"
+
+        def __iter__(self):
+            raise HyperbrowserError("custom operation_name character failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom operation_name character failure"
+    ) as exc_info:
+        runner(_BrokenOperationName("poll operation"))
+
+    assert exc_info.value.original_error is None
