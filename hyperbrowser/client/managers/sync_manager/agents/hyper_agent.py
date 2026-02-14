@@ -3,6 +3,7 @@ from typing import Optional
 from ...agent_payload_utils import build_agent_start_payload
 from ...agent_status_utils import is_agent_terminal_status
 from ...agent_stop_utils import stop_agent_task
+from ...agent_task_read_utils import get_agent_task, get_agent_task_status
 from ...job_wait_utils import wait_for_job_result_with_defaults
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
@@ -41,21 +42,19 @@ class HyperAgentManager:
         )
 
     def get(self, job_id: str) -> HyperAgentTaskResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"/task/hyper-agent/{job_id}")
-        )
-        return parse_response_model(
-            response.data,
+        return get_agent_task(
+            client=self._client,
+            route_prefix="/task/hyper-agent",
+            job_id=job_id,
             model=HyperAgentTaskResponse,
             operation_name="hyper agent task",
         )
 
     def get_status(self, job_id: str) -> HyperAgentTaskStatusResponse:
-        response = self._client.transport.get(
-            self._client._build_url(f"/task/hyper-agent/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return get_agent_task_status(
+            client=self._client,
+            route_prefix="/task/hyper-agent",
+            job_id=job_id,
             model=HyperAgentTaskStatusResponse,
             operation_name="hyper agent task status",
         )

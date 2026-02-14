@@ -22,6 +22,7 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/agent_payload_utils.py",
     "hyperbrowser/client/managers/agent_status_utils.py",
     "hyperbrowser/client/managers/agent_stop_utils.py",
+    "hyperbrowser/client/managers/agent_task_read_utils.py",
     "hyperbrowser/client/managers/browser_use_payload_utils.py",
     "hyperbrowser/client/managers/extension_utils.py",
     "hyperbrowser/client/managers/job_status_utils.py",

@@ -79,6 +79,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_agent_examples_coverage.py` (agent task example coverage enforcement),
   - `tests/test_agent_payload_helper_usage.py` (shared agent start-payload helper usage enforcement),
   - `tests/test_agent_stop_helper_usage.py` (shared agent stop-request helper usage enforcement),
+  - `tests/test_agent_task_read_helper_usage.py` (shared agent task read-helper usage enforcement),
   - `tests/test_agent_terminal_status_helper_usage.py` (shared agent terminal-status helper usage enforcement),
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
   - `tests/test_binary_file_open_helper_usage.py` (shared binary file open helper usage enforcement),

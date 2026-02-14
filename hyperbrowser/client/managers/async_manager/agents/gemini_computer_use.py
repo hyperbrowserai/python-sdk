@@ -3,6 +3,7 @@ from typing import Optional
 from ...agent_payload_utils import build_agent_start_payload
 from ...agent_status_utils import is_agent_terminal_status
 from ...agent_stop_utils import stop_agent_task_async
+from ...agent_task_read_utils import get_agent_task_async, get_agent_task_status_async
 from ...job_wait_utils import wait_for_job_result_with_defaults_async
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
@@ -43,21 +44,19 @@ class GeminiComputerUseManager:
         )
 
     async def get(self, job_id: str) -> GeminiComputerUseTaskResponse:
-        response = await self._client.transport.get(
-            self._client._build_url(f"/task/gemini-computer-use/{job_id}")
-        )
-        return parse_response_model(
-            response.data,
+        return await get_agent_task_async(
+            client=self._client,
+            route_prefix="/task/gemini-computer-use",
+            job_id=job_id,
             model=GeminiComputerUseTaskResponse,
             operation_name="gemini computer use task",
         )
 
     async def get_status(self, job_id: str) -> GeminiComputerUseTaskStatusResponse:
-        response = await self._client.transport.get(
-            self._client._build_url(f"/task/gemini-computer-use/{job_id}/status")
-        )
-        return parse_response_model(
-            response.data,
+        return await get_agent_task_status_async(
+            client=self._client,
+            route_prefix="/task/gemini-computer-use",
+            job_id=job_id,
             model=GeminiComputerUseTaskStatusResponse,
             operation_name="gemini computer use task status",
         )
