@@ -98,6 +98,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extract_payload_helper_usage.py` (extract start-payload helper usage enforcement),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
   - `tests/test_job_pagination_helper_usage.py` (shared scrape/crawl pagination helper usage enforcement),
+  - `tests/test_job_wait_helper_usage.py` (shared wait-for-job defaults helper usage enforcement),
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
   - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
   - `tests/test_mapping_keys_access_usage.py` (centralized key-iteration boundaries),

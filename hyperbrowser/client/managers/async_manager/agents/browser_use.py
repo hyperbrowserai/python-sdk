@@ -1,8 +1,8 @@
 from typing import Optional
 
-from ....polling import wait_for_job_result_async
 from ...agent_status_utils import is_agent_terminal_status
 from ...browser_use_payload_utils import build_browser_use_start_payload
+from ...job_wait_utils import wait_for_job_result_with_defaults_async
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
 
@@ -78,7 +78,7 @@ class BrowserUseManager:
             operation_name_prefix="browser-use task job ",
         )
 
-        return await wait_for_job_result_async(
+        return await wait_for_job_result_with_defaults_async(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=is_agent_terminal_status,
@@ -86,6 +86,4 @@ class BrowserUseManager:
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
-            fetch_max_attempts=POLLING_ATTEMPTS,
-            fetch_retry_delay_seconds=0.5,
         )

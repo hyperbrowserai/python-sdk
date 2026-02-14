@@ -1,8 +1,8 @@
 from typing import Optional
 
-from ....polling import wait_for_job_result
 from ...agent_payload_utils import build_agent_start_payload
 from ...agent_status_utils import is_agent_terminal_status
+from ...job_wait_utils import wait_for_job_result_with_defaults
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
 
@@ -81,7 +81,7 @@ class GeminiComputerUseManager:
             operation_name_prefix="Gemini Computer Use task job ",
         )
 
-        return wait_for_job_result(
+        return wait_for_job_result_with_defaults(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=is_agent_terminal_status,
@@ -89,6 +89,4 @@ class GeminiComputerUseManager:
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
-            fetch_max_attempts=POLLING_ATTEMPTS,
-            fetch_retry_delay_seconds=0.5,
         )

@@ -9,8 +9,8 @@ from hyperbrowser.models.extract import (
 )
 from ..extract_payload_utils import build_extract_start_payload
 from ..job_status_utils import is_default_terminal_job_status
+from ..job_wait_utils import wait_for_job_result_with_defaults_async
 from ..start_job_utils import build_started_job_context
-from ...polling import wait_for_job_result_async
 from ..response_utils import parse_response_model
 
 
@@ -65,7 +65,7 @@ class ExtractManager:
             operation_name_prefix="extract job ",
         )
 
-        return await wait_for_job_result_async(
+        return await wait_for_job_result_with_defaults_async(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=is_default_terminal_job_status,
@@ -73,6 +73,4 @@ class ExtractManager:
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
-            fetch_max_attempts=POLLING_ATTEMPTS,
-            fetch_retry_delay_seconds=0.5,
         )

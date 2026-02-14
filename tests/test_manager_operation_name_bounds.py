@@ -55,7 +55,9 @@ def test_sync_extract_manager_bounds_operation_name(monkeypatch):
         return {"ok": True}
 
     monkeypatch.setattr(
-        sync_extract_module, "wait_for_job_result", fake_wait_for_job_result
+        sync_extract_module,
+        "wait_for_job_result_with_defaults",
+        fake_wait_for_job_result,
     )
 
     result = manager.start_and_wait(params=object())  # type: ignore[arg-type]
@@ -168,7 +170,7 @@ def test_async_extract_manager_bounds_operation_name(monkeypatch):
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_extract_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 
@@ -820,7 +822,7 @@ def test_sync_browser_use_manager_bounds_operation_name_in_wait_helper(monkeypat
 
     monkeypatch.setattr(
         sync_browser_use_module,
-        "wait_for_job_result",
+        "wait_for_job_result_with_defaults",
         fake_wait_for_job_result,
     )
 
@@ -849,7 +851,7 @@ def test_sync_cua_manager_bounds_operation_name_in_wait_helper(monkeypatch):
 
     monkeypatch.setattr(
         sync_cua_module,
-        "wait_for_job_result",
+        "wait_for_job_result_with_defaults",
         fake_wait_for_job_result,
     )
 
@@ -877,7 +879,7 @@ def test_async_browser_use_manager_bounds_operation_name_in_wait_helper(monkeypa
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_browser_use_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 
@@ -907,7 +909,7 @@ def test_async_cua_manager_bounds_operation_name_in_wait_helper(monkeypatch):
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_cua_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 
@@ -938,7 +940,7 @@ def test_sync_scrape_manager_bounds_operation_name_in_wait_helper(monkeypatch):
 
     monkeypatch.setattr(
         sync_scrape_module,
-        "wait_for_job_result",
+        "wait_for_job_result_with_defaults",
         fake_wait_for_job_result,
     )
 
@@ -966,7 +968,7 @@ def test_async_scrape_manager_bounds_operation_name_in_wait_helper(monkeypatch):
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_scrape_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 
@@ -997,7 +999,7 @@ def test_sync_claude_manager_bounds_operation_name_in_wait_helper(monkeypatch):
 
     monkeypatch.setattr(
         sync_claude_module,
-        "wait_for_job_result",
+        "wait_for_job_result_with_defaults",
         fake_wait_for_job_result,
     )
 
@@ -1025,7 +1027,7 @@ def test_async_claude_manager_bounds_operation_name_in_wait_helper(monkeypatch):
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_claude_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 
@@ -1056,7 +1058,7 @@ def test_sync_gemini_manager_bounds_operation_name_in_wait_helper(monkeypatch):
 
     monkeypatch.setattr(
         sync_gemini_module,
-        "wait_for_job_result",
+        "wait_for_job_result_with_defaults",
         fake_wait_for_job_result,
     )
 
@@ -1084,7 +1086,7 @@ def test_async_gemini_manager_bounds_operation_name_in_wait_helper(monkeypatch):
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_gemini_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 
@@ -1115,7 +1117,7 @@ def test_sync_hyper_agent_manager_bounds_operation_name_in_wait_helper(monkeypat
 
     monkeypatch.setattr(
         sync_hyper_agent_module,
-        "wait_for_job_result",
+        "wait_for_job_result_with_defaults",
         fake_wait_for_job_result,
     )
 
@@ -1143,7 +1145,7 @@ def test_async_hyper_agent_manager_bounds_operation_name_in_wait_helper(monkeypa
         monkeypatch.setattr(manager, "start", fake_start)
         monkeypatch.setattr(
             async_hyper_agent_module,
-            "wait_for_job_result_async",
+            "wait_for_job_result_with_defaults_async",
             fake_wait_for_job_result_async,
         )
 

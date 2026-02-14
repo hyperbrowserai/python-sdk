@@ -6,7 +6,6 @@ from ...polling import (
     collect_paginated_results,
     poll_until_terminal_status,
     retry_operation,
-    wait_for_job_result,
 )
 from ..page_params_utils import build_page_batch_params
 from ..job_pagination_utils import (
@@ -14,6 +13,7 @@ from ..job_pagination_utils import (
     initialize_job_paginated_response,
 )
 from ..job_status_utils import is_default_terminal_job_status
+from ..job_wait_utils import wait_for_job_result_with_defaults
 from ..serialization_utils import (
     serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
@@ -200,7 +200,7 @@ class ScrapeManager:
             operation_name_prefix="scrape job ",
         )
 
-        return wait_for_job_result(
+        return wait_for_job_result_with_defaults(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
             is_terminal_status=is_default_terminal_job_status,
@@ -208,6 +208,4 @@ class ScrapeManager:
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
-            fetch_max_attempts=POLLING_ATTEMPTS,
-            fetch_retry_delay_seconds=0.5,
         )
