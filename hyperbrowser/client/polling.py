@@ -68,7 +68,7 @@ def _normalized_exception_text(exc: Exception) -> str:
 
 
 def _coerce_operation_name_component(value: object, *, fallback: str) -> str:
-    if isinstance(value, str) and type(value) is str:
+    if type(value) is str:
         return value
     try:
         normalized_value = str(value)
@@ -159,8 +159,7 @@ def _validate_operation_name(operation_name: str) -> None:
         )
     try:
         contains_control_character = any(
-            ord(character) < 32 or ord(character) == 127
-            for character in operation_name
+            ord(character) < 32 or ord(character) == 127 for character in operation_name
         )
     except HyperbrowserError:
         raise
@@ -389,8 +388,10 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
         status_text = _decode_ascii_bytes_like(status_code)
     elif isinstance(status_code, (bytes, bytearray)):
         status_text = _decode_ascii_bytes_like(status_code)
-    elif isinstance(status_code, str):
+    elif type(status_code) is str:
         status_text = status_code
+    elif isinstance(status_code, str):
+        status_text = None
     else:
         status_text = _decode_ascii_bytes_like(status_code)
 
