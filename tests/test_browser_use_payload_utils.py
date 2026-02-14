@@ -29,8 +29,11 @@ def test_build_browser_use_start_payload_includes_resolved_output_schema(
 
     monkeypatch.setattr(
         browser_use_payload_utils,
-        "resolve_schema_input",
-        lambda schema_input: {"resolvedSchema": schema_input.__name__},
+        "inject_resolved_schema",
+        lambda payload, *, key, schema_input: payload.__setitem__(
+            key,
+            {"resolvedSchema": schema_input.__name__},
+        ),
     )
 
     payload = browser_use_payload_utils.build_browser_use_start_payload(params)

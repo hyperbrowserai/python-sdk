@@ -3,7 +3,7 @@ from typing import Any, Dict
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extract import StartExtractJobParams
 
-from ..schema_utils import resolve_schema_input
+from ..schema_utils import inject_resolved_schema
 from .serialization_utils import serialize_model_dump_to_dict
 
 
@@ -15,6 +15,5 @@ def build_extract_start_payload(params: StartExtractJobParams) -> Dict[str, Any]
         params,
         error_message="Failed to serialize extract start params",
     )
-    if params.schema_:
-        payload["schema"] = resolve_schema_input(params.schema_)
+    inject_resolved_schema(payload, key="schema", schema_input=params.schema_)
     return payload

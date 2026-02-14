@@ -13,6 +13,12 @@ def resolve_schema_input(schema_input: Any) -> Any:
     return schema_input
 
 
+def inject_resolved_schema(payload: dict, *, key: str, schema_input: Any) -> None:
+    if schema_input is None:
+        return
+    payload[key] = resolve_schema_input(schema_input)
+
+
 def inject_web_output_schemas(payload: dict, formats: Optional[List[Any]]) -> None:
     if not formats:
         return
@@ -21,6 +27,8 @@ def inject_web_output_schemas(payload: dict, formats: Optional[List[Any]]) -> No
         schema_input = getattr(output_format, "schema_", None)
         if schema_input is None:
             continue
-        payload["outputs"]["formats"][index]["schema"] = resolve_schema_input(
-            schema_input
+        inject_resolved_schema(
+            payload["outputs"]["formats"][index],
+            key="schema",
+            schema_input=schema_input,
         )

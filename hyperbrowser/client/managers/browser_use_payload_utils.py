@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 
-from ..schema_utils import resolve_schema_input
+from ..schema_utils import inject_resolved_schema
 from .serialization_utils import serialize_model_dump_to_dict
 
 
@@ -11,6 +11,9 @@ def build_browser_use_start_payload(params: StartBrowserUseTaskParams) -> Dict[s
         params,
         error_message="Failed to serialize browser-use start params",
     )
-    if params.output_model_schema:
-        payload["outputModelSchema"] = resolve_schema_input(params.output_model_schema)
+    inject_resolved_schema(
+        payload,
+        key="outputModelSchema",
+        schema_input=params.output_model_schema,
+    )
     return payload

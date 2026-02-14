@@ -38,8 +38,11 @@ def test_build_extract_start_payload_resolves_schema_values(monkeypatch: pytest.
 
     monkeypatch.setattr(
         extract_payload_utils,
-        "resolve_schema_input",
-        lambda schema_input: {"resolvedSchema": schema_input.__name__},
+        "inject_resolved_schema",
+        lambda payload, *, key, schema_input: payload.__setitem__(
+            key,
+            {"resolvedSchema": schema_input.__name__},
+        ),
     )
 
     payload = extract_payload_utils.build_extract_start_payload(params)
