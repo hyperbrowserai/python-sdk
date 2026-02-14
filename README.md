@@ -247,6 +247,8 @@ make check
 make ci
 ```
 
+Contributor workflow details are available in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Examples
 
 Ready-to-run examples are available in `examples/`:
