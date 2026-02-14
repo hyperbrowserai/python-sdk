@@ -88,6 +88,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_agent_task_read_helper_usage.py` (shared agent task read-helper usage enforcement),
   - `tests/test_agent_terminal_status_helper_usage.py` (shared agent terminal-status helper usage enforcement),
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
+  - `tests/test_ast_call_symbol_helper_import_boundary.py` (shared AST call-helper import boundary enforcement across test modules),
   - `tests/test_ast_function_source_helper_usage.py` (shared AST function-source helper usage enforcement across architecture guard suites),
   - `tests/test_ast_function_source_import_boundary.py` (shared AST function-source helper import boundary enforcement across test modules),
   - `tests/test_ast_function_source_utils.py` (shared AST function-source helper contract validation),
