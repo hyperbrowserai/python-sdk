@@ -144,24 +144,25 @@ class Session(BaseModel):
         """Convert string timestamps to integers."""
         if value is None:
             return None
-        if isinstance(value, bool):
+        value_type = type(value)
+        if value_type is bool:
             raise ValueError(
                 "timestamp values must be integers or plain numeric strings"
             )
-        if type(value) is int:
+        if value_type is int:
             return value
-        if isinstance(value, int):
+        if int in value_type.__mro__:
             raise ValueError(
                 "timestamp values must be plain integers or plain numeric strings"
             )
-        if type(value) is str:
+        if value_type is str:
             try:
                 return int(value)
             except Exception as exc:
                 raise ValueError(
                     "timestamp string values must be integer-formatted"
                 ) from exc
-        if isinstance(value, str):
+        if str in value_type.__mro__:
             raise ValueError("timestamp string values must be plain strings")
         raise ValueError(
             "timestamp values must be plain integers or plain numeric strings"
