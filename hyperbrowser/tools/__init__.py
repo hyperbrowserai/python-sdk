@@ -1,10 +1,11 @@
 import inspect
 import json
 from collections.abc import Mapping as MappingABC
-from typing import Any, Callable, Dict, Mapping
+from typing import Any, Dict, Mapping
 
 from hyperbrowser.display_utils import normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.mapping_utils import copy_mapping_values_by_string_keys
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
@@ -62,27 +63,6 @@ def _format_tool_param_key_for_error(key: str) -> str:
     return normalized_key
 
 
-def _copy_mapping_values_by_keys(
-    source_mapping: MappingABC[object, Any],
-    keys: list[str],
-    *,
-    read_error_message_builder: Callable[[str], str],
-) -> Dict[str, Any]:
-    normalized_values: Dict[str, Any] = {}
-    for key in keys:
-        try:
-            normalized_values[key] = source_mapping[key]
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            key_display = _format_tool_param_key_for_error(key)
-            raise HyperbrowserError(
-                read_error_message_builder(key_display),
-                original_error=exc,
-            ) from exc
-    return normalized_values
-
-
 def _normalize_extract_schema_mapping(
     schema_value: MappingABC[object, Any],
 ) -> Dict[str, Any]:
@@ -100,12 +80,13 @@ def _normalize_extract_schema_mapping(
         if type(key) is not str:
             raise HyperbrowserError("Extract tool `schema` object keys must be strings")
         normalized_schema_keys.append(key)
-    return _copy_mapping_values_by_keys(
+    return copy_mapping_values_by_string_keys(
         schema_value,
         normalized_schema_keys,
-        read_error_message_builder=lambda key_display: (
+        read_value_error_builder=lambda key_display: (
             f"Failed to read extract tool `schema` value for key '{key_display}'"
         ),
+        key_display=_format_tool_param_key_for_error,
     )
 
 
@@ -197,12 +178,13 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
             continue
         raise HyperbrowserError("tool params keys must be strings")
     normalized_param_keys = [key for key in param_keys if type(key) is str]
-    return _copy_mapping_values_by_keys(
+    return copy_mapping_values_by_string_keys(
         params,
         normalized_param_keys,
-        read_error_message_builder=lambda key_display: (
+        read_value_error_builder=lambda key_display: (
             f"Failed to read tool param '{key_display}'"
         ),
+        key_display=_format_tool_param_key_for_error,
     )
 
 

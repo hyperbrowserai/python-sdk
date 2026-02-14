@@ -46,3 +46,30 @@ def read_string_key_mapping(
                 original_error=exc,
             ) from exc
     return normalized_mapping
+
+
+def copy_mapping_values_by_string_keys(
+    mapping_value: MappingABC[object, Any],
+    keys: list[str],
+    *,
+    read_value_error_builder: Callable[[str], str],
+    key_display: Callable[[str], str],
+) -> Dict[str, object]:
+    normalized_mapping: Dict[str, object] = {}
+    for key in keys:
+        try:
+            normalized_mapping[key] = mapping_value[key]
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            try:
+                key_text = key_display(key)
+                if type(key_text) is not str:
+                    raise TypeError("mapping key display must be a string")
+            except Exception:
+                key_text = "<unreadable key>"
+            raise HyperbrowserError(
+                read_value_error_builder(key_text),
+                original_error=exc,
+            ) from exc
+    return normalized_mapping
