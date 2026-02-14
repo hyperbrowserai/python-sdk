@@ -51,6 +51,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_contributing_architecture_guard_listing.py",
     "tests/test_readme_examples_listing.py",
     "tests/test_request_helper_parse_import_boundary.py",
+    "tests/test_request_helper_transport_boundary.py",
     "tests/test_response_parse_usage_boundary.py",
     "tests/test_examples_syntax.py",
     "tests/test_docs_python3_commands.py",
