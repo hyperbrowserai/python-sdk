@@ -8,6 +8,7 @@ from hyperbrowser.models import (
     WebCrawlJobResponse,
     POLLING_ATTEMPTS,
 )
+from ...page_params_utils import build_page_batch_params
 from ...web_payload_utils import build_web_crawl_start_payload
 from ...web_payload_utils import build_web_crawl_get_params
 from ...web_pagination_utils import (
@@ -108,7 +109,10 @@ class WebCrawlManager:
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_id,
-                params=GetWebCrawlJobParams(page=page, batch_size=100),
+                params=build_page_batch_params(
+                    GetWebCrawlJobParams,
+                    page=page,
+                ),
             ),
             get_current_page_batch=lambda page_response: (
                 page_response.current_page_batch

@@ -8,6 +8,7 @@ from hyperbrowser.models import (
     BatchFetchJobResponse,
     POLLING_ATTEMPTS,
 )
+from ...page_params_utils import build_page_batch_params
 from ...web_payload_utils import build_batch_fetch_start_payload
 from ...web_payload_utils import build_batch_fetch_get_params
 from ...web_pagination_utils import (
@@ -110,7 +111,10 @@ class BatchFetchManager:
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_id,
-                params=GetBatchFetchJobParams(page=page, batch_size=100),
+                params=build_page_batch_params(
+                    GetBatchFetchJobParams,
+                    page=page,
+                ),
             ),
             get_current_page_batch=lambda page_response: (
                 page_response.current_page_batch

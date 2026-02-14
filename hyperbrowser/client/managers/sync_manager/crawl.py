@@ -9,6 +9,7 @@ from ...polling import (
     poll_until_terminal_status,
     retry_operation,
 )
+from ..page_params_utils import build_page_batch_params
 from ..job_pagination_utils import (
     build_job_paginated_page_merge_callback,
     initialize_job_paginated_response,
@@ -117,7 +118,10 @@ class CrawlManager:
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_start_resp.job_id,
-                GetCrawlJobParams(page=page, batch_size=100),
+                params=build_page_batch_params(
+                    GetCrawlJobParams,
+                    page=page,
+                ),
             ),
             get_current_page_batch=lambda page_response: (
                 page_response.current_page_batch

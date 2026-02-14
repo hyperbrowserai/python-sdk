@@ -10,6 +10,7 @@ from ...polling import (
     retry_operation,
     wait_for_job_result,
 )
+from ..page_params_utils import build_page_batch_params
 from ..job_pagination_utils import (
     build_job_paginated_page_merge_callback,
     initialize_job_paginated_response,
@@ -122,7 +123,10 @@ class BatchScrapeManager:
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_id,
-                params=GetBatchScrapeJobParams(page=page, batch_size=100),
+                params=build_page_batch_params(
+                    GetBatchScrapeJobParams,
+                    page=page,
+                ),
             ),
             get_current_page_batch=lambda page_response: (
                 page_response.current_page_batch

@@ -17,6 +17,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_pyproject_architecture_marker.py",
     "tests/test_architecture_marker_usage.py",
     "tests/test_default_serialization_helper_usage.py",
+    "tests/test_page_params_helper_usage.py",
     "tests/test_plain_type_guard_usage.py",
     "tests/test_plain_type_identity_usage.py",
     "tests/test_plain_list_helper_usage.py",
