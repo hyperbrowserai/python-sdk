@@ -138,6 +138,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_file_message_default_constant_import_boundary.py` (extension/session file-message default constant import boundary enforcement),
   - `tests/test_file_message_default_constant_usage.py` (extension/session file-message default-prefix constant usage enforcement),
   - `tests/test_file_message_prefix_literal_boundary.py` (extension/session file-message prefix literal centralization in shared metadata modules),
+  - `tests/test_file_open_default_prefix_literal_boundary.py` (shared default open-file prefix literal centralization in `hyperbrowser/client/file_utils.py`),
   - `tests/test_file_open_error_helper_import_boundary.py` (shared file-open error-message helper import boundary enforcement),
   - `tests/test_file_open_error_helper_usage.py` (shared file-open error-message helper usage enforcement),
   - `tests/test_file_path_display_helper_import_boundary.py` (shared file-path display helper import boundary enforcement),
