@@ -109,6 +109,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`),
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
+  - `tests/test_schema_injection_helper_usage.py` (shared schema injection helper usage enforcement in payload builders),
   - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
   - `tests/test_start_job_context_helper_usage.py` (shared started-job context helper usage enforcement),
