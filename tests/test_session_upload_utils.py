@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import io
 from os import PathLike
 from pathlib import Path
@@ -183,6 +184,38 @@ def test_open_upload_files_from_input_reuses_file_like_object():
 
     with open_upload_files_from_input(file_obj) as files:
         assert files == {"file": file_obj}
+
+
+def test_open_upload_files_from_input_uses_sanitized_open_error_message(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    captured: dict[str, str] = {}
+
+    @contextmanager
+    def _open_binary_file_stub(file_path, *, open_error_message):  # type: ignore[no-untyped-def]
+        captured["file_path"] = file_path
+        captured["open_error_message"] = open_error_message
+        yield io.BytesIO(b"content")
+
+    monkeypatch.setattr(
+        session_upload_utils,
+        "normalize_upload_file_input",
+        lambda file_input: ("bad\tpath.txt", None),
+    )
+    monkeypatch.setattr(
+        session_upload_utils,
+        "open_binary_file",
+        _open_binary_file_stub,
+    )
+
+    with open_upload_files_from_input("ignored-input") as files:
+        assert files["file"].read() == b"content"
+
+    assert captured["file_path"] == "bad\tpath.txt"
+    assert (
+        captured["open_error_message"]
+        == "Failed to open upload file at path: bad?path.txt"
+    )
 
 
 def test_open_upload_files_from_input_rejects_missing_normalized_file_object(
