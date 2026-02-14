@@ -72,6 +72,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_job_poll_helper_boundary.py",
     "tests/test_job_poll_helper_usage.py",
     "tests/test_job_request_internal_reuse.py",
+    "tests/test_job_request_wrapper_internal_reuse.py",
     "tests/test_job_route_builder_usage.py",
     "tests/test_job_route_constants_usage.py",
     "tests/test_job_request_helper_usage.py",
