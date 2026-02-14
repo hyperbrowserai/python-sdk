@@ -136,6 +136,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`),
   - `tests/test_profile_operation_metadata_usage.py` (profile manager operation-metadata usage enforcement),
   - `tests/test_profile_request_helper_usage.py` (profile manager request-helper usage enforcement),
+  - `tests/test_profile_route_builder_usage.py` (profile request-helper route-builder usage enforcement),
   - `tests/test_profile_route_constants_usage.py` (profile manager route-constant usage enforcement),
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),

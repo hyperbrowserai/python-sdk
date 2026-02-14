@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, Type, TypeVar
 
+from .profile_route_constants import build_profile_route
 from .response_utils import parse_response_model
 
 T = TypeVar("T")
@@ -27,13 +28,12 @@ def create_profile_resource(
 def get_profile_resource(
     *,
     client: Any,
-    route_prefix: str,
     profile_id: str,
     model: Type[T],
     operation_name: str,
 ) -> T:
     response = client.transport.get(
-        client._build_url(f"{route_prefix}/{profile_id}"),
+        client._build_url(build_profile_route(profile_id)),
     )
     return parse_response_model(
         response.data,
@@ -45,13 +45,12 @@ def get_profile_resource(
 def delete_profile_resource(
     *,
     client: Any,
-    route_prefix: str,
     profile_id: str,
     model: Type[T],
     operation_name: str,
 ) -> T:
     response = client.transport.delete(
-        client._build_url(f"{route_prefix}/{profile_id}"),
+        client._build_url(build_profile_route(profile_id)),
     )
     return parse_response_model(
         response.data,
@@ -101,13 +100,12 @@ async def create_profile_resource_async(
 async def get_profile_resource_async(
     *,
     client: Any,
-    route_prefix: str,
     profile_id: str,
     model: Type[T],
     operation_name: str,
 ) -> T:
     response = await client.transport.get(
-        client._build_url(f"{route_prefix}/{profile_id}"),
+        client._build_url(build_profile_route(profile_id)),
     )
     return parse_response_model(
         response.data,
@@ -119,13 +117,12 @@ async def get_profile_resource_async(
 async def delete_profile_resource_async(
     *,
     client: Any,
-    route_prefix: str,
     profile_id: str,
     model: Type[T],
     operation_name: str,
 ) -> T:
     response = await client.transport.delete(
-        client._build_url(f"{route_prefix}/{profile_id}"),
+        client._build_url(build_profile_route(profile_id)),
     )
     return parse_response_model(
         response.data,

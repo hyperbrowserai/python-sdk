@@ -48,7 +48,6 @@ class ProfileManager:
     def get(self, id: str) -> ProfileResponse:
         return get_profile_resource(
             client=self._client,
-            route_prefix=self._ROUTE_PREFIX,
             profile_id=id,
             model=ProfileResponse,
             operation_name=self._OPERATION_METADATA.get_operation_name,
@@ -57,7 +56,6 @@ class ProfileManager:
     def delete(self, id: str) -> BasicResponse:
         return delete_profile_resource(
             client=self._client,
-            route_prefix=self._ROUTE_PREFIX,
             profile_id=id,
             model=BasicResponse,
             operation_name=self._OPERATION_METADATA.delete_operation_name,

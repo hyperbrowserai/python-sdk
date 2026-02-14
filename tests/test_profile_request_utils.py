@@ -71,7 +71,6 @@ def test_get_profile_resource_uses_get_and_parses_response():
     try:
         result = profile_request_utils.get_profile_resource(
             client=_Client(),
-            route_prefix="/profile",
             profile_id="profile-2",
             model=object,
             operation_name="get profile",
@@ -111,7 +110,6 @@ def test_delete_profile_resource_uses_delete_and_parses_response():
     try:
         result = profile_request_utils.delete_profile_resource(
             client=_Client(),
-            route_prefix="/profile",
             profile_id="profile-3",
             model=object,
             operation_name="delete profile",
@@ -236,7 +234,6 @@ def test_get_profile_resource_async_uses_get_and_parses_response():
         result = asyncio.run(
             profile_request_utils.get_profile_resource_async(
                 client=_Client(),
-                route_prefix="/profile",
                 profile_id="profile-5",
                 model=object,
                 operation_name="get profile",
@@ -278,7 +275,6 @@ def test_delete_profile_resource_async_uses_delete_and_parses_response():
         result = asyncio.run(
             profile_request_utils.delete_profile_resource_async(
                 client=_Client(),
-                route_prefix="/profile",
                 profile_id="profile-6",
                 model=object,
                 operation_name="delete profile",
