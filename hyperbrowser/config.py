@@ -112,7 +112,7 @@ class ClientConfig:
 
     @staticmethod
     def normalize_base_url(base_url: str) -> str:
-        if not isinstance(base_url, str):
+        if type(base_url) is not str:
             raise HyperbrowserError("base_url must be a string")
         try:
             stripped_base_url = base_url.strip()
