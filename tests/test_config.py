@@ -107,9 +107,7 @@ def test_client_config_from_env_preserves_hyperbrowser_env_read_errors(
             raise HyperbrowserError("custom env read failure")
         return None
 
-    monkeypatch.setattr(
-        ClientConfig, "_read_env_value", staticmethod(_broken_read_env)
-    )
+    monkeypatch.setattr(ClientConfig, "_read_env_value", staticmethod(_broken_read_env))
 
     with pytest.raises(HyperbrowserError, match="custom env read failure") as exc_info:
         ClientConfig.from_env()
@@ -631,9 +629,7 @@ def test_client_config_normalize_base_url_preserves_hyperbrowser_component_error
 
     monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
 
-    with pytest.raises(
-        HyperbrowserError, match="custom component failure"
-    ) as exc_info:
+    with pytest.raises(HyperbrowserError, match="custom component failure") as exc_info:
         ClientConfig.normalize_base_url("https://example.local")
 
     assert exc_info.value.original_error is None
@@ -808,6 +804,34 @@ def test_client_config_normalize_base_url_rejects_boolean_port_values(
         @property
         def port(self):
             return True
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="base_url parser returned invalid URL components"
+    ):
+        ClientConfig.normalize_base_url("https://example.local")
+
+
+def test_client_config_normalize_base_url_rejects_integer_subclass_port_values(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _IntPort(int):
+        pass
+
+    class _ParsedURL:
+        scheme = "https"
+        netloc = "example.local"
+        hostname = "example.local"
+        query = ""
+        fragment = ""
+        username = None
+        password = None
+        path = "/api"
+
+        @property
+        def port(self):
+            return _IntPort(443)
 
     monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
 

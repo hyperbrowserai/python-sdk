@@ -237,12 +237,11 @@ class ClientConfig:
                 "base_url must contain a valid port number",
                 original_error=exc,
             ) from exc
-        if parsed_base_url_port is not None and (
-            isinstance(parsed_base_url_port, bool)
-            or not isinstance(parsed_base_url_port, int)
-        ):
+        if parsed_base_url_port is not None and type(parsed_base_url_port) is not int:
             raise HyperbrowserError("base_url parser returned invalid URL components")
-        if parsed_base_url_port is not None and not (0 <= parsed_base_url_port <= 65535):
+        if parsed_base_url_port is not None and not (
+            0 <= parsed_base_url_port <= 65535
+        ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
 
         decoded_base_path = ClientConfig._decode_url_component_with_limit(
@@ -327,7 +326,9 @@ class ClientConfig:
         base_url = cls.resolve_base_url_from_env(
             cls._read_env_value("HYPERBROWSER_BASE_URL")
         )
-        headers = cls.parse_headers_from_env(cls._read_env_value("HYPERBROWSER_HEADERS"))
+        headers = cls.parse_headers_from_env(
+            cls._read_env_value("HYPERBROWSER_HEADERS")
+        )
         return cls(api_key=api_key, base_url=base_url, headers=headers)
 
     @staticmethod
