@@ -395,12 +395,15 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
         status_text = _decode_ascii_bytes_like(status_code)
 
     if status_text is not None:
-        normalized_status = status_text.strip()
-        if not normalized_status:
-            return None
-        if len(normalized_status) > _MAX_STATUS_CODE_TEXT_LENGTH:
-            return None
-        if not normalized_status.isascii() or not normalized_status.isdigit():
+        try:
+            normalized_status = status_text.strip()
+            if not normalized_status:
+                return None
+            if len(normalized_status) > _MAX_STATUS_CODE_TEXT_LENGTH:
+                return None
+            if not normalized_status.isascii() or not normalized_status.isdigit():
+                return None
+        except Exception:
             return None
         try:
             return int(normalized_status, 10)

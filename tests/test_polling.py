@@ -1768,6 +1768,34 @@ def test_retry_operation_handles_non_ascii_byte_status_codes_as_retryable():
     assert attempts["count"] == 3
 
 
+def test_retry_operation_handles_status_code_strip_runtime_failures_as_retryable():
+    class _BrokenStatusCode(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("status code strip exploded")
+
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError(
+                "status metadata strip failure",
+                status_code=_BrokenStatusCode("429"),  # type: ignore[arg-type]
+            )
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry status code strip failure",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
 def test_retry_operation_rejects_awaitable_operation_result():
     async def async_operation() -> str:
         return "ok"
@@ -2533,6 +2561,37 @@ def test_retry_operation_async_retries_numeric_bytes_rate_limit_errors():
 
         result = await retry_operation_async(
             operation_name="async retry numeric-bytes rate limit",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_handles_status_code_strip_runtime_failures_as_retryable():
+    class _BrokenStatusCode(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("status code strip exploded")
+
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "status metadata strip failure",
+                    status_code=_BrokenStatusCode("429"),  # type: ignore[arg-type]
+                )
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry status code strip failure",
             operation=operation,
             max_attempts=5,
             retry_delay_seconds=0.0001,
