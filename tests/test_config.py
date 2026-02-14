@@ -383,6 +383,38 @@ def test_client_config_wraps_non_string_api_key_strip_results():
     assert isinstance(exc_info.value.original_error, TypeError)
 
 
+def test_client_config_wraps_api_key_empty_check_length_failures():
+    class _BrokenApiKey(str):
+        class _NormalizedKey(str):
+            def __len__(self):
+                raise RuntimeError("api key length exploded")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedKey("test-key")
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_preserves_hyperbrowser_api_key_empty_check_length_failures():
+    class _BrokenApiKey(str):
+        class _NormalizedKey(str):
+            def __len__(self):
+                raise HyperbrowserError("custom length failure")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedKey("test-key")
+
+    with pytest.raises(HyperbrowserError, match="custom length failure") as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_wraps_api_key_iteration_runtime_errors():
     class _BrokenApiKey(str):
         def strip(self, chars=None):  # type: ignore[override]

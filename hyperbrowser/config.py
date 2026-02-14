@@ -45,7 +45,16 @@ class ClientConfig:
                 "Failed to normalize api_key",
                 original_error=exc,
             ) from exc
-        if not normalized_api_key:
+        try:
+            is_empty_api_key = len(normalized_api_key) == 0
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize api_key",
+                original_error=exc,
+            ) from exc
+        if is_empty_api_key:
             raise HyperbrowserError(empty_error_message)
         try:
             contains_control_character = any(

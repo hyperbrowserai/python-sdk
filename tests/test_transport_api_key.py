@@ -63,6 +63,42 @@ def test_transport_wraps_api_key_character_iteration_failures(transport_class):
 
 
 @pytest.mark.parametrize("transport_class", [SyncTransport, AsyncTransport])
+def test_transport_wraps_api_key_empty_check_length_failures(transport_class):
+    class _BrokenLengthApiKey(str):
+        class _NormalizedKey(str):
+            def __len__(self):
+                raise RuntimeError("api key length exploded")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedKey("test-key")
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
+        transport_class(api_key=_BrokenLengthApiKey("test-key"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("transport_class", [SyncTransport, AsyncTransport])
+def test_transport_preserves_hyperbrowser_api_key_empty_check_length_failures(
+    transport_class,
+):
+    class _BrokenLengthApiKey(str):
+        class _NormalizedKey(str):
+            def __len__(self):
+                raise HyperbrowserError("custom length failure")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedKey("test-key")
+
+    with pytest.raises(HyperbrowserError, match="custom length failure") as exc_info:
+        transport_class(api_key=_BrokenLengthApiKey("test-key"))
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize("transport_class", [SyncTransport, AsyncTransport])
 def test_transport_preserves_hyperbrowser_api_key_character_iteration_failures(
     transport_class,
 ):

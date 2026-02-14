@@ -79,7 +79,16 @@ def _normalize_transport_api_key(api_key: str) -> str:
             original_error=exc,
         ) from exc
 
-    if not normalized_api_key:
+    try:
+        is_empty_api_key = len(normalized_api_key) == 0
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to normalize api_key",
+            original_error=exc,
+        ) from exc
+    if is_empty_api_key:
         raise HyperbrowserError("api_key must not be empty")
 
     try:

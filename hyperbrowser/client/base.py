@@ -49,7 +49,16 @@ class HyperbrowserBase:
                     "Failed to normalize api_key",
                     original_error=exc,
                 ) from exc
-            if not normalized_resolved_api_key:
+            try:
+                is_empty_api_key = len(normalized_resolved_api_key) == 0
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to normalize api_key",
+                    original_error=exc,
+                ) from exc
+            if is_empty_api_key:
                 if api_key_from_constructor:
                     raise HyperbrowserError("api_key must not be empty")
                 raise HyperbrowserError(
