@@ -101,6 +101,39 @@ class _BrokenLongKeyValueMapping(Mapping[str, object]):
         raise KeyError(key)
 
 
+class _BrokenRenderedModelNameString(str):
+    def __iter__(self):
+        raise RuntimeError("cannot iterate rendered model name")
+
+
+class _UnreadableNameCallableModel:
+    __name__ = _BrokenRenderedModelNameString("UnreadableModelName")
+
+    def __call__(self, **kwargs):
+        _ = kwargs
+        raise RuntimeError("call failed")
+
+
+class _BrokenRenderedMappingKey(str):
+    def __iter__(self):
+        raise RuntimeError("cannot iterate rendered mapping key")
+
+
+class _BrokenRenderedKeyValueMapping(Mapping[str, object]):
+    _KEY = _BrokenRenderedMappingKey("name")
+
+    def __iter__(self):
+        return iter([self._KEY])
+
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, key: str) -> object:
+        if key == self._KEY:
+            raise RuntimeError("cannot read rendered key value")
+        raise KeyError(key)
+
+
 def test_api_response_from_json_parses_model_data() -> None:
     response = APIResponse.from_json(
         {"name": "job-1", "retries": 2}, _SampleResponseModel
@@ -206,6 +239,17 @@ def test_api_response_from_json_sanitizes_and_truncates_model_name_in_errors() -
         )
 
 
+def test_api_response_from_json_falls_back_for_unreadable_model_name_text() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to parse response data for response model",
+    ):
+        APIResponse.from_json(
+            {"name": "job-1"},
+            cast("type[_SampleResponseModel]", _UnreadableNameCallableModel()),
+        )
+
+
 def test_api_response_from_json_uses_placeholder_for_blank_mapping_key_in_errors() -> (
     None
 ):
@@ -230,6 +274,19 @@ def test_api_response_from_json_sanitizes_and_truncates_mapping_keys_in_errors()
         ),
     ):
         APIResponse.from_json(_BrokenLongKeyValueMapping(), _SampleResponseModel)
+
+
+def test_api_response_from_json_falls_back_for_unreadable_mapping_keys_in_errors() -> (
+    None
+):
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to parse response data for _SampleResponseModel: "
+            "unable to read value for key '<unreadable key>'"
+        ),
+    ):
+        APIResponse.from_json(_BrokenRenderedKeyValueMapping(), _SampleResponseModel)
 
 
 def test_api_response_from_json_preserves_hyperbrowser_errors() -> None:
