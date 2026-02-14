@@ -7,6 +7,8 @@ from ...polling import (
 from ..job_fetch_utils import (
     collect_paginated_results_with_defaults,
     fetch_job_result_with_defaults,
+    read_page_current_batch,
+    read_page_total_batches,
 )
 from ..page_params_utils import build_page_batch_params
 from ..job_pagination_utils import (
@@ -127,12 +129,8 @@ class BatchScrapeManager:
                     page=page,
                 ),
             ),
-            get_current_page_batch=lambda page_response: (
-                page_response.current_page_batch
-            ),
-            get_total_page_batches=lambda page_response: (
-                page_response.total_page_batches
-            ),
+            get_current_page_batch=read_page_current_batch,
+            get_total_page_batches=read_page_total_batches,
             on_page_success=build_job_paginated_page_merge_callback(
                 job_response=job_response,
                 total_counter_attr="total_scraped_pages",

@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 import hyperbrowser.client.managers.job_fetch_utils as job_fetch_utils
 
@@ -159,3 +160,19 @@ def test_fetch_job_result_with_defaults_async_uses_fetch_operation_name() -> Non
 
     assert result == {"ok": True}
     assert captured_kwargs["operation_name"] == "Fetching crawl job abc"
+
+
+def test_read_page_current_batch_reads_attribute() -> None:
+    response = SimpleNamespace(current_page_batch=3)
+
+    result = job_fetch_utils.read_page_current_batch(response)
+
+    assert result == 3
+
+
+def test_read_page_total_batches_reads_attribute() -> None:
+    response = SimpleNamespace(total_page_batches=7)
+
+    result = job_fetch_utils.read_page_total_batches(response)
+
+    assert result == 7

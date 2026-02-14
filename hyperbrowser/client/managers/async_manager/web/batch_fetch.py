@@ -19,6 +19,8 @@ from ...web_pagination_utils import (
 from ...job_fetch_utils import (
     collect_paginated_results_with_defaults_async,
     fetch_job_result_with_defaults_async,
+    read_page_current_batch,
+    read_page_total_batches,
 )
 from ....polling import (
     poll_until_terminal_status_async,
@@ -115,12 +117,8 @@ class BatchFetchManager:
                     page=page,
                 ),
             ),
-            get_current_page_batch=lambda page_response: (
-                page_response.current_page_batch
-            ),
-            get_total_page_batches=lambda page_response: (
-                page_response.total_page_batches
-            ),
+            get_current_page_batch=read_page_current_batch,
+            get_total_page_batches=read_page_total_batches,
             on_page_success=build_paginated_page_merge_callback(
                 job_response=job_response,
             ),

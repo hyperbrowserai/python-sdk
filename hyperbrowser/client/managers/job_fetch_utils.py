@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable, Optional, TypeVar
+from typing import Any, Awaitable, Callable, Optional, TypeVar
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 
@@ -60,6 +60,14 @@ async def fetch_job_result_with_defaults_async(
         operation_name=build_fetch_operation_name(operation_name),
         operation=fetch_result,
     )
+
+
+def read_page_current_batch(page_response: Any) -> int:
+    return page_response.current_page_batch
+
+
+def read_page_total_batches(page_response: Any) -> int:
+    return page_response.total_page_batches
 
 
 def collect_paginated_results_with_defaults(
