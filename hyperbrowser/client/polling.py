@@ -390,8 +390,6 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
         status_text = _decode_ascii_bytes_like(status_code)
     elif type(status_code) is str:
         status_text = status_code
-    elif isinstance(status_code, str):
-        status_text = None
     else:
         status_text = _decode_ascii_bytes_like(status_code)
 
