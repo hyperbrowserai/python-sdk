@@ -257,12 +257,14 @@ Contributor workflow details are available in [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Ready-to-run examples are available in `examples/`:
 
+- `examples/async_batch_fetch.py`
 - `examples/async_crawl.py`
 - `examples/async_extract.py`
 - `examples/async_scrape.py`
 - `examples/async_session_list.py`
 - `examples/async_web_fetch.py`
 - `examples/async_web_search.py`
+- `examples/sync_batch_fetch.py`
 - `examples/sync_crawl.py`
 - `examples/sync_extract.py`
 - `examples/sync_scrape.py`
