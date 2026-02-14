@@ -379,6 +379,16 @@ def test_build_file_path_error_message_uses_default_for_non_string_prefix():
     assert message == "Upload file not found at path: /tmp/path.txt"
 
 
+def test_build_file_path_error_message_prefers_valid_prefix_when_default_prefix_invalid():
+    message = build_file_path_error_message(
+        "/tmp/path.txt",
+        prefix="Custom\tprefix",
+        default_prefix=123,  # type: ignore[arg-type]
+    )
+
+    assert message == "Custom?prefix: /tmp/path.txt"
+
+
 def test_build_file_path_error_message_uses_default_for_string_subclass_prefix():
     class _Prefix(str):
         pass
@@ -432,6 +442,16 @@ def test_build_open_file_error_message_uses_default_prefix_for_non_string():
     )
 
     assert message == "Failed to open file at path: /tmp/path.txt"
+
+
+def test_build_open_file_error_message_prefers_valid_prefix_when_default_prefix_invalid():
+    message = build_open_file_error_message(
+        "/tmp/path.txt",
+        prefix="Custom\tprefix",
+        default_prefix=123,  # type: ignore[arg-type]
+    )
+
+    assert message == "Custom?prefix: /tmp/path.txt"
 
 
 def test_build_open_file_error_message_uses_default_prefix_for_string_subclass():
