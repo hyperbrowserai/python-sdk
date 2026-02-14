@@ -248,6 +248,9 @@ make check
 make ci
 ```
 
+`make architecture-check` runs fast architecture guard suites
+(shared-helper adoption and quality-gate workflow checks).
+
 Contributor workflow details are available in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Examples
