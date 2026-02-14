@@ -353,6 +353,54 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
         client.close()
 
 
+def test_client_build_url_wraps_path_strip_runtime_errors():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        class _BrokenPath(str):
+            def strip(self, chars=None):  # type: ignore[override]
+                _ = chars
+                raise RuntimeError("path strip exploded")
+
+        with pytest.raises(HyperbrowserError, match="Failed to normalize path") as exc_info:
+            client._build_url(_BrokenPath("/session"))
+
+        assert isinstance(exc_info.value.original_error, RuntimeError)
+    finally:
+        client.close()
+
+
+def test_client_build_url_preserves_hyperbrowser_path_strip_errors():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        class _BrokenPath(str):
+            def strip(self, chars=None):  # type: ignore[override]
+                _ = chars
+                raise HyperbrowserError("custom path strip failure")
+
+        with pytest.raises(HyperbrowserError, match="custom path strip failure") as exc_info:
+            client._build_url(_BrokenPath("/session"))
+
+        assert exc_info.value.original_error is None
+    finally:
+        client.close()
+
+
+def test_client_build_url_wraps_non_string_path_strip_results():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        class _BrokenPath(str):
+            def strip(self, chars=None):  # type: ignore[override]
+                _ = chars
+                return object()
+
+        with pytest.raises(HyperbrowserError, match="Failed to normalize path") as exc_info:
+            client._build_url(_BrokenPath("/session"))
+
+        assert isinstance(exc_info.value.original_error, TypeError)
+    finally:
+        client.close()
+
+
 def test_client_build_url_allows_query_values_containing_absolute_urls():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:

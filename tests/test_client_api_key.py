@@ -1,5 +1,6 @@
 import pytest
 
+import hyperbrowser.client.base as client_base_module
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -108,6 +109,95 @@ def test_async_client_rejects_control_character_env_api_key(monkeypatch):
         HyperbrowserError, match="api_key must not contain control characters"
     ):
         AsyncHyperbrowser()
+
+
+@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
+def test_client_wraps_api_key_env_read_runtime_errors(
+    client_class, monkeypatch: pytest.MonkeyPatch
+):
+    original_get = client_base_module.os.environ.get
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_API_KEY":
+            raise RuntimeError("api key env read exploded")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(client_base_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read HYPERBROWSER_API_KEY environment variable",
+    ) as exc_info:
+        client_class()
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
+def test_client_preserves_hyperbrowser_api_key_env_read_errors(
+    client_class, monkeypatch: pytest.MonkeyPatch
+):
+    original_get = client_base_module.os.environ.get
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_API_KEY":
+            raise HyperbrowserError("custom api key env read failure")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(client_base_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError, match="custom api key env read failure"
+    ) as exc_info:
+        client_class()
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
+def test_client_wraps_base_url_env_read_runtime_errors(
+    client_class, monkeypatch: pytest.MonkeyPatch
+):
+    original_get = client_base_module.os.environ.get
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_BASE_URL":
+            raise RuntimeError("base url env read exploded")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(client_base_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read HYPERBROWSER_BASE_URL environment variable",
+    ) as exc_info:
+        client_class()
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])
+def test_client_wraps_headers_env_read_runtime_errors(
+    client_class, monkeypatch: pytest.MonkeyPatch
+):
+    original_get = client_base_module.os.environ.get
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "test-key")
+
+    def _broken_get(env_name: str, default=None):
+        if env_name == "HYPERBROWSER_HEADERS":
+            raise RuntimeError("headers env read exploded")
+        return original_get(env_name, default)
+
+    monkeypatch.setattr(client_base_module.os.environ, "get", _broken_get)
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read HYPERBROWSER_HEADERS environment variable",
+    ) as exc_info:
+        client_class()
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
 @pytest.mark.parametrize("client_class", [Hyperbrowser, AsyncHyperbrowser])

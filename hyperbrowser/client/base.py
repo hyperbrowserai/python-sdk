@@ -30,7 +30,7 @@ class HyperbrowserBase:
             resolved_api_key = (
                 api_key
                 if api_key_from_constructor
-                else os.environ.get("HYPERBROWSER_API_KEY")
+                else self._read_env_value("HYPERBROWSER_API_KEY")
             )
             if resolved_api_key is None:
                 raise HyperbrowserError(
@@ -59,12 +59,12 @@ class HyperbrowserBase:
                 headers
                 if headers is not None
                 else ClientConfig.parse_headers_from_env(
-                    os.environ.get("HYPERBROWSER_HEADERS")
+                    self._read_env_value("HYPERBROWSER_HEADERS")
                 )
             )
             if base_url is None:
                 resolved_base_url = ClientConfig.resolve_base_url_from_env(
-                    os.environ.get("HYPERBROWSER_BASE_URL")
+                    self._read_env_value("HYPERBROWSER_BASE_URL")
                 )
             else:
                 resolved_base_url = base_url
@@ -79,6 +79,18 @@ class HyperbrowserBase:
 
         self.config = config
         self.transport = transport(config.api_key, headers=config.headers)
+
+    @staticmethod
+    def _read_env_value(env_name: str) -> Optional[str]:
+        try:
+            return os.environ.get(env_name)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                f"Failed to read {env_name} environment variable",
+                original_error=exc,
+            ) from exc
 
     @staticmethod
     def _parse_url_components(
@@ -127,7 +139,17 @@ class HyperbrowserBase:
     def _build_url(self, path: str) -> str:
         if not isinstance(path, str):
             raise HyperbrowserError("path must be a string")
-        stripped_path = path.strip()
+        try:
+            stripped_path = path.strip()
+            if not isinstance(stripped_path, str):
+                raise TypeError("normalized path must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize path",
+                original_error=exc,
+            ) from exc
         if stripped_path != path:
             raise HyperbrowserError(
                 "path must not contain leading or trailing whitespace"
