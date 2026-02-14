@@ -3,9 +3,7 @@ from pathlib import Path
 import pytest
 
 from tests.ast_import_utils import imports_from_module
-from tests.test_ast_call_symbol_helper_import_boundary import (
-    EXPECTED_CALLS_SYMBOL_IMPORTERS,
-)
+from tests.test_ast_call_symbol_helper_usage import AST_CALL_SYMBOL_GUARD_MODULES
 from tests.test_ast_import_helper_secondary_import_boundary import (
     EXPECTED_SECONDARY_AST_IMPORT_HELPER_IMPORTERS,
 )
@@ -39,7 +37,7 @@ def test_ast_import_utils_imports_are_centralized():
     expected_modules = sorted(
         {
             *AST_IMPORT_GUARD_MODULES,
-            *EXPECTED_CALLS_SYMBOL_IMPORTERS,
+            *AST_CALL_SYMBOL_GUARD_MODULES,
             *EXPECTED_SECONDARY_AST_IMPORT_HELPER_IMPORTERS,
             *EXPECTED_EXTRA_IMPORTERS,
         }
