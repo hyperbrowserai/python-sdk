@@ -1,6 +1,18 @@
 import ast
 
 
+def imports_from_module(module_text: str, module: str) -> bool:
+    module_ast = ast.parse(module_text)
+    for node in module_ast.body:
+        if isinstance(node, ast.ImportFrom) and node.module == module:
+            return True
+        if not isinstance(node, ast.Import):
+            continue
+        if any(alias.name == module for alias in node.names):
+            return True
+    return False
+
+
 def imports_symbol_from_module(module_text: str, module: str, symbol: str) -> bool:
     module_ast = ast.parse(module_text)
     for node in module_ast.body:
