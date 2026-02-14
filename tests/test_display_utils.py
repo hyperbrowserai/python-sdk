@@ -115,3 +115,14 @@ def test_format_string_key_for_error_rejects_string_subclass_blank_fallbacks():
         )
         == "<blank key>"
     )
+
+
+def test_format_string_key_for_error_truncates_custom_blank_fallback():
+    assert (
+        format_string_key_for_error(
+            "   ",
+            max_length=12,
+            blank_fallback="fallback-value-too-long",
+        )
+        == "... (truncated)"
+    )
