@@ -28,6 +28,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_ast_import_utils.py",
     "tests/test_ast_import_utils_module_import_boundary.py",
     "tests/test_ast_module_import_helper_import_boundary.py",
+    "tests/test_ast_module_import_helper_usage.py",
     "tests/test_ast_symbol_import_helper_import_boundary.py",
     "tests/test_ast_symbol_import_helper_usage.py",
     "tests/test_guardrail_ast_utils.py",
