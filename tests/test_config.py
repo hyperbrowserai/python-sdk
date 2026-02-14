@@ -318,55 +318,12 @@ def test_client_config_resolve_base_url_from_env_rejects_string_subclass_inputs(
         ClientConfig.resolve_base_url_from_env(_BrokenBaseUrl("https://example.local"))
 
 
-def test_client_config_wraps_api_key_strip_runtime_errors():
-    class _BrokenApiKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("api key strip exploded")
+def test_client_config_rejects_string_subclass_api_key_values():
+    class _ApiKey(str):
+        pass
 
-    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
-        ClientConfig(api_key=_BrokenApiKey("test-key"))
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_client_config_preserves_hyperbrowser_api_key_strip_errors():
-    class _BrokenApiKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom strip failure")
-
-    with pytest.raises(HyperbrowserError, match="custom strip failure") as exc_info:
-        ClientConfig(api_key=_BrokenApiKey("test-key"))
-
-    assert exc_info.value.original_error is None
-
-
-def test_client_config_wraps_non_string_api_key_strip_results():
-    class _BrokenApiKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return object()
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
-        ClientConfig(api_key=_BrokenApiKey("test-key"))
-
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-def test_client_config_wraps_api_key_string_subclass_strip_results():
-    class _BrokenApiKey(str):
-        class _NormalizedKey(str):
-            pass
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedKey("test-key")
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
-        ClientConfig(api_key=_BrokenApiKey("test-key"))
-
-    assert isinstance(exc_info.value.original_error, TypeError)
+    with pytest.raises(HyperbrowserError, match="api_key must be a string"):
+        ClientConfig(api_key=_ApiKey("test-key"))
 
 
 def test_client_config_rejects_blank_api_key_values():

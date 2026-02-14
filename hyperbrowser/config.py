@@ -32,7 +32,7 @@ class ClientConfig:
         *,
         empty_error_message: str = "api_key must not be empty",
     ) -> str:
-        if not isinstance(api_key, str):
+        if type(api_key) is not str:
             raise HyperbrowserError("api_key must be a string")
         try:
             normalized_api_key = api_key.strip()

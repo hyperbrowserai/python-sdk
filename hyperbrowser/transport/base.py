@@ -64,7 +64,7 @@ def _format_mapping_key_for_error(key: str) -> str:
 
 
 def _normalize_transport_api_key(api_key: str) -> str:
-    if not isinstance(api_key, str):
+    if type(api_key) is not str:
         raise HyperbrowserError("api_key must be a string")
 
     try:
