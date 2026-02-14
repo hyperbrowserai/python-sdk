@@ -4,6 +4,7 @@ import pytest
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import (
+    _safe_key_display_for_error,
     copy_mapping_values_by_string_keys,
     read_string_mapping_keys,
     read_string_key_mapping,
@@ -130,6 +131,23 @@ def test_read_string_key_mapping_falls_back_for_unreadable_key_display():
             ),
             key_display=lambda key: key.encode("utf-8"),
         )
+
+
+def test_safe_key_display_for_error_returns_display_value():
+    assert (
+        _safe_key_display_for_error("field", key_display=lambda key: f"<{key}>")
+        == "<field>"
+    )
+
+
+def test_safe_key_display_for_error_returns_unreadable_key_on_failures():
+    assert (
+        _safe_key_display_for_error(
+            "field",
+            key_display=lambda key: key.encode("utf-8"),
+        )
+        == "<unreadable key>"
+    )
 
 
 def test_read_string_mapping_keys_returns_string_keys():

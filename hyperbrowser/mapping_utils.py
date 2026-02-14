@@ -5,6 +5,18 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string
 
 
+def _safe_key_display_for_error(
+    key: str, *, key_display: Callable[[str], str]
+) -> str:
+    try:
+        key_text = key_display(key)
+        if not is_plain_string(key_text):
+            raise TypeError("mapping key display must be a string")
+        return key_text
+    except Exception:
+        return "<unreadable key>"
+
+
 def read_string_mapping_keys(
     mapping_value: Any,
     *,
@@ -54,12 +66,7 @@ def read_string_key_mapping(
         except HyperbrowserError:
             raise
         except Exception as exc:
-            try:
-                key_text = key_display(key)
-                if not is_plain_string(key_text):
-                    raise TypeError("mapping key display must be a string")
-            except Exception:
-                key_text = "<unreadable key>"
+            key_text = _safe_key_display_for_error(key, key_display=key_display)
             raise HyperbrowserError(
                 read_value_error_builder(key_text),
                 original_error=exc,
@@ -83,12 +90,7 @@ def copy_mapping_values_by_string_keys(
         except HyperbrowserError:
             raise
         except Exception as exc:
-            try:
-                key_text = key_display(key)
-                if not is_plain_string(key_text):
-                    raise TypeError("mapping key display must be a string")
-            except Exception:
-                key_text = "<unreadable key>"
+            key_text = _safe_key_display_for_error(key, key_display=key_display)
             raise HyperbrowserError(
                 read_value_error_builder(key_text),
                 original_error=exc,
