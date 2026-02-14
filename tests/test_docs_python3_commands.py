@@ -12,6 +12,8 @@ def test_readme_and_contributing_use_python3_commands():
 
     assert "python -m" not in readme_text
     assert "python -m" not in contributing_text
+    assert not re.search(r"^\s*pip install -e \. pytest ruff build\s*$", readme_text, re.MULTILINE)
+    assert "python3 -m pip install -e . pytest ruff build" in readme_text
 
 
 def test_example_run_blocks_use_python3():

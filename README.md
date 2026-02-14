@@ -232,7 +232,7 @@ except HyperbrowserTimeoutError:
 ## Development
 
 ```bash
-pip install -e . pytest ruff build
+python3 -m pip install -e . pytest ruff build
 python3 -m ruff check .
 python3 -m ruff format --check .
 python3 -m pytest -q
