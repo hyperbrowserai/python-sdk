@@ -160,6 +160,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_session_request_helper_usage.py` (session manager request-helper usage enforcement),
   - `tests/test_session_request_internal_reuse.py` (session request-helper internal reuse of shared model raw request helpers),
   - `tests/test_session_request_wrapper_internal_reuse.py` (parsed session-request wrapper internal reuse of session resource helpers),
+  - `tests/test_session_resource_wrapper_internal_reuse.py` (session resource-wrapper internal reuse of shared model raw request helpers),
   - `tests/test_session_route_constants_usage.py` (session manager route-constant usage enforcement),
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
   - `tests/test_start_and_wait_default_constants_usage.py` (shared start-and-wait default-constant usage enforcement),

@@ -92,6 +92,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_session_request_helper_usage.py",
     "tests/test_session_request_internal_reuse.py",
     "tests/test_session_request_wrapper_internal_reuse.py",
+    "tests/test_session_resource_wrapper_internal_reuse.py",
     "tests/test_session_route_constants_usage.py",
     "tests/test_session_upload_helper_usage.py",
     "tests/test_start_and_wait_default_constants_usage.py",
