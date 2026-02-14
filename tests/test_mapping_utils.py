@@ -5,6 +5,7 @@ import pytest
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import (
     copy_mapping_values_by_string_keys,
+    read_string_mapping_keys,
     read_string_key_mapping,
 )
 
@@ -113,6 +114,55 @@ def test_read_string_key_mapping_falls_back_for_unreadable_key_display():
                 f"failed value for '{key_display}'"
             ),
             key_display=lambda key: key.encode("utf-8"),
+        )
+
+
+def test_read_string_mapping_keys_returns_string_keys():
+    assert read_string_mapping_keys(
+        {"a": 1, "b": 2},
+        expected_mapping_error="expected mapping",
+        read_keys_error="failed keys",
+        non_string_key_error_builder=lambda key: (
+            f"non-string key: {type(key).__name__}"
+        ),
+    ) == ["a", "b"]
+
+
+def test_read_string_mapping_keys_rejects_non_mapping_values():
+    with pytest.raises(HyperbrowserError, match="expected mapping"):
+        read_string_mapping_keys(
+            ["a"],
+            expected_mapping_error="expected mapping",
+            read_keys_error="failed keys",
+            non_string_key_error_builder=lambda key: (
+                f"non-string key: {type(key).__name__}"
+            ),
+        )
+
+
+def test_read_string_mapping_keys_wraps_key_read_errors():
+    with pytest.raises(HyperbrowserError, match="failed keys") as exc_info:
+        read_string_mapping_keys(
+            _BrokenKeysMapping(),
+            expected_mapping_error="expected mapping",
+            read_keys_error="failed keys",
+            non_string_key_error_builder=lambda key: (
+                f"non-string key: {type(key).__name__}"
+            ),
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_read_string_mapping_keys_rejects_non_string_keys():
+    with pytest.raises(HyperbrowserError, match="non-string key: int"):
+        read_string_mapping_keys(
+            {1: "value"},
+            expected_mapping_error="expected mapping",
+            read_keys_error="failed keys",
+            non_string_key_error_builder=lambda key: (
+                f"non-string key: {type(key).__name__}"
+            ),
         )
 
 

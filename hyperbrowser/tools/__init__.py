@@ -5,7 +5,10 @@ from typing import Any, Dict, Mapping
 
 from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.mapping_utils import copy_mapping_values_by_string_keys
+from hyperbrowser.mapping_utils import (
+    copy_mapping_values_by_string_keys,
+    read_string_mapping_keys,
+)
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 from hyperbrowser.models.crawl import StartCrawlJobParams
 from hyperbrowser.models.extract import StartExtractJobParams
@@ -60,20 +63,14 @@ def _format_tool_param_key_for_error(key: str) -> str:
 def _normalize_extract_schema_mapping(
     schema_value: MappingABC[object, Any],
 ) -> Dict[str, Any]:
-    try:
-        schema_keys = list(schema_value.keys())
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            "Failed to read extract tool `schema` object keys",
-            original_error=exc,
-        ) from exc
-    normalized_schema_keys: list[str] = []
-    for key in schema_keys:
-        if type(key) is not str:
-            raise HyperbrowserError("Extract tool `schema` object keys must be strings")
-        normalized_schema_keys.append(key)
+    normalized_schema_keys = read_string_mapping_keys(
+        schema_value,
+        expected_mapping_error="Extract tool `schema` must be an object or JSON string",
+        read_keys_error="Failed to read extract tool `schema` object keys",
+        non_string_key_error_builder=lambda _key: (
+            "Extract tool `schema` object keys must be strings"
+        ),
+    )
     return copy_mapping_values_by_string_keys(
         schema_value,
         normalized_schema_keys,
@@ -114,67 +111,58 @@ def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
-    if not isinstance(params, Mapping):
-        raise HyperbrowserError("tool params must be a mapping")
-    try:
-        param_keys = list(params.keys())
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            "Failed to read tool params keys",
-            original_error=exc,
-        ) from exc
+    param_keys = read_string_mapping_keys(
+        params,
+        expected_mapping_error="tool params must be a mapping",
+        read_keys_error="Failed to read tool params keys",
+        non_string_key_error_builder=lambda _key: "tool params keys must be strings",
+    )
     for key in param_keys:
-        if type(key) is str:
-            try:
-                normalized_key = key.strip()
-                if type(normalized_key) is not str:
-                    raise TypeError("normalized tool param key must be a string")
-                is_empty_key = len(normalized_key) == 0
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "Failed to normalize tool param key",
-                    original_error=exc,
-                ) from exc
-            if is_empty_key:
-                raise HyperbrowserError("tool params keys must not be empty")
-            try:
-                has_surrounding_whitespace = key != normalized_key
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "Failed to normalize tool param key",
-                    original_error=exc,
-                ) from exc
-            if has_surrounding_whitespace:
-                raise HyperbrowserError(
-                    "tool params keys must not contain leading or trailing whitespace"
-                )
-            try:
-                contains_control_character = any(
-                    ord(character) < 32 or ord(character) == 127 for character in key
-                )
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "Failed to validate tool param key characters",
-                    original_error=exc,
-                ) from exc
-            if contains_control_character:
-                raise HyperbrowserError(
-                    "tool params keys must not contain control characters"
-                )
-            continue
-        raise HyperbrowserError("tool params keys must be strings")
-    normalized_param_keys = [key for key in param_keys if type(key) is str]
+        try:
+            normalized_key = key.strip()
+            if type(normalized_key) is not str:
+                raise TypeError("normalized tool param key must be a string")
+            is_empty_key = len(normalized_key) == 0
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize tool param key",
+                original_error=exc,
+            ) from exc
+        if is_empty_key:
+            raise HyperbrowserError("tool params keys must not be empty")
+        try:
+            has_surrounding_whitespace = key != normalized_key
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize tool param key",
+                original_error=exc,
+            ) from exc
+        if has_surrounding_whitespace:
+            raise HyperbrowserError(
+                "tool params keys must not contain leading or trailing whitespace"
+            )
+        try:
+            contains_control_character = any(
+                ord(character) < 32 or ord(character) == 127 for character in key
+            )
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to validate tool param key characters",
+                original_error=exc,
+            ) from exc
+        if contains_control_character:
+            raise HyperbrowserError(
+                "tool params keys must not contain control characters"
+            )
     return copy_mapping_values_by_string_keys(
         params,
-        normalized_param_keys,
+        param_keys,
         read_value_error_builder=lambda key_display: (
             f"Failed to read tool param '{key_display}'"
         ),
