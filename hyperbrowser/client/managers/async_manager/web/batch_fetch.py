@@ -1,5 +1,6 @@
 from typing import Optional
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     StartBatchFetchJobParams,
     StartBatchFetchJobResponse,
@@ -27,7 +28,17 @@ class BatchFetchManager:
     async def start(
         self, params: StartBatchFetchJobParams
     ) -> StartBatchFetchJobResponse:
-        payload = params.model_dump(exclude_none=True, by_alias=True)
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize batch fetch start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize batch fetch start params")
         inject_web_output_schemas(
             payload, params.outputs.formats if params.outputs else None
         )
@@ -56,9 +67,20 @@ class BatchFetchManager:
         self, job_id: str, params: Optional[GetBatchFetchJobParams] = None
     ) -> BatchFetchJobResponse:
         params_obj = params or GetBatchFetchJobParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize batch fetch get params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize batch fetch get params")
         response = await self._client.transport.get(
             self._client._build_url(f"/web/batch-fetch/{job_id}"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_response_model(
             response.data,

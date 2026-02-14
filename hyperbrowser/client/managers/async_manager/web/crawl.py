@@ -1,5 +1,6 @@
 from typing import Optional
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     StartWebCrawlJobParams,
     StartWebCrawlJobResponse,
@@ -25,7 +26,17 @@ class WebCrawlManager:
         self._client = client
 
     async def start(self, params: StartWebCrawlJobParams) -> StartWebCrawlJobResponse:
-        payload = params.model_dump(exclude_none=True, by_alias=True)
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize web crawl start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize web crawl start params")
         inject_web_output_schemas(
             payload, params.outputs.formats if params.outputs else None
         )
@@ -54,9 +65,20 @@ class WebCrawlManager:
         self, job_id: str, params: Optional[GetWebCrawlJobParams] = None
     ) -> WebCrawlJobResponse:
         params_obj = params or GetWebCrawlJobParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize web crawl get params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize web crawl get params")
         response = await self._client.transport.get(
             self._client._build_url(f"/web/crawl/{job_id}"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_response_model(
             response.data,

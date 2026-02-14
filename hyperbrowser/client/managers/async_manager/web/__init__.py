@@ -1,5 +1,6 @@
 from .batch_fetch import BatchFetchManager
 from .crawl import WebCrawlManager
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     FetchParams,
     FetchResponse,
@@ -17,7 +18,17 @@ class WebManager:
         self.crawl = WebCrawlManager(client)
 
     async def fetch(self, params: FetchParams) -> FetchResponse:
-        payload = params.model_dump(exclude_none=True, by_alias=True)
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize web fetch params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize web fetch params")
         inject_web_output_schemas(
             payload, params.outputs.formats if params.outputs else None
         )
@@ -33,9 +44,20 @@ class WebManager:
         )
 
     async def search(self, params: WebSearchParams) -> WebSearchResponse:
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize web search params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize web search params")
         response = await self._client.transport.post(
             self._client._build_url("/web/search"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return parse_response_model(
             response.data,
