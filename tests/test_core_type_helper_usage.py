@@ -48,6 +48,7 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/polling_defaults.py",
     "hyperbrowser/client/managers/session_upload_utils.py",
     "hyperbrowser/client/managers/session_profile_update_utils.py",
+    "hyperbrowser/client/managers/web_route_constants.py",
     "hyperbrowser/client/managers/web_pagination_utils.py",
     "hyperbrowser/client/managers/web_payload_utils.py",
     "hyperbrowser/client/managers/start_job_utils.py",

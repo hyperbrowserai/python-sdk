@@ -9,6 +9,7 @@ from hyperbrowser.models import (
 )
 from ...page_params_utils import build_page_batch_params
 from ...job_status_utils import is_default_terminal_job_status
+from ...web_route_constants import WEB_CRAWL_JOB_ROUTE_PREFIX
 from ...web_payload_utils import build_web_crawl_start_payload
 from ...web_payload_utils import build_web_crawl_get_params
 from ...web_pagination_utils import (
@@ -32,6 +33,8 @@ from ...start_job_utils import build_started_job_context
 
 
 class WebCrawlManager:
+    _ROUTE_PREFIX = WEB_CRAWL_JOB_ROUTE_PREFIX
+
     def __init__(self, client):
         self._client = client
 
@@ -39,7 +42,7 @@ class WebCrawlManager:
         payload = build_web_crawl_start_payload(params)
 
         response = self._client.transport.post(
-            self._client._build_url("/web/crawl"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -50,7 +53,7 @@ class WebCrawlManager:
 
     def get_status(self, job_id: str) -> WebCrawlJobStatusResponse:
         response = self._client.transport.get(
-            self._client._build_url(f"/web/crawl/{job_id}/status")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
         )
         return parse_response_model(
             response.data,
@@ -63,7 +66,7 @@ class WebCrawlManager:
     ) -> WebCrawlJobResponse:
         query_params = build_web_crawl_get_params(params)
         response = self._client.transport.get(
-            self._client._build_url(f"/web/crawl/{job_id}"),
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}"),
             params=query_params,
         )
         return parse_response_model(

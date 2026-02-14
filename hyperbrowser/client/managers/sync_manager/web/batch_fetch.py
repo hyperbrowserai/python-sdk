@@ -9,6 +9,7 @@ from hyperbrowser.models import (
 )
 from ...page_params_utils import build_page_batch_params
 from ...job_status_utils import is_default_terminal_job_status
+from ...web_route_constants import BATCH_FETCH_JOB_ROUTE_PREFIX
 from ...web_payload_utils import build_batch_fetch_start_payload
 from ...web_payload_utils import build_batch_fetch_get_params
 from ...web_pagination_utils import (
@@ -34,6 +35,8 @@ from ...start_job_utils import build_started_job_context
 
 
 class BatchFetchManager:
+    _ROUTE_PREFIX = BATCH_FETCH_JOB_ROUTE_PREFIX
+
     def __init__(self, client):
         self._client = client
 
@@ -41,7 +44,7 @@ class BatchFetchManager:
         payload = build_batch_fetch_start_payload(params)
 
         response = self._client.transport.post(
-            self._client._build_url("/web/batch-fetch"),
+            self._client._build_url(self._ROUTE_PREFIX),
             data=payload,
         )
         return parse_response_model(
@@ -52,7 +55,7 @@ class BatchFetchManager:
 
     def get_status(self, job_id: str) -> BatchFetchJobStatusResponse:
         response = self._client.transport.get(
-            self._client._build_url(f"/web/batch-fetch/{job_id}/status")
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}/status")
         )
         return parse_response_model(
             response.data,
@@ -65,7 +68,7 @@ class BatchFetchManager:
     ) -> BatchFetchJobResponse:
         query_params = build_batch_fetch_get_params(params)
         response = self._client.transport.get(
-            self._client._build_url(f"/web/batch-fetch/{job_id}"),
+            self._client._build_url(f"{self._ROUTE_PREFIX}/{job_id}"),
             params=query_params,
         )
         return parse_response_model(

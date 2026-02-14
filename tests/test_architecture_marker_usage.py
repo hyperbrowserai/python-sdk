@@ -65,6 +65,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_started_job_helper_boundary.py",
     "tests/test_web_pagination_internal_reuse.py",
     "tests/test_web_payload_helper_usage.py",
+    "tests/test_web_route_constants_usage.py",
 )
 
 
