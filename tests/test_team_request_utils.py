@@ -1,82 +1,55 @@
 import asyncio
-from types import SimpleNamespace
 
 import hyperbrowser.client.managers.team_request_utils as team_request_utils
 
 
-def test_get_team_resource_uses_route_and_parses_response():
+def test_get_team_resource_delegates_to_get_model_request():
     captured = {}
 
-    class _SyncTransport:
-        def get(self, url):
-            captured["url"] = url
-            return SimpleNamespace(data={"remainingCredits": 42})
-
-    class _Client:
-        transport = _SyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
-
-    def _fake_parse_response_model(data, **kwargs):
-        captured["parse_data"] = data
-        captured["parse_kwargs"] = kwargs
+    def _fake_get_model_request(**kwargs):
+        captured.update(kwargs)
         return {"parsed": True}
 
-    original_parse = team_request_utils.parse_response_model
-    team_request_utils.parse_response_model = _fake_parse_response_model
+    original = team_request_utils.get_model_request
+    team_request_utils.get_model_request = _fake_get_model_request
     try:
         result = team_request_utils.get_team_resource(
-            client=_Client(),
+            client=object(),
             route_path="/team/credit-info",
             model=object,
             operation_name="team credit info",
         )
     finally:
-        team_request_utils.parse_response_model = original_parse
+        team_request_utils.get_model_request = original
 
     assert result == {"parsed": True}
-    assert captured["url"] == "https://api.example.test/team/credit-info"
-    assert captured["parse_data"] == {"remainingCredits": 42}
-    assert captured["parse_kwargs"]["operation_name"] == "team credit info"
+    assert captured["route_path"] == "/team/credit-info"
+    assert captured["params"] is None
+    assert captured["operation_name"] == "team credit info"
 
 
-def test_get_team_resource_async_uses_route_and_parses_response():
+def test_get_team_resource_async_delegates_to_get_model_request_async():
     captured = {}
 
-    class _AsyncTransport:
-        async def get(self, url):
-            captured["url"] = url
-            return SimpleNamespace(data={"remainingCredits": 42})
-
-    class _Client:
-        transport = _AsyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
-
-    def _fake_parse_response_model(data, **kwargs):
-        captured["parse_data"] = data
-        captured["parse_kwargs"] = kwargs
+    async def _fake_get_model_request_async(**kwargs):
+        captured.update(kwargs)
         return {"parsed": True}
 
-    original_parse = team_request_utils.parse_response_model
-    team_request_utils.parse_response_model = _fake_parse_response_model
+    original = team_request_utils.get_model_request_async
+    team_request_utils.get_model_request_async = _fake_get_model_request_async
     try:
         result = asyncio.run(
             team_request_utils.get_team_resource_async(
-                client=_Client(),
+                client=object(),
                 route_path="/team/credit-info",
                 model=object,
                 operation_name="team credit info",
             )
         )
     finally:
-        team_request_utils.parse_response_model = original_parse
+        team_request_utils.get_model_request_async = original
 
     assert result == {"parsed": True}
-    assert captured["url"] == "https://api.example.test/team/credit-info"
-    assert captured["parse_data"] == {"remainingCredits": 42}
-    assert captured["parse_kwargs"]["operation_name"] == "team credit info"
+    assert captured["route_path"] == "/team/credit-info"
+    assert captured["params"] is None
+    assert captured["operation_name"] == "team credit info"

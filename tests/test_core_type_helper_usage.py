@@ -52,6 +52,7 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/job_route_builders.py",
     "hyperbrowser/client/managers/job_route_constants.py",
     "hyperbrowser/client/managers/job_start_payload_utils.py",
+    "hyperbrowser/client/managers/model_request_utils.py",
     "hyperbrowser/client/managers/page_params_utils.py",
     "hyperbrowser/client/managers/job_wait_utils.py",
     "hyperbrowser/client/managers/polling_defaults.py",

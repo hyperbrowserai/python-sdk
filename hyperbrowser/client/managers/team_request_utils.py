@@ -1,6 +1,6 @@
 from typing import Any, Type, TypeVar
 
-from .response_utils import parse_response_model
+from .model_request_utils import get_model_request, get_model_request_async
 
 T = TypeVar("T")
 
@@ -12,11 +12,10 @@ def get_team_resource(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(route_path),
-    )
-    return parse_response_model(
-        response.data,
+    return get_model_request(
+        client=client,
+        route_path=route_path,
+        params=None,
         model=model,
         operation_name=operation_name,
     )
@@ -29,11 +28,10 @@ async def get_team_resource_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(route_path),
-    )
-    return parse_response_model(
-        response.data,
+    return await get_model_request_async(
+        client=client,
+        route_path=route_path,
+        params=None,
         model=model,
         operation_name=operation_name,
     )
