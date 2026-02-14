@@ -260,6 +260,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_batch_fetch.py`
 - `examples/async_browser_use_task.py`
 - `examples/async_claude_computer_use_task.py`
+- `examples/async_computer_action.py`
 - `examples/async_crawl.py`
 - `examples/async_cua_task.py`
 - `examples/async_extension_create.py`
@@ -277,6 +278,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/sync_batch_fetch.py`
 - `examples/sync_browser_use_task.py`
 - `examples/sync_claude_computer_use_task.py`
+- `examples/sync_computer_action.py`
 - `examples/sync_crawl.py`
 - `examples/sync_cua_task.py`
 - `examples/sync_extension_create.py`
