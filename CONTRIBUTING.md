@@ -119,6 +119,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_core_type_helper_usage.py` (core transport/config/header/file/polling/session/error/parsing manager+tool module enforcement of shared plain-type helper usage),
   - `tests/test_default_serialization_helper_usage.py` (default optional-query serialization helper usage enforcement),
   - `tests/test_default_terminal_status_helper_usage.py` (default terminal-status helper usage enforcement for non-agent managers),
+  - `tests/test_display_blank_key_literal_boundary.py` (blank-key display literal centralization in `hyperbrowser/display_utils.py`),
   - `tests/test_display_helper_usage.py` (display/key-format helper usage),
   - `tests/test_docs_python3_commands.py` (`README`/`CONTRIBUTING`/examples python3 command consistency enforcement),
   - `tests/test_example_run_instructions.py` (example run-instruction consistency enforcement),
