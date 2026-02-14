@@ -146,7 +146,7 @@ class HyperbrowserBase:
         )
 
     def _build_url(self, path: str) -> str:
-        if not isinstance(path, str):
+        if type(path) is not str:
             raise HyperbrowserError("path must be a string")
         try:
             stripped_path = path.strip()
