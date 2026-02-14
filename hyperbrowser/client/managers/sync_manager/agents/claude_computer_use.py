@@ -36,7 +36,7 @@ class ClaudeComputerUseManager:
     ) -> StartClaudeComputerUseTaskResponse:
         payload = build_agent_start_payload(
             params,
-            error_message="Failed to serialize Claude Computer Use start params",
+            error_message=self._OPERATION_METADATA.start_payload_error_message,
         )
         return start_agent_task(
             client=self._client,

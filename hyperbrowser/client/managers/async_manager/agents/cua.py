@@ -34,7 +34,7 @@ class CuaManager:
     async def start(self, params: StartCuaTaskParams) -> StartCuaTaskResponse:
         payload = build_agent_start_payload(
             params,
-            error_message="Failed to serialize CUA start params",
+            error_message=self._OPERATION_METADATA.start_payload_error_message,
         )
         return await start_agent_task_async(
             client=self._client,

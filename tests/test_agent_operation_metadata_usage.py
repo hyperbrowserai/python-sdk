@@ -27,6 +27,11 @@ def test_agent_managers_use_shared_operation_metadata():
         assert "operation_name=self._OPERATION_METADATA." in module_text
         assert "start_error_message=self._OPERATION_METADATA." in module_text
         assert "operation_name_prefix=self._OPERATION_METADATA." in module_text
+        if "build_agent_start_payload(" in module_text:
+            assert (
+                "error_message=self._OPERATION_METADATA.start_payload_error_message"
+                in module_text
+            )
         assert 'operation_name="' not in module_text
         assert 'start_error_message="' not in module_text
         assert 'operation_name_prefix="' not in module_text

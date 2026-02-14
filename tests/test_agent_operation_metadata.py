@@ -8,6 +8,10 @@ from hyperbrowser.client.managers.agent_operation_metadata import (
 
 
 def test_browser_use_operation_metadata_values():
+    assert (
+        BROWSER_USE_OPERATION_METADATA.start_payload_error_message
+        == "Failed to serialize browser-use start params"
+    )
     assert BROWSER_USE_OPERATION_METADATA.start_operation_name == "browser-use start"
     assert BROWSER_USE_OPERATION_METADATA.task_operation_name == "browser-use task"
     assert (
@@ -25,6 +29,10 @@ def test_browser_use_operation_metadata_values():
 
 
 def test_hyper_agent_operation_metadata_values():
+    assert (
+        HYPER_AGENT_OPERATION_METADATA.start_payload_error_message
+        == "Failed to serialize HyperAgent start params"
+    )
     assert HYPER_AGENT_OPERATION_METADATA.start_operation_name == "hyper agent start"
     assert HYPER_AGENT_OPERATION_METADATA.task_operation_name == "hyper agent task"
     assert (
@@ -40,6 +48,10 @@ def test_hyper_agent_operation_metadata_values():
 
 
 def test_gemini_operation_metadata_values():
+    assert (
+        GEMINI_COMPUTER_USE_OPERATION_METADATA.start_payload_error_message
+        == "Failed to serialize Gemini Computer Use start params"
+    )
     assert (
         GEMINI_COMPUTER_USE_OPERATION_METADATA.start_operation_name
         == "gemini computer use start"
@@ -68,6 +80,10 @@ def test_gemini_operation_metadata_values():
 
 def test_claude_operation_metadata_values():
     assert (
+        CLAUDE_COMPUTER_USE_OPERATION_METADATA.start_payload_error_message
+        == "Failed to serialize Claude Computer Use start params"
+    )
+    assert (
         CLAUDE_COMPUTER_USE_OPERATION_METADATA.start_operation_name
         == "claude computer use start"
     )
@@ -94,6 +110,10 @@ def test_claude_operation_metadata_values():
 
 
 def test_cua_operation_metadata_values():
+    assert (
+        CUA_OPERATION_METADATA.start_payload_error_message
+        == "Failed to serialize CUA start params"
+    )
     assert CUA_OPERATION_METADATA.start_operation_name == "cua start"
     assert CUA_OPERATION_METADATA.task_operation_name == "cua task"
     assert CUA_OPERATION_METADATA.status_operation_name == "cua task status"
