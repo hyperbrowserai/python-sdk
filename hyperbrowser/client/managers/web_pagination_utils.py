@@ -1,4 +1,4 @@
-from typing import Any, Type, TypeVar
+from typing import Any, Callable, Type, TypeVar
 
 T = TypeVar("T")
 
@@ -29,3 +29,10 @@ def merge_paginated_page_response(job_response: Any, page_response: Any) -> None
     job_response.total_page_batches = page_response.total_page_batches
     job_response.batch_size = page_response.batch_size
     job_response.error = page_response.error
+
+
+def build_paginated_page_merge_callback(*, job_response: Any) -> Callable[[Any], None]:
+    def _merge_callback(page_response: Any) -> None:
+        merge_paginated_page_response(job_response, page_response)
+
+    return _merge_callback

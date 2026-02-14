@@ -36,11 +36,12 @@ def test_batch_fetch_managers_use_shared_start_payload_helper():
         assert "build_batch_fetch_start_payload(" in module_text
         assert "build_batch_fetch_get_params(" in module_text
         assert "initialize_paginated_job_response(" in module_text
-        assert "merge_paginated_page_response(" in module_text
+        assert "build_paginated_page_merge_callback(" in module_text
         assert "inject_web_output_schemas(" not in module_text
         assert "serialize_model_dump_to_dict(" not in module_text
         assert "BatchFetchJobResponse(" not in module_text
         assert "current_page_batch = page_response.current_page_batch" not in module_text
+        assert "def merge_page_response(" not in module_text
 
 
 def test_web_crawl_managers_use_shared_start_payload_helper():
@@ -49,8 +50,9 @@ def test_web_crawl_managers_use_shared_start_payload_helper():
         assert "build_web_crawl_start_payload(" in module_text
         assert "build_web_crawl_get_params(" in module_text
         assert "initialize_paginated_job_response(" in module_text
-        assert "merge_paginated_page_response(" in module_text
+        assert "build_paginated_page_merge_callback(" in module_text
         assert "inject_web_output_schemas(" not in module_text
         assert "serialize_model_dump_to_dict(" not in module_text
         assert "WebCrawlJobResponse(" not in module_text
         assert "current_page_batch = page_response.current_page_batch" not in module_text
+        assert "def merge_page_response(" not in module_text

@@ -1,4 +1,5 @@
 from hyperbrowser.client.managers.job_pagination_utils import (
+    build_job_paginated_page_merge_callback,
     initialize_job_paginated_response,
     merge_job_paginated_page_response,
 )
@@ -70,3 +71,33 @@ def test_merge_job_paginated_page_response_updates_totals_and_error():
     assert job_response.total_crawled_pages == 21
     assert job_response.batch_size == 50
     assert job_response.error == "partial failure"
+
+
+def test_build_job_paginated_page_merge_callback_merges_values():
+    job_response = initialize_job_paginated_response(
+        model=BatchScrapeJobResponse,
+        job_id="job-3",
+        status="running",
+        total_counter_alias="totalScrapedPages",
+    )
+    page_response = BatchScrapeJobResponse(
+        jobId="job-3",
+        status="running",
+        data=[],
+        currentPageBatch=1,
+        totalPageBatches=5,
+        totalScrapedPages=6,
+        batchSize=30,
+        error=None,
+    )
+    merge_callback = build_job_paginated_page_merge_callback(
+        job_response=job_response,
+        total_counter_attr="total_scraped_pages",
+    )
+
+    merge_callback(page_response)
+
+    assert job_response.current_page_batch == 1
+    assert job_response.total_page_batches == 5
+    assert job_response.total_scraped_pages == 6
+    assert job_response.batch_size == 30

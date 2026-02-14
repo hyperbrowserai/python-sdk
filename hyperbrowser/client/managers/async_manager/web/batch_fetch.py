@@ -11,8 +11,8 @@ from hyperbrowser.models import (
 from ...web_payload_utils import build_batch_fetch_start_payload
 from ...web_payload_utils import build_batch_fetch_get_params
 from ...web_pagination_utils import (
+    build_paginated_page_merge_callback,
     initialize_paginated_job_response,
-    merge_paginated_page_response,
 )
 from ....polling import (
     build_fetch_operation_name,
@@ -106,9 +106,6 @@ class BatchFetchManager:
             status=job_status,
         )
 
-        def merge_page_response(page_response: BatchFetchJobResponse) -> None:
-            merge_paginated_page_response(job_response, page_response)
-
         await collect_paginated_results_async(
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
@@ -121,7 +118,9 @@ class BatchFetchManager:
             get_total_page_batches=lambda page_response: (
                 page_response.total_page_batches
             ),
-            on_page_success=merge_page_response,
+            on_page_success=build_paginated_page_merge_callback(
+                job_response=job_response,
+            ),
             max_wait_seconds=max_wait_seconds,
             max_attempts=POLLING_ATTEMPTS,
             retry_delay_seconds=0.5,

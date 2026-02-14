@@ -10,8 +10,8 @@ from ...polling import (
     retry_operation,
 )
 from ..job_pagination_utils import (
+    build_job_paginated_page_merge_callback,
     initialize_job_paginated_response,
-    merge_job_paginated_page_response,
 )
 from ..serialization_utils import (
     serialize_model_dump_or_default,
@@ -113,13 +113,6 @@ class CrawlManager:
             total_counter_alias="totalCrawledPages",
         )
 
-        def merge_page_response(page_response: CrawlJobResponse) -> None:
-            merge_job_paginated_page_response(
-                job_response,
-                page_response,
-                total_counter_attr="total_crawled_pages",
-            )
-
         collect_paginated_results(
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
@@ -132,7 +125,10 @@ class CrawlManager:
             get_total_page_batches=lambda page_response: (
                 page_response.total_page_batches
             ),
-            on_page_success=merge_page_response,
+            on_page_success=build_job_paginated_page_merge_callback(
+                job_response=job_response,
+                total_counter_attr="total_crawled_pages",
+            ),
             max_wait_seconds=max_wait_seconds,
             max_attempts=POLLING_ATTEMPTS,
             retry_delay_seconds=0.5,
