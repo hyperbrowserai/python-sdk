@@ -2,15 +2,15 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_display_helper_usage import (
+    ALLOWED_KEY_FORMAT_CALL_FILES,
+    ALLOWED_NORMALIZE_DISPLAY_CALL_FILES,
+)
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_DISPLAY_UTILS_IMPORTERS = (
-    "hyperbrowser/client/managers/extension_utils.py",
-    "hyperbrowser/client/managers/response_utils.py",
-    "hyperbrowser/client/managers/session_utils.py",
-    "hyperbrowser/tools/__init__.py",
-    "hyperbrowser/transport/base.py",
+EXPECTED_EXTRA_IMPORTERS = (
     "tests/test_display_utils.py",
     "tests/test_display_utils_import_boundary.py",
 )
@@ -31,4 +31,13 @@ def test_display_utils_imports_are_centralized():
             continue
         discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_DISPLAY_UTILS_IMPORTERS)
+    expected_runtime_modules = sorted(
+        f"hyperbrowser/{path.as_posix()}"
+        for path in {
+            *ALLOWED_KEY_FORMAT_CALL_FILES,
+            *ALLOWED_NORMALIZE_DISPLAY_CALL_FILES,
+        }
+        if path != Path("display_utils.py")
+    )
+    expected_modules = sorted([*expected_runtime_modules, *EXPECTED_EXTRA_IMPORTERS])
+    assert discovered_modules == expected_modules
