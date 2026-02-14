@@ -1,35 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
+from hyperbrowser.display_utils import normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
 
 T = TypeVar("T")
-_TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
 _MAX_MODEL_NAME_DISPLAY_LENGTH = 120
 _MAX_MAPPING_KEY_DISPLAY_LENGTH = 120
 _MIN_HTTP_STATUS_CODE = 100
 _MAX_HTTP_STATUS_CODE = 599
-
-
-def _sanitize_display_text(value: str, *, max_length: int) -> str:
-    try:
-        sanitized_value = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in value
-        ).strip()
-        if type(sanitized_value) is not str:
-            return ""
-        if not sanitized_value:
-            return ""
-        if len(sanitized_value) <= max_length:
-            return sanitized_value
-        available_length = max_length - len(_TRUNCATED_DISPLAY_SUFFIX)
-        if available_length <= 0:
-            return _TRUNCATED_DISPLAY_SUFFIX
-        return f"{sanitized_value[:available_length]}{_TRUNCATED_DISPLAY_SUFFIX}"
-    except Exception:
-        return ""
 
 
 def _safe_model_name(model: object) -> str:
@@ -40,7 +20,7 @@ def _safe_model_name(model: object) -> str:
     if type(model_name) is not str:
         return "response model"
     try:
-        normalized_model_name = _sanitize_display_text(
+        normalized_model_name = normalize_display_text(
             model_name, max_length=_MAX_MODEL_NAME_DISPLAY_LENGTH
         )
     except Exception:
@@ -51,7 +31,7 @@ def _safe_model_name(model: object) -> str:
 
 
 def _format_mapping_key_for_error(key: str) -> str:
-    normalized_key = _sanitize_display_text(
+    normalized_key = normalize_display_text(
         key, max_length=_MAX_MAPPING_KEY_DISPLAY_LENGTH
     )
     if normalized_key:

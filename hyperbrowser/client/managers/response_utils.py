@@ -1,55 +1,32 @@
 from typing import Any, Type, TypeVar
 
+from hyperbrowser.display_utils import normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
 
 T = TypeVar("T")
 _MAX_OPERATION_NAME_DISPLAY_LENGTH = 120
-_TRUNCATED_OPERATION_NAME_SUFFIX = "... (truncated)"
 _MAX_KEY_DISPLAY_LENGTH = 120
-_TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 
 
 def _normalize_operation_name_for_error(operation_name: str) -> str:
-    try:
-        normalized_name = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in operation_name
-        ).strip()
-        if type(normalized_name) is not str:
-            raise TypeError("normalized operation name must be a string")
-    except Exception:
-        return "operation"
+    normalized_name = normalize_display_text(
+        operation_name,
+        max_length=_MAX_OPERATION_NAME_DISPLAY_LENGTH,
+    )
     if not normalized_name:
         return "operation"
-    if len(normalized_name) <= _MAX_OPERATION_NAME_DISPLAY_LENGTH:
-        return normalized_name
-    available_length = _MAX_OPERATION_NAME_DISPLAY_LENGTH - len(
-        _TRUNCATED_OPERATION_NAME_SUFFIX
-    )
-    if available_length <= 0:
-        return _TRUNCATED_OPERATION_NAME_SUFFIX
-    return f"{normalized_name[:available_length]}{_TRUNCATED_OPERATION_NAME_SUFFIX}"
+    return normalized_name
 
 
 def _normalize_response_key_for_error(key: str) -> str:
-    try:
-        normalized_key = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in key
-        ).strip()
-        if type(normalized_key) is not str:
-            raise TypeError("normalized response key must be a string")
-    except Exception:
-        return "<unreadable key>"
+    normalized_key = normalize_display_text(
+        key,
+        max_length=_MAX_KEY_DISPLAY_LENGTH,
+    )
     if not normalized_key:
         return "<blank key>"
-    if len(normalized_key) <= _MAX_KEY_DISPLAY_LENGTH:
-        return normalized_key
-    available_length = _MAX_KEY_DISPLAY_LENGTH - len(_TRUNCATED_KEY_DISPLAY_SUFFIX)
-    if available_length <= 0:
-        return _TRUNCATED_KEY_DISPLAY_SUFFIX
-    return f"{normalized_key[:available_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
+    return normalized_key
 
 
 def parse_response_model(
