@@ -6,6 +6,7 @@ import os
 
 from .exceptions import HyperbrowserError
 from .header_utils import normalize_headers, parse_headers_env_json
+from .type_utils import is_plain_int, is_plain_string
 
 _ENCODED_HOST_DELIMITER_PATTERN = re.compile(r"%(?:2f|3f|23|40|3a)", re.IGNORECASE)
 
@@ -32,11 +33,11 @@ class ClientConfig:
         *,
         empty_error_message: str = "api_key must not be empty",
     ) -> str:
-        if type(api_key) is not str:
+        if not is_plain_string(api_key):
             raise HyperbrowserError("api_key must be a string")
         try:
             normalized_api_key = api_key.strip()
-            if type(normalized_api_key) is not str:
+            if not is_plain_string(normalized_api_key):
                 raise TypeError("normalized api_key must be a string")
         except HyperbrowserError:
             raise
@@ -99,7 +100,7 @@ class ClientConfig:
     def _safe_unquote(value: str, *, component_label: str) -> str:
         try:
             decoded_value = unquote(value)
-            if type(decoded_value) is not str:
+            if not is_plain_string(decoded_value):
                 raise TypeError("decoded URL component must be a string")
             return decoded_value
         except HyperbrowserError:
@@ -112,14 +113,14 @@ class ClientConfig:
 
     @staticmethod
     def normalize_base_url(base_url: str) -> str:
-        if type(base_url) is not str:
+        if not is_plain_string(base_url):
             raise HyperbrowserError("base_url must be a string")
         try:
             stripped_base_url = base_url.strip()
-            if type(stripped_base_url) is not str:
+            if not is_plain_string(stripped_base_url):
                 raise TypeError("normalized base_url must be a string")
             normalized_base_url = stripped_base_url.rstrip("/")
-            if type(normalized_base_url) is not str:
+            if not is_plain_string(normalized_base_url):
                 raise TypeError("normalized base_url must be a string")
         except HyperbrowserError:
             raise
@@ -165,11 +166,11 @@ class ClientConfig:
                 original_error=exc,
             ) from exc
         if (
-            type(parsed_base_url_scheme) is not str
-            or type(parsed_base_url_netloc) is not str
-            or type(parsed_base_url_path) is not str
-            or type(parsed_base_url_query) is not str
-            or type(parsed_base_url_fragment) is not str
+            not is_plain_string(parsed_base_url_scheme)
+            or not is_plain_string(parsed_base_url_netloc)
+            or not is_plain_string(parsed_base_url_path)
+            or not is_plain_string(parsed_base_url_query)
+            or not is_plain_string(parsed_base_url_fragment)
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         try:
@@ -181,9 +182,8 @@ class ClientConfig:
                 "Failed to parse base_url host",
                 original_error=exc,
             ) from exc
-        if (
-            parsed_base_url_hostname is not None
-            and type(parsed_base_url_hostname) is not str
+        if parsed_base_url_hostname is not None and not is_plain_string(
+            parsed_base_url_hostname
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if (
@@ -211,14 +211,12 @@ class ClientConfig:
                 "Failed to parse base_url credentials",
                 original_error=exc,
             ) from exc
-        if (
-            parsed_base_url_username is not None
-            and type(parsed_base_url_username) is not str
+        if parsed_base_url_username is not None and not is_plain_string(
+            parsed_base_url_username
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
-        if (
-            parsed_base_url_password is not None
-            and type(parsed_base_url_password) is not str
+        if parsed_base_url_password is not None and not is_plain_string(
+            parsed_base_url_password
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if parsed_base_url_username is not None or parsed_base_url_password is not None:
@@ -237,7 +235,7 @@ class ClientConfig:
                 "base_url must contain a valid port number",
                 original_error=exc,
             ) from exc
-        if parsed_base_url_port is not None and type(parsed_base_url_port) is not int:
+        if parsed_base_url_port is not None and not is_plain_int(parsed_base_url_port):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if parsed_base_url_port is not None and not (
             0 <= parsed_base_url_port <= 65535
@@ -351,11 +349,11 @@ class ClientConfig:
     def resolve_base_url_from_env(raw_base_url: Optional[str]) -> str:
         if raw_base_url is None:
             return "https://api.hyperbrowser.ai"
-        if type(raw_base_url) is not str:
+        if not is_plain_string(raw_base_url):
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must be a string")
         try:
             normalized_env_base_url = raw_base_url.strip()
-            if type(normalized_env_base_url) is not str:
+            if not is_plain_string(normalized_env_base_url):
                 raise TypeError("normalized environment base_url must be a string")
             is_empty_env_base_url = len(normalized_env_base_url) == 0
         except HyperbrowserError:
