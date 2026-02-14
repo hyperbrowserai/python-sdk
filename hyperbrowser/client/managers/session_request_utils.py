@@ -1,5 +1,13 @@
 from typing import Any, Dict, Optional, Type, TypeVar
 
+from .model_request_utils import (
+    get_model_response_data,
+    get_model_response_data_async,
+    post_model_response_data,
+    post_model_response_data_async,
+    put_model_response_data,
+    put_model_response_data_async,
+)
 from .session_utils import (
     parse_session_recordings_response_data,
     parse_session_response_model,
@@ -15,18 +23,12 @@ def post_session_resource(
     data: Optional[Dict[str, Any]] = None,
     files: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    if files is None:
-        response = client.transport.post(
-            client._build_url(route_path),
-            data=data,
-        )
-    else:
-        response = client.transport.post(
-            client._build_url(route_path),
-            data=data,
-            files=files,
-        )
-    return response.data
+    return post_model_response_data(
+        client=client,
+        route_path=route_path,
+        data=data,
+        files=files,
+    )
 
 
 def get_session_resource(
@@ -36,18 +38,12 @@ def get_session_resource(
     params: Optional[Dict[str, Any]] = None,
     follow_redirects: bool = False,
 ) -> Any:
-    if follow_redirects:
-        response = client.transport.get(
-            client._build_url(route_path),
-            params,
-            True,
-        )
-    else:
-        response = client.transport.get(
-            client._build_url(route_path),
-            params=params,
-        )
-    return response.data
+    return get_model_response_data(
+        client=client,
+        route_path=route_path,
+        params=params,
+        follow_redirects=follow_redirects,
+    )
 
 
 def put_session_resource(
@@ -56,11 +52,11 @@ def put_session_resource(
     route_path: str,
     data: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    response = client.transport.put(
-        client._build_url(route_path),
+    return put_model_response_data(
+        client=client,
+        route_path=route_path,
         data=data,
     )
-    return response.data
 
 
 async def post_session_resource_async(
@@ -70,18 +66,12 @@ async def post_session_resource_async(
     data: Optional[Dict[str, Any]] = None,
     files: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    if files is None:
-        response = await client.transport.post(
-            client._build_url(route_path),
-            data=data,
-        )
-    else:
-        response = await client.transport.post(
-            client._build_url(route_path),
-            data=data,
-            files=files,
-        )
-    return response.data
+    return await post_model_response_data_async(
+        client=client,
+        route_path=route_path,
+        data=data,
+        files=files,
+    )
 
 
 async def get_session_resource_async(
@@ -91,18 +81,12 @@ async def get_session_resource_async(
     params: Optional[Dict[str, Any]] = None,
     follow_redirects: bool = False,
 ) -> Any:
-    if follow_redirects:
-        response = await client.transport.get(
-            client._build_url(route_path),
-            params,
-            True,
-        )
-    else:
-        response = await client.transport.get(
-            client._build_url(route_path),
-            params=params,
-        )
-    return response.data
+    return await get_model_response_data_async(
+        client=client,
+        route_path=route_path,
+        params=params,
+        follow_redirects=follow_redirects,
+    )
 
 
 async def put_session_resource_async(
@@ -111,11 +95,11 @@ async def put_session_resource_async(
     route_path: str,
     data: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    response = await client.transport.put(
-        client._build_url(route_path),
+    return await put_model_response_data_async(
+        client=client,
+        route_path=route_path,
         data=data,
     )
-    return response.data
 
 
 def post_session_model(

@@ -37,10 +37,10 @@ def test_get_session_resource_supports_follow_redirects():
     captured = {}
 
     class _SyncTransport:
-        def get(self, url, params=None, *args):
+        def get(self, url, params=None, follow_redirects=False):
             captured["url"] = url
             captured["params"] = params
-            captured["args"] = args
+            captured["follow_redirects"] = follow_redirects
             return SimpleNamespace(data={"ok": True})
 
     class _Client:
@@ -59,7 +59,7 @@ def test_get_session_resource_supports_follow_redirects():
     assert result == {"ok": True}
     assert captured["url"] == "https://api.example.test/session/sess_1/recording"
     assert captured["params"] is None
-    assert captured["args"] == (True,)
+    assert captured["follow_redirects"] is True
 
 
 def test_put_session_resource_forwards_payload():
@@ -124,10 +124,10 @@ def test_get_session_resource_async_supports_follow_redirects():
     captured = {}
 
     class _AsyncTransport:
-        async def get(self, url, params=None, *args):
+        async def get(self, url, params=None, follow_redirects=False):
             captured["url"] = url
             captured["params"] = params
-            captured["args"] = args
+            captured["follow_redirects"] = follow_redirects
             return SimpleNamespace(data={"ok": True})
 
     class _Client:
@@ -148,7 +148,7 @@ def test_get_session_resource_async_supports_follow_redirects():
     assert result == {"ok": True}
     assert captured["url"] == "https://api.example.test/session/sess_1/recording"
     assert captured["params"] is None
-    assert captured["args"] == (True,)
+    assert captured["follow_redirects"] is True
 
 
 def test_put_session_resource_async_forwards_payload():
@@ -229,10 +229,10 @@ def test_get_session_recordings_parses_recording_payload():
     captured = {}
 
     class _SyncTransport:
-        def get(self, url, params=None, *args):
+        def get(self, url, params=None, follow_redirects=False):
             captured["url"] = url
             captured["params"] = params
-            captured["args"] = args
+            captured["follow_redirects"] = follow_redirects
             return SimpleNamespace(data=[{"id": "rec_1"}])
 
     class _Client:
@@ -261,7 +261,7 @@ def test_get_session_recordings_parses_recording_payload():
     assert result == ["parsed-recording"]
     assert captured["url"] == "https://api.example.test/session/sess_1/recording"
     assert captured["params"] is None
-    assert captured["args"] == (True,)
+    assert captured["follow_redirects"] is True
     assert captured["parse_response_data"] == [{"id": "rec_1"}]
 
 

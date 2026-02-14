@@ -87,6 +87,36 @@ def test_post_model_request_forwards_files_when_provided():
     assert captured["parse_data"] == {"id": "resource-file"}
 
 
+def test_post_model_response_data_forwards_payload_and_returns_raw_data():
+    captured = {}
+
+    class _SyncTransport:
+        def post(self, url, data=None, files=None):
+            captured["url"] = url
+            captured["data"] = data
+            captured["files"] = files
+            return SimpleNamespace(data={"id": "resource-raw"})
+
+    class _Client:
+        transport = _SyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = model_request_utils.post_model_response_data(
+        client=_Client(),
+        route_path="/resource",
+        data={"name": "value"},
+        files={"file": object()},
+    )
+
+    assert result == {"id": "resource-raw"}
+    assert captured["url"] == "https://api.example.test/resource"
+    assert captured["data"] == {"name": "value"}
+    assert captured["files"] is not None
+
+
 def test_get_model_request_gets_payload_and_parses_response():
     captured = {}
 
@@ -196,6 +226,33 @@ def test_delete_model_request_deletes_resource_and_parses_response():
     assert captured["parse_kwargs"]["operation_name"] == "delete resource"
 
 
+def test_put_model_response_data_forwards_payload_and_returns_raw_data():
+    captured = {}
+
+    class _SyncTransport:
+        def put(self, url, data=None):
+            captured["url"] = url
+            captured["data"] = data
+            return SimpleNamespace(data={"id": "resource-put-raw"})
+
+    class _Client:
+        transport = _SyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = model_request_utils.put_model_response_data(
+        client=_Client(),
+        route_path="/resource/put",
+        data={"name": "value"},
+    )
+
+    assert result == {"id": "resource-put-raw"}
+    assert captured["url"] == "https://api.example.test/resource/put"
+    assert captured["data"] == {"name": "value"}
+
+
 def test_post_model_request_async_posts_payload_and_parses_response():
     captured = {}
 
@@ -281,6 +338,38 @@ def test_post_model_request_async_forwards_files_when_provided():
     assert captured["url"] == "https://api.example.test/resource"
     assert captured["files"] is not None
     assert captured["parse_data"] == {"id": "resource-file-async"}
+
+
+def test_post_model_response_data_async_forwards_payload_and_returns_raw_data():
+    captured = {}
+
+    class _AsyncTransport:
+        async def post(self, url, data=None, files=None):
+            captured["url"] = url
+            captured["data"] = data
+            captured["files"] = files
+            return SimpleNamespace(data={"id": "resource-raw-async"})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = asyncio.run(
+        model_request_utils.post_model_response_data_async(
+            client=_Client(),
+            route_path="/resource",
+            data={"name": "value"},
+            files={"file": object()},
+        )
+    )
+
+    assert result == {"id": "resource-raw-async"}
+    assert captured["url"] == "https://api.example.test/resource"
+    assert captured["data"] == {"name": "value"}
+    assert captured["files"] is not None
 
 
 def test_get_model_request_async_gets_payload_and_parses_response():
@@ -396,6 +485,35 @@ def test_delete_model_request_async_deletes_resource_and_parses_response():
     assert captured["url"] == "https://api.example.test/resource/6"
     assert captured["parse_data"] == {"success": True}
     assert captured["parse_kwargs"]["operation_name"] == "delete resource"
+
+
+def test_put_model_response_data_async_forwards_payload_and_returns_raw_data():
+    captured = {}
+
+    class _AsyncTransport:
+        async def put(self, url, data=None):
+            captured["url"] = url
+            captured["data"] = data
+            return SimpleNamespace(data={"id": "resource-put-raw-async"})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = asyncio.run(
+        model_request_utils.put_model_response_data_async(
+            client=_Client(),
+            route_path="/resource/put",
+            data={"name": "value"},
+        )
+    )
+
+    assert result == {"id": "resource-put-raw-async"}
+    assert captured["url"] == "https://api.example.test/resource/put"
+    assert captured["data"] == {"name": "value"}
 
 
 def test_post_model_request_to_endpoint_posts_and_parses_response():

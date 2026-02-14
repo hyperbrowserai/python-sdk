@@ -155,6 +155,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_session_parse_usage_boundary.py` (centralized session parse-helper usage boundary enforcement),
   - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
   - `tests/test_session_request_helper_usage.py` (session manager request-helper usage enforcement),
+  - `tests/test_session_request_internal_reuse.py` (session request-helper internal reuse of shared model raw request helpers),
   - `tests/test_session_route_constants_usage.py` (session manager route-constant usage enforcement),
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
   - `tests/test_start_and_wait_default_constants_usage.py` (shared start-and-wait default-constant usage enforcement),
