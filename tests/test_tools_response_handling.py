@@ -1128,6 +1128,28 @@ def test_async_scrape_tool_preserves_hyperbrowser_mapping_data_read_failures():
     asyncio.run(run())
 
 
+def test_async_scrape_tool_rejects_broken_string_subclass_markdown_field_values():
+    class _BrokenMarkdownValue(str):
+        def __iter__(self):
+            raise RuntimeError("markdown iteration exploded")
+
+    async def run() -> None:
+        client = _AsyncScrapeClient(
+            _Response(data=SimpleNamespace(markdown=_BrokenMarkdownValue("page")))
+        )
+        with pytest.raises(
+            HyperbrowserError,
+            match="scrape tool response field 'markdown' must be a UTF-8 string",
+        ) as exc_info:
+            await WebsiteScrapeTool.async_runnable(
+                client,
+                {"url": "https://example.com"},
+            )
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
 def test_async_crawl_tool_rejects_non_list_response_data():
     async def run() -> None:
         client = _AsyncCrawlClient(_Response(data={"invalid": "payload"}))
@@ -1182,6 +1204,57 @@ def test_async_browser_use_tool_rejects_non_string_final_result():
             match="browser-use tool response field 'final_result' must be a UTF-8 string",
         ):
             await BrowserUseTool.async_runnable(client, {"task": "search docs"})
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_rejects_broken_string_subclass_page_url_values():
+    class _BrokenUrlValue(str):
+        def __iter__(self):
+            raise RuntimeError("url iteration exploded")
+
+    async def run() -> None:
+        client = _AsyncCrawlClient(
+            _Response(
+                data=[
+                    SimpleNamespace(
+                        url=_BrokenUrlValue("https://example.com"),
+                        markdown="body",
+                    )
+                ]
+            )
+        )
+        with pytest.raises(
+            HyperbrowserError,
+            match="crawl tool page field 'url' must be a UTF-8 string at index 0",
+        ) as exc_info:
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
+def test_async_browser_use_tool_rejects_broken_string_subclass_final_result_values():
+    class _BrokenFinalResultValue(str):
+        def __iter__(self):
+            raise RuntimeError("final_result iteration exploded")
+
+    async def run() -> None:
+        client = _AsyncBrowserUseClient(
+            _Response(
+                data=SimpleNamespace(final_result=_BrokenFinalResultValue("done"))
+            )
+        )
+        with pytest.raises(
+            HyperbrowserError,
+            match=(
+                "browser-use tool response field 'final_result' must be a UTF-8 string"
+            ),
+        ) as exc_info:
+            await BrowserUseTool.async_runnable(client, {"task": "search docs"})
+        assert exc_info.value.original_error is None
 
     asyncio.run(run())
 
