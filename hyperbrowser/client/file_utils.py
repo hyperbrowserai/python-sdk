@@ -63,7 +63,7 @@ def ensure_existing_file_path(
         ) from exc
     except Exception as exc:
         raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
-    if not isinstance(normalized_path, str):
+    if type(normalized_path) is not str:
         raise HyperbrowserError("file_path must resolve to a string path")
     try:
         stripped_normalized_path = normalized_path.strip()

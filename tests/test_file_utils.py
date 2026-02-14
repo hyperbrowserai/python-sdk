@@ -159,6 +159,22 @@ def test_ensure_existing_file_path_rejects_non_string_fspath_results():
         )
 
 
+def test_ensure_existing_file_path_rejects_string_subclass_fspath_results():
+    class _PathLike:
+        class _PathString(str):
+            pass
+
+        def __fspath__(self):
+            return self._PathString("/tmp/subclass-path")
+
+    with pytest.raises(HyperbrowserError, match="file_path must resolve to a string"):
+        ensure_existing_file_path(
+            _PathLike(),  # type: ignore[arg-type]
+            missing_file_message="missing",
+            not_file_message="not-file",
+        )
+
+
 def test_ensure_existing_file_path_rejects_empty_string_paths():
     with pytest.raises(HyperbrowserError, match="file_path must not be empty"):
         ensure_existing_file_path(
@@ -485,23 +501,25 @@ def test_ensure_existing_file_path_wraps_not_file_message_string_subclass_strip_
     assert isinstance(exc_info.value.original_error, TypeError)
 
 
-def test_ensure_existing_file_path_wraps_file_path_strip_runtime_errors():
+def test_ensure_existing_file_path_rejects_string_subclass_path_inputs_before_strip():
     class _BrokenPath(str):
         def strip(self, chars=None):  # type: ignore[override]
             _ = chars
             raise RuntimeError("path strip exploded")
 
-    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="file_path must resolve to a string path"
+    ) as exc_info:
         ensure_existing_file_path(
             _BrokenPath("/tmp/path.txt"),
             missing_file_message="missing",
             not_file_message="not-file",
         )
 
-    assert isinstance(exc_info.value.original_error, RuntimeError)
+    assert exc_info.value.original_error is None
 
 
-def test_ensure_existing_file_path_wraps_file_path_string_subclass_strip_results():
+def test_ensure_existing_file_path_rejects_string_subclass_path_strip_result_inputs():
     class _BrokenPath(str):
         class _NormalizedPath(str):
             pass
@@ -510,17 +528,19 @@ def test_ensure_existing_file_path_wraps_file_path_string_subclass_strip_results
             _ = chars
             return self._NormalizedPath("/tmp/path.txt")
 
-    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="file_path must resolve to a string path"
+    ) as exc_info:
         ensure_existing_file_path(
             _BrokenPath("/tmp/path.txt"),
             missing_file_message="missing",
             not_file_message="not-file",
         )
 
-    assert isinstance(exc_info.value.original_error, TypeError)
+    assert exc_info.value.original_error is None
 
 
-def test_ensure_existing_file_path_wraps_file_path_contains_runtime_errors():
+def test_ensure_existing_file_path_rejects_string_subclass_path_inputs_before_contains():
     class _BrokenPath(str):
         def strip(self, chars=None):  # type: ignore[override]
             _ = chars
@@ -530,17 +550,19 @@ def test_ensure_existing_file_path_wraps_file_path_contains_runtime_errors():
             _ = item
             raise RuntimeError("path contains exploded")
 
-    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="file_path must resolve to a string path"
+    ) as exc_info:
         ensure_existing_file_path(
             _BrokenPath("/tmp/path.txt"),
             missing_file_message="missing",
             not_file_message="not-file",
         )
 
-    assert isinstance(exc_info.value.original_error, TypeError)
+    assert exc_info.value.original_error is None
 
 
-def test_ensure_existing_file_path_wraps_file_path_character_iteration_runtime_errors():
+def test_ensure_existing_file_path_rejects_string_subclass_path_inputs_before_character_iteration():
     class _BrokenPath(str):
         def strip(self, chars=None):  # type: ignore[override]
             _ = chars
@@ -553,11 +575,13 @@ def test_ensure_existing_file_path_wraps_file_path_character_iteration_runtime_e
         def __iter__(self):
             raise RuntimeError("path iteration exploded")
 
-    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="file_path must resolve to a string path"
+    ) as exc_info:
         ensure_existing_file_path(
             _BrokenPath("/tmp/path.txt"),
             missing_file_message="missing",
             not_file_message="not-file",
         )
 
-    assert isinstance(exc_info.value.original_error, TypeError)
+    assert exc_info.value.original_error is None
