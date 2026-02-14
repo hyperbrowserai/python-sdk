@@ -51,6 +51,21 @@ def get_model_request(
     )
 
 
+def get_model_response_data(
+    *,
+    client: Any,
+    route_path: str,
+    params: Optional[Dict[str, Any]] = None,
+    follow_redirects: bool = False,
+) -> Any:
+    response = client.transport.get(
+        client._build_url(route_path),
+        params=params,
+        follow_redirects=follow_redirects,
+    )
+    return response.data
+
+
 def delete_model_request(
     *,
     client: Any,
@@ -131,6 +146,21 @@ async def get_model_request_async(
         model=model,
         operation_name=operation_name,
     )
+
+
+async def get_model_response_data_async(
+    *,
+    client: Any,
+    route_path: str,
+    params: Optional[Dict[str, Any]] = None,
+    follow_redirects: bool = False,
+) -> Any:
+    response = await client.transport.get(
+        client._build_url(route_path),
+        params=params,
+        follow_redirects=follow_redirects,
+    )
+    return response.data
 
 
 async def delete_model_request_async(

@@ -128,6 +128,36 @@ def test_get_model_request_gets_payload_and_parses_response():
     assert captured["parse_kwargs"]["operation_name"] == "read resource"
 
 
+def test_get_model_response_data_gets_payload_without_parsing():
+    captured = {}
+
+    class _SyncTransport:
+        def get(self, url, params=None, follow_redirects=False):
+            captured["url"] = url
+            captured["params"] = params
+            captured["follow_redirects"] = follow_redirects
+            return SimpleNamespace(data={"id": "resource-raw"})
+
+    class _Client:
+        transport = _SyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = model_request_utils.get_model_response_data(
+        client=_Client(),
+        route_path="/resource/raw",
+        params={"page": 1},
+        follow_redirects=True,
+    )
+
+    assert result == {"id": "resource-raw"}
+    assert captured["url"] == "https://api.example.test/resource/raw"
+    assert captured["params"] == {"page": 1}
+    assert captured["follow_redirects"] is True
+
+
 def test_delete_model_request_deletes_resource_and_parses_response():
     captured = {}
 
@@ -294,6 +324,38 @@ def test_get_model_request_async_gets_payload_and_parses_response():
     assert captured["params"] == {"page": 2}
     assert captured["parse_data"] == {"id": "resource-5"}
     assert captured["parse_kwargs"]["operation_name"] == "read resource"
+
+
+def test_get_model_response_data_async_gets_payload_without_parsing():
+    captured = {}
+
+    class _AsyncTransport:
+        async def get(self, url, params=None, follow_redirects=False):
+            captured["url"] = url
+            captured["params"] = params
+            captured["follow_redirects"] = follow_redirects
+            return SimpleNamespace(data={"id": "resource-raw-async"})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+        @staticmethod
+        def _build_url(path: str) -> str:
+            return f"https://api.example.test{path}"
+
+    result = asyncio.run(
+        model_request_utils.get_model_response_data_async(
+            client=_Client(),
+            route_path="/resource/raw",
+            params={"page": 2},
+            follow_redirects=True,
+        )
+    )
+
+    assert result == {"id": "resource-raw-async"}
+    assert captured["url"] == "https://api.example.test/resource/raw"
+    assert captured["params"] == {"page": 2}
+    assert captured["follow_redirects"] is True
 
 
 def test_delete_model_request_async_deletes_resource_and_parses_response():

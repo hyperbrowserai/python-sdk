@@ -1,6 +1,5 @@
 import asyncio
 from io import BytesIO
-from types import SimpleNamespace
 
 import hyperbrowser.client.managers.extension_request_utils as extension_request_utils
 
@@ -37,36 +36,31 @@ def test_create_extension_resource_delegates_to_post_model_request():
 def test_list_extension_resources_uses_get_and_extension_parser():
     captured = {}
 
-    class _SyncTransport:
-        def get(self, url):
-            captured["url"] = url
-            return SimpleNamespace(data={"extensions": []})
-
-    class _Client:
-        transport = _SyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
+    def _fake_get_model_response_data(**kwargs):
+        captured.update(kwargs)
+        return {"extensions": []}
 
     def _fake_parse_extension_list_response_data(data):
         captured["parse_data"] = data
         return ["parsed"]
 
+    original_get_data = extension_request_utils.get_model_response_data
     original_parse = extension_request_utils.parse_extension_list_response_data
+    extension_request_utils.get_model_response_data = _fake_get_model_response_data
     extension_request_utils.parse_extension_list_response_data = (
         _fake_parse_extension_list_response_data
     )
     try:
         result = extension_request_utils.list_extension_resources(
-            client=_Client(),
+            client=object(),
             route_path="/extensions/list",
         )
     finally:
+        extension_request_utils.get_model_response_data = original_get_data
         extension_request_utils.parse_extension_list_response_data = original_parse
 
     assert result == ["parsed"]
-    assert captured["url"] == "https://api.example.test/extensions/list"
+    assert captured["route_path"] == "/extensions/list"
     assert captured["parse_data"] == {"extensions": []}
 
 
@@ -104,36 +98,33 @@ def test_create_extension_resource_async_delegates_to_post_model_request_async()
 def test_list_extension_resources_async_uses_get_and_extension_parser():
     captured = {}
 
-    class _AsyncTransport:
-        async def get(self, url):
-            captured["url"] = url
-            return SimpleNamespace(data={"extensions": []})
-
-    class _Client:
-        transport = _AsyncTransport()
-
-        @staticmethod
-        def _build_url(path: str) -> str:
-            return f"https://api.example.test{path}"
+    async def _fake_get_model_response_data_async(**kwargs):
+        captured.update(kwargs)
+        return {"extensions": []}
 
     def _fake_parse_extension_list_response_data(data):
         captured["parse_data"] = data
         return ["parsed"]
 
+    original_get_data = extension_request_utils.get_model_response_data_async
     original_parse = extension_request_utils.parse_extension_list_response_data
+    extension_request_utils.get_model_response_data_async = (
+        _fake_get_model_response_data_async
+    )
     extension_request_utils.parse_extension_list_response_data = (
         _fake_parse_extension_list_response_data
     )
     try:
         result = asyncio.run(
             extension_request_utils.list_extension_resources_async(
-                client=_Client(),
+                client=object(),
                 route_path="/extensions/list",
             )
         )
     finally:
+        extension_request_utils.get_model_response_data_async = original_get_data
         extension_request_utils.parse_extension_list_response_data = original_parse
 
     assert result == ["parsed"]
-    assert captured["url"] == "https://api.example.test/extensions/list"
+    assert captured["route_path"] == "/extensions/list"
     assert captured["parse_data"] == {"extensions": []}

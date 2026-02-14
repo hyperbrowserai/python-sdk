@@ -19,7 +19,7 @@ MODULE_DISALLOWED_MARKERS = {
         "parse_response_model(",
     ),
     "hyperbrowser/client/managers/extension_request_utils.py": (
-        "client.transport.post(",
+        "client.transport.",
         "parse_response_model(",
     ),
     "hyperbrowser/client/managers/job_request_utils.py": (
