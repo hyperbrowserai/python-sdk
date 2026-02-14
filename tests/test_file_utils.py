@@ -371,6 +371,16 @@ def test_build_file_path_error_message_uses_open_default_when_default_prefix_inv
     assert message == "Failed to open file at path: /tmp/path.txt"
 
 
+def test_build_file_path_error_message_sanitizes_default_prefix_when_prefix_invalid():
+    message = build_file_path_error_message(
+        "/tmp/path.txt",
+        prefix=123,  # type: ignore[arg-type]
+        default_prefix="Custom\tdefault",
+    )
+
+    assert message == "Custom?default: /tmp/path.txt"
+
+
 def test_build_open_file_error_message_uses_default_prefix_for_non_string():
     message = build_open_file_error_message(
         "/tmp/path.txt",

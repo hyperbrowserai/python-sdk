@@ -16,7 +16,11 @@ def _normalize_error_prefix(prefix: object, *, default_prefix: str) -> str:
         normalized_default_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
     else:
         try:
-            stripped_default_prefix = normalized_default_prefix.strip()
+            sanitized_default_prefix = "".join(
+                "?" if ord(character) < 32 or ord(character) == 127 else character
+                for character in normalized_default_prefix
+            )
+            stripped_default_prefix = sanitized_default_prefix.strip()
         except Exception:
             stripped_default_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
         if not is_plain_string(stripped_default_prefix) or not stripped_default_prefix:
