@@ -3,14 +3,15 @@ from os import PathLike
 from typing import Union
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.type_utils import is_plain_string
 
 
 def _validate_error_message_text(message_value: str, *, field_name: str) -> None:
-    if type(message_value) is not str:
+    if not is_plain_string(message_value):
         raise HyperbrowserError(f"{field_name} must be a string")
     try:
         normalized_message = message_value.strip()
-        if type(normalized_message) is not str:
+        if not is_plain_string(normalized_message):
             raise TypeError(f"normalized {field_name} must be a string")
         is_empty = len(normalized_message) == 0
     except HyperbrowserError:
@@ -62,11 +63,11 @@ def ensure_existing_file_path(
         ) from exc
     except Exception as exc:
         raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
-    if type(normalized_path) is not str:
+    if not is_plain_string(normalized_path):
         raise HyperbrowserError("file_path must resolve to a string path")
     try:
         stripped_normalized_path = normalized_path.strip()
-        if type(stripped_normalized_path) is not str:
+        if not is_plain_string(stripped_normalized_path):
             raise TypeError("normalized file_path must be a string")
     except HyperbrowserError:
         raise
