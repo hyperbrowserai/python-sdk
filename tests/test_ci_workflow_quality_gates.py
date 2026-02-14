@@ -15,6 +15,8 @@ def test_ci_workflow_includes_architecture_guard_job():
 def test_ci_workflow_uses_make_targets_for_quality_gates():
     ci_workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
+    assert "python3 -m pip install --upgrade pip" in ci_workflow
+    assert "run: |\n          python3 -m pip install --upgrade pip\n          make install" in ci_workflow
     assert "run: make lint" in ci_workflow
     assert "run: make format-check" in ci_workflow
     assert "run: make compile" in ci_workflow
