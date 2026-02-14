@@ -88,6 +88,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_example_sync_async_parity.py` (sync/async example parity enforcement),
   - `tests/test_examples_naming_convention.py` (example sync/async prefix naming enforcement),
   - `tests/test_examples_syntax.py` (example script syntax guardrail),
+  - `tests/test_extension_create_helper_usage.py` (extension create-input normalization helper usage enforcement),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
   - `tests/test_job_pagination_helper_usage.py` (shared scrape/crawl pagination helper usage enforcement),
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
