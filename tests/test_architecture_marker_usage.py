@@ -8,6 +8,7 @@ pytestmark = pytest.mark.architecture
 ARCHITECTURE_GUARD_MODULES = (
     "tests/test_agent_examples_coverage.py",
     "tests/test_agent_payload_helper_usage.py",
+    "tests/test_agent_stop_helper_usage.py",
     "tests/test_agent_terminal_status_helper_usage.py",
     "tests/test_guardrail_ast_utils.py",
     "tests/test_manager_model_dump_usage.py",
