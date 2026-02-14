@@ -6,6 +6,7 @@ from ....polling import (
     wait_for_job_result_async,
 )
 from ...response_utils import parse_response_model
+from .....exceptions import HyperbrowserError
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -24,9 +25,22 @@ class ClaudeComputerUseManager:
     async def start(
         self, params: StartClaudeComputerUseTaskParams
     ) -> StartClaudeComputerUseTaskResponse:
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize Claude Computer Use start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError(
+                "Failed to serialize Claude Computer Use start params"
+            )
         response = await self._client.transport.post(
             self._client._build_url("/task/claude-computer-use"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return parse_response_model(
             response.data,
