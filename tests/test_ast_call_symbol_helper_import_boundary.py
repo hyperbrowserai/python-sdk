@@ -8,6 +8,7 @@ pytestmark = pytest.mark.architecture
 
 
 EXPECTED_CALLS_SYMBOL_IMPORTERS = (
+    "tests/test_ast_call_symbol_helper_usage.py",
     "tests/test_ast_function_source_helper_usage.py",
     "tests/test_ast_import_helper_usage.py",
     "tests/test_ast_import_utils.py",

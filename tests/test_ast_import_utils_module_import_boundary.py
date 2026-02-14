@@ -16,6 +16,7 @@ pytestmark = pytest.mark.architecture
 
 EXPECTED_EXTRA_IMPORTERS = (
     "tests/test_ast_call_symbol_helper_import_boundary.py",
+    "tests/test_ast_call_symbol_helper_usage.py",
     "tests/test_ast_import_helper_import_boundary.py",
     "tests/test_ast_import_helper_secondary_import_boundary.py",
     "tests/test_ast_module_import_helper_import_boundary.py",
