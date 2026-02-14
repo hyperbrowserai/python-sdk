@@ -1,11 +1,9 @@
-import os
 from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
-from ...file_utils import ensure_existing_file_path
 from ..serialization_utils import serialize_model_dump_to_dict
+from ..session_upload_utils import normalize_upload_file_input
 from ..session_utils import (
     parse_session_recordings_response_data,
     parse_session_response_model,
@@ -158,21 +156,12 @@ class SessionManager:
     def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
-        if is_plain_string(file_input) or isinstance(file_input, PathLike):
-            try:
-                raw_file_path = os.fspath(file_input)
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "file_input path is invalid",
-                    original_error=exc,
-                ) from exc
-            file_path = ensure_existing_file_path(
-                raw_file_path,
-                missing_file_message=f"Upload file not found at path: {raw_file_path}",
-                not_file_message=f"Upload file path must point to a file: {raw_file_path}",
-            )
+        file_path, file_obj = normalize_upload_file_input(
+            file_input,
+            missing_file_message=f"Upload file not found at path: {file_input}",
+            not_file_message=f"Upload file path must point to a file: {file_input}",
+        )
+        if file_path is not None:
             try:
                 with open(file_path, "rb") as file_obj:
                     files = {"file": file_obj}
@@ -185,39 +174,12 @@ class SessionManager:
                     f"Failed to open upload file at path: {file_path}",
                     original_error=exc,
                 ) from exc
-        elif is_string_subclass_instance(file_input):
-            raise HyperbrowserError("file_input path must be a plain string path")
         else:
-            try:
-                read_method = getattr(file_input, "read", None)
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "file_input file-like object state is invalid",
-                    original_error=exc,
-                ) from exc
-            if callable(read_method):
-                try:
-                    is_closed = bool(getattr(file_input, "closed", False))
-                except HyperbrowserError:
-                    raise
-                except Exception as exc:
-                    raise HyperbrowserError(
-                        "file_input file-like object state is invalid",
-                        original_error=exc,
-                    ) from exc
-                if is_closed:
-                    raise HyperbrowserError("file_input file-like object must be open")
-                files = {"file": file_input}
-                response = self._client.transport.post(
-                    self._client._build_url(f"/session/{id}/uploads"),
-                    files=files,
-                )
-            else:
-                raise HyperbrowserError(
-                    "file_input must be a file path or file-like object"
-                )
+            files = {"file": file_obj}
+            response = self._client.transport.post(
+                self._client._build_url(f"/session/{id}/uploads"),
+                files=files,
+            )
 
         return parse_session_response_model(
             response.data,

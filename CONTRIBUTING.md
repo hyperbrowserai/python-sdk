@@ -97,7 +97,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_docs_python3_commands.py` (`README`/`CONTRIBUTING`/examples python3 command consistency enforcement),
   - `tests/test_example_sync_async_parity.py` (sync/async example parity enforcement),
   - `tests/test_example_run_instructions.py` (example run-instruction consistency enforcement),
-  - `tests/test_computer_action_endpoint_helper_usage.py` (computer-action endpoint-normalization helper usage enforcement).
+  - `tests/test_computer_action_endpoint_helper_usage.py` (computer-action endpoint-normalization helper usage enforcement),
+  - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement).
 
 ## Code quality conventions
 
