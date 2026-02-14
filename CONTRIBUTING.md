@@ -122,6 +122,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_job_wait_helper_usage.py` (shared wait-for-job defaults helper usage enforcement),
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
   - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
+  - `tests/test_manager_transport_boundary.py` (manager transport boundary enforcement through shared request helpers),
   - `tests/test_mapping_keys_access_usage.py` (centralized key-iteration boundaries),
   - `tests/test_mapping_reader_usage.py` (shared mapping-read parser usage),
   - `tests/test_optional_serialization_helper_usage.py` (optional model serialization helper usage enforcement),
