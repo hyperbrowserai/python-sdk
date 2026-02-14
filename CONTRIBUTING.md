@@ -133,6 +133,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extension_request_internal_reuse.py` (extension request-helper internal reuse of shared model request helpers),
   - `tests/test_extension_route_constants_usage.py` (extension manager route-constant usage enforcement),
   - `tests/test_extract_payload_helper_usage.py` (extract start-payload helper usage enforcement),
+  - `tests/test_file_path_display_helper_import_boundary.py` (shared file-path display helper import boundary enforcement),
   - `tests/test_file_path_display_helper_usage.py` (shared file-path display helper usage enforcement),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
   - `tests/test_helper_transport_usage_boundary.py` (manager-helper transport usage boundary enforcement through shared model request helpers),
