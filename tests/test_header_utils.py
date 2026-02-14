@@ -72,6 +72,17 @@ class _NonStringHeadersEnvStripResult(str):
         return object()
 
 
+class _BrokenHeaderValueContains(str):
+    def __contains__(self, item):  # type: ignore[override]
+        _ = item
+        raise RuntimeError("header value contains exploded")
+
+
+class _BrokenHeaderValueStringify(str):
+    def __str__(self) -> str:
+        raise RuntimeError("header value stringify exploded")
+
+
 def test_normalize_headers_trims_header_names():
     headers = normalize_headers(
         {"  X-Correlation-Id  ": "abc123"},
@@ -326,6 +337,45 @@ def test_normalize_headers_rejects_control_characters():
             {"X-Trace-Id": "value\twith-tab"},
             mapping_error_message="headers must be a mapping of string pairs",
         )
+
+
+def test_normalize_headers_wraps_header_character_validation_contains_failures():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to validate header characters"
+    ) as exc_info:
+        normalize_headers(
+            {"X-Trace-Id": _BrokenHeaderValueContains("value")},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_normalize_headers_preserves_header_character_validation_contains_hyperbrowser_failures():
+    class _BrokenHeaderValueContains(str):
+        def __contains__(self, item):  # type: ignore[override]
+            _ = item
+            raise HyperbrowserError("custom contains failure")
+
+    with pytest.raises(HyperbrowserError, match="custom contains failure") as exc_info:
+        normalize_headers(
+            {"X-Trace-Id": _BrokenHeaderValueContains("value")},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert exc_info.value.original_error is None
+
+
+def test_normalize_headers_wraps_header_character_validation_stringify_failures():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to validate header characters"
+    ) as exc_info:
+        normalize_headers(
+            {"X-Trace-Id": _BrokenHeaderValueStringify("value")},
+            mapping_error_message="headers must be a mapping of string pairs",
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
 def test_parse_headers_env_json_rejects_control_characters():

@@ -72,17 +72,35 @@ def normalize_headers(
             raise HyperbrowserError(
                 "header names must contain only valid HTTP token characters"
             )
-        if (
-            "\n" in normalized_key
-            or "\r" in normalized_key
-            or "\n" in value
-            or "\r" in value
-        ):
+        try:
+            contains_newline = (
+                "\n" in normalized_key
+                or "\r" in normalized_key
+                or "\n" in value
+                or "\r" in value
+            )
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to validate header characters",
+                original_error=exc,
+            ) from exc
+        if contains_newline:
             raise HyperbrowserError("headers must not contain newline characters")
-        if any(
-            ord(character) < 32 or ord(character) == 127
-            for character in f"{normalized_key}{value}"
-        ):
+        try:
+            contains_control_character = any(
+                ord(character) < 32 or ord(character) == 127
+                for character in f"{normalized_key}{value}"
+            )
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to validate header characters",
+                original_error=exc,
+            ) from exc
+        if contains_control_character:
             raise HyperbrowserError("headers must not contain control characters")
         try:
             canonical_header_name = normalized_key.lower()
