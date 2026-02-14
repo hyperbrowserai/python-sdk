@@ -25,3 +25,10 @@ def test_makefile_compile_target_covers_sdk_examples_and_tests():
     makefile_text = Path("Makefile").read_text(encoding="utf-8")
 
     assert "compile:\n\t$(PYTHON) -m compileall -q hyperbrowser examples tests" in makefile_text
+
+
+def test_makefile_uses_python3_default_and_python_module_invocation():
+    makefile_text = Path("Makefile").read_text(encoding="utf-8")
+
+    assert "PYTHON ?= python3" in makefile_text
+    assert "install:\n\t$(PYTHON) -m pip install -e . pytest ruff build" in makefile_text
