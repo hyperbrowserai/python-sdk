@@ -13,6 +13,7 @@ from ..job_pagination_utils import (
     build_job_paginated_page_merge_callback,
     initialize_job_paginated_response,
 )
+from ..job_status_utils import is_default_terminal_job_status
 from ..serialization_utils import (
     serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
@@ -99,7 +100,7 @@ class BatchScrapeManager:
         job_status = await poll_until_terminal_status_async(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
-            is_terminal_status=lambda status: status in {"completed", "failed"},
+            is_terminal_status=is_default_terminal_job_status,
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
@@ -204,7 +205,7 @@ class ScrapeManager:
         return await wait_for_job_result_async(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
-            is_terminal_status=lambda status: status in {"completed", "failed"},
+            is_terminal_status=is_default_terminal_job_status,
             fetch_result=lambda: self.get(job_id),
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,

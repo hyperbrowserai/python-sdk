@@ -17,6 +17,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_binary_file_open_helper_usage.py",
     "tests/test_browser_use_payload_helper_usage.py",
     "tests/test_ci_workflow_quality_gates.py",
+    "tests/test_default_terminal_status_helper_usage.py",
     "tests/test_makefile_quality_targets.py",
     "tests/test_pyproject_architecture_marker.py",
     "tests/test_architecture_marker_usage.py",

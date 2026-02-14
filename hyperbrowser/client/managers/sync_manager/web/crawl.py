@@ -9,6 +9,7 @@ from hyperbrowser.models import (
     POLLING_ATTEMPTS,
 )
 from ...page_params_utils import build_page_batch_params
+from ...job_status_utils import is_default_terminal_job_status
 from ...web_payload_utils import build_web_crawl_start_payload
 from ...web_payload_utils import build_web_crawl_get_params
 from ...web_pagination_utils import (
@@ -84,7 +85,7 @@ class WebCrawlManager:
         job_status = poll_until_terminal_status(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
-            is_terminal_status=lambda status: status in {"completed", "failed"},
+            is_terminal_status=is_default_terminal_job_status,
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
             max_status_failures=max_status_failures,
