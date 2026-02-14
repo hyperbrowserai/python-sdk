@@ -1,7 +1,15 @@
 from typing import Any, Callable, Type, TypeVar
 
+from .job_pagination_utils import (
+    build_job_paginated_page_merge_callback,
+    initialize_job_paginated_response,
+    merge_job_paginated_page_response,
+)
+
 T = TypeVar("T")
 
+_WEB_TOTAL_COUNTER_ALIAS = "totalPages"
+_WEB_TOTAL_COUNTER_ATTR = "total_pages"
 
 def initialize_paginated_job_response(
     *,
@@ -10,29 +18,25 @@ def initialize_paginated_job_response(
     status: str,
     batch_size: int = 100,
 ) -> T:
-    return model(
-        jobId=job_id,
+    return initialize_job_paginated_response(
+        model=model,
+        job_id=job_id,
         status=status,
-        data=[],
-        currentPageBatch=0,
-        totalPageBatches=0,
-        totalPages=0,
-        batchSize=batch_size,
+        total_counter_alias=_WEB_TOTAL_COUNTER_ALIAS,
+        batch_size=batch_size,
     )
 
 
 def merge_paginated_page_response(job_response: Any, page_response: Any) -> None:
-    if page_response.data:
-        job_response.data.extend(page_response.data)
-    job_response.current_page_batch = page_response.current_page_batch
-    job_response.total_pages = page_response.total_pages
-    job_response.total_page_batches = page_response.total_page_batches
-    job_response.batch_size = page_response.batch_size
-    job_response.error = page_response.error
+    merge_job_paginated_page_response(
+        job_response,
+        page_response,
+        total_counter_attr=_WEB_TOTAL_COUNTER_ATTR,
+    )
 
 
 def build_paginated_page_merge_callback(*, job_response: Any) -> Callable[[Any], None]:
-    def _merge_callback(page_response: Any) -> None:
-        merge_paginated_page_response(job_response, page_response)
-
-    return _merge_callback
+    return build_job_paginated_page_merge_callback(
+        job_response=job_response,
+        total_counter_attr=_WEB_TOTAL_COUNTER_ATTR,
+    )

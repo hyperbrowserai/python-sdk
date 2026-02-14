@@ -106,6 +106,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
   - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),
+  - `tests/test_web_pagination_internal_reuse.py` (web pagination helper internal reuse of shared job pagination helpers),
   - `tests/test_web_payload_helper_usage.py` (web manager payload-helper usage enforcement).
 
 ## Code quality conventions
