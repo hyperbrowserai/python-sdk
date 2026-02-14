@@ -52,3 +52,11 @@ def imports_imports_collect_function_sources(module_text: str) -> bool:
         module="tests.ast_import_utils",
         symbol="imports_collect_function_sources",
     )
+
+
+def imports_imports_imports_collect_function_sources(module_text: str) -> bool:
+    return imports_symbol_from_module(
+        module_text,
+        module="tests.ast_import_utils",
+        symbol="imports_imports_collect_function_sources",
+    )
