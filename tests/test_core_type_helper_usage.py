@@ -17,6 +17,12 @@ CORE_MODULES = (
     "hyperbrowser/transport/sync.py",
     "hyperbrowser/transport/async_transport.py",
     "hyperbrowser/transport/error_utils.py",
+    "hyperbrowser/mapping_utils.py",
+    "hyperbrowser/client/managers/response_utils.py",
+    "hyperbrowser/client/managers/extension_utils.py",
+    "hyperbrowser/client/managers/list_parsing_utils.py",
+    "hyperbrowser/display_utils.py",
+    "hyperbrowser/exceptions.py",
 )
 
 _PLAIN_TYPE_CHECK_PATTERN = re.compile(
