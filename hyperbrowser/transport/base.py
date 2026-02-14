@@ -7,6 +7,7 @@ from hyperbrowser.display_utils import (
 )
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
+from hyperbrowser.type_utils import is_plain_int, is_plain_string
 
 T = TypeVar("T")
 _MAX_MODEL_NAME_DISPLAY_LENGTH = 120
@@ -20,7 +21,7 @@ def _safe_model_name(model: object) -> str:
         model_name = getattr(model, "__name__", "response model")
     except Exception:
         return "response model"
-    if type(model_name) is not str:
+    if not is_plain_string(model_name):
         return "response model"
     try:
         normalized_model_name = normalize_display_text(
@@ -41,12 +42,12 @@ def _format_mapping_key_for_error(key: str) -> str:
 
 
 def _normalize_transport_api_key(api_key: str) -> str:
-    if type(api_key) is not str:
+    if not is_plain_string(api_key):
         raise HyperbrowserError("api_key must be a string")
 
     try:
         normalized_api_key = api_key.strip()
-        if type(normalized_api_key) is not str:
+        if not is_plain_string(normalized_api_key):
             raise TypeError("normalized api_key must be a string")
     except HyperbrowserError:
         raise
@@ -93,7 +94,7 @@ class APIResponse(Generic[T]):
     """
 
     def __init__(self, data: Optional[Union[dict, T]] = None, status_code: int = 200):
-        if type(status_code) is not int:
+        if not is_plain_int(status_code):
             raise HyperbrowserError("status_code must be an integer")
         if not (_MIN_HTTP_STATUS_CODE <= status_code <= _MAX_HTTP_STATUS_CODE):
             raise HyperbrowserError("status_code must be between 100 and 599")
