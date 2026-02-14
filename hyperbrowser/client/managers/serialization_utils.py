@@ -51,7 +51,18 @@ def serialize_model_dump_or_default(
     exclude_none: bool = True,
     by_alias: bool = True,
 ) -> Dict[str, Any]:
-    model_obj = model if model is not None else default_factory()
+    if model is not None:
+        model_obj = model
+    else:
+        try:
+            model_obj = default_factory()
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                error_message,
+                original_error=exc,
+            ) from exc
     return serialize_model_dump_to_dict(
         model_obj,
         error_message=error_message,

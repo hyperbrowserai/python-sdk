@@ -137,3 +137,31 @@ def test_serialize_model_dump_or_default_uses_provided_model_when_present():
     assert provided_model.calls == [(False, False)]
     assert default_model.calls == []
     assert default_factory_called is False
+
+
+def test_serialize_model_dump_or_default_wraps_default_factory_errors():
+    def _broken_default_factory():
+        raise RuntimeError("default factory failed")
+
+    with pytest.raises(HyperbrowserError, match="serialize failure") as exc_info:
+        serialize_model_dump_or_default(
+            None,
+            default_factory=_broken_default_factory,
+            error_message="serialize failure",
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_serialize_model_dump_or_default_preserves_hyperbrowser_default_factory_errors():
+    def _broken_default_factory():
+        raise HyperbrowserError("custom default failure")
+
+    with pytest.raises(HyperbrowserError, match="custom default failure") as exc_info:
+        serialize_model_dump_or_default(
+            None,
+            default_factory=_broken_default_factory,
+            error_message="serialize failure",
+        )
+
+    assert exc_info.value.original_error is None
