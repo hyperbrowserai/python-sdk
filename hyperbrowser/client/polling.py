@@ -234,7 +234,7 @@ def build_fetch_operation_name(operation_name: object) -> str:
 
 
 def ensure_started_job_id(job_id: object, *, error_message: str) -> str:
-    if not isinstance(job_id, str):
+    if type(job_id) is not str:
         raise HyperbrowserError(error_message)
     try:
         normalized_job_id = job_id.strip()

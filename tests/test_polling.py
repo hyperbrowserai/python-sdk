@@ -210,6 +210,14 @@ def test_ensure_started_job_id_rejects_non_string_values():
         ensure_started_job_id(123, error_message="Failed to start job")
 
 
+def test_ensure_started_job_id_rejects_string_subclass_values():
+    class _JobId(str):
+        pass
+
+    with pytest.raises(HyperbrowserError, match="Failed to start job"):
+        ensure_started_job_id(_JobId("job_123"), error_message="Failed to start job")
+
+
 def test_ensure_started_job_id_rejects_blank_values():
     with pytest.raises(HyperbrowserError, match="Failed to start job"):
         ensure_started_job_id("   ", error_message="Failed to start job")
@@ -233,71 +241,6 @@ def test_ensure_started_job_id_keeps_non_blank_control_characters():
         )
         == "job_\t123"
     )
-
-
-def test_ensure_started_job_id_wraps_strip_runtime_failures():
-    class _BrokenJobId(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("job_id strip exploded")
-
-    with pytest.raises(HyperbrowserError, match="Failed to start job") as exc_info:
-        ensure_started_job_id(
-            _BrokenJobId("job_123"),
-            error_message="Failed to start job",
-        )
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_ensure_started_job_id_preserves_hyperbrowser_strip_failures():
-    class _BrokenJobId(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom job_id strip failure")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom job_id strip failure"
-    ) as exc_info:
-        ensure_started_job_id(
-            _BrokenJobId("job_123"),
-            error_message="Failed to start job",
-        )
-
-    assert exc_info.value.original_error is None
-
-
-def test_ensure_started_job_id_wraps_non_string_strip_results():
-    class _BrokenJobId(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return object()
-
-    with pytest.raises(HyperbrowserError, match="Failed to start job") as exc_info:
-        ensure_started_job_id(
-            _BrokenJobId("job_123"),
-            error_message="Failed to start job",
-        )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-def test_ensure_started_job_id_wraps_string_subclass_strip_results():
-    class _BrokenJobId(str):
-        class _NormalizedJobId(str):
-            pass
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedJobId("job_123")
-
-    with pytest.raises(HyperbrowserError, match="Failed to start job") as exc_info:
-        ensure_started_job_id(
-            _BrokenJobId("job_123"),
-            error_message="Failed to start job",
-        )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_build_operation_name_keeps_short_names_unchanged():
