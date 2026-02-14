@@ -50,6 +50,15 @@ def test_format_string_key_for_error_returns_normalized_key():
     assert format_string_key_for_error(" \nkey\t ", max_length=20) == "?key?"
 
 
+def test_format_string_key_for_error_uses_default_length_for_non_int_max_length():
+    assert format_string_key_for_error("key", max_length="invalid") == "key"  # type: ignore[arg-type]
+
+
+def test_format_string_key_for_error_uses_default_length_for_non_positive_max_length():
+    assert format_string_key_for_error("key", max_length=0) == "key"
+    assert format_string_key_for_error("key", max_length=-5) == "key"
+
+
 def test_format_string_key_for_error_returns_blank_fallback_for_empty_keys():
     assert format_string_key_for_error("   ", max_length=20) == "<blank key>"
 
