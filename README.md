@@ -260,6 +260,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/sync_scrape.py`
 - `examples/async_extract.py`
 - `examples/sync_web_search.py`
+- `examples/async_web_search.py`
 
 ## License
 
