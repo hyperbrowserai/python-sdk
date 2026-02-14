@@ -91,3 +91,46 @@ def test_normalize_upload_file_input_rejects_non_callable_read_attribute():
 
     with pytest.raises(HyperbrowserError, match="file_input must be a file path"):
         normalize_upload_file_input(fake_file)  # type: ignore[arg-type]
+
+
+def test_normalize_upload_file_input_wraps_file_like_read_state_errors():
+    class _BrokenFileLike:
+        @property
+        def read(self):
+            raise RuntimeError("broken read")
+
+    with pytest.raises(
+        HyperbrowserError, match="file_input file-like object state is invalid"
+    ) as exc_info:
+        normalize_upload_file_input(_BrokenFileLike())  # type: ignore[arg-type]
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_normalize_upload_file_input_preserves_hyperbrowser_read_state_errors():
+    class _BrokenFileLike:
+        @property
+        def read(self):
+            raise HyperbrowserError("custom read state error")
+
+    with pytest.raises(HyperbrowserError, match="custom read state error") as exc_info:
+        normalize_upload_file_input(_BrokenFileLike())  # type: ignore[arg-type]
+
+    assert exc_info.value.original_error is None
+
+
+def test_normalize_upload_file_input_preserves_hyperbrowser_closed_state_errors():
+    class _BrokenFileLike:
+        def read(self):
+            return b"content"
+
+        @property
+        def closed(self):
+            raise HyperbrowserError("custom closed-state error")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom closed-state error"
+    ) as exc_info:
+        normalize_upload_file_input(_BrokenFileLike())  # type: ignore[arg-type]
+
+    assert exc_info.value.original_error is None
