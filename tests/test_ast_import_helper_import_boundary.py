@@ -3,13 +3,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_ast_import_helper_usage import AST_IMPORT_GUARD_MODULES
+
 pytestmark = pytest.mark.architecture
-
-
-EXPECTED_AST_IMPORT_HELPER_IMPORTERS = (
-    "tests/test_ast_function_source_helper_usage.py",
-    "tests/test_ast_function_source_import_boundary.py",
-)
 
 
 def _imports_ast_import_helper(module_text: str) -> bool:
@@ -32,4 +28,4 @@ def test_ast_import_helper_imports_are_centralized():
             continue
         discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_AST_IMPORT_HELPER_IMPORTERS)
+    assert discovered_modules == sorted(AST_IMPORT_GUARD_MODULES)
