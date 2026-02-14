@@ -3,15 +3,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_file_open_error_helper_usage import OPEN_ERROR_HELPER_MODULES
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_OPEN_ERROR_HELPER_IMPORTERS = (
-    "hyperbrowser/client/managers/async_manager/extension.py",
-    "hyperbrowser/client/managers/session_upload_utils.py",
-    "hyperbrowser/client/managers/sync_manager/extension.py",
-    "tests/test_file_utils.py",
-)
+EXPECTED_EXTRA_IMPORTERS = ("tests/test_file_utils.py",)
 
 
 def _imports_open_error_helper(module_text: str) -> bool:
@@ -37,4 +34,7 @@ def test_build_open_file_error_message_imports_are_centralized():
         if _imports_open_error_helper(module_text):
             discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_OPEN_ERROR_HELPER_IMPORTERS)
+    expected_modules = sorted(
+        [*(module_path for module_path, _ in OPEN_ERROR_HELPER_MODULES), *EXPECTED_EXTRA_IMPORTERS]
+    )
+    assert discovered_modules == expected_modules
