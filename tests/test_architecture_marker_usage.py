@@ -64,6 +64,8 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_computer_action_endpoint_helper_usage.py",
     "tests/test_computer_action_payload_helper_usage.py",
     "tests/test_schema_injection_helper_usage.py",
+    "tests/test_session_operation_metadata_usage.py",
+    "tests/test_session_route_constants_usage.py",
     "tests/test_session_profile_update_helper_usage.py",
     "tests/test_session_upload_helper_usage.py",
     "tests/test_start_and_wait_default_constants_usage.py",
