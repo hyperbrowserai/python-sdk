@@ -101,6 +101,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_job_fetch_helper_boundary.py` (centralization boundary enforcement for retry/paginated-fetch helper primitives),
   - `tests/test_job_fetch_helper_usage.py` (shared retry/paginated-fetch defaults helper usage enforcement),
   - `tests/test_job_pagination_helper_usage.py` (shared scrape/crawl pagination helper usage enforcement),
+  - `tests/test_job_poll_helper_boundary.py` (centralization boundary enforcement for terminal-status polling helper primitives),
+  - `tests/test_job_poll_helper_usage.py` (shared terminal-status polling helper usage enforcement),
   - `tests/test_job_start_payload_helper_usage.py` (shared scrape/crawl start-payload helper usage enforcement),
   - `tests/test_job_wait_helper_boundary.py` (centralization boundary enforcement for wait-for-job helper primitives),
   - `tests/test_job_wait_helper_usage.py` (shared wait-for-job defaults helper usage enforcement),

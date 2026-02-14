@@ -1,9 +1,7 @@
 from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
-from ...polling import (
-    poll_until_terminal_status,
-)
+from ..job_poll_utils import poll_job_until_terminal_status as poll_until_terminal_status
 from ..job_fetch_utils import (
     collect_paginated_results_with_defaults,
     fetch_job_result_with_defaults,

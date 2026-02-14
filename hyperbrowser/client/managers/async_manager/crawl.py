@@ -1,8 +1,8 @@
 from typing import Optional
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
-from ...polling import (
-    poll_until_terminal_status_async,
+from ..job_poll_utils import (
+    poll_job_until_terminal_status_async as poll_until_terminal_status_async,
 )
 from ..job_fetch_utils import (
     collect_paginated_results_with_defaults_async,

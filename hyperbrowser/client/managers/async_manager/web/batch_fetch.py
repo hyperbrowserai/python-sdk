@@ -22,8 +22,8 @@ from ...job_fetch_utils import (
     read_page_current_batch,
     read_page_total_batches,
 )
-from ....polling import (
-    poll_until_terminal_status_async,
+from ...job_poll_utils import (
+    poll_job_until_terminal_status_async as poll_until_terminal_status_async,
 )
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context

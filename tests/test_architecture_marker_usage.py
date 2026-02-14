@@ -41,6 +41,8 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_job_pagination_helper_usage.py",
     "tests/test_job_fetch_helper_boundary.py",
     "tests/test_job_fetch_helper_usage.py",
+    "tests/test_job_poll_helper_boundary.py",
+    "tests/test_job_poll_helper_usage.py",
     "tests/test_job_start_payload_helper_usage.py",
     "tests/test_job_wait_helper_boundary.py",
     "tests/test_job_wait_helper_usage.py",
