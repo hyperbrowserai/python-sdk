@@ -115,3 +115,18 @@ def test_normalize_extension_create_input_rejects_missing_file(tmp_path):
 
     with pytest.raises(HyperbrowserError, match="Extension file not found"):
         normalize_extension_create_input(params)
+
+
+def test_normalize_extension_create_input_rejects_control_character_path():
+    params = CreateExtensionParams(
+        name="bad-extension",
+        file_path="bad\tpath.zip",
+    )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="file_path must not contain control characters",
+    ) as exc_info:
+        normalize_extension_create_input(params)
+
+    assert exc_info.value.original_error is None

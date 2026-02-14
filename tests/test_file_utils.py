@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 import hyperbrowser.client.file_utils as file_utils
-from hyperbrowser.client.file_utils import ensure_existing_file_path, open_binary_file
+from hyperbrowser.client.file_utils import (
+    ensure_existing_file_path,
+    format_file_path_for_error,
+    open_binary_file,
+)
 from hyperbrowser.exceptions import HyperbrowserError
 
 
@@ -264,6 +268,38 @@ def test_ensure_existing_file_path_rejects_control_character_paths():
             missing_file_message="missing",
             not_file_message="not-file",
         )
+
+
+def test_format_file_path_for_error_sanitizes_control_characters():
+    display_path = format_file_path_for_error("bad\tpath\nvalue")
+
+    assert display_path == "bad?path?value"
+
+
+def test_format_file_path_for_error_truncates_long_paths():
+    display_path = format_file_path_for_error("abcdef", max_length=5)
+
+    assert display_path == "ab..."
+
+
+def test_format_file_path_for_error_falls_back_for_non_string_values():
+    assert format_file_path_for_error(object()) == "<provided path>"
+
+
+def test_format_file_path_for_error_falls_back_for_fspath_failures():
+    class _BrokenPathLike:
+        def __fspath__(self) -> str:
+            raise RuntimeError("bad fspath")
+
+    assert format_file_path_for_error(_BrokenPathLike()) == "<provided path>"
+
+
+def test_format_file_path_for_error_uses_pathlike_string_values():
+    class _PathLike:
+        def __fspath__(self) -> str:
+            return "/tmp/path-value"
+
+    assert format_file_path_for_error(_PathLike()) == "/tmp/path-value"
 
 
 def test_ensure_existing_file_path_wraps_invalid_path_os_errors(monkeypatch):

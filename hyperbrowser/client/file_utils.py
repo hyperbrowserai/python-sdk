@@ -6,6 +6,40 @@ from typing import BinaryIO, Iterator, Union
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string
 
+_MAX_FILE_PATH_DISPLAY_LENGTH = 200
+
+
+def format_file_path_for_error(
+    file_path: object,
+    *,
+    max_length: int = _MAX_FILE_PATH_DISPLAY_LENGTH,
+) -> str:
+    try:
+        path_value = (
+            os.fspath(file_path)
+            if is_plain_string(file_path) or isinstance(file_path, PathLike)
+            else file_path
+        )
+    except Exception:
+        return "<provided path>"
+    if not is_plain_string(path_value):
+        return "<provided path>"
+    try:
+        sanitized_path = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in path_value
+        )
+    except Exception:
+        return "<provided path>"
+    if not is_plain_string(sanitized_path):
+        return "<provided path>"
+    if len(sanitized_path) <= max_length:
+        return sanitized_path
+    truncated_length = max_length - 3
+    if truncated_length <= 0:
+        return "..."
+    return f"{sanitized_path[:truncated_length]}..."
+
 
 def _normalize_file_path_text(file_path: Union[str, PathLike[str]]) -> str:
     try:
