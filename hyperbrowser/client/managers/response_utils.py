@@ -58,7 +58,7 @@ def parse_response_model(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    if not isinstance(operation_name, str):
+    if type(operation_name) is not str:
         raise HyperbrowserError("operation_name must be a non-empty string")
     try:
         normalized_operation_name_input = operation_name.strip()

@@ -221,73 +221,18 @@ def test_parse_response_model_sanitizes_operation_name_in_errors():
         )
 
 
-def test_parse_response_model_wraps_operation_name_strip_failures():
-    class _BrokenOperationName(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("operation name strip exploded")
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize operation_name") as exc_info:
-        parse_response_model(
-            {"success": True},
-            model=BasicResponse,
-            operation_name=_BrokenOperationName("basic operation"),
-        )
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_parse_response_model_preserves_hyperbrowser_operation_name_strip_failures():
-    class _BrokenOperationName(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom operation name strip failure")
+def test_parse_response_model_rejects_string_subclass_operation_names():
+    class _OperationName(str):
+        pass
 
     with pytest.raises(
-        HyperbrowserError, match="custom operation name strip failure"
-    ) as exc_info:
+        HyperbrowserError, match="operation_name must be a non-empty string"
+    ):
         parse_response_model(
             {"success": True},
             model=BasicResponse,
-            operation_name=_BrokenOperationName("basic operation"),
+            operation_name=_OperationName("basic operation"),
         )
-
-    assert exc_info.value.original_error is None
-
-
-def test_parse_response_model_wraps_non_string_operation_name_strip_results():
-    class _BrokenOperationName(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return object()
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize operation_name") as exc_info:
-        parse_response_model(
-            {"success": True},
-            model=BasicResponse,
-            operation_name=_BrokenOperationName("basic operation"),
-        )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-def test_parse_response_model_wraps_operation_name_string_subclass_strip_results():
-    class _BrokenOperationName(str):
-        class _NormalizedName(str):
-            pass
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedName("basic operation")
-
-    with pytest.raises(HyperbrowserError, match="Failed to normalize operation_name") as exc_info:
-        parse_response_model(
-            {"success": True},
-            model=BasicResponse,
-            operation_name=_BrokenOperationName("basic operation"),
-        )
-
-    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_parse_response_model_rejects_blank_operation_names():
