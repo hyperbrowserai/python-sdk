@@ -150,8 +150,10 @@ class HyperbrowserBase:
             raise HyperbrowserError("path must be a string")
         try:
             stripped_path = path.strip()
-            if not isinstance(stripped_path, str):
+            if type(stripped_path) is not str:
                 raise TypeError("normalized path must be a string")
+            has_surrounding_whitespace = stripped_path != path
+            is_empty_path = len(stripped_path) == 0
         except HyperbrowserError:
             raise
         except Exception as exc:
@@ -159,11 +161,11 @@ class HyperbrowserBase:
                 "Failed to normalize path",
                 original_error=exc,
             ) from exc
-        if stripped_path != path:
+        if has_surrounding_whitespace:
             raise HyperbrowserError(
                 "path must not contain leading or trailing whitespace"
             )
-        if not stripped_path:
+        if is_empty_path:
             raise HyperbrowserError("path must not be empty")
         if "\\" in stripped_path:
             raise HyperbrowserError("path must not contain backslashes")

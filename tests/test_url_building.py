@@ -401,6 +401,25 @@ def test_client_build_url_wraps_non_string_path_strip_results():
         client.close()
 
 
+def test_client_build_url_wraps_string_subclass_path_strip_results():
+    client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
+    try:
+        class _BrokenPath(str):
+            class _NormalizedPath(str):
+                pass
+
+            def strip(self, chars=None):  # type: ignore[override]
+                _ = chars
+                return self._NormalizedPath("/session")
+
+        with pytest.raises(HyperbrowserError, match="Failed to normalize path") as exc_info:
+            client._build_url(_BrokenPath("/session"))
+
+        assert isinstance(exc_info.value.original_error, TypeError)
+    finally:
+        client.close()
+
+
 def test_client_build_url_allows_query_values_containing_absolute_urls():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
