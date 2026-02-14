@@ -2,7 +2,10 @@ from typing import Any
 
 from hyperbrowser.models import ComputerActionResponse
 
-from .response_utils import parse_response_model
+from .model_request_utils import (
+    post_model_request_to_endpoint,
+    post_model_request_to_endpoint_async,
+)
 
 
 def execute_computer_action_request(
@@ -12,12 +15,10 @@ def execute_computer_action_request(
     payload: dict[str, Any],
     operation_name: str,
 ) -> ComputerActionResponse:
-    response = client.transport.post(
-        endpoint,
+    return post_model_request_to_endpoint(
+        client=client,
+        endpoint=endpoint,
         data=payload,
-    )
-    return parse_response_model(
-        response.data,
         model=ComputerActionResponse,
         operation_name=operation_name,
     )
@@ -30,12 +31,10 @@ async def execute_computer_action_request_async(
     payload: dict[str, Any],
     operation_name: str,
 ) -> ComputerActionResponse:
-    response = await client.transport.post(
-        endpoint,
+    return await post_model_request_to_endpoint_async(
+        client=client,
+        endpoint=endpoint,
         data=payload,
-    )
-    return parse_response_model(
-        response.data,
         model=ComputerActionResponse,
         operation_name=operation_name,
     )

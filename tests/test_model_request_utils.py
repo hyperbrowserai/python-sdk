@@ -334,3 +334,79 @@ def test_delete_model_request_async_deletes_resource_and_parses_response():
     assert captured["url"] == "https://api.example.test/resource/6"
     assert captured["parse_data"] == {"success": True}
     assert captured["parse_kwargs"]["operation_name"] == "delete resource"
+
+
+def test_post_model_request_to_endpoint_posts_and_parses_response():
+    captured = {}
+
+    class _SyncTransport:
+        def post(self, endpoint, data):
+            captured["endpoint"] = endpoint
+            captured["data"] = data
+            return SimpleNamespace(data={"id": "endpoint-resource"})
+
+    class _Client:
+        transport = _SyncTransport()
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = model_request_utils.post_model_request_to_endpoint(
+            client=_Client(),
+            endpoint="https://api.example.test/resource",
+            data={"name": "value"},
+            model=object,
+            operation_name="endpoint create",
+        )
+    finally:
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["endpoint"] == "https://api.example.test/resource"
+    assert captured["data"] == {"name": "value"}
+    assert captured["parse_data"] == {"id": "endpoint-resource"}
+    assert captured["parse_kwargs"]["operation_name"] == "endpoint create"
+
+
+def test_post_model_request_to_endpoint_async_posts_and_parses_response():
+    captured = {}
+
+    class _AsyncTransport:
+        async def post(self, endpoint, data):
+            captured["endpoint"] = endpoint
+            captured["data"] = data
+            return SimpleNamespace(data={"id": "endpoint-resource-async"})
+
+    class _Client:
+        transport = _AsyncTransport()
+
+    def _fake_parse_response_model(data, **kwargs):
+        captured["parse_data"] = data
+        captured["parse_kwargs"] = kwargs
+        return {"parsed": True}
+
+    original_parse = model_request_utils.parse_response_model
+    model_request_utils.parse_response_model = _fake_parse_response_model
+    try:
+        result = asyncio.run(
+            model_request_utils.post_model_request_to_endpoint_async(
+                client=_Client(),
+                endpoint="https://api.example.test/resource",
+                data={"name": "value"},
+                model=object,
+                operation_name="endpoint create",
+            )
+        )
+    finally:
+        model_request_utils.parse_response_model = original_parse
+
+    assert result == {"parsed": True}
+    assert captured["endpoint"] == "https://api.example.test/resource"
+    assert captured["data"] == {"name": "value"}
+    assert captured["parse_data"] == {"id": "endpoint-resource-async"}
+    assert captured["parse_kwargs"]["operation_name"] == "endpoint create"

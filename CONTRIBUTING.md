@@ -94,6 +94,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_computer_action_operation_metadata_usage.py` (computer-action manager operation-metadata usage enforcement),
   - `tests/test_computer_action_payload_helper_usage.py` (computer-action payload helper usage enforcement),
   - `tests/test_computer_action_request_helper_usage.py` (computer-action manager request-helper usage enforcement),
+  - `tests/test_computer_action_request_internal_reuse.py` (computer-action request-helper internal reuse of shared model request endpoint helpers),
   - `tests/test_contributing_architecture_guard_listing.py` (`CONTRIBUTING.md` architecture-guard inventory completeness enforcement),
   - `tests/test_core_type_helper_usage.py` (core transport/config/header/file/polling/session/error/parsing manager+tool module enforcement of shared plain-type helper usage),
   - `tests/test_default_serialization_helper_usage.py` (default optional-query serialization helper usage enforcement),

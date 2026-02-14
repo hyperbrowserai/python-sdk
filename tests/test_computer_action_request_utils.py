@@ -1,78 +1,57 @@
 import asyncio
-from types import SimpleNamespace
 
 import hyperbrowser.client.managers.computer_action_request_utils as request_utils
 
 
-def test_execute_computer_action_request_posts_and_parses_response():
+def test_execute_computer_action_request_delegates_to_endpoint_post_helper():
     captured = {}
 
-    class _SyncTransport:
-        def post(self, endpoint, data=None):
-            captured["endpoint"] = endpoint
-            captured["data"] = data
-            return SimpleNamespace(data={"success": True})
-
-    class _Client:
-        transport = _SyncTransport()
-
-    def _fake_parse_response_model(data, **kwargs):
-        captured["parse_data"] = data
-        captured["parse_kwargs"] = kwargs
+    def _fake_post_model_request_to_endpoint(**kwargs):
+        captured.update(kwargs)
         return {"parsed": True}
 
-    original_parse = request_utils.parse_response_model
-    request_utils.parse_response_model = _fake_parse_response_model
+    original = request_utils.post_model_request_to_endpoint
+    request_utils.post_model_request_to_endpoint = _fake_post_model_request_to_endpoint
     try:
         result = request_utils.execute_computer_action_request(
-            client=_Client(),
+            client=object(),
             endpoint="https://example.com/cua",
             payload={"action": {"type": "screenshot"}},
             operation_name="computer action",
         )
     finally:
-        request_utils.parse_response_model = original_parse
+        request_utils.post_model_request_to_endpoint = original
 
     assert result == {"parsed": True}
     assert captured["endpoint"] == "https://example.com/cua"
     assert captured["data"] == {"action": {"type": "screenshot"}}
-    assert captured["parse_data"] == {"success": True}
-    assert captured["parse_kwargs"]["operation_name"] == "computer action"
+    assert captured["operation_name"] == "computer action"
 
 
-def test_execute_computer_action_request_async_posts_and_parses_response():
+def test_execute_computer_action_request_async_delegates_to_endpoint_post_helper():
     captured = {}
 
-    class _AsyncTransport:
-        async def post(self, endpoint, data=None):
-            captured["endpoint"] = endpoint
-            captured["data"] = data
-            return SimpleNamespace(data={"success": True})
-
-    class _Client:
-        transport = _AsyncTransport()
-
-    def _fake_parse_response_model(data, **kwargs):
-        captured["parse_data"] = data
-        captured["parse_kwargs"] = kwargs
+    async def _fake_post_model_request_to_endpoint_async(**kwargs):
+        captured.update(kwargs)
         return {"parsed": True}
 
-    original_parse = request_utils.parse_response_model
-    request_utils.parse_response_model = _fake_parse_response_model
+    original = request_utils.post_model_request_to_endpoint_async
+    request_utils.post_model_request_to_endpoint_async = (
+        _fake_post_model_request_to_endpoint_async
+    )
     try:
         result = asyncio.run(
             request_utils.execute_computer_action_request_async(
-                client=_Client(),
+                client=object(),
                 endpoint="https://example.com/cua",
                 payload={"action": {"type": "screenshot"}},
                 operation_name="computer action",
             )
         )
     finally:
-        request_utils.parse_response_model = original_parse
+        request_utils.post_model_request_to_endpoint_async = original
 
     assert result == {"parsed": True}
     assert captured["endpoint"] == "https://example.com/cua"
     assert captured["data"] == {"action": {"type": "screenshot"}}
-    assert captured["parse_data"] == {"success": True}
-    assert captured["parse_kwargs"]["operation_name"] == "computer action"
+    assert captured["operation_name"] == "computer action"
