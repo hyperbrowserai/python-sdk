@@ -37,13 +37,15 @@ def _safe_exception_text(exc: Exception) -> str:
         exception_message = str(exc)
     except Exception:
         return f"<unstringifiable {type(exc).__name__}>"
-    if not isinstance(exception_message, str):
+    if type(exception_message) is not str:
         return f"<unstringifiable {type(exc).__name__}>"
     try:
         sanitized_exception_message = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in exception_message
         )
+        if type(sanitized_exception_message) is not str:
+            return f"<unstringifiable {type(exc).__name__}>"
         if sanitized_exception_message.strip():
             if len(sanitized_exception_message) <= _MAX_EXCEPTION_TEXT_LENGTH:
                 return sanitized_exception_message

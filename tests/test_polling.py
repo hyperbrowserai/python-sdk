@@ -6923,6 +6923,31 @@ def test_poll_until_terminal_status_handles_runtime_errors_with_broken_string_su
         )
 
 
+def test_poll_until_terminal_status_handles_runtime_errors_with_string_subclass_results():
+    class _RenderedRuntimeError(RuntimeError):
+        class _RenderedString(str):
+            pass
+
+        def __str__(self) -> str:
+            return self._RenderedString("runtime subclass text")
+
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match=(
+            r"Failed to poll sync poll after 1 attempts: "
+            r"<unstringifiable _RenderedRuntimeError>"
+        ),
+    ):
+        poll_until_terminal_status(
+            operation_name="sync poll",
+            get_status=lambda: (_ for _ in ()).throw(_RenderedRuntimeError()),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
 def test_retry_operation_handles_unstringifiable_value_errors():
     class _UnstringifiableValueError(ValueError):
         def __str__(self) -> str:
