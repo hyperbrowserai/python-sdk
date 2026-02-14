@@ -1,6 +1,5 @@
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from hyperbrowser.models.extract import (
     ExtractJobResponse,
@@ -9,8 +8,7 @@ from hyperbrowser.models.extract import (
     StartExtractJobResponse,
 )
 from ...polling import build_operation_name, ensure_started_job_id, wait_for_job_result
-from ..serialization_utils import serialize_model_dump_to_dict
-from ...schema_utils import resolve_schema_input
+from ..extract_payload_utils import build_extract_start_payload
 from ..response_utils import parse_response_model
 
 
@@ -19,15 +17,7 @@ class ExtractManager:
         self._client = client
 
     def start(self, params: StartExtractJobParams) -> StartExtractJobResponse:
-        if not params.schema_ and not params.prompt:
-            raise HyperbrowserError("Either schema or prompt must be provided")
-
-        payload = serialize_model_dump_to_dict(
-            params,
-            error_message="Failed to serialize extract start params",
-        )
-        if params.schema_:
-            payload["schema"] = resolve_schema_input(params.schema_)
+        payload = build_extract_start_payload(params)
 
         response = self._client.transport.post(
             self._client._build_url("/extract"),
