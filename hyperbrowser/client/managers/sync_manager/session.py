@@ -2,6 +2,7 @@ from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
+from ...file_utils import open_binary_file
 from ..serialization_utils import (
     serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
@@ -161,18 +162,15 @@ class SessionManager:
     ) -> UploadFileResponse:
         file_path, file_obj = normalize_upload_file_input(file_input)
         if file_path is not None:
-            try:
-                with open(file_path, "rb") as file_obj:
-                    files = {"file": file_obj}
-                    response = self._client.transport.post(
-                        self._client._build_url(f"/session/{id}/uploads"),
-                        files=files,
-                    )
-            except OSError as exc:
-                raise HyperbrowserError(
-                    f"Failed to open upload file at path: {file_path}",
-                    original_error=exc,
-                ) from exc
+            with open_binary_file(
+                file_path,
+                open_error_message=f"Failed to open upload file at path: {file_path}",
+            ) as file_obj:
+                files = {"file": file_obj}
+                response = self._client.transport.post(
+                    self._client._build_url(f"/session/{id}/uploads"),
+                    files=files,
+                )
         else:
             if file_obj is None:
                 raise HyperbrowserError(

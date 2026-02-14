@@ -1,6 +1,7 @@
 import os
+from contextlib import contextmanager
 from os import PathLike
-from typing import Union
+from typing import BinaryIO, Iterator, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string
@@ -125,3 +126,38 @@ def ensure_existing_file_path(
     if not is_file:
         raise HyperbrowserError(not_file_message)
     return normalized_path
+
+
+@contextmanager
+def open_binary_file(
+    file_path: Union[str, PathLike[str]],
+    *,
+    open_error_message: str,
+) -> Iterator[BinaryIO]:
+    _validate_error_message_text(
+        open_error_message,
+        field_name="open_error_message",
+    )
+    try:
+        normalized_path = os.fspath(file_path)
+    except HyperbrowserError:
+        raise
+    except TypeError as exc:
+        raise HyperbrowserError(
+            "file_path must be a string or os.PathLike object",
+            original_error=exc,
+        ) from exc
+    except Exception as exc:
+        raise HyperbrowserError("file_path is invalid", original_error=exc) from exc
+    if not is_plain_string(normalized_path):
+        raise HyperbrowserError("file_path must resolve to a string path")
+    try:
+        with open(normalized_path, "rb") as file_obj:
+            yield file_obj
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            open_error_message,
+            original_error=exc,
+        ) from exc

@@ -12,6 +12,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_mapping_keys_access_usage.py",
     "tests/test_tool_mapping_reader_usage.py",
     "tests/test_display_helper_usage.py",
+    "tests/test_binary_file_open_helper_usage.py",
     "tests/test_ci_workflow_quality_gates.py",
     "tests/test_makefile_quality_targets.py",
     "tests/test_pyproject_architecture_marker.py",

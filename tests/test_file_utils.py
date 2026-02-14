@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 import hyperbrowser.client.file_utils as file_utils
-from hyperbrowser.client.file_utils import ensure_existing_file_path
+from hyperbrowser.client.file_utils import ensure_existing_file_path, open_binary_file
 from hyperbrowser.exceptions import HyperbrowserError
 
 
@@ -480,3 +480,62 @@ def test_ensure_existing_file_path_rejects_string_subclass_path_inputs_before_ch
         )
 
     assert exc_info.value.original_error is None
+
+
+def test_open_binary_file_reads_content_and_closes(tmp_path: Path):
+    file_path = tmp_path / "binary.bin"
+    file_path.write_bytes(b"content")
+
+    with open_binary_file(
+        str(file_path),
+        open_error_message="open failed",
+    ) as file_obj:
+        assert file_obj.read() == b"content"
+        assert file_obj.closed is False
+
+    assert file_obj.closed is True
+
+
+def test_open_binary_file_rejects_non_string_error_message(tmp_path: Path):
+    file_path = tmp_path / "binary.bin"
+    file_path.write_bytes(b"content")
+
+    with pytest.raises(HyperbrowserError, match="open_error_message must be a string"):
+        with open_binary_file(
+            str(file_path),
+            open_error_message=123,  # type: ignore[arg-type]
+        ):
+            pass
+
+
+def test_open_binary_file_rejects_invalid_file_path_type():
+    with pytest.raises(
+        HyperbrowserError, match="file_path must be a string or os.PathLike object"
+    ):
+        with open_binary_file(
+            123,  # type: ignore[arg-type]
+            open_error_message="open failed",
+        ):
+            pass
+
+
+def test_open_binary_file_rejects_non_string_fspath_results():
+    with pytest.raises(HyperbrowserError, match="file_path must resolve to a string"):
+        with open_binary_file(
+            b"/tmp/bytes-path",  # type: ignore[arg-type]
+            open_error_message="open failed",
+        ):
+            pass
+
+
+def test_open_binary_file_wraps_open_errors(tmp_path: Path):
+    missing_path = tmp_path / "missing.bin"
+
+    with pytest.raises(HyperbrowserError, match="open failed") as exc_info:
+        with open_binary_file(
+            str(missing_path),
+            open_error_message="open failed",
+        ):
+            pass
+
+    assert isinstance(exc_info.value.original_error, FileNotFoundError)
