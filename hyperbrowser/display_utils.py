@@ -1,9 +1,12 @@
 from hyperbrowser.type_utils import is_plain_string
 
 _TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
+_DEFAULT_BLANK_KEY_FALLBACK = "<blank key>"
 
 
-def normalize_display_text(value: str, *, max_length: int) -> str:
+def normalize_display_text(value: object, *, max_length: int) -> str:
+    if not is_plain_string(value):
+        return ""
     try:
         sanitized_value = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
@@ -23,13 +26,23 @@ def normalize_display_text(value: str, *, max_length: int) -> str:
         return ""
 
 
+def _normalize_blank_key_fallback(*, fallback: object, max_length: int) -> str:
+    normalized_fallback = normalize_display_text(fallback, max_length=max_length)
+    if normalized_fallback:
+        return normalized_fallback
+    return _DEFAULT_BLANK_KEY_FALLBACK
+
+
 def format_string_key_for_error(
-    key: str,
+    key: object,
     *,
     max_length: int,
-    blank_fallback: str = "<blank key>",
+    blank_fallback: object = _DEFAULT_BLANK_KEY_FALLBACK,
 ) -> str:
     normalized_key = normalize_display_text(key, max_length=max_length)
     if not normalized_key:
-        return blank_fallback
+        return _normalize_blank_key_fallback(
+            fallback=blank_fallback,
+            max_length=max_length,
+        )
     return normalized_key

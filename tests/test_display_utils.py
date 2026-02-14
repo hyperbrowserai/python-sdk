@@ -30,6 +30,13 @@ def test_normalize_display_text_returns_empty_for_non_string_inputs():
     assert normalize_display_text(123, max_length=20) == ""  # type: ignore[arg-type]
 
 
+def test_normalize_display_text_rejects_string_subclass_inputs():
+    class _StringSubclass(str):
+        pass
+
+    assert normalize_display_text(_StringSubclass("value"), max_length=20) == ""
+
+
 def test_format_string_key_for_error_returns_normalized_key():
     assert format_string_key_for_error(" \nkey\t ", max_length=20) == "?key?"
 
@@ -42,4 +49,18 @@ def test_format_string_key_for_error_supports_custom_blank_fallback():
     assert (
         format_string_key_for_error("   ", max_length=20, blank_fallback="<empty>")
         == "<empty>"
+    )
+
+
+def test_format_string_key_for_error_sanitizes_custom_blank_fallback():
+    assert (
+        format_string_key_for_error("   ", max_length=20, blank_fallback=" \nempty\t ")
+        == "?empty?"
+    )
+
+
+def test_format_string_key_for_error_uses_default_fallback_for_invalid_blank_fallback():
+    assert (
+        format_string_key_for_error("   ", max_length=20, blank_fallback=123)
+        == "<blank key>"
     )
