@@ -262,6 +262,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_extension_create.py`
 - `examples/async_extension_list.py`
 - `examples/async_extract.py`
+- `examples/async_hyper_agent_task.py`
 - `examples/async_profile_list.py`
 - `examples/async_scrape.py`
 - `examples/async_session_list.py`
@@ -274,6 +275,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/sync_extension_create.py`
 - `examples/sync_extension_list.py`
 - `examples/sync_extract.py`
+- `examples/sync_hyper_agent_task.py`
 - `examples/sync_profile_list.py`
 - `examples/sync_scrape.py`
 - `examples/sync_session_list.py`
