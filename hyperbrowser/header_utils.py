@@ -51,7 +51,17 @@ def normalize_headers(
     ):
         if not isinstance(key, str) or not isinstance(value, str):
             raise HyperbrowserError(effective_pair_error_message)
-        normalized_key = key.strip()
+        try:
+            normalized_key = key.strip()
+            if not isinstance(normalized_key, str):
+                raise TypeError("normalized header name must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize header name",
+                original_error=exc,
+            ) from exc
         if not normalized_key:
             raise HyperbrowserError("header names must not be empty")
         if len(normalized_key) > _MAX_HEADER_NAME_LENGTH:
@@ -74,7 +84,17 @@ def normalize_headers(
             for character in f"{normalized_key}{value}"
         ):
             raise HyperbrowserError("headers must not contain control characters")
-        canonical_header_name = normalized_key.lower()
+        try:
+            canonical_header_name = normalized_key.lower()
+            if not isinstance(canonical_header_name, str):
+                raise TypeError("canonical header name must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize header name",
+                original_error=exc,
+            ) from exc
         if canonical_header_name in seen_header_names:
             raise HyperbrowserError(
                 "duplicate header names are not allowed after normalization"
