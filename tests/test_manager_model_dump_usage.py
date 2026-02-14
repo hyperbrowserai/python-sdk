@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from tests.guardrail_ast_utils import collect_attribute_call_lines, read_module_ast
+
+pytestmark = pytest.mark.architecture
 
 MANAGERS_DIR = (
     Path(__file__).resolve().parents[1] / "hyperbrowser" / "client" / "managers"

@@ -249,7 +249,7 @@ make ci
 ```
 
 `make architecture-check` runs fast architecture guard suites
-(shared-helper adoption and quality-gate workflow checks).
+(shared-helper adoption and quality-gate workflow checks) via `pytest -m architecture`.
 
 Contributor workflow details are available in [CONTRIBUTING.md](CONTRIBUTING.md).
 

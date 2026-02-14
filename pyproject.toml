@@ -22,6 +22,9 @@ pytest = "^8.0.0"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "architecture: architecture/guardrail quality gate tests",
+]
 
 
 [build-system]

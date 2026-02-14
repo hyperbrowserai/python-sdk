@@ -1,16 +1,21 @@
 from pathlib import Path
 
+import pytest
+
 from tests.guardrail_ast_utils import (
     collect_list_keys_call_lines,
     collect_name_call_lines,
     read_module_ast,
 )
 
+pytestmark = pytest.mark.architecture
+
 _TARGET_FILES = (
     Path("hyperbrowser/client/managers/response_utils.py"),
     Path("hyperbrowser/transport/base.py"),
     Path("hyperbrowser/client/managers/list_parsing_utils.py"),
 )
+
 
 def test_core_mapping_parsers_use_shared_mapping_reader():
     violations: list[str] = []

@@ -60,6 +60,8 @@ make test
 make architecture-check
 ```
 
+This runs `pytest -m architecture` against guardrail suites.
+
 ### Full local CI parity
 
 ```bash

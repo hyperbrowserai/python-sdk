@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from tests.guardrail_ast_utils import collect_name_call_lines, read_module_ast
+
+pytestmark = pytest.mark.architecture
 
 HYPERBROWSER_ROOT = Path(__file__).resolve().parents[1] / "hyperbrowser"
 ALLOWED_NORMALIZE_DISPLAY_CALL_FILES = {
@@ -12,6 +16,7 @@ ALLOWED_NORMALIZE_DISPLAY_CALL_FILES = {
 
 def _python_files() -> list[Path]:
     return sorted(HYPERBROWSER_ROOT.rglob("*.py"))
+
 
 def test_normalize_display_text_usage_is_centralized():
     violations: list[str] = []

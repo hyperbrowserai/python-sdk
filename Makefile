@@ -18,15 +18,7 @@ test:
 	$(PYTHON) -m pytest -q
 
 architecture-check:
-	$(PYTHON) -m pytest -q \
-		tests/test_guardrail_ast_utils.py \
-		tests/test_manager_model_dump_usage.py \
-		tests/test_mapping_reader_usage.py \
-		tests/test_mapping_keys_access_usage.py \
-		tests/test_tool_mapping_reader_usage.py \
-		tests/test_display_helper_usage.py \
-		tests/test_ci_workflow_quality_gates.py \
-		tests/test_makefile_quality_targets.py
+	$(PYTHON) -m pytest -q -m architecture
 
 compile:
 	$(PYTHON) -m compileall -q hyperbrowser examples tests

@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.architecture
+
 
 def test_ci_workflow_includes_architecture_guard_job():
     ci_workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")

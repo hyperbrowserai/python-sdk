@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from tests.guardrail_ast_utils import collect_list_keys_call_lines, read_module_ast
+
+pytestmark = pytest.mark.architecture
 
 HYPERBROWSER_ROOT = Path(__file__).resolve().parents[1] / "hyperbrowser"
 ALLOWED_KEYS_LIST_FILES = {
@@ -11,6 +15,7 @@ ALLOWED_KEYS_LIST_FILES = {
 
 def _python_files() -> list[Path]:
     return sorted(HYPERBROWSER_ROOT.rglob("*.py"))
+
 
 def test_mapping_key_iteration_is_centralized():
     violations: list[str] = []

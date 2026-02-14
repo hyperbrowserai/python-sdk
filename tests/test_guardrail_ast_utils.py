@@ -1,10 +1,14 @@
 import ast
 
+import pytest
+
 from tests.guardrail_ast_utils import (
     collect_attribute_call_lines,
     collect_list_keys_call_lines,
     collect_name_call_lines,
 )
+
+pytestmark = pytest.mark.architecture
 
 
 SAMPLE_MODULE = ast.parse(

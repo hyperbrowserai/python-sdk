@@ -1,12 +1,17 @@
 from pathlib import Path
 
+import pytest
+
 from tests.guardrail_ast_utils import (
     collect_attribute_call_lines,
     collect_name_call_lines,
     read_module_ast,
 )
 
+pytestmark = pytest.mark.architecture
+
 TOOLS_MODULE = Path("hyperbrowser/tools/__init__.py")
+
 
 def test_tools_module_uses_shared_mapping_read_helpers():
     module = read_module_ast(TOOLS_MODULE)
