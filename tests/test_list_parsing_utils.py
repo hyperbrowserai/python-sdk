@@ -102,6 +102,32 @@ def test_parse_mapping_list_items_wraps_value_read_failures():
     assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
+def test_parse_mapping_list_items_falls_back_when_key_display_raises():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read demo object value for key '<unreadable key>' at index 0",
+    ):
+        parse_mapping_list_items(
+            [_ExplodingValueMapping()],
+            item_label="demo",
+            parse_item=lambda payload: payload,
+            key_display=lambda key: 1 / 0,
+        )
+
+
+def test_parse_mapping_list_items_falls_back_when_key_display_returns_non_string():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read demo object value for key '<unreadable key>' at index 0",
+    ):
+        parse_mapping_list_items(
+            [_ExplodingValueMapping()],
+            item_label="demo",
+            parse_item=lambda payload: payload,
+            key_display=lambda key: key.encode("utf-8"),
+        )
+
+
 def test_parse_mapping_list_items_wraps_parse_failures():
     with pytest.raises(
         HyperbrowserError,

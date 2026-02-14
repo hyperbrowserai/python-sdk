@@ -6,6 +6,20 @@ from hyperbrowser.exceptions import HyperbrowserError
 T = TypeVar("T")
 
 
+def _safe_key_display_for_error(
+    key: str,
+    *,
+    key_display: Callable[[str], str],
+) -> str:
+    try:
+        key_text = key_display(key)
+        if type(key_text) is not str:
+            raise TypeError("key display must be a string")
+        return key_text
+    except Exception:
+        return "<unreadable key>"
+
+
 def parse_mapping_list_items(
     items: List[Any],
     *,
@@ -41,8 +55,9 @@ def parse_mapping_list_items(
             except HyperbrowserError:
                 raise
             except Exception as exc:
+                key_text = _safe_key_display_for_error(key, key_display=key_display)
                 raise HyperbrowserError(
-                    f"Failed to read {item_label} object value for key '{key_display(key)}' at index {index}",
+                    f"Failed to read {item_label} object value for key '{key_text}' at index {index}",
                     original_error=exc,
                 ) from exc
         try:
