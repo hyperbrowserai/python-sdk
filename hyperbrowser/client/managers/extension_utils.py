@@ -3,6 +3,7 @@ from typing import Any, List
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import ExtensionResponse
+from .list_parsing_utils import parse_mapping_list_items
 
 _MAX_DISPLAYED_MISSING_KEYS = 20
 _MAX_DISPLAYED_MISSING_KEY_LENGTH = 120
@@ -108,48 +109,9 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
             "Failed to iterate 'extensions' list from response",
             original_error=exc,
         ) from exc
-    parsed_extensions: List[ExtensionResponse] = []
-    for index, extension in enumerate(extension_items):
-        if not isinstance(extension, Mapping):
-            raise HyperbrowserError(
-                "Expected extension object at index "
-                f"{index} but got {_get_type_name(extension)}"
-            )
-        try:
-            extension_keys = list(extension.keys())
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                f"Failed to read extension object at index {index}",
-                original_error=exc,
-            ) from exc
-        for key in extension_keys:
-            if type(key) is str:
-                continue
-            raise HyperbrowserError(
-                f"Expected extension object keys to be strings at index {index}"
-            )
-        extension_payload: dict[str, object] = {}
-        for key in extension_keys:
-            try:
-                extension_payload[key] = extension[key]
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                key_display = _format_key_display(key)
-                raise HyperbrowserError(
-                    "Failed to read extension object value for key "
-                    f"'{key_display}' at index {index}",
-                    original_error=exc,
-                ) from exc
-        try:
-            parsed_extensions.append(ExtensionResponse(**extension_payload))
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                f"Failed to parse extension at index {index}",
-                original_error=exc,
-            ) from exc
-    return parsed_extensions
+    return parse_mapping_list_items(
+        extension_items,
+        item_label="extension",
+        parse_item=lambda extension_payload: ExtensionResponse(**extension_payload),
+        key_display=_format_key_display,
+    )
