@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
-from hyperbrowser.display_utils import format_string_key_for_error, normalize_display_text
+from hyperbrowser.display_utils import (
+    format_string_key_for_error,
+    normalize_display_text,
+)
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
 

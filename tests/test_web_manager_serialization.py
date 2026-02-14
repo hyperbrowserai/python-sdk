@@ -37,7 +37,9 @@ class _SyncTransport:
     def post(self, url: str, data=None) -> SimpleNamespace:
         self.post_calls.append((url, data))
         if url == "/web/fetch":
-            return SimpleNamespace(data={"jobId": "job_sync_fetch", "status": "completed"})
+            return SimpleNamespace(
+                data={"jobId": "job_sync_fetch", "status": "completed"}
+            )
         if url == "/web/search":
             return SimpleNamespace(
                 data={

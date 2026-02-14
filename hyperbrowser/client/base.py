@@ -210,8 +210,12 @@ class HyperbrowserBase:
             normalized_path_only,
             normalized_path_query,
             _normalized_path_fragment,
-        ) = self._parse_url_components(normalized_path, component_label="normalized path")
-        normalized_query_suffix = f"?{normalized_path_query}" if normalized_path_query else ""
+        ) = self._parse_url_components(
+            normalized_path, component_label="normalized path"
+        )
+        normalized_query_suffix = (
+            f"?{normalized_path_query}" if normalized_path_query else ""
+        )
         decoded_path = ClientConfig._decode_url_component_with_limit(
             normalized_path_only, component_label="path"
         )

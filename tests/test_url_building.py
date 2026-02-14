@@ -356,6 +356,7 @@ def test_client_build_url_rejects_empty_or_non_string_paths():
 def test_client_build_url_rejects_string_subclass_path_inputs():
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
+
         class _BrokenPath(str):
             pass
 
@@ -412,6 +413,7 @@ def test_client_build_url_wraps_path_parse_runtime_errors(
 ):
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
+
         def _raise_parse_runtime_error(_value: str):
             raise RuntimeError("path parse exploded")
 
@@ -430,6 +432,7 @@ def test_client_build_url_preserves_hyperbrowser_path_parse_errors(
 ):
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
+
         def _raise_parse_hyperbrowser_error(_value: str):
             raise HyperbrowserError("custom path parse failure")
 
@@ -454,12 +457,15 @@ def test_client_build_url_wraps_path_component_access_runtime_errors(
 ):
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
+
         class _BrokenParsedPath:
             @property
             def scheme(self) -> str:
                 raise RuntimeError("path scheme exploded")
 
-        monkeypatch.setattr(client_base_module, "urlparse", lambda _value: _BrokenParsedPath())
+        monkeypatch.setattr(
+            client_base_module, "urlparse", lambda _value: _BrokenParsedPath()
+        )
 
         with pytest.raises(
             HyperbrowserError, match="Failed to parse path components"
@@ -476,6 +482,7 @@ def test_client_build_url_rejects_invalid_path_parser_component_types(
 ):
     client = Hyperbrowser(config=ClientConfig(api_key="test-key"))
     try:
+
         class _InvalidParsedPath:
             scheme = object()
             netloc = ""
@@ -483,7 +490,9 @@ def test_client_build_url_rejects_invalid_path_parser_component_types(
             query = ""
             fragment = ""
 
-        monkeypatch.setattr(client_base_module, "urlparse", lambda _value: _InvalidParsedPath())
+        monkeypatch.setattr(
+            client_base_module, "urlparse", lambda _value: _InvalidParsedPath()
+        )
 
         with pytest.raises(
             HyperbrowserError, match="path parser returned invalid URL components"
@@ -531,7 +540,9 @@ def test_client_build_url_wraps_base_url_parse_runtime_errors(
 
         monkeypatch.setattr(client_base_module, "urlparse", _conditional_urlparse)
 
-        with pytest.raises(HyperbrowserError, match="Failed to parse base_url") as exc_info:
+        with pytest.raises(
+            HyperbrowserError, match="Failed to parse base_url"
+        ) as exc_info:
             client._build_url("/session")
 
         assert isinstance(exc_info.value.original_error, RuntimeError)

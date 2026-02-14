@@ -2,7 +2,9 @@ import ast
 from pathlib import Path
 
 
-MANAGERS_DIR = Path(__file__).resolve().parents[1] / "hyperbrowser" / "client" / "managers"
+MANAGERS_DIR = (
+    Path(__file__).resolve().parents[1] / "hyperbrowser" / "client" / "managers"
+)
 
 
 def _manager_python_files() -> list[Path]:

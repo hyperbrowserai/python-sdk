@@ -34,7 +34,10 @@ def _collect_mapping_reader_calls(module: ast.AST) -> list[int]:
     for node in ast.walk(module):
         if not isinstance(node, ast.Call):
             continue
-        if isinstance(node.func, ast.Name) and node.func.id == "read_string_key_mapping":
+        if (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "read_string_key_mapping"
+        ):
             reader_calls.append(node.lineno)
     return reader_calls
 

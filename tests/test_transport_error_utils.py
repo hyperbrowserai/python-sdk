@@ -1098,7 +1098,9 @@ def test_extract_error_message_handles_truncate_sanitization_runtime_failures(
     def _raise_sanitize_error(_message: str) -> str:
         raise RuntimeError("sanitize exploded")
 
-    monkeypatch.setattr(error_utils, "_sanitize_error_message_text", _raise_sanitize_error)
+    monkeypatch.setattr(
+        error_utils, "_sanitize_error_message_text", _raise_sanitize_error
+    )
 
     message = extract_error_message(
         _DummyResponse("   ", text="   "),

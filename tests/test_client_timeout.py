@@ -163,8 +163,7 @@ def test_async_client_wraps_timeout_isfinite_failures(
     assert exc_info.value.original_error is not None
 
 
-def test_sync_client_wraps_unexpected_timeout_float_conversion_failures(
-):
+def test_sync_client_wraps_unexpected_timeout_float_conversion_failures():
     class _BrokenDecimal(Decimal):
         def __float__(self) -> float:
             raise RuntimeError("unexpected float conversion failure")
@@ -178,8 +177,7 @@ def test_sync_client_wraps_unexpected_timeout_float_conversion_failures(
     assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
-def test_async_client_wraps_unexpected_timeout_float_conversion_failures(
-):
+def test_async_client_wraps_unexpected_timeout_float_conversion_failures():
     class _BrokenDecimal(Decimal):
         def __float__(self) -> float:
             raise RuntimeError("unexpected float conversion failure")

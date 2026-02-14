@@ -1,4 +1,7 @@
-from hyperbrowser.display_utils import format_string_key_for_error, normalize_display_text
+from hyperbrowser.display_utils import (
+    format_string_key_for_error,
+    normalize_display_text,
+)
 
 
 def test_normalize_display_text_keeps_valid_input():
@@ -7,15 +10,12 @@ def test_normalize_display_text_keeps_valid_input():
 
 def test_normalize_display_text_replaces_control_characters_and_trims():
     assert (
-        normalize_display_text(" \nhello\tworld\r ", max_length=50)
-        == "?hello?world?"
+        normalize_display_text(" \nhello\tworld\r ", max_length=50) == "?hello?world?"
     )
 
 
 def test_normalize_display_text_truncates_long_values():
-    assert (
-        normalize_display_text("abcdefghij", max_length=7) == "... (truncated)"
-    )
+    assert normalize_display_text("abcdefghij", max_length=7) == "... (truncated)"
 
 
 def test_normalize_display_text_returns_empty_for_unreadable_inputs():
@@ -31,10 +31,7 @@ def test_normalize_display_text_returns_empty_for_non_string_inputs():
 
 
 def test_format_string_key_for_error_returns_normalized_key():
-    assert (
-        format_string_key_for_error(" \nkey\t ", max_length=20)
-        == "?key?"
-    )
+    assert format_string_key_for_error(" \nkey\t ", max_length=20) == "?key?"
 
 
 def test_format_string_key_for_error_returns_blank_fallback_for_empty_keys():

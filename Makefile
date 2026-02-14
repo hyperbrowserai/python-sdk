@@ -1,26 +1,36 @@
-.PHONY: install lint format-check format compile test build check ci
+.PHONY: install lint format-check format compile test architecture-check build check ci
+
+PYTHON ?= python3
 
 install:
-	python -m pip install -e . pytest ruff build
+	$(PYTHON) -m pip install -e . pytest ruff build
 
 lint:
-	python -m ruff check .
+	$(PYTHON) -m ruff check .
 
 format-check:
-	python -m ruff format --check .
+	$(PYTHON) -m ruff format --check .
 
 format:
-	python -m ruff format .
+	$(PYTHON) -m ruff format .
 
 test:
-	python -m pytest -q
+	$(PYTHON) -m pytest -q
+
+architecture-check:
+	$(PYTHON) -m pytest -q \
+		tests/test_manager_model_dump_usage.py \
+		tests/test_mapping_reader_usage.py \
+		tests/test_mapping_keys_access_usage.py \
+		tests/test_tool_mapping_reader_usage.py \
+		tests/test_display_helper_usage.py
 
 compile:
-	python -m compileall -q hyperbrowser examples tests
+	$(PYTHON) -m compileall -q hyperbrowser examples tests
 
 build:
-	python -m build
+	$(PYTHON) -m build
 
-check: lint format-check compile test build
+check: lint format-check compile architecture-check test build
 
 ci: check

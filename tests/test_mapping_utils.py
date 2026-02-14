@@ -54,7 +54,9 @@ def _read_mapping(mapping_value):
         mapping_value,
         expected_mapping_error="expected mapping",
         read_keys_error="failed keys",
-        non_string_key_error_builder=lambda key: f"non-string key: {type(key).__name__}",
+        non_string_key_error_builder=lambda key: (
+            f"non-string key: {type(key).__name__}"
+        ),
         read_value_error_builder=lambda key_display: (
             f"failed value for '{key_display}'"
         ),
@@ -84,25 +86,23 @@ def test_read_string_key_mapping_rejects_non_string_keys():
 
 
 def test_read_string_key_mapping_wraps_value_read_failures():
-    with pytest.raises(
-        HyperbrowserError, match="failed value for 'field'"
-    ) as exc_info:
+    with pytest.raises(HyperbrowserError, match="failed value for 'field'") as exc_info:
         _read_mapping(_BrokenValueMapping())
 
     assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
 def test_read_string_key_mapping_preserves_hyperbrowser_value_failures():
-    with pytest.raises(HyperbrowserError, match="custom value read failure") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="custom value read failure"
+    ) as exc_info:
         _read_mapping(_HyperbrowserValueFailureMapping())
 
     assert exc_info.value.original_error is None
 
 
 def test_read_string_key_mapping_falls_back_for_unreadable_key_display():
-    with pytest.raises(
-        HyperbrowserError, match="failed value for '<unreadable key>'"
-    ):
+    with pytest.raises(HyperbrowserError, match="failed value for '<unreadable key>'"):
         read_string_key_mapping(
             _BrokenValueMapping(),
             expected_mapping_error="expected mapping",
@@ -180,9 +180,7 @@ def test_copy_mapping_values_by_string_keys_returns_selected_values():
 
 
 def test_copy_mapping_values_by_string_keys_wraps_value_read_failures():
-    with pytest.raises(
-        HyperbrowserError, match="failed value for 'field'"
-    ) as exc_info:
+    with pytest.raises(HyperbrowserError, match="failed value for 'field'") as exc_info:
         copy_mapping_values_by_string_keys(
             _BrokenValueMapping(),
             ["field"],
@@ -196,7 +194,9 @@ def test_copy_mapping_values_by_string_keys_wraps_value_read_failures():
 
 
 def test_copy_mapping_values_by_string_keys_preserves_hyperbrowser_failures():
-    with pytest.raises(HyperbrowserError, match="custom value read failure") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="custom value read failure"
+    ) as exc_info:
         copy_mapping_values_by_string_keys(
             _HyperbrowserValueFailureMapping(),
             ["field"],
@@ -210,9 +210,7 @@ def test_copy_mapping_values_by_string_keys_preserves_hyperbrowser_failures():
 
 
 def test_copy_mapping_values_by_string_keys_falls_back_for_unreadable_key_display():
-    with pytest.raises(
-        HyperbrowserError, match="failed value for '<unreadable key>'"
-    ):
+    with pytest.raises(HyperbrowserError, match="failed value for '<unreadable key>'"):
         copy_mapping_values_by_string_keys(
             _BrokenValueMapping(),
             ["field"],

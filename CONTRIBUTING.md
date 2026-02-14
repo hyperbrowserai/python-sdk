@@ -54,6 +54,12 @@ Or:
 make test
 ```
 
+### Architecture guard suites
+
+```bash
+make architecture-check
+```
+
 ### Full local CI parity
 
 ```bash
