@@ -7,6 +7,8 @@ from tests.test_ast_import_helper_usage import AST_IMPORT_GUARD_MODULES
 
 pytestmark = pytest.mark.architecture
 
+EXPECTED_EXTRA_IMPORTER_MODULES = ("tests/test_ast_import_utils.py",)
+
 
 def _imports_ast_import_helper(module_text: str) -> bool:
     module_ast = ast.parse(module_text)
@@ -28,4 +30,5 @@ def test_ast_import_helper_imports_are_centralized():
             continue
         discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == sorted(AST_IMPORT_GUARD_MODULES)
+    expected_modules = sorted([*AST_IMPORT_GUARD_MODULES, *EXPECTED_EXTRA_IMPORTER_MODULES])
+    assert discovered_modules == expected_modules

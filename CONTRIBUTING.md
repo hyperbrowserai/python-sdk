@@ -93,6 +93,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_ast_function_source_utils.py` (shared AST function-source helper contract validation),
   - `tests/test_ast_import_helper_import_boundary.py` (shared AST import-helper import boundary enforcement across test modules),
   - `tests/test_ast_import_helper_usage.py` (shared AST import-helper usage enforcement across AST import-boundary guard suites),
+  - `tests/test_ast_import_utils.py` (shared AST import-helper contract validation),
   - `tests/test_binary_file_open_helper_usage.py` (shared binary file open helper usage enforcement),
   - `tests/test_browser_use_payload_helper_usage.py` (browser-use payload helper usage enforcement),
   - `tests/test_ci_workflow_quality_gates.py` (CI guard-stage + make-target enforcement),
