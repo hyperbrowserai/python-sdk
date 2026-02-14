@@ -89,7 +89,7 @@ def parse_response_model(
             original_error=exc,
         ) from exc
     for key in response_keys:
-        if isinstance(key, str):
+        if type(key) is str:
             continue
         raise HyperbrowserError(
             f"Expected {normalized_operation_name} response object keys to be strings"

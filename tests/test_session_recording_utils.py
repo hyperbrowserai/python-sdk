@@ -237,6 +237,21 @@ def test_parse_session_recordings_response_data_rejects_non_string_recording_key
         )
 
 
+def test_parse_session_recordings_response_data_rejects_string_subclass_recording_keys():
+    class _Key(str):
+        pass
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected session recording object keys to be strings at index 0",
+    ):
+        parse_session_recordings_response_data(
+            [
+                {_Key("type"): "bad-key"},
+            ]
+        )
+
+
 def test_parse_session_recordings_response_data_wraps_recording_value_read_failures():
     class _BrokenValueLookupMapping(Mapping[str, object]):
         def __iter__(self) -> Iterator[str]:
@@ -282,7 +297,7 @@ def test_parse_session_recordings_response_data_sanitizes_recording_value_keys()
     assert exc_info.value.original_error is not None
 
 
-def test_parse_session_recordings_response_data_falls_back_for_unreadable_recording_keys():
+def test_parse_session_recordings_response_data_rejects_string_subclass_recording_keys_before_value_reads():
     class _BrokenKey(str):
         def __iter__(self):
             raise RuntimeError("cannot iterate recording key")
@@ -300,14 +315,11 @@ def test_parse_session_recordings_response_data_falls_back_for_unreadable_record
 
     with pytest.raises(
         HyperbrowserError,
-        match=(
-            "Failed to read session recording object value "
-            "for key '<unreadable key>' at index 0"
-        ),
+        match="Expected session recording object keys to be strings at index 0",
     ) as exc_info:
         parse_session_recordings_response_data([_BrokenValueLookupMapping()])
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_parse_session_recordings_response_data_preserves_hyperbrowser_value_read_errors():

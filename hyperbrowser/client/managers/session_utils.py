@@ -76,7 +76,7 @@ def parse_session_recordings_response_data(
                 original_error=exc,
             ) from exc
         for key in recording_keys:
-            if isinstance(key, str):
+            if type(key) is str:
                 continue
             raise HyperbrowserError(
                 f"Expected session recording object keys to be strings at index {index}"

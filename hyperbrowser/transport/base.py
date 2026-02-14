@@ -146,7 +146,7 @@ class APIResponse(Generic[T]):
                 original_error=exc,
             ) from exc
         for key in response_keys:
-            if isinstance(key, str):
+            if type(key) is str:
                 continue
             key_type_name = type(key).__name__
             raise HyperbrowserError(

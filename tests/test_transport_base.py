@@ -184,6 +184,23 @@ def test_api_response_from_json_rejects_non_string_mapping_keys() -> None:
         )
 
 
+def test_api_response_from_json_rejects_string_subclass_mapping_keys() -> None:
+    class _Key(str):
+        pass
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to parse response data for _SampleResponseModel: "
+            "expected string keys but received _Key"
+        ),
+    ):
+        APIResponse.from_json(
+            {_Key("name"): "job-1"},
+            _SampleResponseModel,
+        )
+
+
 def test_api_response_from_json_wraps_non_hyperbrowser_errors() -> None:
     with pytest.raises(
         HyperbrowserError,
@@ -298,14 +315,14 @@ def test_api_response_from_json_sanitizes_and_truncates_mapping_keys_in_errors()
         APIResponse.from_json(_BrokenLongKeyValueMapping(), _SampleResponseModel)
 
 
-def test_api_response_from_json_falls_back_for_unreadable_mapping_keys_in_errors() -> (
+def test_api_response_from_json_rejects_string_subclass_mapping_keys_before_value_reads() -> (
     None
 ):
     with pytest.raises(
         HyperbrowserError,
         match=(
             "Failed to parse response data for _SampleResponseModel: "
-            "unable to read value for key '<unreadable key>'"
+            "expected string keys but received _BrokenRenderedMappingKey"
         ),
     ):
         APIResponse.from_json(_BrokenRenderedKeyValueMapping(), _SampleResponseModel)

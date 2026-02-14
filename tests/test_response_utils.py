@@ -194,6 +194,21 @@ def test_parse_response_model_rejects_non_string_keys():
         )
 
 
+def test_parse_response_model_rejects_string_subclass_keys():
+    class _Key(str):
+        pass
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected basic operation response object keys to be strings",
+    ):
+        parse_response_model(
+            {_Key("success"): True},
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+
 def test_parse_response_model_sanitizes_operation_name_in_errors():
     with pytest.raises(
         HyperbrowserError,
@@ -303,7 +318,7 @@ def test_parse_response_model_truncates_operation_name_in_errors():
         )
 
 
-def test_parse_response_model_falls_back_for_unreadable_key_display():
+def test_parse_response_model_rejects_string_subclass_keys_before_value_reads():
     class _BrokenKey(str):
         def __iter__(self):
             raise RuntimeError("key iteration exploded")
@@ -321,7 +336,7 @@ def test_parse_response_model_falls_back_for_unreadable_key_display():
 
     with pytest.raises(
         HyperbrowserError,
-        match="Failed to read basic operation response value for key '<unreadable key>'",
+        match="Expected basic operation response object keys to be strings",
     ) as exc_info:
         parse_response_model(
             _BrokenValueLookupMapping(),
@@ -329,7 +344,7 @@ def test_parse_response_model_falls_back_for_unreadable_key_display():
             operation_name="basic operation",
         )
 
-    assert isinstance(exc_info.value.original_error, RuntimeError)
+    assert exc_info.value.original_error is None
 
 
 def test_parse_response_model_wraps_mapping_read_failures():

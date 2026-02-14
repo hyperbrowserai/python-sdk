@@ -321,6 +321,23 @@ def test_parse_extension_list_response_data_rejects_non_string_extension_keys():
         )
 
 
+def test_parse_extension_list_response_data_rejects_string_subclass_extension_keys():
+    class _Key(str):
+        pass
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected extension object keys to be strings at index 0",
+    ):
+        parse_extension_list_response_data(
+            {
+                "extensions": [
+                    {_Key("name"): "invalid-key-type"},
+                ]
+            }
+        )
+
+
 def test_parse_extension_list_response_data_wraps_extension_value_read_failures():
     class _BrokenValueLookupMapping(Mapping[str, object]):
         def __iter__(self) -> Iterator[str]:
@@ -367,7 +384,7 @@ def test_parse_extension_list_response_data_sanitizes_extension_value_read_keys(
     assert exc_info.value.original_error is not None
 
 
-def test_parse_extension_list_response_data_falls_back_for_unreadable_value_read_keys():
+def test_parse_extension_list_response_data_rejects_string_subclass_value_read_keys():
     class _BrokenKey(str):
         class _BrokenRenderedKey(str):
             def __iter__(self):
@@ -389,13 +406,13 @@ def test_parse_extension_list_response_data_falls_back_for_unreadable_value_read
 
     with pytest.raises(
         HyperbrowserError,
-        match="Failed to read extension object value for key '<unprintable _BrokenKey>' at index 0",
+        match="Expected extension object keys to be strings at index 0",
     ) as exc_info:
         parse_extension_list_response_data(
             {"extensions": [_BrokenValueLookupMapping()]}
         )
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_parse_extension_list_response_data_preserves_hyperbrowser_value_read_errors():
