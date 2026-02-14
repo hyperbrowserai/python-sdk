@@ -122,6 +122,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_job_query_params_helper_usage.py` (shared scrape/crawl query-param helper usage enforcement),
   - `tests/test_job_request_helper_usage.py` (shared scrape/crawl/extract request-helper usage enforcement),
   - `tests/test_job_request_internal_reuse.py` (shared job request helper internal reuse of shared model request helpers),
+  - `tests/test_job_request_route_builder_internal_reuse.py` (job-request wrapper internal reuse of shared route-builders),
   - `tests/test_job_request_wrapper_internal_reuse.py` (parsed job-request wrapper internal reuse of shared model request helpers),
   - `tests/test_job_route_builder_usage.py` (shared job/web request-helper route-builder usage enforcement),
   - `tests/test_job_route_constants_usage.py` (shared scrape/crawl/extract route-constant usage enforcement),
