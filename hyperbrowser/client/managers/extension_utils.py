@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from typing import Any, List
 
-from hyperbrowser.display_utils import normalize_display_text
+from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import ExtensionResponse
 from .list_parsing_utils import parse_mapping_list_items
@@ -31,13 +31,10 @@ def _format_key_display(value: object) -> str:
             raise TypeError("normalized key display must be a string")
     except Exception:
         return "<unreadable key>"
-    normalized_key = normalize_display_text(
+    return format_string_key_for_error(
         normalized_key,
         max_length=_MAX_DISPLAYED_MISSING_KEY_LENGTH,
     )
-    if not normalized_key:
-        return "<blank key>"
-    return normalized_key
 
 
 def _summarize_mapping_keys(mapping: Mapping[object, object]) -> str:
