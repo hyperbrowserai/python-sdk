@@ -381,7 +381,7 @@ def _decode_ascii_bytes_like(value: object) -> Optional[str]:
 def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
     if isinstance(status_code, bool):
         return None
-    if isinstance(status_code, int):
+    if type(status_code) is int:
         return status_code
     status_text: Optional[str] = None
     if isinstance(status_code, memoryview):
