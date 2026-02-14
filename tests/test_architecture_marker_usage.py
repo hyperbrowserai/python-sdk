@@ -87,6 +87,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_examples_syntax.py",
     "tests/test_docs_python3_commands.py",
     "tests/test_extension_create_helper_usage.py",
+    "tests/test_extension_create_metadata_usage.py",
     "tests/test_extract_payload_helper_usage.py",
     "tests/test_examples_naming_convention.py",
     "tests/test_extension_operation_metadata_usage.py",

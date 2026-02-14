@@ -126,6 +126,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_examples_naming_convention.py` (example sync/async prefix naming enforcement),
   - `tests/test_examples_syntax.py` (example script syntax guardrail),
   - `tests/test_extension_create_helper_usage.py` (extension create-input normalization helper usage enforcement),
+  - `tests/test_extension_create_metadata_usage.py` (extension create-helper shared operation-metadata prefix usage enforcement),
   - `tests/test_extension_operation_metadata_usage.py` (extension manager operation-metadata usage enforcement),
   - `tests/test_extension_parse_usage_boundary.py` (centralized extension list parse-helper usage boundary enforcement),
   - `tests/test_extension_request_function_parse_boundary.py` (extension-request function-level parser boundary enforcement between create/list wrappers),
