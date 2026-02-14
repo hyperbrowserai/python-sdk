@@ -76,6 +76,7 @@ This runs lint, format checks, compile checks, tests, and package build.
 - Keep sync/async behavior in parity where applicable.
 - Prefer deterministic unit tests over network-dependent tests.
 - Preserve architectural guardrails with focused tests. Current guard suites include:
+  - `tests/test_agent_terminal_status_helper_usage.py` (shared agent terminal-status helper usage enforcement),
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
   - `tests/test_binary_file_open_helper_usage.py` (shared binary file open helper usage enforcement),
   - `tests/test_browser_use_payload_helper_usage.py` (browser-use payload helper usage enforcement),

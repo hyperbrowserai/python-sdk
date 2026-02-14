@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ....polling import wait_for_job_result_async
+from ...agent_status_utils import is_agent_terminal_status
 from ...response_utils import parse_response_model
 from ...serialization_utils import serialize_model_dump_to_dict
 from ...start_job_utils import build_started_job_context
@@ -83,9 +84,7 @@ class HyperAgentManager:
         return await wait_for_job_result_async(
             operation_name=operation_name,
             get_status=lambda: self.get_status(job_id).status,
-            is_terminal_status=lambda status: (
-                status in {"completed", "failed", "stopped"}
-            ),
+            is_terminal_status=is_agent_terminal_status,
             fetch_result=lambda: self.get(job_id),
             poll_interval_seconds=poll_interval_seconds,
             max_wait_seconds=max_wait_seconds,
