@@ -1,7 +1,7 @@
 import inspect
 import json
 from collections.abc import Mapping as MappingABC
-from typing import Any, Dict, Mapping
+from typing import Any, Callable, Dict, Mapping
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
@@ -72,6 +72,27 @@ def _format_tool_param_key_for_error(key: str) -> str:
     return f"{normalized_key[:available_length]}{_TRUNCATED_KEY_DISPLAY_SUFFIX}"
 
 
+def _copy_mapping_values_by_keys(
+    source_mapping: MappingABC[object, Any],
+    keys: list[str],
+    *,
+    read_error_message_builder: Callable[[str], str],
+) -> Dict[str, Any]:
+    normalized_values: Dict[str, Any] = {}
+    for key in keys:
+        try:
+            normalized_values[key] = source_mapping[key]
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            key_display = _format_tool_param_key_for_error(key)
+            raise HyperbrowserError(
+                read_error_message_builder(key_display),
+                original_error=exc,
+            ) from exc
+    return normalized_values
+
+
 def _normalize_extract_schema_mapping(
     schema_value: MappingABC[object, Any],
 ) -> Dict[str, Any]:
@@ -84,21 +105,18 @@ def _normalize_extract_schema_mapping(
             "Failed to read extract tool `schema` object keys",
             original_error=exc,
         ) from exc
-    normalized_schema: Dict[str, Any] = {}
+    normalized_schema_keys: list[str] = []
     for key in schema_keys:
         if type(key) is not str:
             raise HyperbrowserError("Extract tool `schema` object keys must be strings")
-        try:
-            normalized_schema[key] = schema_value[key]
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            key_display = _format_tool_param_key_for_error(key)
-            raise HyperbrowserError(
-                f"Failed to read extract tool `schema` value for key '{key_display}'",
-                original_error=exc,
-            ) from exc
-    return normalized_schema
+        normalized_schema_keys.append(key)
+    return _copy_mapping_values_by_keys(
+        schema_value,
+        normalized_schema_keys,
+        read_error_message_builder=lambda key_display: (
+            f"Failed to read extract tool `schema` value for key '{key_display}'"
+        ),
+    )
 
 
 def _prepare_extract_tool_params(params: Mapping[str, Any]) -> Dict[str, Any]:
@@ -188,19 +206,14 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
                 )
             continue
         raise HyperbrowserError("tool params keys must be strings")
-    normalized_params: Dict[str, Any] = {}
-    for key in param_keys:
-        try:
-            normalized_params[key] = params[key]
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            key_display = _format_tool_param_key_for_error(key)
-            raise HyperbrowserError(
-                f"Failed to read tool param '{key_display}'",
-                original_error=exc,
-            ) from exc
-    return normalized_params
+    normalized_param_keys = [key for key in param_keys if type(key) is str]
+    return _copy_mapping_values_by_keys(
+        params,
+        normalized_param_keys,
+        read_error_message_builder=lambda key_display: (
+            f"Failed to read tool param '{key_display}'"
+        ),
+    )
 
 
 def _serialize_extract_tool_data(data: Any) -> str:
