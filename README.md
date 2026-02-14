@@ -259,6 +259,7 @@ Ready-to-run examples are available in `examples/`:
 
 - `examples/async_batch_fetch.py`
 - `examples/async_crawl.py`
+- `examples/async_extension_create.py`
 - `examples/async_extension_list.py`
 - `examples/async_extract.py`
 - `examples/async_profile_list.py`
@@ -270,6 +271,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_web_search.py`
 - `examples/sync_batch_fetch.py`
 - `examples/sync_crawl.py`
+- `examples/sync_extension_create.py`
 - `examples/sync_extension_list.py`
 - `examples/sync_extract.py`
 - `examples/sync_profile_list.py`
