@@ -98,3 +98,16 @@ def test_hyperbrowser_error_str_handles_original_error_string_subclass_iteration
         str(error)
         == "request failed - Caused by _BrokenOriginalError: <unstringifiable _BrokenOriginalError>"
     )
+
+
+def test_hyperbrowser_error_str_falls_back_for_string_subclass_str_results():
+    class _BrokenMessage:
+        class _SubclassString(str):
+            pass
+
+        def __str__(self) -> str:
+            return self._SubclassString("request failed")
+
+    error = HyperbrowserError(_BrokenMessage())  # type: ignore[arg-type]
+
+    assert str(error) == "Hyperbrowser error"
