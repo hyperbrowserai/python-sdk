@@ -101,6 +101,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`),
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
+  - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
   - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),

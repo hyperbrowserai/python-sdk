@@ -7,6 +7,7 @@ from ..serialization_utils import (
     serialize_model_dump_to_dict,
     serialize_optional_model_dump_to_dict,
 )
+from ..session_profile_update_utils import resolve_update_profile_params
 from ..session_upload_utils import normalize_upload_file_input
 from ..session_utils import (
     parse_session_recordings_response_data,
@@ -225,36 +226,11 @@ class SessionManager:
         *,
         persist_changes: Optional[bool] = None,
     ) -> BasicResponse:
-        params_obj: UpdateSessionProfileParams
-
-        if type(params) is UpdateSessionProfileParams:
-            if persist_changes is not None:
-                raise HyperbrowserError(
-                    "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
-                )
-            params_obj = params
-        elif isinstance(params, UpdateSessionProfileParams):
-            raise HyperbrowserError(
-                "update_profile_params() requires a plain UpdateSessionProfileParams object."
-            )
-        elif isinstance(params, bool):
-            if persist_changes is not None:
-                raise HyperbrowserError(
-                    "Pass either a boolean as the second argument or persist_changes=bool, not both."
-                )
-            self._warn_update_profile_params_boolean_deprecated()
-            params_obj = UpdateSessionProfileParams(persist_changes=params)
-        elif params is None:
-            if persist_changes is None:
-                raise HyperbrowserError(
-                    "update_profile_params() requires either UpdateSessionProfileParams or persist_changes=bool."
-                )
-            self._warn_update_profile_params_boolean_deprecated()
-            params_obj = UpdateSessionProfileParams(persist_changes=persist_changes)
-        else:
-            raise HyperbrowserError(
-                "update_profile_params() requires either UpdateSessionProfileParams or a boolean persist_changes."
-            )
+        params_obj = resolve_update_profile_params(
+            params,
+            persist_changes=persist_changes,
+            on_deprecated_bool_usage=self._warn_update_profile_params_boolean_deprecated,
+        )
 
         serialized_params = serialize_model_dump_to_dict(
             params_obj,

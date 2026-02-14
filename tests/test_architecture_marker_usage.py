@@ -33,6 +33,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_example_sync_async_parity.py",
     "tests/test_example_run_instructions.py",
     "tests/test_computer_action_endpoint_helper_usage.py",
+    "tests/test_session_profile_update_helper_usage.py",
     "tests/test_session_upload_helper_usage.py",
     "tests/test_web_payload_helper_usage.py",
 )
