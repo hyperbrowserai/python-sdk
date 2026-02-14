@@ -60,6 +60,25 @@ def delete_model_request(
     )
 
 
+def put_model_request(
+    *,
+    client: Any,
+    route_path: str,
+    data: Optional[Dict[str, Any]],
+    model: Type[T],
+    operation_name: str,
+) -> T:
+    response = client.transport.put(
+        client._build_url(route_path),
+        data=data,
+    )
+    return parse_response_model(
+        response.data,
+        model=model,
+        operation_name=operation_name,
+    )
+
+
 async def post_model_request_async(
     *,
     client: Any,
@@ -107,6 +126,25 @@ async def delete_model_request_async(
 ) -> T:
     response = await client.transport.delete(
         client._build_url(route_path),
+    )
+    return parse_response_model(
+        response.data,
+        model=model,
+        operation_name=operation_name,
+    )
+
+
+async def put_model_request_async(
+    *,
+    client: Any,
+    route_path: str,
+    data: Optional[Dict[str, Any]],
+    model: Type[T],
+    operation_name: str,
+) -> T:
+    response = await client.transport.put(
+        client._build_url(route_path),
+        data=data,
     )
     return parse_response_model(
         response.data,

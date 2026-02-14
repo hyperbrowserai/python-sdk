@@ -5,7 +5,14 @@ from .job_route_builders import (
     build_job_route,
     build_job_status_route,
 )
-from .response_utils import parse_response_model
+from .model_request_utils import (
+    get_model_request,
+    get_model_request_async,
+    post_model_request,
+    post_model_request_async,
+    put_model_request,
+    put_model_request_async,
+)
 
 T = TypeVar("T")
 
@@ -18,12 +25,10 @@ def start_job(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.post(
-        client._build_url(route_prefix),
+    return post_model_request(
+        client=client,
+        route_path=route_prefix,
         data=payload,
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )
@@ -37,11 +42,10 @@ def get_job_status(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(build_job_status_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return get_model_request(
+        client=client,
+        route_path=build_job_status_route(route_prefix, job_id),
+        params=None,
         model=model,
         operation_name=operation_name,
     )
@@ -56,12 +60,10 @@ def get_job(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.get(
-        client._build_url(build_job_route(route_prefix, job_id)),
+    return get_model_request(
+        client=client,
+        route_path=build_job_route(route_prefix, job_id),
         params=params,
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )
@@ -75,12 +77,10 @@ async def start_job_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.post(
-        client._build_url(route_prefix),
+    return await post_model_request_async(
+        client=client,
+        route_path=route_prefix,
         data=payload,
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )
@@ -94,11 +94,10 @@ async def get_job_status_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(build_job_status_route(route_prefix, job_id)),
-    )
-    return parse_response_model(
-        response.data,
+    return await get_model_request_async(
+        client=client,
+        route_path=build_job_status_route(route_prefix, job_id),
+        params=None,
         model=model,
         operation_name=operation_name,
     )
@@ -113,12 +112,10 @@ async def get_job_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.get(
-        client._build_url(build_job_route(route_prefix, job_id)),
+    return await get_model_request_async(
+        client=client,
+        route_path=build_job_route(route_prefix, job_id),
         params=params,
-    )
-    return parse_response_model(
-        response.data,
         model=model,
         operation_name=operation_name,
     )
@@ -133,11 +130,10 @@ def put_job_action(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = client.transport.put(
-        client._build_url(build_job_action_route(route_prefix, job_id, action_suffix)),
-    )
-    return parse_response_model(
-        response.data,
+    return put_model_request(
+        client=client,
+        route_path=build_job_action_route(route_prefix, job_id, action_suffix),
+        data=None,
         model=model,
         operation_name=operation_name,
     )
@@ -152,11 +148,10 @@ async def put_job_action_async(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    response = await client.transport.put(
-        client._build_url(build_job_action_route(route_prefix, job_id, action_suffix)),
-    )
-    return parse_response_model(
-        response.data,
+    return await put_model_request_async(
+        client=client,
+        route_path=build_job_action_route(route_prefix, job_id, action_suffix),
+        data=None,
         model=model,
         operation_name=operation_name,
     )
