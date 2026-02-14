@@ -579,6 +579,49 @@ def test_extract_tool_async_runnable_wraps_serialization_failures():
     assert exc_info.value.original_error is not None
 
 
+def test_extract_tool_runnable_wraps_non_string_serialization_results(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _SerializedString(str):
+        pass
+
+    def _return_string_subclass(*_args, **_kwargs):
+        return _SerializedString('{"ok": true}')
+
+    monkeypatch.setattr(tools_module.json, "dumps", _return_string_subclass)
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize extract tool response data"
+    ) as exc_info:
+        WebsiteExtractTool.runnable(_SyncClient(), {"urls": ["https://example.com"]})
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
+def test_extract_tool_async_runnable_wraps_non_string_serialization_results(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _SerializedString(str):
+        pass
+
+    def _return_string_subclass(*_args, **_kwargs):
+        return _SerializedString('{"ok": true}')
+
+    monkeypatch.setattr(tools_module.json, "dumps", _return_string_subclass)
+
+    async def run():
+        return await WebsiteExtractTool.async_runnable(
+            _AsyncClient(), {"urls": ["https://example.com"]}
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to serialize extract tool response data"
+    ) as exc_info:
+        asyncio.run(run())
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
 def test_extract_tool_runnable_rejects_nan_json_payloads():
     client = _SyncClient(response_data={"value": math.nan})
 

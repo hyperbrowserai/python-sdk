@@ -207,7 +207,10 @@ def _serialize_extract_tool_data(data: Any) -> str:
     if data is None:
         return ""
     try:
-        return json.dumps(data, allow_nan=False)
+        serialized_data = json.dumps(data, allow_nan=False)
+        if type(serialized_data) is not str:
+            raise TypeError("serialized extract tool response data must be a string")
+        return serialized_data
     except HyperbrowserError:
         raise
     except Exception as exc:
