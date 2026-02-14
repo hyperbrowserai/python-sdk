@@ -115,6 +115,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_plain_list_helper_usage.py` (shared plain-list normalization helper usage enforcement),
   - `tests/test_plain_type_guard_usage.py` (`str`/`int` guardrail enforcement via plain-type checks),
   - `tests/test_plain_type_identity_usage.py` (direct `type(... ) is str|int` guardrail enforcement via shared helpers),
+  - `tests/test_polling_defaults_usage.py` (shared polling-default constant usage enforcement across polling helper modules),
   - `tests/test_polling_loop_usage.py` (`while True` polling-loop centralization in `hyperbrowser/client/polling.py`),
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),

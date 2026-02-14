@@ -1,6 +1,10 @@
 import asyncio
 
 import hyperbrowser.client.managers.job_wait_utils as job_wait_utils
+from hyperbrowser.client.managers.polling_defaults import (
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLLING_RETRY_DELAY_SECONDS,
+)
 
 
 def test_wait_for_job_result_with_defaults_forwards_arguments():
@@ -31,8 +35,11 @@ def test_wait_for_job_result_with_defaults_forwards_arguments():
     assert captured_kwargs["poll_interval_seconds"] == 1.5
     assert captured_kwargs["max_wait_seconds"] == 25.0
     assert captured_kwargs["max_status_failures"] == 4
-    assert captured_kwargs["fetch_max_attempts"] == job_wait_utils.POLLING_ATTEMPTS
-    assert captured_kwargs["fetch_retry_delay_seconds"] == 0.5
+    assert captured_kwargs["fetch_max_attempts"] == DEFAULT_POLLING_RETRY_ATTEMPTS
+    assert (
+        captured_kwargs["fetch_retry_delay_seconds"]
+        == DEFAULT_POLLING_RETRY_DELAY_SECONDS
+    )
 
 
 def test_wait_for_job_result_with_defaults_async_forwards_arguments():
@@ -65,5 +72,8 @@ def test_wait_for_job_result_with_defaults_async_forwards_arguments():
     assert captured_kwargs["poll_interval_seconds"] == 1.5
     assert captured_kwargs["max_wait_seconds"] == 25.0
     assert captured_kwargs["max_status_failures"] == 4
-    assert captured_kwargs["fetch_max_attempts"] == job_wait_utils.POLLING_ATTEMPTS
-    assert captured_kwargs["fetch_retry_delay_seconds"] == 0.5
+    assert captured_kwargs["fetch_max_attempts"] == DEFAULT_POLLING_RETRY_ATTEMPTS
+    assert (
+        captured_kwargs["fetch_retry_delay_seconds"]
+        == DEFAULT_POLLING_RETRY_DELAY_SECONDS
+    )

@@ -1,13 +1,15 @@
 from typing import Any, Awaitable, Callable, Optional, TypeVar
 
-from hyperbrowser.models.consts import POLLING_ATTEMPTS
-
 from ..polling import (
     build_fetch_operation_name,
     collect_paginated_results,
     collect_paginated_results_async,
     retry_operation,
     retry_operation_async,
+)
+from .polling_defaults import (
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLLING_RETRY_DELAY_SECONDS,
 )
 
 T = TypeVar("T")
@@ -22,8 +24,8 @@ def retry_operation_with_defaults(
     return retry_operation(
         operation_name=operation_name,
         operation=operation,
-        max_attempts=POLLING_ATTEMPTS,
-        retry_delay_seconds=0.5,
+        max_attempts=DEFAULT_POLLING_RETRY_ATTEMPTS,
+        retry_delay_seconds=DEFAULT_POLLING_RETRY_DELAY_SECONDS,
     )
 
 
@@ -35,8 +37,8 @@ async def retry_operation_with_defaults_async(
     return await retry_operation_async(
         operation_name=operation_name,
         operation=operation,
-        max_attempts=POLLING_ATTEMPTS,
-        retry_delay_seconds=0.5,
+        max_attempts=DEFAULT_POLLING_RETRY_ATTEMPTS,
+        retry_delay_seconds=DEFAULT_POLLING_RETRY_DELAY_SECONDS,
     )
 
 
@@ -86,8 +88,8 @@ def collect_paginated_results_with_defaults(
         get_total_page_batches=get_total_page_batches,
         on_page_success=on_page_success,
         max_wait_seconds=max_wait_seconds,
-        max_attempts=POLLING_ATTEMPTS,
-        retry_delay_seconds=0.5,
+        max_attempts=DEFAULT_POLLING_RETRY_ATTEMPTS,
+        retry_delay_seconds=DEFAULT_POLLING_RETRY_DELAY_SECONDS,
     )
 
 
@@ -107,6 +109,6 @@ async def collect_paginated_results_with_defaults_async(
         get_total_page_batches=get_total_page_batches,
         on_page_success=on_page_success,
         max_wait_seconds=max_wait_seconds,
-        max_attempts=POLLING_ATTEMPTS,
-        retry_delay_seconds=0.5,
+        max_attempts=DEFAULT_POLLING_RETRY_ATTEMPTS,
+        retry_delay_seconds=DEFAULT_POLLING_RETRY_DELAY_SECONDS,
     )

@@ -2,6 +2,10 @@ import asyncio
 from types import SimpleNamespace
 
 import hyperbrowser.client.managers.job_fetch_utils as job_fetch_utils
+from hyperbrowser.client.managers.polling_defaults import (
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLLING_RETRY_DELAY_SECONDS,
+)
 
 
 def test_retry_operation_with_defaults_forwards_arguments() -> None:
@@ -24,8 +28,8 @@ def test_retry_operation_with_defaults_forwards_arguments() -> None:
 
     assert result == {"ok": True}
     assert captured_kwargs["operation_name"] == "fetch job"
-    assert captured_kwargs["max_attempts"] == job_fetch_utils.POLLING_ATTEMPTS
-    assert captured_kwargs["retry_delay_seconds"] == 0.5
+    assert captured_kwargs["max_attempts"] == DEFAULT_POLLING_RETRY_ATTEMPTS
+    assert captured_kwargs["retry_delay_seconds"] == DEFAULT_POLLING_RETRY_DELAY_SECONDS
 
 
 def test_retry_operation_with_defaults_async_forwards_arguments() -> None:
@@ -50,8 +54,8 @@ def test_retry_operation_with_defaults_async_forwards_arguments() -> None:
 
     assert result == {"ok": True}
     assert captured_kwargs["operation_name"] == "fetch job"
-    assert captured_kwargs["max_attempts"] == job_fetch_utils.POLLING_ATTEMPTS
-    assert captured_kwargs["retry_delay_seconds"] == 0.5
+    assert captured_kwargs["max_attempts"] == DEFAULT_POLLING_RETRY_ATTEMPTS
+    assert captured_kwargs["retry_delay_seconds"] == DEFAULT_POLLING_RETRY_DELAY_SECONDS
 
 
 def test_collect_paginated_results_with_defaults_forwards_arguments() -> None:
@@ -79,8 +83,8 @@ def test_collect_paginated_results_with_defaults_forwards_arguments() -> None:
     assert result is None
     assert captured_kwargs["operation_name"] == "batch job"
     assert captured_kwargs["max_wait_seconds"] == 25.0
-    assert captured_kwargs["max_attempts"] == job_fetch_utils.POLLING_ATTEMPTS
-    assert captured_kwargs["retry_delay_seconds"] == 0.5
+    assert captured_kwargs["max_attempts"] == DEFAULT_POLLING_RETRY_ATTEMPTS
+    assert captured_kwargs["retry_delay_seconds"] == DEFAULT_POLLING_RETRY_DELAY_SECONDS
 
 
 def test_collect_paginated_results_with_defaults_async_forwards_arguments() -> None:
@@ -110,8 +114,8 @@ def test_collect_paginated_results_with_defaults_async_forwards_arguments() -> N
     assert result is None
     assert captured_kwargs["operation_name"] == "batch job"
     assert captured_kwargs["max_wait_seconds"] == 25.0
-    assert captured_kwargs["max_attempts"] == job_fetch_utils.POLLING_ATTEMPTS
-    assert captured_kwargs["retry_delay_seconds"] == 0.5
+    assert captured_kwargs["max_attempts"] == DEFAULT_POLLING_RETRY_ATTEMPTS
+    assert captured_kwargs["retry_delay_seconds"] == DEFAULT_POLLING_RETRY_DELAY_SECONDS
 
 
 def test_fetch_job_result_with_defaults_uses_fetch_operation_name() -> None:

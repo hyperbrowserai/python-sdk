@@ -1,8 +1,10 @@
 from typing import Awaitable, Callable, Optional, TypeVar
 
-from hyperbrowser.models.consts import POLLING_ATTEMPTS
-
 from ..polling import wait_for_job_result, wait_for_job_result_async
+from .polling_defaults import (
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLLING_RETRY_DELAY_SECONDS,
+)
 
 T = TypeVar("T")
 
@@ -25,8 +27,8 @@ def wait_for_job_result_with_defaults(
         poll_interval_seconds=poll_interval_seconds,
         max_wait_seconds=max_wait_seconds,
         max_status_failures=max_status_failures,
-        fetch_max_attempts=POLLING_ATTEMPTS,
-        fetch_retry_delay_seconds=0.5,
+        fetch_max_attempts=DEFAULT_POLLING_RETRY_ATTEMPTS,
+        fetch_retry_delay_seconds=DEFAULT_POLLING_RETRY_DELAY_SECONDS,
     )
 
 
@@ -48,6 +50,6 @@ async def wait_for_job_result_with_defaults_async(
         poll_interval_seconds=poll_interval_seconds,
         max_wait_seconds=max_wait_seconds,
         max_status_failures=max_status_failures,
-        fetch_max_attempts=POLLING_ATTEMPTS,
-        fetch_retry_delay_seconds=0.5,
+        fetch_max_attempts=DEFAULT_POLLING_RETRY_ATTEMPTS,
+        fetch_retry_delay_seconds=DEFAULT_POLLING_RETRY_DELAY_SECONDS,
     )
