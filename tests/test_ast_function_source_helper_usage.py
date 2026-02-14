@@ -14,6 +14,7 @@ AST_FUNCTION_SOURCE_GUARD_MODULES = (
     "tests/test_model_request_wrapper_internal_reuse.py",
     "tests/test_request_wrapper_internal_reuse.py",
     "tests/test_session_recordings_follow_redirects_boundary.py",
+    "tests/test_session_request_function_parse_boundary.py",
     "tests/test_session_request_wrapper_internal_reuse.py",
     "tests/test_session_resource_wrapper_internal_reuse.py",
     "tests/test_web_request_wrapper_internal_reuse.py",

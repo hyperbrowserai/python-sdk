@@ -99,6 +99,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_session_parse_usage_boundary.py",
     "tests/test_session_profile_update_helper_usage.py",
     "tests/test_session_recordings_follow_redirects_boundary.py",
+    "tests/test_session_request_function_parse_boundary.py",
     "tests/test_session_request_helper_usage.py",
     "tests/test_session_request_internal_reuse.py",
     "tests/test_session_request_wrapper_internal_reuse.py",
