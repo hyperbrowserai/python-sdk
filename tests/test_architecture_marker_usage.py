@@ -43,6 +43,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_manager_parse_boundary.py",
     "tests/test_manager_transport_boundary.py",
     "tests/test_mapping_copy_helper_import_boundary.py",
+    "tests/test_mapping_helpers_usage.py",
     "tests/test_mapping_read_keys_helper_import_boundary.py",
     "tests/test_mapping_read_helper_import_boundary.py",
     "tests/test_mapping_reader_usage.py",
