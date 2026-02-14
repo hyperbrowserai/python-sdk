@@ -135,6 +135,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extension_request_internal_reuse.py` (extension request-helper internal reuse of shared model request helpers),
   - `tests/test_extension_route_constants_usage.py` (extension manager route-constant usage enforcement),
   - `tests/test_extract_payload_helper_usage.py` (extract start-payload helper usage enforcement),
+  - `tests/test_file_message_prefix_literal_boundary.py` (extension/session file-message prefix literal centralization in shared metadata modules),
   - `tests/test_file_open_error_helper_import_boundary.py` (shared file-open error-message helper import boundary enforcement),
   - `tests/test_file_open_error_helper_usage.py` (shared file-open error-message helper usage enforcement),
   - `tests/test_file_path_display_helper_import_boundary.py` (shared file-path display helper import boundary enforcement),
