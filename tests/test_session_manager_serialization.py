@@ -4,8 +4,7 @@ from typing import Any, Awaitable, Callable, Tuple, Type
 
 import pytest
 
-import hyperbrowser.client.managers.async_manager.session as async_session_module
-import hyperbrowser.client.managers.sync_manager.session as sync_session_module
+import hyperbrowser.client.managers.session_request_utils as session_request_utils_module
 from hyperbrowser.client.managers.async_manager.session import (
     SessionManager as AsyncSessionManager,
 )
@@ -231,7 +230,7 @@ def test_sync_session_methods_serialize_params(
         lambda *args, **kwargs: dict(expected_payload),
     )
     monkeypatch.setattr(
-        sync_session_module,
+        session_request_utils_module,
         "parse_session_response_model",
         lambda data, model, operation_name: {"data": data, "operation": operation_name},
     )
@@ -370,7 +369,7 @@ def test_async_session_methods_serialize_params(
         lambda *args, **kwargs: dict(expected_payload),
     )
     monkeypatch.setattr(
-        async_session_module,
+        session_request_utils_module,
         "parse_session_response_model",
         lambda data, model, operation_name: {"data": data, "operation": operation_name},
     )
