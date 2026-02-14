@@ -74,3 +74,15 @@ def test_build_page_batch_params_preserves_hyperbrowser_errors():
         build_page_batch_params(_BrokenParams, page=1)
 
     assert exc_info.value.original_error is None
+
+
+def test_build_page_batch_params_rejects_constructor_returning_wrong_type():
+    class _BrokenParams:
+        def __new__(cls, *, page, batch_size):  # noqa: ARG003
+            return {"page": page, "batch_size": batch_size}
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Paginated page params model constructor returned invalid type",
+    ):
+        build_page_batch_params(_BrokenParams, page=1)

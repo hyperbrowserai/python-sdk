@@ -23,7 +23,7 @@ def build_page_batch_params(
     if batch_size <= 0:
         raise HyperbrowserError("batch_size must be a positive integer")
     try:
-        return cast(T, params_model(page=page, batch_size=batch_size))
+        params_obj = params_model(page=page, batch_size=batch_size)
     except HyperbrowserError:
         raise
     except Exception as exc:
@@ -31,3 +31,8 @@ def build_page_batch_params(
             "Failed to build paginated page params",
             original_error=exc,
         ) from exc
+    if type(params_obj) is not params_model:
+        raise HyperbrowserError(
+            "Paginated page params model constructor returned invalid type"
+        )
+    return cast(T, params_obj)

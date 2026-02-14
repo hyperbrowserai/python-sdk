@@ -22,3 +22,7 @@ def test_paginated_managers_use_shared_page_params_helper():
         module_text = Path(module_path).read_text(encoding="utf-8")
         assert "build_page_batch_params(" in module_text
         assert "batch_size=100" not in module_text
+        assert "GetBatchScrapeJobParams(page=page" not in module_text
+        assert "GetCrawlJobParams(page=page" not in module_text
+        assert "GetBatchFetchJobParams(page=page" not in module_text
+        assert "GetWebCrawlJobParams(page=page" not in module_text
