@@ -10,6 +10,7 @@ from hyperbrowser.models import (
 )
 from ...web_payload_utils import build_web_crawl_start_payload
 from ...web_payload_utils import build_web_crawl_get_params
+from ...web_pagination_utils import initialize_paginated_job_response
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
@@ -94,14 +95,10 @@ class WebCrawlManager:
                 retry_delay_seconds=0.5,
             )
 
-        job_response = WebCrawlJobResponse(
-            jobId=job_id,
+        job_response = initialize_paginated_job_response(
+            model=WebCrawlJobResponse,
+            job_id=job_id,
             status=job_status,
-            data=[],
-            currentPageBatch=0,
-            totalPageBatches=0,
-            totalPages=0,
-            batchSize=100,
         )
 
         def merge_page_response(page_response: WebCrawlJobResponse) -> None:

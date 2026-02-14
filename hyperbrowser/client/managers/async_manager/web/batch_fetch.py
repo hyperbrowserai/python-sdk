@@ -10,6 +10,7 @@ from hyperbrowser.models import (
 )
 from ...web_payload_utils import build_batch_fetch_start_payload
 from ...web_payload_utils import build_batch_fetch_get_params
+from ...web_pagination_utils import initialize_paginated_job_response
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
@@ -96,14 +97,10 @@ class BatchFetchManager:
                 retry_delay_seconds=0.5,
             )
 
-        job_response = BatchFetchJobResponse(
-            jobId=job_id,
+        job_response = initialize_paginated_job_response(
+            model=BatchFetchJobResponse,
+            job_id=job_id,
             status=job_status,
-            data=[],
-            currentPageBatch=0,
-            totalPageBatches=0,
-            totalPages=0,
-            batchSize=100,
         )
 
         def merge_page_response(page_response: BatchFetchJobResponse) -> None:
