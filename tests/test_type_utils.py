@@ -34,6 +34,15 @@ def test_string_helpers_enforce_plain_string_boundaries():
     assert is_string_subclass_instance(_StringSubclass("value")) is True
 
 
+def test_string_helpers_reject_non_string_inputs():
+    assert is_plain_string(None) is False
+    assert is_plain_string(123) is False
+    assert is_plain_string(b"value") is False
+    assert is_string_subclass_instance(None) is False
+    assert is_string_subclass_instance(123) is False
+    assert is_string_subclass_instance(b"value") is False
+
+
 def test_int_helpers_enforce_plain_integer_boundaries():
     class _IntSubclass(int):
         pass
@@ -43,3 +52,18 @@ def test_int_helpers_enforce_plain_integer_boundaries():
     assert is_int_subclass_instance(10) is False
     assert is_int_subclass_instance(_IntSubclass(10)) is True
     assert is_int_subclass_instance(True) is True
+
+
+def test_int_helpers_reject_non_integer_and_handle_indirect_subclasses():
+    class _IntSubclass(int):
+        pass
+
+    class _NestedIntSubclass(_IntSubclass):
+        pass
+
+    assert is_plain_int(3.14) is False
+    assert is_plain_int(False) is False
+    assert is_plain_int(None) is False
+    assert is_int_subclass_instance(3.14) is False
+    assert is_int_subclass_instance(None) is False
+    assert is_int_subclass_instance(_NestedIntSubclass(7)) is True
