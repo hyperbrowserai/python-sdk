@@ -86,7 +86,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
   - `tests/test_pyproject_architecture_marker.py` (pytest marker registration enforcement),
   - `tests/test_architecture_marker_usage.py` (architecture marker coverage across guard modules),
-  - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement).
+  - `tests/test_readme_examples_listing.py` (README example-listing consistency enforcement),
+  - `tests/test_plain_type_guard_usage.py` (`str`/`int` guardrail enforcement via plain-type checks).
 
 ## Code quality conventions
 

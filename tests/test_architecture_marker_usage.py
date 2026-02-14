@@ -16,6 +16,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_makefile_quality_targets.py",
     "tests/test_pyproject_architecture_marker.py",
     "tests/test_architecture_marker_usage.py",
+    "tests/test_plain_type_guard_usage.py",
 )
 
 
