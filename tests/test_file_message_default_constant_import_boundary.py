@@ -15,6 +15,7 @@ EXPECTED_EXTENSION_DEFAULT_CONSTANT_CONSUMERS = (
     "tests/test_extension_operation_metadata_usage.py",
     "tests/test_file_message_default_constant_import_boundary.py",
     "tests/test_file_message_default_constant_usage.py",
+    "tests/test_file_open_error_helper_usage.py",
 )
 
 EXPECTED_SESSION_DEFAULT_CONSTANT_CONSUMERS = (
@@ -22,6 +23,7 @@ EXPECTED_SESSION_DEFAULT_CONSTANT_CONSUMERS = (
     "hyperbrowser/client/managers/session_upload_utils.py",
     "tests/test_file_message_default_constant_import_boundary.py",
     "tests/test_file_message_default_constant_usage.py",
+    "tests/test_file_open_error_helper_usage.py",
     "tests/test_session_operation_metadata.py",
     "tests/test_session_upload_metadata_usage.py",
 )
