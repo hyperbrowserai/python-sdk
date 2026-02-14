@@ -3,14 +3,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_file_path_display_helper_usage import FILE_PATH_DISPLAY_MODULES
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_FILE_PATH_ERROR_MESSAGE_IMPORTERS = (
-    "hyperbrowser/client/managers/extension_create_utils.py",
-    "hyperbrowser/client/managers/session_upload_utils.py",
-    "tests/test_file_utils.py",
-)
+EXPECTED_EXTRA_IMPORTERS = ("tests/test_file_utils.py",)
 
 
 def _imports_build_file_path_error_message(module_text: str) -> bool:
@@ -36,4 +34,5 @@ def test_build_file_path_error_message_imports_are_centralized():
         if _imports_build_file_path_error_message(module_text):
             discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_FILE_PATH_ERROR_MESSAGE_IMPORTERS)
+    expected_modules = sorted([*FILE_PATH_DISPLAY_MODULES, *EXPECTED_EXTRA_IMPORTERS])
+    assert discovered_modules == expected_modules
