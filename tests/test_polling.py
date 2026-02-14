@@ -1142,6 +1142,21 @@ def test_poll_until_terminal_status_retries_server_errors():
     assert attempts["count"] == 3
 
 
+def test_poll_until_terminal_status_rejects_string_subclass_status_values():
+    class _Status(str):
+        pass
+
+    with pytest.raises(HyperbrowserError, match="get_status must return a string"):
+        poll_until_terminal_status(
+            operation_name="sync poll subclass status value",
+            get_status=lambda: _Status("completed"),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.0,
+            max_wait_seconds=1.0,
+            max_status_failures=1,
+        )
+
+
 def test_poll_until_terminal_status_raises_after_status_failures():
     with pytest.raises(
         HyperbrowserPollingError, match="Failed to poll sync poll failure"
@@ -2392,6 +2407,24 @@ def test_poll_until_terminal_status_async_retries_server_errors():
 
         assert status == "completed"
         assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_poll_until_terminal_status_async_rejects_string_subclass_status_values():
+    class _Status(str):
+        pass
+
+    async def run() -> None:
+        with pytest.raises(HyperbrowserError, match="get_status must return a string"):
+            await poll_until_terminal_status_async(
+                operation_name="async poll subclass status value",
+                get_status=lambda: asyncio.sleep(0, result=_Status("completed")),
+                is_terminal_status=lambda value: value == "completed",
+                poll_interval_seconds=0.0,
+                max_wait_seconds=1.0,
+                max_status_failures=1,
+            )
 
     asyncio.run(run())
 

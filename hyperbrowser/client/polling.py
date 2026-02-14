@@ -265,7 +265,7 @@ def _ensure_status_string(status: object, *, operation_name: str) -> str:
     _ensure_non_awaitable(
         status, callback_name="get_status", operation_name=operation_name
     )
-    if not isinstance(status, str):
+    if type(status) is not str:
         raise _NonRetryablePollingError(
             f"get_status must return a string for {operation_name}"
         )
