@@ -12,7 +12,12 @@ from ..file_utils import (
     ensure_existing_file_path,
     open_binary_file,
 )
-from .session_operation_metadata import SESSION_OPERATION_METADATA
+from .session_operation_metadata import (
+    SESSION_DEFAULT_UPLOAD_MISSING_FILE_MESSAGE_PREFIX,
+    SESSION_DEFAULT_UPLOAD_NOT_FILE_MESSAGE_PREFIX,
+    SESSION_DEFAULT_UPLOAD_OPEN_FILE_ERROR_PREFIX,
+    SESSION_OPERATION_METADATA,
+)
 
 
 def normalize_upload_file_input(
@@ -33,12 +38,12 @@ def normalize_upload_file_input(
             missing_file_message=build_file_path_error_message(
                 raw_file_path,
                 prefix=SESSION_OPERATION_METADATA.upload_missing_file_message_prefix,
-                default_prefix="Upload file not found at path",
+                default_prefix=SESSION_DEFAULT_UPLOAD_MISSING_FILE_MESSAGE_PREFIX,
             ),
             not_file_message=build_file_path_error_message(
                 raw_file_path,
                 prefix=SESSION_OPERATION_METADATA.upload_not_file_message_prefix,
-                default_prefix="Upload file path must point to a file",
+                default_prefix=SESSION_DEFAULT_UPLOAD_NOT_FILE_MESSAGE_PREFIX,
             ),
         )
         return file_path, None
@@ -84,7 +89,7 @@ def open_upload_files_from_input(
             open_error_message=build_open_file_error_message(
                 file_path,
                 prefix=SESSION_OPERATION_METADATA.upload_open_file_error_prefix,
-                default_prefix="Failed to open upload file at path",
+                default_prefix=SESSION_DEFAULT_UPLOAD_OPEN_FILE_ERROR_PREFIX,
             ),
         ) as opened_file:
             yield {"file": opened_file}

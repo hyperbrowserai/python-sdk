@@ -1,4 +1,7 @@
 from hyperbrowser.client.managers.session_operation_metadata import (
+    SESSION_DEFAULT_UPLOAD_MISSING_FILE_MESSAGE_PREFIX,
+    SESSION_DEFAULT_UPLOAD_NOT_FILE_MESSAGE_PREFIX,
+    SESSION_DEFAULT_UPLOAD_OPEN_FILE_ERROR_PREFIX,
     SESSION_OPERATION_METADATA,
 )
 
@@ -18,6 +21,18 @@ def test_session_operation_metadata_values():
         == "session downloads url"
     )
     assert SESSION_OPERATION_METADATA.upload_file_operation_name == "session upload file"
+    assert (
+        SESSION_OPERATION_METADATA.upload_missing_file_message_prefix
+        == SESSION_DEFAULT_UPLOAD_MISSING_FILE_MESSAGE_PREFIX
+    )
+    assert (
+        SESSION_OPERATION_METADATA.upload_not_file_message_prefix
+        == SESSION_DEFAULT_UPLOAD_NOT_FILE_MESSAGE_PREFIX
+    )
+    assert (
+        SESSION_OPERATION_METADATA.upload_open_file_error_prefix
+        == SESSION_DEFAULT_UPLOAD_OPEN_FILE_ERROR_PREFIX
+    )
     assert SESSION_OPERATION_METADATA.extend_operation_name == "session extend"
     assert (
         SESSION_OPERATION_METADATA.update_profile_operation_name

@@ -15,6 +15,8 @@ def test_extension_create_helper_uses_shared_operation_metadata_prefixes():
     assert "extension_operation_metadata import" in module_text
     assert "EXTENSION_OPERATION_METADATA.missing_file_message_prefix" in module_text
     assert "EXTENSION_OPERATION_METADATA.not_file_message_prefix" in module_text
+    assert "EXTENSION_DEFAULT_MISSING_FILE_MESSAGE_PREFIX" in module_text
+    assert "EXTENSION_DEFAULT_NOT_FILE_MESSAGE_PREFIX" in module_text
     assert (
         re.search(
             r'(?<!default_)prefix="Extension file not found at path"',

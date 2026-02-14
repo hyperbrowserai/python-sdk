@@ -2,7 +2,10 @@ from typing import List
 
 from ...file_utils import build_open_file_error_message, open_binary_file
 from ..extension_create_utils import normalize_extension_create_input
-from ..extension_operation_metadata import EXTENSION_OPERATION_METADATA
+from ..extension_operation_metadata import (
+    EXTENSION_DEFAULT_OPEN_FILE_ERROR_PREFIX,
+    EXTENSION_OPERATION_METADATA,
+)
 from ..extension_request_utils import (
     create_extension_resource,
     list_extension_resources,
@@ -30,7 +33,7 @@ class ExtensionManager:
             open_error_message=build_open_file_error_message(
                 file_path,
                 prefix=self._OPERATION_METADATA.open_file_error_prefix,
-                default_prefix="Failed to open extension file at path",
+                default_prefix=EXTENSION_DEFAULT_OPEN_FILE_ERROR_PREFIX,
             ),
         ) as extension_file:
             return create_extension_resource(

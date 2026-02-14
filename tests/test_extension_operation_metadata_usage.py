@@ -19,6 +19,7 @@ def test_extension_managers_use_shared_operation_metadata():
         assert "_OPERATION_METADATA = " in module_text
         assert "operation_name=self._OPERATION_METADATA." in module_text
         assert "prefix=self._OPERATION_METADATA.open_file_error_prefix" in module_text
+        assert "default_prefix=EXTENSION_DEFAULT_OPEN_FILE_ERROR_PREFIX" in module_text
         assert 'operation_name="' not in module_text
         assert (
             re.search(
