@@ -1,6 +1,5 @@
 from typing import Optional
 
-from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from hyperbrowser.models.extract import (
     ExtractJobResponse,
     ExtractJobStatusResponse,
@@ -10,6 +9,11 @@ from hyperbrowser.models.extract import (
 from ..extract_payload_utils import build_extract_start_payload
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_wait_utils import wait_for_job_result_with_defaults_async
+from ..polling_defaults import (
+    DEFAULT_MAX_WAIT_SECONDS,
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
+)
 from ..start_job_utils import build_started_job_context
 from ..response_utils import parse_response_model
 
@@ -54,9 +58,9 @@ class ExtractManager:
     async def start_and_wait(
         self,
         params: StartExtractJobParams,
-        poll_interval_seconds: float = 2.0,
-        max_wait_seconds: Optional[float] = 600.0,
-        max_status_failures: int = POLLING_ATTEMPTS,
+        poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
+        max_wait_seconds: Optional[float] = DEFAULT_MAX_WAIT_SECONDS,
+        max_status_failures: int = DEFAULT_POLLING_RETRY_ATTEMPTS,
     ) -> ExtractJobResponse:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(

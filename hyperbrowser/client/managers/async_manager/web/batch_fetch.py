@@ -6,7 +6,6 @@ from hyperbrowser.models import (
     BatchFetchJobStatusResponse,
     GetBatchFetchJobParams,
     BatchFetchJobResponse,
-    POLLING_ATTEMPTS,
 )
 from ...page_params_utils import build_page_batch_params
 from ...job_status_utils import is_default_terminal_job_status
@@ -24,6 +23,11 @@ from ...job_fetch_utils import (
 )
 from ...job_poll_utils import (
     poll_job_until_terminal_status_async as poll_until_terminal_status_async,
+)
+from ...polling_defaults import (
+    DEFAULT_MAX_WAIT_SECONDS,
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
 )
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
@@ -76,9 +80,9 @@ class BatchFetchManager:
         self,
         params: StartBatchFetchJobParams,
         return_all_pages: bool = True,
-        poll_interval_seconds: float = 2.0,
-        max_wait_seconds: Optional[float] = 600.0,
-        max_status_failures: int = POLLING_ATTEMPTS,
+        poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
+        max_wait_seconds: Optional[float] = DEFAULT_MAX_WAIT_SECONDS,
+        max_status_failures: int = DEFAULT_POLLING_RETRY_ATTEMPTS,
     ) -> BatchFetchJobResponse:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(

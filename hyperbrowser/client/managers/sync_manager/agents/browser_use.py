@@ -7,12 +7,16 @@ from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
 
 from .....models import (
-    POLLING_ATTEMPTS,
     BasicResponse,
     BrowserUseTaskResponse,
     BrowserUseTaskStatusResponse,
     StartBrowserUseTaskParams,
     StartBrowserUseTaskResponse,
+)
+from ...polling_defaults import (
+    DEFAULT_MAX_WAIT_SECONDS,
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
 )
 
 
@@ -65,9 +69,9 @@ class BrowserUseManager:
     def start_and_wait(
         self,
         params: StartBrowserUseTaskParams,
-        poll_interval_seconds: float = 2.0,
-        max_wait_seconds: Optional[float] = 600.0,
-        max_status_failures: int = POLLING_ATTEMPTS,
+        poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
+        max_wait_seconds: Optional[float] = DEFAULT_MAX_WAIT_SECONDS,
+        max_status_failures: int = DEFAULT_POLLING_RETRY_ATTEMPTS,
     ) -> BrowserUseTaskResponse:
         job_start_resp = self.start(params)
         job_id, operation_name = build_started_job_context(

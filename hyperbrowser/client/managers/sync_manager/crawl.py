@@ -1,6 +1,5 @@
 from typing import Optional
 
-from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ..job_poll_utils import poll_job_until_terminal_status as poll_until_terminal_status
 from ..job_fetch_utils import (
     collect_paginated_results_with_defaults,
@@ -15,6 +14,11 @@ from ..job_pagination_utils import (
 )
 from ..job_status_utils import is_default_terminal_job_status
 from ..job_start_payload_utils import build_crawl_start_payload
+from ..polling_defaults import (
+    DEFAULT_MAX_WAIT_SECONDS,
+    DEFAULT_POLLING_RETRY_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
+)
 from ..serialization_utils import (
     serialize_model_dump_or_default,
 )
@@ -77,9 +81,9 @@ class CrawlManager:
         self,
         params: StartCrawlJobParams,
         return_all_pages: bool = True,
-        poll_interval_seconds: float = 2.0,
-        max_wait_seconds: Optional[float] = 600.0,
-        max_status_failures: int = POLLING_ATTEMPTS,
+        poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
+        max_wait_seconds: Optional[float] = DEFAULT_MAX_WAIT_SECONDS,
+        max_status_failures: int = DEFAULT_POLLING_RETRY_ATTEMPTS,
     ) -> CrawlJobResponse:
         job_start_resp = self.start(params)
         job_id, operation_name = build_started_job_context(

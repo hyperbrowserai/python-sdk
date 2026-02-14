@@ -122,6 +122,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_schema_injection_helper_usage.py` (shared schema injection helper usage enforcement in payload builders),
   - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
+  - `tests/test_start_and_wait_default_constants_usage.py` (shared start-and-wait default-constant usage enforcement),
   - `tests/test_start_job_context_helper_usage.py` (shared started-job context helper usage enforcement),
   - `tests/test_started_job_helper_boundary.py` (centralization boundary enforcement for started-job helper primitives),
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
