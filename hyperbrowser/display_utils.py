@@ -1,12 +1,15 @@
-from hyperbrowser.type_utils import is_plain_string
+from hyperbrowser.type_utils import is_plain_int, is_plain_string
 
 _TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
 _DEFAULT_BLANK_KEY_FALLBACK = "<blank key>"
+_DEFAULT_MAX_DISPLAY_LENGTH = 200
 
 
 def normalize_display_text(value: object, *, max_length: int) -> str:
     if not is_plain_string(value):
         return ""
+    if not is_plain_int(max_length) or max_length <= 0:
+        max_length = _DEFAULT_MAX_DISPLAY_LENGTH
     try:
         sanitized_value = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character

@@ -37,6 +37,15 @@ def test_normalize_display_text_rejects_string_subclass_inputs():
     assert normalize_display_text(_StringSubclass("value"), max_length=20) == ""
 
 
+def test_normalize_display_text_uses_default_length_for_non_int_max_length():
+    assert normalize_display_text("value", max_length="invalid") == "value"  # type: ignore[arg-type]
+
+
+def test_normalize_display_text_uses_default_length_for_non_positive_max_length():
+    assert normalize_display_text("value", max_length=0) == "value"
+    assert normalize_display_text("value", max_length=-10) == "value"
+
+
 def test_format_string_key_for_error_returns_normalized_key():
     assert format_string_key_for_error(" \nkey\t ", max_length=20) == "?key?"
 
