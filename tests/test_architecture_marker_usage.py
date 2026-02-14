@@ -23,6 +23,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_core_type_helper_usage.py",
     "tests/test_contributing_architecture_guard_listing.py",
     "tests/test_examples_syntax.py",
+    "tests/test_docs_python3_commands.py",
 )
 
 
