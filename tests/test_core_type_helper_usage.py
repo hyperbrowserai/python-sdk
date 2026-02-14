@@ -10,6 +10,7 @@ CORE_MODULES = (
     "hyperbrowser/config.py",
     "hyperbrowser/header_utils.py",
     "hyperbrowser/client/base.py",
+    "hyperbrowser/client/file_utils.py",
     "hyperbrowser/client/polling.py",
     "hyperbrowser/models/session.py",
     "hyperbrowser/transport/base.py",
