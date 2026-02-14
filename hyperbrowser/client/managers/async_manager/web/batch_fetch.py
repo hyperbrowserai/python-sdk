@@ -10,7 +10,10 @@ from hyperbrowser.models import (
 )
 from ...web_payload_utils import build_batch_fetch_start_payload
 from ...web_payload_utils import build_batch_fetch_get_params
-from ...web_pagination_utils import initialize_paginated_job_response
+from ...web_pagination_utils import (
+    initialize_paginated_job_response,
+    merge_paginated_page_response,
+)
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
@@ -104,13 +107,7 @@ class BatchFetchManager:
         )
 
         def merge_page_response(page_response: BatchFetchJobResponse) -> None:
-            if page_response.data:
-                job_response.data.extend(page_response.data)
-            job_response.current_page_batch = page_response.current_page_batch
-            job_response.total_pages = page_response.total_pages
-            job_response.total_page_batches = page_response.total_page_batches
-            job_response.batch_size = page_response.batch_size
-            job_response.error = page_response.error
+            merge_paginated_page_response(job_response, page_response)
 
         await collect_paginated_results_async(
             operation_name=operation_name,
