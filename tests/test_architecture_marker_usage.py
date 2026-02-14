@@ -29,6 +29,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_examples_syntax.py",
     "tests/test_docs_python3_commands.py",
     "tests/test_examples_naming_convention.py",
+    "tests/test_job_pagination_helper_usage.py",
     "tests/test_example_sync_async_parity.py",
     "tests/test_example_run_instructions.py",
     "tests/test_computer_action_endpoint_helper_usage.py",

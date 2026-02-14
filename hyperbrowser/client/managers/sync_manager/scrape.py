@@ -10,6 +10,10 @@ from ...polling import (
     retry_operation,
     wait_for_job_result,
 )
+from ..job_pagination_utils import (
+    initialize_job_paginated_response,
+    merge_job_paginated_page_response,
+)
 from ..serialization_utils import (
     serialize_model_dump_or_default,
     serialize_model_dump_to_dict,
@@ -107,24 +111,19 @@ class BatchScrapeManager:
                 retry_delay_seconds=0.5,
             )
 
-        job_response = BatchScrapeJobResponse(
-            jobId=job_id,
+        job_response = initialize_job_paginated_response(
+            model=BatchScrapeJobResponse,
+            job_id=job_id,
             status=job_status,
-            data=[],
-            currentPageBatch=0,
-            totalPageBatches=0,
-            totalScrapedPages=0,
-            batchSize=100,
+            total_counter_alias="totalScrapedPages",
         )
 
         def merge_page_response(page_response: BatchScrapeJobResponse) -> None:
-            if page_response.data:
-                job_response.data.extend(page_response.data)
-            job_response.current_page_batch = page_response.current_page_batch
-            job_response.total_scraped_pages = page_response.total_scraped_pages
-            job_response.total_page_batches = page_response.total_page_batches
-            job_response.batch_size = page_response.batch_size
-            job_response.error = page_response.error
+            merge_job_paginated_page_response(
+                job_response,
+                page_response,
+                total_counter_attr="total_scraped_pages",
+            )
 
         collect_paginated_results(
             operation_name=operation_name,
