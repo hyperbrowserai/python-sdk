@@ -211,6 +211,58 @@ def test_client_config_rejects_non_string_values():
         ClientConfig(api_key="bad\nkey")
 
 
+def test_client_config_normalize_base_url_wraps_strip_runtime_errors():
+    class _BrokenBaseUrl(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("base_url strip exploded")
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize base_url") as exc_info:
+        ClientConfig.normalize_base_url(_BrokenBaseUrl("https://example.local"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_normalize_base_url_preserves_hyperbrowser_strip_errors():
+    class _BrokenBaseUrl(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise HyperbrowserError("custom base_url strip failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom base_url strip failure"
+    ) as exc_info:
+        ClientConfig.normalize_base_url(_BrokenBaseUrl("https://example.local"))
+
+    assert exc_info.value.original_error is None
+
+
+def test_client_config_normalize_base_url_wraps_non_string_strip_results():
+    class _BrokenBaseUrl(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return object()
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize base_url") as exc_info:
+        ClientConfig.normalize_base_url(_BrokenBaseUrl("https://example.local"))
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
+def test_client_config_resolve_base_url_from_env_wraps_strip_runtime_errors():
+    class _BrokenBaseUrl(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("environment base_url strip exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize HYPERBROWSER_BASE_URL"
+    ) as exc_info:
+        ClientConfig.resolve_base_url_from_env(_BrokenBaseUrl("https://example.local"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
 def test_client_config_wraps_api_key_strip_runtime_errors():
     class _BrokenApiKey(str):
         def strip(self, chars=None):  # type: ignore[override]

@@ -60,6 +60,18 @@ class _NonStringLowerHeaderName(str):
         return object()
 
 
+class _BrokenHeadersEnvString(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        raise RuntimeError("headers env strip exploded")
+
+
+class _NonStringHeadersEnvStripResult(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return object()
+
+
 def test_normalize_headers_trims_header_names():
     headers = normalize_headers(
         {"  X-Correlation-Id  ": "abc123"},
@@ -190,6 +202,38 @@ def test_parse_headers_env_json_rejects_non_string_input():
         HyperbrowserError, match="HYPERBROWSER_HEADERS must be a string"
     ):
         parse_headers_env_json(123)  # type: ignore[arg-type]
+
+
+def test_parse_headers_env_json_wraps_strip_runtime_errors():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
+    ) as exc_info:
+        parse_headers_env_json(_BrokenHeadersEnvString('{"X-Trace-Id":"abc123"}'))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_parse_headers_env_json_preserves_hyperbrowser_strip_errors():
+    class _BrokenHeadersEnvString(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise HyperbrowserError("custom headers strip failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom headers strip failure"
+    ) as exc_info:
+        parse_headers_env_json(_BrokenHeadersEnvString('{"X-Trace-Id":"abc123"}'))
+
+    assert exc_info.value.original_error is None
+
+
+def test_parse_headers_env_json_wraps_non_string_strip_results():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
+    ) as exc_info:
+        parse_headers_env_json(_NonStringHeadersEnvStripResult('{"X-Trace-Id":"abc123"}'))
+
+    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_parse_headers_env_json_rejects_invalid_json():

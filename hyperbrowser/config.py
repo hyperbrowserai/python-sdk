@@ -105,7 +105,20 @@ class ClientConfig:
     def normalize_base_url(base_url: str) -> str:
         if not isinstance(base_url, str):
             raise HyperbrowserError("base_url must be a string")
-        normalized_base_url = base_url.strip().rstrip("/")
+        try:
+            stripped_base_url = base_url.strip()
+            if type(stripped_base_url) is not str:
+                raise TypeError("normalized base_url must be a string")
+            normalized_base_url = stripped_base_url.rstrip("/")
+            if type(normalized_base_url) is not str:
+                raise TypeError("normalized base_url must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize base_url",
+                original_error=exc,
+            ) from exc
         if not normalized_base_url:
             raise HyperbrowserError("base_url must not be empty")
         if "\n" in normalized_base_url or "\r" in normalized_base_url:
@@ -318,6 +331,17 @@ class ClientConfig:
             return "https://api.hyperbrowser.ai"
         if not isinstance(raw_base_url, str):
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must be a string")
-        if not raw_base_url.strip():
+        try:
+            normalized_env_base_url = raw_base_url.strip()
+            if not isinstance(normalized_env_base_url, str):
+                raise TypeError("normalized environment base_url must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize HYPERBROWSER_BASE_URL",
+                original_error=exc,
+            ) from exc
+        if not normalized_env_base_url:
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must not be empty when set")
-        return ClientConfig.normalize_base_url(raw_base_url)
+        return ClientConfig.normalize_base_url(normalized_env_base_url)
