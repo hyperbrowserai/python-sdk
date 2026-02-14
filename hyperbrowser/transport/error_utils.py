@@ -100,7 +100,10 @@ def _normalize_request_method(method: Any) -> str:
             raw_method = memoryview(raw_method).tobytes().decode("ascii")
         except (TypeError, ValueError, UnicodeDecodeError):
             return "UNKNOWN"
-    elif not isinstance(raw_method, str):
+    elif isinstance(raw_method, str):
+        if type(raw_method) is not str:
+            return "UNKNOWN"
+    elif type(raw_method) is not str:
         try:
             raw_method = str(raw_method)
         except Exception:
@@ -145,7 +148,10 @@ def _normalize_request_url(url: Any) -> str:
             raw_url = memoryview(raw_url).tobytes().decode("utf-8")
         except (TypeError, ValueError, UnicodeDecodeError):
             return "unknown URL"
-    elif not isinstance(raw_url, str):
+    elif isinstance(raw_url, str):
+        if type(raw_url) is not str:
+            return "unknown URL"
+    elif type(raw_url) is not str:
         try:
             raw_url = str(raw_url)
         except Exception:

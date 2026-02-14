@@ -55,6 +55,14 @@ class _MethodLikeRequest:
     url = "https://example.com/method-like"
 
 
+class _StringSubclassMethodRequest:
+    class _MethodSubclass(str):
+        pass
+
+    method = _MethodSubclass("get")
+    url = "https://example.com/subclass-method"
+
+
 class _WhitespaceInsideUrlRequest:
     method = "GET"
     url = "https://example.com/with space"
@@ -63,6 +71,14 @@ class _WhitespaceInsideUrlRequest:
 class _BytesUrlContextRequest:
     method = "GET"
     url = b"https://example.com/from-bytes"
+
+
+class _StringSubclassUrlRequest:
+    class _UrlSubclass(str):
+        pass
+
+    method = "GET"
+    url = _UrlSubclass("https://example.com/subclass-url")
 
 
 class _InvalidBytesUrlContextRequest:
@@ -118,6 +134,12 @@ class _RequestErrorWithMethodLikeContext(httpx.RequestError):
         return _MethodLikeRequest()
 
 
+class _RequestErrorWithStringSubclassMethodContext(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _StringSubclassMethodRequest()
+
+
 class _RequestErrorWithWhitespaceInsideUrl(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
@@ -128,6 +150,12 @@ class _RequestErrorWithBytesUrlContext(httpx.RequestError):
     @property
     def request(self):  # type: ignore[override]
         return _BytesUrlContextRequest()
+
+
+class _RequestErrorWithStringSubclassUrlContext(httpx.RequestError):
+    @property
+    def request(self):  # type: ignore[override]
+        return _StringSubclassUrlRequest()
 
 
 class _RequestErrorWithInvalidBytesUrlContext(httpx.RequestError):
@@ -403,6 +431,15 @@ def test_extract_request_error_context_accepts_stringifiable_method_values():
     assert url == "https://example.com/method-like"
 
 
+def test_extract_request_error_context_rejects_string_subclass_method_values():
+    method, url = extract_request_error_context(
+        _RequestErrorWithStringSubclassMethodContext("network down")
+    )
+
+    assert method == "UNKNOWN"
+    assert url == "https://example.com/subclass-method"
+
+
 def test_extract_request_error_context_rejects_urls_with_whitespace():
     method, url = extract_request_error_context(
         _RequestErrorWithWhitespaceInsideUrl("network down")
@@ -419,6 +456,15 @@ def test_extract_request_error_context_supports_bytes_url_values():
 
     assert method == "GET"
     assert url == "https://example.com/from-bytes"
+
+
+def test_extract_request_error_context_rejects_string_subclass_url_values():
+    method, url = extract_request_error_context(
+        _RequestErrorWithStringSubclassUrlContext("network down")
+    )
+
+    assert method == "GET"
+    assert url == "unknown URL"
 
 
 def test_extract_request_error_context_rejects_invalid_bytes_url_values():
