@@ -10,9 +10,6 @@ from ..file_utils import ensure_existing_file_path
 
 def normalize_upload_file_input(
     file_input: Union[str, PathLike[str], IO],
-    *,
-    missing_file_message: str,
-    not_file_message: str,
 ) -> Tuple[Optional[str], Optional[IO]]:
     if is_plain_string(file_input) or isinstance(file_input, PathLike):
         try:
@@ -26,8 +23,8 @@ def normalize_upload_file_input(
             ) from exc
         file_path = ensure_existing_file_path(
             raw_file_path,
-            missing_file_message=missing_file_message,
-            not_file_message=not_file_message,
+            missing_file_message=f"Upload file not found at path: {raw_file_path}",
+            not_file_message=f"Upload file path must point to a file: {raw_file_path}",
         )
         return file_path, None
 

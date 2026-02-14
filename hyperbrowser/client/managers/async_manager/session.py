@@ -164,11 +164,7 @@ class SessionManager:
     async def upload_file(
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
-        file_path, file_obj = normalize_upload_file_input(
-            file_input,
-            missing_file_message=f"Upload file not found at path: {file_input}",
-            not_file_message=f"Upload file path must point to a file: {file_input}",
-        )
+        file_path, file_obj = normalize_upload_file_input(file_input)
         if file_path is not None:
             try:
                 with open(file_path, "rb") as file_obj:
