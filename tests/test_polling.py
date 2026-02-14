@@ -1676,6 +1676,32 @@ def test_retry_operation_handles_non_integer_status_codes_as_retryable():
     assert attempts["count"] == 3
 
 
+def test_retry_operation_handles_string_subclass_status_codes_as_retryable_unknown():
+    class _StringSubclassStatus(str):
+        pass
+
+    attempts = {"count": 0}
+
+    def operation() -> str:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HyperbrowserError(
+                "string-subclass status code",
+                status_code=_StringSubclassStatus("429"),  # type: ignore[arg-type]
+            )
+        return "ok"
+
+    result = retry_operation(
+        operation_name="sync retry string-subclass status code",
+        operation=operation,
+        max_attempts=5,
+        retry_delay_seconds=0.0001,
+    )
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+
+
 def test_retry_operation_handles_signed_string_status_codes_as_retryable_unknown():
     attempts = {"count": 0}
 
@@ -2431,6 +2457,35 @@ def test_retry_operation_async_retries_numeric_string_rate_limit_errors():
 
         result = await retry_operation_async(
             operation_name="async retry numeric-string rate limit",
+            operation=operation,
+            max_attempts=5,
+            retry_delay_seconds=0.0001,
+        )
+
+        assert result == "ok"
+        assert attempts["count"] == 3
+
+    asyncio.run(run())
+
+
+def test_retry_operation_async_handles_string_subclass_status_codes_as_retryable_unknown():
+    class _StringSubclassStatus(str):
+        pass
+
+    async def run() -> None:
+        attempts = {"count": 0}
+
+        async def operation() -> str:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise HyperbrowserError(
+                    "string-subclass status code",
+                    status_code=_StringSubclassStatus("429"),  # type: ignore[arg-type]
+                )
+            return "ok"
+
+        result = await retry_operation_async(
+            operation_name="async retry string-subclass status code",
             operation=operation,
             max_attempts=5,
             retry_delay_seconds=0.0001,

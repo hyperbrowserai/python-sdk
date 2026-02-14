@@ -396,7 +396,11 @@ def _normalize_status_code_for_retry(status_code: object) -> Optional[int]:
 
     if status_text is not None:
         try:
+            if type(status_text) is not str:
+                return None
             normalized_status = status_text.strip()
+            if type(normalized_status) is not str:
+                return None
             if not normalized_status:
                 return None
             if len(normalized_status) > _MAX_STATUS_CODE_TEXT_LENGTH:
