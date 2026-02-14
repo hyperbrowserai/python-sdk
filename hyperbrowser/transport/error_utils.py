@@ -51,12 +51,17 @@ def _safe_to_string(value: Any) -> str:
         normalized_value = str(value)
     except Exception:
         return f"<unstringifiable {type(value).__name__}>"
-    sanitized_value = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in normalized_value
-    )
-    if sanitized_value.strip():
-        return sanitized_value
+    if not isinstance(normalized_value, str):
+        return f"<{type(value).__name__}>"
+    try:
+        sanitized_value = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in normalized_value
+        )
+        if sanitized_value.strip():
+            return sanitized_value
+    except Exception:
+        return f"<{type(value).__name__}>"
     return f"<{type(value).__name__}>"
 
 
@@ -83,18 +88,31 @@ def _normalize_request_method(method: Any) -> str:
             raw_method = str(raw_method)
         except Exception:
             return "UNKNOWN"
-    if not isinstance(raw_method, str) or not raw_method.strip():
+    try:
+        if not isinstance(raw_method, str):
+            return "UNKNOWN"
+        stripped_method = raw_method.strip()
+        if not isinstance(stripped_method, str) or not stripped_method:
+            return "UNKNOWN"
+        normalized_method = stripped_method.upper()
+        if not isinstance(normalized_method, str):
+            return "UNKNOWN"
+        lowered_method = normalized_method.lower()
+        if not isinstance(lowered_method, str):
+            return "UNKNOWN"
+    except Exception:
         return "UNKNOWN"
-    normalized_method = raw_method.strip().upper()
-    lowered_method = normalized_method.lower()
     if (
         lowered_method in _INVALID_METHOD_SENTINELS
         or _NUMERIC_LIKE_METHOD_PATTERN.fullmatch(normalized_method)
     ):
         return "UNKNOWN"
-    if len(normalized_method) > _MAX_REQUEST_METHOD_LENGTH:
-        return "UNKNOWN"
-    if not _HTTP_METHOD_TOKEN_PATTERN.fullmatch(normalized_method):
+    try:
+        if len(normalized_method) > _MAX_REQUEST_METHOD_LENGTH:
+            return "UNKNOWN"
+        if not _HTTP_METHOD_TOKEN_PATTERN.fullmatch(normalized_method):
+            return "UNKNOWN"
+    except Exception:
         return "UNKNOWN"
     return normalized_method
 
@@ -116,22 +134,31 @@ def _normalize_request_url(url: Any) -> str:
         except Exception:
             return "unknown URL"
 
-    normalized_url = raw_url.strip()
-    if not normalized_url:
+    try:
+        normalized_url = raw_url.strip()
+        if not isinstance(normalized_url, str) or not normalized_url:
+            return "unknown URL"
+        lowered_url = normalized_url.lower()
+        if not isinstance(lowered_url, str):
+            return "unknown URL"
+    except Exception:
         return "unknown URL"
-    lowered_url = normalized_url.lower()
     if lowered_url in _INVALID_URL_SENTINELS or _NUMERIC_LIKE_URL_PATTERN.fullmatch(
         normalized_url
     ):
         return "unknown URL"
-    if any(character.isspace() for character in normalized_url):
+    try:
+        if any(character.isspace() for character in normalized_url):
+            return "unknown URL"
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in normalized_url
+        ):
+            return "unknown URL"
+        if len(normalized_url) > _MAX_REQUEST_URL_DISPLAY_LENGTH:
+            return f"{normalized_url[:_MAX_REQUEST_URL_DISPLAY_LENGTH]}... (truncated)"
+    except Exception:
         return "unknown URL"
-    if any(
-        ord(character) < 32 or ord(character) == 127 for character in normalized_url
-    ):
-        return "unknown URL"
-    if len(normalized_url) > _MAX_REQUEST_URL_DISPLAY_LENGTH:
-        return f"{normalized_url[:_MAX_REQUEST_URL_DISPLAY_LENGTH]}... (truncated)"
     return normalized_url
 
 

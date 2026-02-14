@@ -205,6 +205,66 @@ class _BrokenSliceErrorList(list):
         return "broken-slice-error-list"
 
 
+class _BrokenStripMethod(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        raise RuntimeError("method strip exploded")
+
+
+class _BrokenUpperMethod(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self
+
+    def upper(self):  # type: ignore[override]
+        raise RuntimeError("method upper exploded")
+
+
+class _BrokenMethodLength(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self
+
+    def __len__(self):
+        raise RuntimeError("method length exploded")
+
+
+class _BrokenStripUrl(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        raise RuntimeError("url strip exploded")
+
+
+class _BrokenLowerUrl(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self
+
+    def lower(self):  # type: ignore[override]
+        raise RuntimeError("url lower exploded")
+
+
+class _BrokenUrlIteration(str):
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self
+
+    def lower(self):  # type: ignore[override]
+        return "https://example.com/path"
+
+    def __iter__(self):
+        raise RuntimeError("url iteration exploded")
+
+
+class _StringifiesToBrokenSubclass:
+    class _BrokenString(str):
+        def __iter__(self):
+            raise RuntimeError("fallback string iteration exploded")
+
+    def __str__(self) -> str:
+        return self._BrokenString("broken\tfallback\nvalue")
+
+
 def test_extract_request_error_context_uses_unknown_when_request_unset():
     method, url = extract_request_error_context(httpx.RequestError("network down"))
 
@@ -663,6 +723,60 @@ def test_format_generic_request_failure_message_supports_memoryview_method_value
     assert message == "Request PATCH https://example.com/path failed"
 
 
+def test_format_generic_request_failure_message_normalizes_method_strip_failures():
+    message = format_generic_request_failure_message(
+        method=_BrokenStripMethod("get"),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_normalizes_method_upper_failures():
+    message = format_generic_request_failure_message(
+        method=_BrokenUpperMethod("get"),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_normalizes_method_length_failures():
+    message = format_generic_request_failure_message(
+        method=_BrokenMethodLength("get"),
+        url="https://example.com/path",
+    )
+
+    assert message == "Request UNKNOWN https://example.com/path failed"
+
+
+def test_format_generic_request_failure_message_normalizes_url_strip_failures():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=_BrokenStripUrl("https://example.com/path"),
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
+def test_format_generic_request_failure_message_normalizes_url_lower_failures():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=_BrokenLowerUrl("https://example.com/path"),
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
+def test_format_generic_request_failure_message_normalizes_url_iteration_failures():
+    message = format_generic_request_failure_message(
+        method="GET",
+        url=_BrokenUrlIteration("https://example.com/path"),
+    )
+
+    assert message == "Request GET unknown URL failed"
+
+
 def test_format_request_failure_message_truncates_very_long_fallback_urls():
     very_long_url = "https://example.com/" + ("a" * 1200)
     message = format_request_failure_message(
@@ -799,6 +913,15 @@ def test_extract_error_message_sanitizes_control_characters_in_fallback_error_te
     )
 
     assert message == "bad?fallback?text"
+
+
+def test_extract_error_message_handles_fallback_errors_with_broken_string_subclasses():
+    message = extract_error_message(
+        _DummyResponse("   ", text="   "),
+        _StringifiesToBrokenSubclass(),
+    )
+
+    assert message == "<_StringifiesToBrokenSubclass>"
 
 
 def test_extract_error_message_sanitizes_control_characters_in_json_message():
