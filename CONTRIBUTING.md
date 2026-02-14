@@ -76,7 +76,10 @@ This runs lint, format checks, compile checks, tests, and package build.
 - Preserve architectural guardrails with focused tests. Current guard suites include:
   - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
   - `tests/test_mapping_reader_usage.py` (shared mapping-read parser usage),
-  - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage).
+  - `tests/test_mapping_keys_access_usage.py` (centralized key-iteration boundaries),
+  - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
+  - `tests/test_display_helper_usage.py` (display/key-format helper usage),
+  - `tests/test_ci_workflow_quality_gates.py` (CI guard-stage + make-target enforcement).
 
 ## Code quality conventions
 

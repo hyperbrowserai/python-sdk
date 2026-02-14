@@ -23,7 +23,8 @@ architecture-check:
 		tests/test_mapping_reader_usage.py \
 		tests/test_mapping_keys_access_usage.py \
 		tests/test_tool_mapping_reader_usage.py \
-		tests/test_display_helper_usage.py
+		tests/test_display_helper_usage.py \
+		tests/test_ci_workflow_quality_gates.py
 
 compile:
 	$(PYTHON) -m compileall -q hyperbrowser examples tests
