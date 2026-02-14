@@ -7,6 +7,11 @@ from ..serialization_utils import (
     serialize_optional_model_dump_to_dict,
 )
 from ..session_profile_update_utils import resolve_update_profile_params
+from ..session_request_utils import (
+    get_session_resource,
+    post_session_resource,
+    put_session_resource,
+)
 from ..session_upload_utils import open_upload_files_from_input
 from ..session_operation_metadata import SESSION_OPERATION_METADATA
 from ..session_route_constants import (
@@ -61,14 +66,13 @@ class SessionEventLogsManager:
             default_factory=SessionEventLogListParams,
             error_message="Failed to serialize session event log params",
         )
-        response = self._client.transport.get(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{session_id}{SESSION_EVENT_LOGS_ROUTE_SUFFIX}"
-            ),
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{session_id}{SESSION_EVENT_LOGS_ROUTE_SUFFIX}",
             params=query_params,
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=SessionEventLogListResponse,
             operation_name=self._OPERATION_METADATA.event_logs_operation_name,
         )
@@ -89,12 +93,13 @@ class SessionManager:
             params,
             error_message="Failed to serialize session create params",
         )
-        response = self._client.transport.post(
-            self._client._build_url(self._ROUTE_PREFIX),
+        response_data = post_session_resource(
+            client=self._client,
+            route_path=self._ROUTE_PREFIX,
             data=payload,
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=SessionDetail,
             operation_name=self._OPERATION_METADATA.detail_operation_name,
         )
@@ -105,22 +110,24 @@ class SessionManager:
             default_factory=SessionGetParams,
             error_message="Failed to serialize session get params",
         )
-        response = self._client.transport.get(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{id}"),
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}",
             params=query_params,
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=SessionDetail,
             operation_name=self._OPERATION_METADATA.detail_operation_name,
         )
 
     def stop(self, id: str) -> BasicResponse:
-        response = self._client.transport.put(
-            self._client._build_url(f"{self._ROUTE_PREFIX}/{id}{SESSION_STOP_ROUTE_SUFFIX}")
+        response_data = put_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_STOP_ROUTE_SUFFIX}",
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=BasicResponse,
             operation_name=self._OPERATION_METADATA.stop_operation_name,
         )
@@ -131,58 +138,54 @@ class SessionManager:
             default_factory=SessionListParams,
             error_message="Failed to serialize session list params",
         )
-        response = self._client.transport.get(
-            self._client._build_url(self._LIST_ROUTE_PATH),
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=self._LIST_ROUTE_PATH,
             params=query_params,
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=SessionListResponse,
             operation_name=self._OPERATION_METADATA.list_operation_name,
         )
 
     def get_recording(self, id: str) -> List[SessionRecording]:
-        response = self._client.transport.get(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{id}{SESSION_RECORDING_ROUTE_SUFFIX}"
-            ),
-            None,
-            True,
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_RECORDING_ROUTE_SUFFIX}",
+            follow_redirects=True,
         )
-        return parse_session_recordings_response_data(response.data)
+        return parse_session_recordings_response_data(response_data)
 
     def get_recording_url(self, id: str) -> GetSessionRecordingUrlResponse:
-        response = self._client.transport.get(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{id}{SESSION_RECORDING_URL_ROUTE_SUFFIX}"
-            )
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_RECORDING_URL_ROUTE_SUFFIX}",
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=GetSessionRecordingUrlResponse,
             operation_name=self._OPERATION_METADATA.recording_url_operation_name,
         )
 
     def get_video_recording_url(self, id: str) -> GetSessionVideoRecordingUrlResponse:
-        response = self._client.transport.get(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{id}{SESSION_VIDEO_RECORDING_URL_ROUTE_SUFFIX}"
-            )
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_VIDEO_RECORDING_URL_ROUTE_SUFFIX}",
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=GetSessionVideoRecordingUrlResponse,
             operation_name=self._OPERATION_METADATA.video_recording_url_operation_name,
         )
 
     def get_downloads_url(self, id: str) -> GetSessionDownloadsUrlResponse:
-        response = self._client.transport.get(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{id}{SESSION_DOWNLOADS_URL_ROUTE_SUFFIX}"
-            )
+        response_data = get_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_DOWNLOADS_URL_ROUTE_SUFFIX}",
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=GetSessionDownloadsUrlResponse,
             operation_name=self._OPERATION_METADATA.downloads_url_operation_name,
         )
@@ -191,28 +194,26 @@ class SessionManager:
         self, id: str, file_input: Union[str, PathLike[str], IO]
     ) -> UploadFileResponse:
         with open_upload_files_from_input(file_input) as files:
-            response = self._client.transport.post(
-                self._client._build_url(
-                    f"{self._ROUTE_PREFIX}/{id}{SESSION_UPLOADS_ROUTE_SUFFIX}"
-                ),
+            response_data = post_session_resource(
+                client=self._client,
+                route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_UPLOADS_ROUTE_SUFFIX}",
                 files=files,
             )
 
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=UploadFileResponse,
             operation_name=self._OPERATION_METADATA.upload_file_operation_name,
         )
 
     def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:
-        response = self._client.transport.put(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{id}{SESSION_EXTEND_ROUTE_SUFFIX}"
-            ),
+        response_data = put_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_EXTEND_ROUTE_SUFFIX}",
             data={"durationMinutes": duration_minutes},
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=BasicResponse,
             operation_name=self._OPERATION_METADATA.extend_operation_name,
         )
@@ -245,17 +246,16 @@ class SessionManager:
             error_message="Failed to serialize update_profile_params payload",
         )
 
-        response = self._client.transport.put(
-            self._client._build_url(
-                f"{self._ROUTE_PREFIX}/{id}{SESSION_UPDATE_ROUTE_SUFFIX}"
-            ),
+        response_data = put_session_resource(
+            client=self._client,
+            route_path=f"{self._ROUTE_PREFIX}/{id}{SESSION_UPDATE_ROUTE_SUFFIX}",
             data={
                 "type": "profile",
                 "params": serialized_params,
             },
         )
         return parse_session_response_model(
-            response.data,
+            response_data,
             model=BasicResponse,
             operation_name=self._OPERATION_METADATA.update_profile_operation_name,
         )
