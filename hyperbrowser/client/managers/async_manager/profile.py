@@ -8,7 +8,10 @@ from hyperbrowser.models.profile import (
     ProfileResponse,
 )
 from hyperbrowser.models.session import BasicResponse
-from ..serialization_utils import serialize_model_dump_to_dict
+from ..serialization_utils import (
+    serialize_model_dump_to_dict,
+    serialize_optional_model_dump_to_dict,
+)
 from ..response_utils import parse_response_model
 
 
@@ -19,12 +22,10 @@ class ProfileManager:
     async def create(
         self, params: Optional[CreateProfileParams] = None
     ) -> CreateProfileResponse:
-        payload = {}
-        if params is not None:
-            payload = serialize_model_dump_to_dict(
-                params,
-                error_message="Failed to serialize profile create params",
-            )
+        payload = serialize_optional_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize profile create params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/profile"),
             data=payload,

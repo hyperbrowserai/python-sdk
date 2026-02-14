@@ -4,6 +4,7 @@ import pytest
 
 from hyperbrowser.client.managers.serialization_utils import (
     serialize_model_dump_to_dict,
+    serialize_optional_model_dump_to_dict,
 )
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -74,3 +75,27 @@ def test_serialize_model_dump_to_dict_rejects_non_dict_payloads():
         )
 
     assert exc_info.value.original_error is None
+
+
+def test_serialize_optional_model_dump_to_dict_returns_empty_dict_for_none():
+    assert (
+        serialize_optional_model_dump_to_dict(
+            None,
+            error_message="serialize failure",
+        )
+        == {}
+    )
+
+
+def test_serialize_optional_model_dump_to_dict_serializes_non_none_values():
+    model = _ModelWithPayload({"value": 1})
+
+    payload = serialize_optional_model_dump_to_dict(
+        model,
+        error_message="serialize failure",
+        exclude_none=False,
+        by_alias=False,
+    )
+
+    assert payload == {"value": 1}
+    assert model.calls == [(False, False)]

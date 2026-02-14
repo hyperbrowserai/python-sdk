@@ -2,7 +2,10 @@ from os import PathLike
 from typing import IO, List, Optional, Union, overload
 import warnings
 from hyperbrowser.exceptions import HyperbrowserError
-from ..serialization_utils import serialize_model_dump_to_dict
+from ..serialization_utils import (
+    serialize_model_dump_to_dict,
+    serialize_optional_model_dump_to_dict,
+)
 from ..session_upload_utils import normalize_upload_file_input
 from ..session_utils import (
     parse_session_recordings_response_data,
@@ -61,12 +64,10 @@ class SessionManager:
     async def create(
         self, params: Optional[CreateSessionParams] = None
     ) -> SessionDetail:
-        payload = {}
-        if params is not None:
-            payload = serialize_model_dump_to_dict(
-                params,
-                error_message="Failed to serialize session create params",
-            )
+        payload = serialize_optional_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize session create params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/session"),
             data=payload,
