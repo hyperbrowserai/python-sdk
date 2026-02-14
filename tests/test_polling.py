@@ -68,8 +68,7 @@ def test_poll_until_terminal_status_wraps_isfinite_failures(
     assert exc_info.value.original_error is not None
 
 
-def test_poll_until_terminal_status_wraps_unexpected_float_conversion_failures(
-):
+def test_poll_until_terminal_status_wraps_unexpected_float_conversion_failures():
     class _BrokenDecimal(Decimal):
         def __float__(self) -> float:
             raise RuntimeError("unexpected float conversion failure")
@@ -4080,6 +4079,30 @@ def test_collect_paginated_results_raises_on_invalid_page_batch_types():
         )
 
 
+def test_collect_paginated_results_raises_on_integer_subclass_page_batch_types():
+    class _IntSubclass(int):
+        pass
+
+    with pytest.raises(
+        HyperbrowserPollingError,
+        match="Invalid total page batches for sync paginated int-subclass types",
+    ):
+        collect_paginated_results(
+            operation_name="sync paginated int-subclass types",
+            get_next_page=lambda page: {
+                "current": 1,
+                "total": _IntSubclass(2),
+                "items": [],
+            },
+            get_current_page_batch=lambda response: response["current"],
+            get_total_page_batches=lambda response: response["total"],
+            on_page_success=lambda response: None,
+            max_wait_seconds=1.0,
+            max_attempts=2,
+            retry_delay_seconds=0.0001,
+        )
+
+
 def test_collect_paginated_results_raises_on_boolean_page_batch_values():
     with pytest.raises(
         HyperbrowserPollingError,
@@ -4167,6 +4190,32 @@ def test_collect_paginated_results_async_raises_on_invalid_page_batch_types():
                 operation_name="async paginated invalid types",
                 get_next_page=lambda page: asyncio.sleep(
                     0, result={"current": 1, "total": "2", "items": []}
+                ),
+                get_current_page_batch=lambda response: response["current"],
+                get_total_page_batches=lambda response: response["total"],
+                on_page_success=lambda response: None,
+                max_wait_seconds=1.0,
+                max_attempts=2,
+                retry_delay_seconds=0.0001,
+            )
+
+    asyncio.run(run())
+
+
+def test_collect_paginated_results_async_raises_on_integer_subclass_page_batch_types():
+    class _IntSubclass(int):
+        pass
+
+    async def run() -> None:
+        with pytest.raises(
+            HyperbrowserPollingError,
+            match="Invalid current page batch for async paginated int-subclass types",
+        ):
+            await collect_paginated_results_async(
+                operation_name="async paginated int-subclass types",
+                get_next_page=lambda page: asyncio.sleep(
+                    0,
+                    result={"current": _IntSubclass(1), "total": 2, "items": []},
                 ),
                 get_current_page_batch=lambda response: response["current"],
                 get_total_page_batches=lambda response: response["total"],
@@ -6686,6 +6735,9 @@ def test_wait_for_job_result_async_validates_configuration():
 
 
 def test_polling_helpers_validate_retry_and_interval_configuration():
+    class _IntSubclass(int):
+        pass
+
     with pytest.raises(HyperbrowserError, match="max_attempts must be at least 1"):
         retry_operation(
             operation_name="invalid-retry",
@@ -6749,6 +6801,14 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             retry_delay_seconds=0,
         )
 
+    with pytest.raises(HyperbrowserError, match="max_attempts must be an integer"):
+        retry_operation(
+            operation_name="invalid-retry-int-subclass",
+            operation=lambda: "ok",
+            max_attempts=_IntSubclass(1),  # type: ignore[arg-type]
+            retry_delay_seconds=0,
+        )
+
     with pytest.raises(
         HyperbrowserError, match="retry_delay_seconds must be non-negative"
     ):
@@ -6781,6 +6841,18 @@ def test_polling_helpers_validate_retry_and_interval_configuration():
             poll_interval_seconds=0.1,
             max_wait_seconds=1.0,
             max_status_failures=1.5,  # type: ignore[arg-type]
+        )
+
+    with pytest.raises(
+        HyperbrowserError, match="max_status_failures must be an integer"
+    ):
+        poll_until_terminal_status(
+            operation_name="invalid-status-failures-int-subclass",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.1,
+            max_wait_seconds=1.0,
+            max_status_failures=_IntSubclass(1),  # type: ignore[arg-type]
         )
 
     with pytest.raises(

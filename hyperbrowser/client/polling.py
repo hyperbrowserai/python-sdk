@@ -458,7 +458,7 @@ def _validate_retry_config(
     retry_delay_seconds: float,
     max_status_failures: Optional[int] = None,
 ) -> float:
-    if isinstance(max_attempts, bool) or not isinstance(max_attempts, int):
+    if type(max_attempts) is not int:
         raise HyperbrowserError("max_attempts must be an integer")
     if max_attempts < 1:
         raise HyperbrowserError("max_attempts must be at least 1")
@@ -466,9 +466,7 @@ def _validate_retry_config(
         retry_delay_seconds, field_name="retry_delay_seconds"
     )
     if max_status_failures is not None:
-        if isinstance(max_status_failures, bool) or not isinstance(
-            max_status_failures, int
-        ):
+        if type(max_status_failures) is not int:
             raise HyperbrowserError("max_status_failures must be an integer")
         if max_status_failures < 1:
             raise HyperbrowserError("max_status_failures must be at least 1")
@@ -494,11 +492,11 @@ def _validate_page_batch_values(
     current_page_batch: int,
     total_page_batches: int,
 ) -> None:
-    if isinstance(current_page_batch, bool) or not isinstance(current_page_batch, int):
+    if type(current_page_batch) is not int:
         raise HyperbrowserPollingError(
             f"Invalid current page batch for {operation_name}: expected integer"
         )
-    if isinstance(total_page_batches, bool) or not isinstance(total_page_batches, int):
+    if type(total_page_batches) is not int:
         raise HyperbrowserPollingError(
             f"Invalid total page batches for {operation_name}: expected integer"
         )
