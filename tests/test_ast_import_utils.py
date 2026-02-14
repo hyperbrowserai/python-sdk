@@ -1,6 +1,9 @@
 import pytest
 
-from tests.ast_import_utils import imports_collect_function_sources
+from tests.ast_import_utils import (
+    imports_collect_function_sources,
+    imports_imports_collect_function_sources,
+)
 
 pytestmark = pytest.mark.architecture
 
@@ -39,3 +42,21 @@ def test_imports_collect_function_sources_ignores_non_from_imports():
     )
 
     assert imports_collect_function_sources(module_text) is False
+
+
+def test_imports_imports_collect_function_sources_detects_expected_import():
+    module_text = (
+        "from tests.ast_import_utils import imports_collect_function_sources\n"
+        "imports_collect_function_sources('dummy')\n"
+    )
+
+    assert imports_imports_collect_function_sources(module_text) is True
+
+
+def test_imports_imports_collect_function_sources_ignores_non_matching_imports():
+    module_text = (
+        "from tests.ast_import_utils import other_helper\n"
+        "from tests.ast_function_source_utils import imports_collect_function_sources\n"
+    )
+
+    assert imports_imports_collect_function_sources(module_text) is False

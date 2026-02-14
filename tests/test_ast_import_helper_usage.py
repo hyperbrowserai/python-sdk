@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.ast_import_utils import imports_imports_collect_function_sources
+
 pytestmark = pytest.mark.architecture
 
 
@@ -16,6 +18,9 @@ def test_ast_import_guard_modules_reuse_shared_import_helper():
     for module_path in AST_IMPORT_GUARD_MODULES:
         module_text = Path(module_path).read_text(encoding="utf-8")
         if "ast_import_utils import imports_collect_function_sources" not in module_text:
+            violating_modules.append(module_path)
+            continue
+        if not imports_imports_collect_function_sources(module_text):
             violating_modules.append(module_path)
             continue
         if "imports_collect_function_sources(" not in module_text:

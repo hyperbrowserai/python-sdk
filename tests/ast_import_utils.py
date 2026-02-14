@@ -11,3 +11,15 @@ def imports_collect_function_sources(module_text: str) -> bool:
         if any(alias.name == "collect_function_sources" for alias in node.names):
             return True
     return False
+
+
+def imports_imports_collect_function_sources(module_text: str) -> bool:
+    module_ast = ast.parse(module_text)
+    for node in module_ast.body:
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module != "tests.ast_import_utils":
+            continue
+        if any(alias.name == "imports_collect_function_sources" for alias in node.names):
+            return True
+    return False
