@@ -1,7 +1,6 @@
-import ast
-from pathlib import Path
-
 import pytest
+
+from tests.ast_function_source_utils import collect_function_sources
 
 pytestmark = pytest.mark.architecture
 
@@ -41,22 +40,9 @@ MODULE_WRAPPER_EXPECTATIONS = {
     },
 }
 
-
-def _collect_module_function_sources(module_path: str) -> dict[str, str]:
-    module_text = Path(module_path).read_text(encoding="utf-8")
-    module_ast = ast.parse(module_text)
-    function_sources: dict[str, str] = {}
-    for node in module_ast.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            function_source = ast.get_source_segment(module_text, node)
-            if function_source is not None:
-                function_sources[node.name] = function_source
-    return function_sources
-
-
 def test_request_wrappers_delegate_to_expected_shared_helpers():
     for module_path, wrapper_expectations in MODULE_WRAPPER_EXPECTATIONS.items():
-        function_sources = _collect_module_function_sources(module_path)
+        function_sources = collect_function_sources(module_path)
         for wrapper_name, expected_markers in wrapper_expectations.items():
             wrapper_source = function_sources[wrapper_name]
             for expected_marker in expected_markers:
