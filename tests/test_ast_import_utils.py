@@ -60,6 +60,38 @@ def test_imports_symbol_from_module_ignores_unrelated_symbols():
     )
 
 
+def test_imports_symbol_from_module_supports_aliased_symbol_import():
+    module_text = (
+        "from tests.ast_import_utils import imports_collect_function_sources as helper\n"
+        "helper('dummy')\n"
+    )
+
+    assert (
+        imports_symbol_from_module(
+            module_text,
+            module="tests.ast_import_utils",
+            symbol="imports_collect_function_sources",
+        )
+        is True
+    )
+
+
+def test_imports_symbol_from_module_ignores_non_from_import():
+    module_text = (
+        "import tests.ast_import_utils as import_utils\n"
+        "import_utils.imports_collect_function_sources('dummy')\n"
+    )
+
+    assert (
+        imports_symbol_from_module(
+            module_text,
+            module="tests.ast_import_utils",
+            symbol="imports_collect_function_sources",
+        )
+        is False
+    )
+
+
 def test_imports_collect_function_sources_supports_aliased_import():
     module_text = (
         "from tests.ast_function_source_utils import collect_function_sources as cfs\n"
