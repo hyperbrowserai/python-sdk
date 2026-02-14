@@ -20,6 +20,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_type_utils_usage.py",
     "tests/test_polling_loop_usage.py",
     "tests/test_core_type_helper_usage.py",
+    "tests/test_contributing_architecture_guard_listing.py",
 )
 
 
