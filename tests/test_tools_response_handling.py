@@ -351,7 +351,7 @@ def test_scrape_tool_wraps_broken_string_subclass_markdown_field_values():
     ) as exc_info:
         WebsiteScrapeTool.runnable(client, {"url": "https://example.com"})
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_scrape_tool_wraps_attributeerror_from_declared_markdown_property():
@@ -758,7 +758,9 @@ def test_crawl_tool_preserves_hyperbrowser_mapping_page_inspection_failures():
 
     client = _SyncCrawlClient(_Response(data=[_BrokenContainsPage()]))
 
-    with pytest.raises(HyperbrowserError, match="custom page inspect failure") as exc_info:
+    with pytest.raises(
+        HyperbrowserError, match="custom page inspect failure"
+    ) as exc_info:
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
     assert exc_info.value.original_error is None
@@ -782,7 +784,13 @@ def test_crawl_tool_wraps_broken_string_subclass_page_url_values():
             raise RuntimeError("url iteration exploded")
 
     client = _SyncCrawlClient(
-        _Response(data=[SimpleNamespace(url=_BrokenUrlValue("https://example.com"), markdown="body")])
+        _Response(
+            data=[
+                SimpleNamespace(
+                    url=_BrokenUrlValue("https://example.com"), markdown="body"
+                )
+            ]
+        )
     )
 
     with pytest.raises(
@@ -791,7 +799,7 @@ def test_crawl_tool_wraps_broken_string_subclass_page_url_values():
     ) as exc_info:
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_crawl_tool_decodes_utf8_bytes_page_fields():
@@ -870,7 +878,7 @@ def test_browser_use_tool_wraps_broken_string_subclass_final_result_values():
     ) as exc_info:
         BrowserUseTool.runnable(client, {"task": "search docs"})
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_browser_use_tool_wraps_attributeerror_from_declared_final_result_property():

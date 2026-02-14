@@ -146,7 +146,7 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
         if type(key) is str:
             try:
                 normalized_key = key.strip()
-                if not isinstance(normalized_key, str):
+                if type(normalized_key) is not str:
                     raise TypeError("normalized tool param key must be a string")
                 is_empty_key = len(normalized_key) == 0
             except HyperbrowserError:
@@ -227,7 +227,7 @@ def _normalize_optional_text_field_value(
 ) -> str:
     if field_value is None:
         return ""
-    if isinstance(field_value, str):
+    if type(field_value) is str:
         try:
             normalized_field_value = "".join(character for character in field_value)
             if type(normalized_field_value) is not str:
@@ -240,6 +240,8 @@ def _normalize_optional_text_field_value(
                 error_message,
                 original_error=exc,
             ) from exc
+    if isinstance(field_value, str):
+        raise HyperbrowserError(error_message)
     if isinstance(field_value, (bytes, bytearray, memoryview)):
         try:
             normalized_field_value = memoryview(field_value).tobytes().decode("utf-8")
