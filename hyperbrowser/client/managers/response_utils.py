@@ -1,7 +1,7 @@
-from collections.abc import Mapping
 from typing import Any, Type, TypeVar
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.mapping_utils import read_string_key_mapping
 
 T = TypeVar("T")
 _MAX_OPERATION_NAME_DISPLAY_LENGTH = 120
@@ -75,38 +75,21 @@ def parse_response_model(
     if is_empty_operation_name:
         raise HyperbrowserError("operation_name must be a non-empty string")
     normalized_operation_name = _normalize_operation_name_for_error(operation_name)
-    if not isinstance(response_data, Mapping):
-        raise HyperbrowserError(
+    response_payload = read_string_key_mapping(
+        response_data,
+        expected_mapping_error=(
             f"Expected {normalized_operation_name} response to be an object"
-        )
-    try:
-        response_keys = list(response_data.keys())
-    except HyperbrowserError:
-        raise
-    except Exception as exc:
-        raise HyperbrowserError(
-            f"Failed to read {normalized_operation_name} response keys",
-            original_error=exc,
-        ) from exc
-    for key in response_keys:
-        if type(key) is str:
-            continue
-        raise HyperbrowserError(
+        ),
+        read_keys_error=f"Failed to read {normalized_operation_name} response keys",
+        non_string_key_error_builder=lambda _key: (
             f"Expected {normalized_operation_name} response object keys to be strings"
-        )
-    response_payload: dict[str, object] = {}
-    for key in response_keys:
-        try:
-            response_payload[key] = response_data[key]
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            key_display = _normalize_response_key_for_error(key)
-            raise HyperbrowserError(
-                f"Failed to read {normalized_operation_name} response value for key "
-                f"'{key_display}'",
-                original_error=exc,
-            ) from exc
+        ),
+        read_value_error_builder=lambda key_display: (
+            f"Failed to read {normalized_operation_name} response value for key "
+            f"'{key_display}'"
+        ),
+        key_display=_normalize_response_key_for_error,
+    )
     try:
         return model(**response_payload)
     except HyperbrowserError:

@@ -1,8 +1,8 @@
-from collections.abc import Mapping as MappingABC
 from abc import ABC, abstractmethod
 from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.mapping_utils import read_string_key_mapping
 
 T = TypeVar("T")
 _TRUNCATED_DISPLAY_SUFFIX = "... (truncated)"
@@ -129,43 +129,26 @@ class APIResponse(Generic[T]):
     ) -> "APIResponse[T]":
         """Create an APIResponse from JSON data with a specific model."""
         model_name = _safe_model_name(model)
-        if not isinstance(json_data, MappingABC):
-            actual_type_name = type(json_data).__name__
-            raise HyperbrowserError(
+        normalized_payload = read_string_key_mapping(
+            json_data,
+            expected_mapping_error=(
+                f"Failed to parse response data for {model_name}: expected a mapping "
+                f"but received {type(json_data).__name__}"
+            ),
+            read_keys_error=(
                 f"Failed to parse response data for {model_name}: "
-                f"expected a mapping but received {actual_type_name}"
-            )
-        try:
-            response_keys = list(json_data.keys())
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
+                "unable to read mapping keys"
+            ),
+            non_string_key_error_builder=lambda key: (
                 f"Failed to parse response data for {model_name}: "
-                "unable to read mapping keys",
-                original_error=exc,
-            ) from exc
-        for key in response_keys:
-            if type(key) is str:
-                continue
-            key_type_name = type(key).__name__
-            raise HyperbrowserError(
+                f"expected string keys but received {type(key).__name__}"
+            ),
+            read_value_error_builder=lambda key_display: (
                 f"Failed to parse response data for {model_name}: "
-                f"expected string keys but received {key_type_name}"
-            )
-        normalized_payload: dict[str, object] = {}
-        for key in response_keys:
-            try:
-                normalized_payload[key] = json_data[key]
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                key_display = _format_mapping_key_for_error(key)
-                raise HyperbrowserError(
-                    f"Failed to parse response data for {model_name}: "
-                    f"unable to read value for key '{key_display}'",
-                    original_error=exc,
-                ) from exc
+                f"unable to read value for key '{key_display}'"
+            ),
+            key_display=_format_mapping_key_for_error,
+        )
         try:
             return cls(data=model(**normalized_payload))
         except HyperbrowserError:
