@@ -16,11 +16,13 @@ from ...web_pagination_utils import (
     build_paginated_page_merge_callback,
     initialize_paginated_job_response,
 )
+from ...job_fetch_utils import (
+    collect_paginated_results_with_defaults,
+    retry_operation_with_defaults,
+)
 from ....polling import (
     build_fetch_operation_name,
-    collect_paginated_results,
     poll_until_terminal_status,
-    retry_operation,
 )
 from ...response_utils import parse_response_model
 from ...start_job_utils import build_started_job_context
@@ -92,11 +94,9 @@ class WebCrawlManager:
         )
 
         if not return_all_pages:
-            return retry_operation(
+            return retry_operation_with_defaults(
                 operation_name=build_fetch_operation_name(operation_name),
                 operation=lambda: self.get(job_id),
-                max_attempts=POLLING_ATTEMPTS,
-                retry_delay_seconds=0.5,
             )
 
         job_response = initialize_paginated_job_response(
@@ -105,7 +105,7 @@ class WebCrawlManager:
             status=job_status,
         )
 
-        collect_paginated_results(
+        collect_paginated_results_with_defaults(
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_id,
@@ -124,8 +124,6 @@ class WebCrawlManager:
                 job_response=job_response,
             ),
             max_wait_seconds=max_wait_seconds,
-            max_attempts=POLLING_ATTEMPTS,
-            retry_delay_seconds=0.5,
         )
 
         return job_response

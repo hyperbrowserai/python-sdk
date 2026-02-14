@@ -98,7 +98,7 @@ def test_sync_crawl_manager_bounds_operation_name_for_polling_and_pagination(
     )
     monkeypatch.setattr(
         sync_crawl_module,
-        "collect_paginated_results",
+        "collect_paginated_results_with_defaults",
         fake_collect_paginated_results,
     )
 
@@ -139,7 +139,7 @@ def test_sync_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypat
     )
     monkeypatch.setattr(
         sync_crawl_module,
-        "retry_operation",
+        "retry_operation_with_defaults",
         fake_retry_operation,
     )
 
@@ -213,7 +213,7 @@ def test_async_crawl_manager_bounds_operation_name_for_polling_and_pagination(
         )
         monkeypatch.setattr(
             async_crawl_module,
-            "collect_paginated_results_async",
+            "collect_paginated_results_with_defaults_async",
             fake_collect_paginated_results_async,
         )
 
@@ -258,7 +258,7 @@ def test_async_crawl_manager_bounds_operation_name_for_fetch_retry_path(monkeypa
         )
         monkeypatch.setattr(
             async_crawl_module,
-            "retry_operation_async",
+            "retry_operation_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -307,7 +307,7 @@ def test_sync_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
     )
     monkeypatch.setattr(
         sync_batch_fetch_module,
-        "retry_operation",
+        "retry_operation_with_defaults",
         fake_retry_operation,
     )
 
@@ -350,7 +350,7 @@ def test_async_batch_fetch_manager_bounds_operation_name_for_fetch_retry_path(
         )
         monkeypatch.setattr(
             async_batch_fetch_module,
-            "retry_operation_async",
+            "retry_operation_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -398,7 +398,7 @@ def test_sync_batch_fetch_manager_bounds_operation_name_for_paginated_path(
     )
     monkeypatch.setattr(
         sync_batch_fetch_module,
-        "collect_paginated_results",
+        "collect_paginated_results_with_defaults",
         fake_collect_paginated_results,
     )
 
@@ -438,7 +438,7 @@ def test_async_batch_fetch_manager_bounds_operation_name_for_paginated_path(
         )
         monkeypatch.setattr(
             async_batch_fetch_module,
-            "collect_paginated_results_async",
+            "collect_paginated_results_with_defaults_async",
             fake_collect_paginated_results_async,
         )
 
@@ -483,7 +483,7 @@ def test_sync_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(monke
     )
     monkeypatch.setattr(
         sync_web_crawl_module,
-        "retry_operation",
+        "retry_operation_with_defaults",
         fake_retry_operation,
     )
 
@@ -526,7 +526,7 @@ def test_async_web_crawl_manager_bounds_operation_name_for_fetch_retry_path(
         )
         monkeypatch.setattr(
             async_web_crawl_module,
-            "retry_operation_async",
+            "retry_operation_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -572,7 +572,7 @@ def test_sync_web_crawl_manager_bounds_operation_name_for_paginated_path(monkeyp
     )
     monkeypatch.setattr(
         sync_web_crawl_module,
-        "collect_paginated_results",
+        "collect_paginated_results_with_defaults",
         fake_collect_paginated_results,
     )
 
@@ -610,7 +610,7 @@ def test_async_web_crawl_manager_bounds_operation_name_for_paginated_path(monkey
         )
         monkeypatch.setattr(
             async_web_crawl_module,
-            "collect_paginated_results_async",
+            "collect_paginated_results_with_defaults_async",
             fake_collect_paginated_results_async,
         )
 
@@ -657,7 +657,7 @@ def test_sync_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
     )
     monkeypatch.setattr(
         sync_scrape_module,
-        "retry_operation",
+        "retry_operation_with_defaults",
         fake_retry_operation,
     )
 
@@ -700,7 +700,7 @@ def test_async_batch_scrape_manager_bounds_operation_name_for_fetch_retry_path(
         )
         monkeypatch.setattr(
             async_scrape_module,
-            "retry_operation_async",
+            "retry_operation_with_defaults_async",
             fake_retry_operation_async,
         )
 
@@ -748,7 +748,7 @@ def test_sync_batch_scrape_manager_bounds_operation_name_for_paginated_path(
     )
     monkeypatch.setattr(
         sync_scrape_module,
-        "collect_paginated_results",
+        "collect_paginated_results_with_defaults",
         fake_collect_paginated_results,
     )
 
@@ -788,7 +788,7 @@ def test_async_batch_scrape_manager_bounds_operation_name_for_paginated_path(
         )
         monkeypatch.setattr(
             async_scrape_module,
-            "collect_paginated_results_async",
+            "collect_paginated_results_with_defaults_async",
             fake_collect_paginated_results_async,
         )
 

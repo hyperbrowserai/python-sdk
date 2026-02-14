@@ -3,9 +3,11 @@ from typing import Optional
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
-    collect_paginated_results,
     poll_until_terminal_status,
-    retry_operation,
+)
+from ..job_fetch_utils import (
+    collect_paginated_results_with_defaults,
+    retry_operation_with_defaults,
 )
 from ..page_params_utils import build_page_batch_params
 from ..job_pagination_utils import (
@@ -97,11 +99,9 @@ class CrawlManager:
         )
 
         if not return_all_pages:
-            return retry_operation(
+            return retry_operation_with_defaults(
                 operation_name=build_fetch_operation_name(operation_name),
                 operation=lambda: self.get(job_id),
-                max_attempts=POLLING_ATTEMPTS,
-                retry_delay_seconds=0.5,
             )
 
         job_response = initialize_job_paginated_response(
@@ -111,7 +111,7 @@ class CrawlManager:
             total_counter_alias="totalCrawledPages",
         )
 
-        collect_paginated_results(
+        collect_paginated_results_with_defaults(
             operation_name=operation_name,
             get_next_page=lambda page: self.get(
                 job_start_resp.job_id,
@@ -131,8 +131,6 @@ class CrawlManager:
                 total_counter_attr="total_crawled_pages",
             ),
             max_wait_seconds=max_wait_seconds,
-            max_attempts=POLLING_ATTEMPTS,
-            retry_delay_seconds=0.5,
         )
 
         return job_response

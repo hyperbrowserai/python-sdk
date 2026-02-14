@@ -98,6 +98,8 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extension_create_helper_usage.py` (extension create-input normalization helper usage enforcement),
   - `tests/test_extract_payload_helper_usage.py` (extract start-payload helper usage enforcement),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
+  - `tests/test_job_fetch_helper_boundary.py` (centralization boundary enforcement for retry/paginated-fetch helper primitives),
+  - `tests/test_job_fetch_helper_usage.py` (shared retry/paginated-fetch defaults helper usage enforcement),
   - `tests/test_job_pagination_helper_usage.py` (shared scrape/crawl pagination helper usage enforcement),
   - `tests/test_job_start_payload_helper_usage.py` (shared scrape/crawl start-payload helper usage enforcement),
   - `tests/test_job_wait_helper_boundary.py` (centralization boundary enforcement for wait-for-job helper primitives),

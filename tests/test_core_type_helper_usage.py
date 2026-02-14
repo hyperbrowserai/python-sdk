@@ -33,6 +33,7 @@ CORE_MODULES = (
     "hyperbrowser/client/managers/computer_action_payload_utils.py",
     "hyperbrowser/client/managers/extension_create_utils.py",
     "hyperbrowser/client/managers/extract_payload_utils.py",
+    "hyperbrowser/client/managers/job_fetch_utils.py",
     "hyperbrowser/client/managers/job_pagination_utils.py",
     "hyperbrowser/client/managers/job_start_payload_utils.py",
     "hyperbrowser/client/managers/page_params_utils.py",
