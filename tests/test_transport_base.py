@@ -114,6 +114,17 @@ class _UnreadableNameCallableModel:
         raise RuntimeError("call failed")
 
 
+class _StringSubclassModelNameCallableModel:
+    class _ModelName(str):
+        pass
+
+    __name__ = _ModelName("SubclassModelName")
+
+    def __call__(self, **kwargs):
+        _ = kwargs
+        raise RuntimeError("call failed")
+
+
 class _BrokenRenderedMappingKey(str):
     def __iter__(self):
         raise RuntimeError("cannot iterate rendered mapping key")
@@ -247,6 +258,17 @@ def test_api_response_from_json_falls_back_for_unreadable_model_name_text() -> N
         APIResponse.from_json(
             {"name": "job-1"},
             cast("type[_SampleResponseModel]", _UnreadableNameCallableModel()),
+        )
+
+
+def test_api_response_from_json_falls_back_for_string_subclass_model_names() -> None:
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to parse response data for response model",
+    ):
+        APIResponse.from_json(
+            {"name": "job-1"},
+            cast("type[_SampleResponseModel]", _StringSubclassModelNameCallableModel()),
         )
 
 

@@ -18,7 +18,7 @@ def _sanitize_display_text(value: str, *, max_length: int) -> str:
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in value
         ).strip()
-        if not isinstance(sanitized_value, str):
+        if type(sanitized_value) is not str:
             return ""
         if not sanitized_value:
             return ""
@@ -37,7 +37,7 @@ def _safe_model_name(model: object) -> str:
         model_name = getattr(model, "__name__", "response model")
     except Exception:
         return "response model"
-    if not isinstance(model_name, str):
+    if type(model_name) is not str:
         return "response model"
     try:
         normalized_model_name = _sanitize_display_text(
