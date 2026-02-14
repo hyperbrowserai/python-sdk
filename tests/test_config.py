@@ -544,6 +544,34 @@ def test_client_config_normalize_base_url_rejects_invalid_urlparse_component_typ
         ClientConfig.normalize_base_url("https://example.local")
 
 
+def test_client_config_normalize_base_url_rejects_string_subclass_components(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _WeirdString(str):
+        pass
+
+    class _ParsedURL:
+        scheme = _WeirdString("https")
+        netloc = _WeirdString("example.local")
+        hostname = "example.local"
+        query = _WeirdString("")
+        fragment = _WeirdString("")
+        username = None
+        password = None
+        path = _WeirdString("/api")
+
+        @property
+        def port(self) -> int:
+            return 443
+
+    monkeypatch.setattr(config_module, "urlparse", lambda _value: _ParsedURL())
+
+    with pytest.raises(
+        HyperbrowserError, match="base_url parser returned invalid URL components"
+    ):
+        ClientConfig.normalize_base_url("https://example.local")
+
+
 def test_client_config_normalize_base_url_rejects_invalid_hostname_types(
     monkeypatch: pytest.MonkeyPatch,
 ):

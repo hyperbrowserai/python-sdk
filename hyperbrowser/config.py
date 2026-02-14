@@ -114,11 +114,11 @@ class ClientConfig:
                 original_error=exc,
             ) from exc
         if (
-            not isinstance(parsed_base_url_scheme, str)
-            or not isinstance(parsed_base_url_netloc, str)
-            or not isinstance(parsed_base_url_path, str)
-            or not isinstance(parsed_base_url_query, str)
-            or not isinstance(parsed_base_url_fragment, str)
+            type(parsed_base_url_scheme) is not str
+            or type(parsed_base_url_netloc) is not str
+            or type(parsed_base_url_path) is not str
+            or type(parsed_base_url_query) is not str
+            or type(parsed_base_url_fragment) is not str
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         try:
@@ -130,8 +130,9 @@ class ClientConfig:
                 "Failed to parse base_url host",
                 original_error=exc,
             ) from exc
-        if parsed_base_url_hostname is not None and not isinstance(
-            parsed_base_url_hostname, str
+        if (
+            parsed_base_url_hostname is not None
+            and type(parsed_base_url_hostname) is not str
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if (
@@ -159,12 +160,14 @@ class ClientConfig:
                 "Failed to parse base_url credentials",
                 original_error=exc,
             ) from exc
-        if parsed_base_url_username is not None and not isinstance(
-            parsed_base_url_username, str
+        if (
+            parsed_base_url_username is not None
+            and type(parsed_base_url_username) is not str
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
-        if parsed_base_url_password is not None and not isinstance(
-            parsed_base_url_password, str
+        if (
+            parsed_base_url_password is not None
+            and type(parsed_base_url_password) is not str
         ):
             raise HyperbrowserError("base_url parser returned invalid URL components")
         if parsed_base_url_username is not None or parsed_base_url_password is not None:
