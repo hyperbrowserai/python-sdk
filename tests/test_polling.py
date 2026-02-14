@@ -67,6 +67,53 @@ def test_poll_until_terminal_status_wraps_isfinite_failures(
     assert exc_info.value.original_error is not None
 
 
+def test_poll_until_terminal_status_wraps_unexpected_float_conversion_failures(
+):
+    class _BrokenDecimal(Decimal):
+        def __float__(self) -> float:
+            raise RuntimeError("unexpected float conversion failure")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="poll_interval_seconds must be finite",
+    ) as exc_info:
+        poll_until_terminal_status(
+            operation_name="sync poll float check",
+            get_status=lambda: "completed",
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=_BrokenDecimal("0.1"),  # type: ignore[arg-type]
+            max_wait_seconds=1.0,
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_poll_until_terminal_status_async_wraps_unexpected_isfinite_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_isfinite_error(_value: float) -> bool:
+        raise RuntimeError("unexpected finite check failure")
+
+    monkeypatch.setattr(polling_helpers.math, "isfinite", _raise_isfinite_error)
+
+    async def run() -> None:
+        await poll_until_terminal_status_async(
+            operation_name="async poll finite check",
+            get_status=lambda: asyncio.sleep(0, result="completed"),
+            is_terminal_status=lambda value: value == "completed",
+            poll_interval_seconds=0.1,
+            max_wait_seconds=1.0,
+        )
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="poll_interval_seconds must be finite",
+    ) as exc_info:
+        asyncio.run(run())
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
 def test_build_fetch_operation_name_prefixes_when_within_length_limit():
     assert build_fetch_operation_name("crawl job 123") == "Fetching crawl job 123"
 

@@ -16,14 +16,18 @@ def validate_timeout_seconds(timeout: Optional[float]) -> Optional[float]:
         raise HyperbrowserError("timeout must be a number")
     try:
         normalized_timeout = float(timeout)
-    except (TypeError, ValueError, OverflowError) as exc:
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
         raise HyperbrowserError(
             "timeout must be finite",
             original_error=exc,
         ) from exc
     try:
         is_finite = math.isfinite(normalized_timeout)
-    except (TypeError, ValueError, OverflowError) as exc:
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
         raise HyperbrowserError(
             "timeout must be finite",
             original_error=exc,

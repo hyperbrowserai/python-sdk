@@ -161,3 +161,61 @@ def test_async_client_wraps_timeout_isfinite_failures(
         AsyncHyperbrowser(api_key="test-key", timeout=1)
 
     assert exc_info.value.original_error is not None
+
+
+def test_sync_client_wraps_unexpected_timeout_float_conversion_failures(
+):
+    class _BrokenDecimal(Decimal):
+        def __float__(self) -> float:
+            raise RuntimeError("unexpected float conversion failure")
+
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
+        Hyperbrowser(
+            api_key="test-key",
+            timeout=_BrokenDecimal("1"),  # type: ignore[arg-type]
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_async_client_wraps_unexpected_timeout_float_conversion_failures(
+):
+    class _BrokenDecimal(Decimal):
+        def __float__(self) -> float:
+            raise RuntimeError("unexpected float conversion failure")
+
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
+        AsyncHyperbrowser(
+            api_key="test-key",
+            timeout=_BrokenDecimal("1"),  # type: ignore[arg-type]
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_sync_client_wraps_unexpected_timeout_isfinite_runtime_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_isfinite_error(_value: float) -> bool:
+        raise RuntimeError("unexpected finite check failure")
+
+    monkeypatch.setattr(timeout_helpers.math, "isfinite", _raise_isfinite_error)
+
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
+        Hyperbrowser(api_key="test-key", timeout=1)
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_async_client_wraps_unexpected_timeout_isfinite_runtime_failures(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raise_isfinite_error(_value: float) -> bool:
+        raise RuntimeError("unexpected finite check failure")
+
+    monkeypatch.setattr(timeout_helpers.math, "isfinite", _raise_isfinite_error)
+
+    with pytest.raises(HyperbrowserError, match="timeout must be finite") as exc_info:
+        AsyncHyperbrowser(api_key="test-key", timeout=1)
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
