@@ -223,20 +223,11 @@ def test_tool_wrappers_preserve_hyperbrowser_param_value_read_failures():
 
 
 @pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_fall_back_for_unreadable_param_value_read_keys(runner):
+def test_tool_wrappers_reject_string_subclass_param_keys(runner):
     class _BrokenKey(str):
-        def __new__(cls, value: str):
-            instance = super().__new__(cls, value)
-            instance._iteration_count = 0
-            return instance
+        pass
 
-        def __iter__(self):
-            self._iteration_count += 1
-            if self._iteration_count > 1:
-                raise RuntimeError("cannot iterate param key")
-            return super().__iter__()
-
-    class _BrokenValueMapping(Mapping[str, object]):
+    class _BrokenKeyMapping(Mapping[str, object]):
         def __iter__(self) -> Iterator[str]:
             yield _BrokenKey("url")
 
@@ -245,134 +236,7 @@ def test_tool_wrappers_fall_back_for_unreadable_param_value_read_keys(runner):
 
         def __getitem__(self, key: str) -> object:
             _ = key
-            raise RuntimeError("cannot read value")
+            return "https://example.com"
 
-    with pytest.raises(
-        HyperbrowserError, match="Failed to read tool param '<unreadable key>'"
-    ) as exc_info:
-        runner(_BrokenValueMapping())
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_wrap_param_key_strip_failures(runner):
-    class _BrokenStripKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("tool param key strip exploded")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize tool param key"
-    ) as exc_info:
-        runner({_BrokenStripKey("url"): "https://example.com"})
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_preserve_hyperbrowser_param_key_strip_failures(runner):
-    class _BrokenStripKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom tool param key strip failure")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom tool param key strip failure"
-    ) as exc_info:
-        runner({_BrokenStripKey("url"): "https://example.com"})
-
-    assert exc_info.value.original_error is None
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_wrap_non_string_param_key_strip_results(runner):
-    class _BrokenStripKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return object()
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize tool param key"
-    ) as exc_info:
-        runner({_BrokenStripKey("url"): "https://example.com"})
-
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_wrap_param_key_empty_check_length_failures(runner):
-    class _BrokenStripKey(str):
-        class _NormalizedKey(str):
-            def __len__(self):
-                raise RuntimeError("tool param key length exploded")
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedKey("url")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize tool param key"
-    ) as exc_info:
-        runner({_BrokenStripKey("url"): "https://example.com"})
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_preserve_hyperbrowser_param_key_empty_check_length_failures(
-    runner,
-):
-    class _BrokenStripKey(str):
-        class _NormalizedKey(str):
-            def __len__(self):
-                raise HyperbrowserError("custom tool param key length failure")
-
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self._NormalizedKey("url")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom tool param key length failure"
-    ) as exc_info:
-        runner({_BrokenStripKey("url"): "https://example.com"})
-
-    assert exc_info.value.original_error is None
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_wrap_param_key_character_validation_failures(runner):
-    class _BrokenIterKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self
-
-        def __iter__(self):
-            raise RuntimeError("tool param key iteration exploded")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to validate tool param key characters"
-    ) as exc_info:
-        runner({_BrokenIterKey("url"): "https://example.com"})
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
-def test_tool_wrappers_preserve_hyperbrowser_param_key_character_validation_failures(
-    runner,
-):
-    class _BrokenIterKey(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            return self
-
-        def __iter__(self):
-            raise HyperbrowserError("custom tool param key iteration failure")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom tool param key iteration failure"
-    ) as exc_info:
-        runner({_BrokenIterKey("url"): "https://example.com"})
-
-    assert exc_info.value.original_error is None
+    with pytest.raises(HyperbrowserError, match="tool params keys must be strings"):
+        runner(_BrokenKeyMapping())

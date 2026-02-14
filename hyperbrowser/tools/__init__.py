@@ -141,7 +141,7 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
             original_error=exc,
         ) from exc
     for key in param_keys:
-        if isinstance(key, str):
+        if type(key) is str:
             try:
                 normalized_key = key.strip()
                 if not isinstance(normalized_key, str):
