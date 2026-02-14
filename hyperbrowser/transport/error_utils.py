@@ -54,14 +54,14 @@ def _safe_to_string(value: Any) -> str:
         normalized_value = str(value)
     except Exception:
         return f"<unstringifiable {type(value).__name__}>"
-    if type(normalized_value) is not str:
+    if not _is_plain_string(normalized_value):
         return f"<{type(value).__name__}>"
     try:
         sanitized_value = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in normalized_value
         )
-        if type(sanitized_value) is not str:
+        if not _is_plain_string(sanitized_value):
             return f"<{type(value).__name__}>"
         if sanitized_value.strip():
             return sanitized_value
@@ -85,7 +85,7 @@ def _has_non_blank_text(value: Any) -> bool:
         return False
     try:
         stripped_value = value.strip()
-        if type(stripped_value) is not str:
+        if not _is_plain_string(stripped_value):
             return False
         return bool(stripped_value)
     except Exception:
@@ -111,16 +111,16 @@ def _normalize_request_method(method: Any) -> str:
         except Exception:
             return "UNKNOWN"
     try:
-        if type(raw_method) is not str:
+        if not _is_plain_string(raw_method):
             return "UNKNOWN"
         stripped_method = raw_method.strip()
-        if type(stripped_method) is not str or not stripped_method:
+        if not _is_plain_string(stripped_method) or not stripped_method:
             return "UNKNOWN"
         normalized_method = stripped_method.upper()
-        if type(normalized_method) is not str:
+        if not _is_plain_string(normalized_method):
             return "UNKNOWN"
         lowered_method = normalized_method.lower()
-        if type(lowered_method) is not str:
+        if not _is_plain_string(lowered_method):
             return "UNKNOWN"
     except Exception:
         return "UNKNOWN"
@@ -159,13 +159,13 @@ def _normalize_request_url(url: Any) -> str:
             return "unknown URL"
 
     try:
-        if type(raw_url) is not str:
+        if not _is_plain_string(raw_url):
             return "unknown URL"
         normalized_url = raw_url.strip()
-        if type(normalized_url) is not str or not normalized_url:
+        if not _is_plain_string(normalized_url) or not normalized_url:
             return "unknown URL"
         lowered_url = normalized_url.lower()
-        if type(lowered_url) is not str:
+        if not _is_plain_string(lowered_url):
             return "unknown URL"
     except Exception:
         return "unknown URL"
@@ -201,7 +201,7 @@ def _normalize_response_text_for_error_message(response_text: Any) -> str:
     if _is_plain_string(response_text):
         try:
             normalized_response_text = "".join(character for character in response_text)
-            if type(normalized_response_text) is not str:
+            if not _is_plain_string(normalized_response_text):
                 raise TypeError("normalized response text must be a string")
             return normalized_response_text
         except Exception:
@@ -222,7 +222,7 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if _is_plain_string(value):
         try:
             normalized_value = "".join(character for character in value)
-            if type(normalized_value) is not str:
+            if not _is_plain_string(normalized_value):
                 raise TypeError("normalized error value must be a string")
             return normalized_value
         except Exception:
@@ -299,7 +299,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
                     break
         else:
             extracted_message = _stringify_error_value(error_data)
-    elif type(error_data) is str:
+    elif _is_plain_string(error_data):
         extracted_message = error_data
     else:
         extracted_message = _stringify_error_value(error_data)
