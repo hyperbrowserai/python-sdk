@@ -46,7 +46,7 @@ def parse_session_response_model(
 def parse_session_recordings_response_data(
     response_data: Any,
 ) -> List[SessionRecording]:
-    if not isinstance(response_data, list):
+    if type(response_data) is not list:
         raise HyperbrowserError(
             "Expected session recording response to be a list of objects"
         )

@@ -342,26 +342,14 @@ def test_parse_session_recordings_response_data_preserves_hyperbrowser_value_rea
     assert exc_info.value.original_error is None
 
 
-def test_parse_session_recordings_response_data_wraps_unreadable_list_iteration():
+def test_parse_session_recordings_response_data_rejects_list_subclass_payloads():
     class _BrokenRecordingList(list):
         def __iter__(self):
             raise RuntimeError("cannot iterate recordings")
 
     with pytest.raises(
-        HyperbrowserError, match="Failed to iterate session recording response list"
-    ) as exc_info:
-        parse_session_recordings_response_data(_BrokenRecordingList([{}]))
-
-    assert exc_info.value.original_error is not None
-
-
-def test_parse_session_recordings_response_data_preserves_hyperbrowser_iteration_errors():
-    class _BrokenRecordingList(list):
-        def __iter__(self):
-            raise HyperbrowserError("custom recording iteration failure")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom recording iteration failure"
+        HyperbrowserError,
+        match="Expected session recording response to be a list of objects",
     ) as exc_info:
         parse_session_recordings_response_data(_BrokenRecordingList([{}]))
 

@@ -94,7 +94,7 @@ def parse_extension_list_response_data(response_data: Any) -> List[ExtensionResp
             "Failed to read 'extensions' value from response",
             original_error=exc,
         ) from exc
-    if not isinstance(extensions_value, list):
+    if type(extensions_value) is not list:
         raise HyperbrowserError(
             "Expected list in 'extensions' key but got "
             f"{_get_type_name(extensions_value)}"
