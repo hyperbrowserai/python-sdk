@@ -528,6 +528,36 @@ def test_open_binary_file_rejects_non_string_fspath_results():
             pass
 
 
+def test_open_binary_file_wraps_fspath_runtime_errors():
+    class _BrokenPathLike:
+        def __fspath__(self) -> str:
+            raise RuntimeError("bad fspath")
+
+    with pytest.raises(HyperbrowserError, match="file_path is invalid") as exc_info:
+        with open_binary_file(
+            _BrokenPathLike(),  # type: ignore[arg-type]
+            open_error_message="open failed",
+        ):
+            pass
+
+    assert exc_info.value.original_error is not None
+
+
+def test_open_binary_file_preserves_hyperbrowser_fspath_errors():
+    class _BrokenPathLike:
+        def __fspath__(self) -> str:
+            raise HyperbrowserError("custom fspath failure")
+
+    with pytest.raises(HyperbrowserError, match="custom fspath failure") as exc_info:
+        with open_binary_file(
+            _BrokenPathLike(),  # type: ignore[arg-type]
+            open_error_message="open failed",
+        ):
+            pass
+
+    assert exc_info.value.original_error is None
+
+
 def test_open_binary_file_rejects_string_subclass_fspath_results():
     class _PathLike:
         class _PathString(str):
