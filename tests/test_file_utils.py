@@ -409,6 +409,16 @@ def test_build_open_file_error_message_uses_explicit_default_prefix_when_prefix_
     assert message == "Failed to open upload file at path: /tmp/path.txt"
 
 
+def test_build_open_file_error_message_sanitizes_explicit_default_prefix_when_prefix_invalid():
+    message = build_open_file_error_message(
+        "/tmp/path.txt",
+        prefix=123,  # type: ignore[arg-type]
+        default_prefix="Failed\tupload",
+    )
+
+    assert message == "Failed?upload: /tmp/path.txt"
+
+
 def test_build_open_file_error_message_sanitizes_control_chars_in_prefix():
     message = build_open_file_error_message(
         "/tmp/path.txt",
