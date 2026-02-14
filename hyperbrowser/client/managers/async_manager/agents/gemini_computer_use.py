@@ -6,7 +6,7 @@ from ....polling import (
     wait_for_job_result_async,
 )
 from ...response_utils import parse_response_model
-from .....exceptions import HyperbrowserError
+from ...serialization_utils import serialize_model_dump_to_dict
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -25,19 +25,10 @@ class GeminiComputerUseManager:
     async def start(
         self, params: StartGeminiComputerUseTaskParams
     ) -> StartGeminiComputerUseTaskResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize Gemini Computer Use start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError(
-                "Failed to serialize Gemini Computer Use start params"
-            )
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize Gemini Computer Use start params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/task/gemini-computer-use"),
             data=payload,

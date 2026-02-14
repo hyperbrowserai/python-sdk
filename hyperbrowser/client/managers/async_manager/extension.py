@@ -2,6 +2,7 @@ from typing import List
 
 from hyperbrowser.exceptions import HyperbrowserError
 from ...file_utils import ensure_existing_file_path
+from ..serialization_utils import serialize_model_dump_to_dict
 from ..extension_utils import parse_extension_list_response_data
 from ..response_utils import parse_response_model
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
@@ -23,17 +24,10 @@ class ExtensionManager:
                 "params.file_path is invalid",
                 original_error=exc,
             ) from exc
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize extension create params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize extension create params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize extension create params",
+        )
         payload.pop("filePath", None)
 
         file_path = ensure_existing_file_path(

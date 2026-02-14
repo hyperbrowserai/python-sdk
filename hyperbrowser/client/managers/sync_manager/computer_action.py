@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Union, List, Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from ..response_utils import parse_response_model
+from ..serialization_utils import serialize_model_dump_to_dict
 from hyperbrowser.models import (
     SessionDetail,
     ComputerActionParams,
@@ -91,15 +92,12 @@ class ComputerActionManager:
             )
 
         if isinstance(params, BaseModel):
-            try:
-                payload = params.model_dump(by_alias=True, exclude_none=True)
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "Failed to serialize computer action params",
-                    original_error=exc,
-                ) from exc
+            payload = serialize_model_dump_to_dict(
+                params,
+                error_message="Failed to serialize computer action params",
+                by_alias=True,
+                exclude_none=True,
+            )
         else:
             payload = params
 

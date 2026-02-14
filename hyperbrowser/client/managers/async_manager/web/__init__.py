@@ -1,6 +1,5 @@
 from .batch_fetch import BatchFetchManager
 from .crawl import WebCrawlManager
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     FetchParams,
     FetchResponse,
@@ -8,6 +7,7 @@ from hyperbrowser.models import (
     WebSearchResponse,
 )
 from ....schema_utils import inject_web_output_schemas
+from ...serialization_utils import serialize_model_dump_to_dict
 from ...response_utils import parse_response_model
 
 
@@ -18,17 +18,10 @@ class WebManager:
         self.crawl = WebCrawlManager(client)
 
     async def fetch(self, params: FetchParams) -> FetchResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize web fetch params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize web fetch params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize web fetch params",
+        )
         inject_web_output_schemas(
             payload, params.outputs.formats if params.outputs else None
         )
@@ -44,17 +37,10 @@ class WebManager:
         )
 
     async def search(self, params: WebSearchParams) -> WebSearchResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize web search params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize web search params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize web search params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/web/search"),
             data=payload,

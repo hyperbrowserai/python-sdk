@@ -1,6 +1,5 @@
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.profile import (
     CreateProfileParams,
     CreateProfileResponse,
@@ -9,6 +8,7 @@ from hyperbrowser.models.profile import (
     ProfileResponse,
 )
 from hyperbrowser.models.session import BasicResponse
+from ..serialization_utils import serialize_model_dump_to_dict
 from ..response_utils import parse_response_model
 
 
@@ -21,17 +21,10 @@ class ProfileManager:
     ) -> CreateProfileResponse:
         payload = {}
         if params is not None:
-            try:
-                payload = params.model_dump(exclude_none=True, by_alias=True)
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                raise HyperbrowserError(
-                    "Failed to serialize profile create params",
-                    original_error=exc,
-                ) from exc
-            if type(payload) is not dict:
-                raise HyperbrowserError("Failed to serialize profile create params")
+            payload = serialize_model_dump_to_dict(
+                params,
+                error_message="Failed to serialize profile create params",
+            )
         response = self._client.transport.post(
             self._client._build_url("/profile"),
             data=payload,
@@ -64,17 +57,10 @@ class ProfileManager:
 
     def list(self, params: Optional[ProfileListParams] = None) -> ProfileListResponse:
         params_obj = params or ProfileListParams()
-        try:
-            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize profile list params",
-                original_error=exc,
-            ) from exc
-        if type(query_params) is not dict:
-            raise HyperbrowserError("Failed to serialize profile list params")
+        query_params = serialize_model_dump_to_dict(
+            params_obj,
+            error_message="Failed to serialize profile list params",
+        )
         response = self._client.transport.get(
             self._client._build_url("/profiles"),
             params=query_params,

@@ -9,6 +9,7 @@ from hyperbrowser.models.extract import (
     StartExtractJobResponse,
 )
 from ...polling import build_operation_name, ensure_started_job_id, wait_for_job_result
+from ..serialization_utils import serialize_model_dump_to_dict
 from ...schema_utils import resolve_schema_input
 from ..response_utils import parse_response_model
 
@@ -21,17 +22,10 @@ class ExtractManager:
         if not params.schema_ and not params.prompt:
             raise HyperbrowserError("Either schema or prompt must be provided")
 
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize extract start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize extract start params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize extract start params",
+        )
         if params.schema_:
             payload["schema"] = resolve_schema_input(params.schema_)
 

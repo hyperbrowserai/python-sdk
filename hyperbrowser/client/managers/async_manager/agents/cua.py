@@ -6,7 +6,7 @@ from ....polling import (
     wait_for_job_result_async,
 )
 from ...response_utils import parse_response_model
-from .....exceptions import HyperbrowserError
+from ...serialization_utils import serialize_model_dump_to_dict
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -23,17 +23,10 @@ class CuaManager:
         self._client = client
 
     async def start(self, params: StartCuaTaskParams) -> StartCuaTaskResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize CUA start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize CUA start params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize CUA start params",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/task/cua"),
             data=payload,

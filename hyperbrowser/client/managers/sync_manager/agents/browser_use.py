@@ -3,6 +3,7 @@ from typing import Optional
 from ....polling import build_operation_name, ensure_started_job_id, wait_for_job_result
 from ....schema_utils import resolve_schema_input
 from ...response_utils import parse_response_model
+from ...serialization_utils import serialize_model_dump_to_dict
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -12,7 +13,6 @@ from .....models import (
     StartBrowserUseTaskParams,
     StartBrowserUseTaskResponse,
 )
-from .....exceptions import HyperbrowserError
 
 
 class BrowserUseManager:
@@ -20,17 +20,10 @@ class BrowserUseManager:
         self._client = client
 
     def start(self, params: StartBrowserUseTaskParams) -> StartBrowserUseTaskResponse:
-        try:
-            payload = params.model_dump(exclude_none=True, by_alias=True)
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                "Failed to serialize browser-use start params",
-                original_error=exc,
-            ) from exc
-        if type(payload) is not dict:
-            raise HyperbrowserError("Failed to serialize browser-use start params")
+        payload = serialize_model_dump_to_dict(
+            params,
+            error_message="Failed to serialize browser-use start params",
+        )
         if params.output_model_schema:
             payload["outputModelSchema"] = resolve_schema_input(
                 params.output_model_schema
