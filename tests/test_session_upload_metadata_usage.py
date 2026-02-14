@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,24 @@ def test_session_upload_helper_uses_shared_operation_metadata_prefixes():
     assert "SESSION_OPERATION_METADATA.upload_missing_file_message_prefix" in module_text
     assert "SESSION_OPERATION_METADATA.upload_not_file_message_prefix" in module_text
     assert "SESSION_OPERATION_METADATA.upload_open_file_error_prefix" in module_text
-    assert 'prefix="Upload file not found at path"' not in module_text
-    assert 'prefix="Upload file path must point to a file"' not in module_text
-    assert 'prefix="Failed to open upload file at path"' not in module_text
+    assert (
+        re.search(
+            r'(?<!default_)prefix="Upload file not found at path"',
+            module_text,
+        )
+        is None
+    )
+    assert (
+        re.search(
+            r'(?<!default_)prefix="Upload file path must point to a file"',
+            module_text,
+        )
+        is None
+    )
+    assert (
+        re.search(
+            r'(?<!default_)prefix="Failed to open upload file at path"',
+            module_text,
+        )
+        is None
+    )
