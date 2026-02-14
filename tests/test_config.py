@@ -211,6 +211,74 @@ def test_client_config_rejects_non_string_values():
         ClientConfig(api_key="bad\nkey")
 
 
+def test_client_config_wraps_api_key_strip_runtime_errors():
+    class _BrokenApiKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("api key strip exploded")
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_preserves_hyperbrowser_api_key_strip_errors():
+    class _BrokenApiKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise HyperbrowserError("custom strip failure")
+
+    with pytest.raises(HyperbrowserError, match="custom strip failure") as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert exc_info.value.original_error is None
+
+
+def test_client_config_wraps_non_string_api_key_strip_results():
+    class _BrokenApiKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return object()
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize api_key") as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
+def test_client_config_wraps_api_key_iteration_runtime_errors():
+    class _BrokenApiKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self
+
+        def __iter__(self):
+            raise RuntimeError("api key iteration exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to validate api_key characters"
+    ) as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_client_config_preserves_hyperbrowser_api_key_iteration_errors():
+    class _BrokenApiKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self
+
+        def __iter__(self):
+            raise HyperbrowserError("custom iteration failure")
+
+    with pytest.raises(HyperbrowserError, match="custom iteration failure") as exc_info:
+        ClientConfig(api_key=_BrokenApiKey("test-key"))
+
+    assert exc_info.value.original_error is None
+
+
 def test_client_config_rejects_empty_or_invalid_base_url():
     with pytest.raises(HyperbrowserError, match="base_url must not be empty"):
         ClientConfig(api_key="test-key", base_url="   ")

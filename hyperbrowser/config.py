@@ -19,20 +19,49 @@ class ClientConfig:
     headers: Optional[Mapping[str, str]] = None
 
     def __post_init__(self) -> None:
-        if not isinstance(self.api_key, str):
-            raise HyperbrowserError("api_key must be a string")
-        self.api_key = self.api_key.strip()
-        if not self.api_key:
-            raise HyperbrowserError("api_key must not be empty")
-        if any(
-            ord(character) < 32 or ord(character) == 127 for character in self.api_key
-        ):
-            raise HyperbrowserError("api_key must not contain control characters")
+        self.api_key = self.normalize_api_key(self.api_key)
         self.base_url = self.normalize_base_url(self.base_url)
         self.headers = normalize_headers(
             self.headers,
             mapping_error_message="headers must be a mapping of string pairs",
         )
+
+    @staticmethod
+    def normalize_api_key(
+        api_key: str,
+        *,
+        empty_error_message: str = "api_key must not be empty",
+    ) -> str:
+        if not isinstance(api_key, str):
+            raise HyperbrowserError("api_key must be a string")
+        try:
+            normalized_api_key = api_key.strip()
+            if not isinstance(normalized_api_key, str):
+                raise TypeError("normalized api_key must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize api_key",
+                original_error=exc,
+            ) from exc
+        if not normalized_api_key:
+            raise HyperbrowserError(empty_error_message)
+        try:
+            contains_control_character = any(
+                ord(character) < 32 or ord(character) == 127
+                for character in normalized_api_key
+            )
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to validate api_key characters",
+                original_error=exc,
+            ) from exc
+        if contains_control_character:
+            raise HyperbrowserError("api_key must not contain control characters")
+        return normalized_api_key
 
     @staticmethod
     def _decode_url_component_with_limit(value: str, *, component_label: str) -> str:
@@ -264,10 +293,14 @@ class ClientConfig:
     @classmethod
     def from_env(cls) -> "ClientConfig":
         api_key = os.environ.get("HYPERBROWSER_API_KEY")
-        if api_key is None or not api_key.strip():
+        if api_key is None:
             raise HyperbrowserError(
                 "HYPERBROWSER_API_KEY environment variable is required"
             )
+        api_key = cls.normalize_api_key(
+            api_key,
+            empty_error_message="HYPERBROWSER_API_KEY environment variable is required",
+        )
 
         base_url = cls.resolve_base_url_from_env(
             os.environ.get("HYPERBROWSER_BASE_URL")
