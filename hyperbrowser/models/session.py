@@ -149,7 +149,12 @@ class Session(BaseModel):
                 "timestamp values must be integers or plain numeric strings"
             )
         if type(value) is str:
-            return int(value)
+            try:
+                return int(value)
+            except Exception as exc:
+                raise ValueError(
+                    "timestamp string values must be integer-formatted"
+                ) from exc
         if isinstance(value, str):
             raise ValueError("timestamp string values must be plain strings")
         return value

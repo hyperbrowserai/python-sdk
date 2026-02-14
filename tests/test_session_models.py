@@ -60,3 +60,13 @@ def test_session_model_preserves_integer_timestamps():
 
     assert model.start_time == 1735689600
     assert model.end_time == 1735689660
+
+
+def test_session_model_rejects_non_integer_timestamp_strings():
+    payload = _build_session_payload()
+    payload["startTime"] = "not-a-number"
+
+    with pytest.raises(
+        ValidationError, match="timestamp string values must be integer-formatted"
+    ):
+        Session.model_validate(payload)
