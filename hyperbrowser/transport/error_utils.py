@@ -78,7 +78,7 @@ def _sanitize_error_message_text(message: str) -> str:
 
 
 def _has_non_blank_text(value: Any) -> bool:
-    if not isinstance(value, str):
+    if type(value) is not str:
         return False
     try:
         stripped_value = value.strip()
@@ -170,8 +170,7 @@ def _normalize_request_url(url: Any) -> str:
         if any(character.isspace() for character in normalized_url):
             return "unknown URL"
         if any(
-            ord(character) < 32 or ord(character) == 127
-            for character in normalized_url
+            ord(character) < 32 or ord(character) == 127 for character in normalized_url
         ):
             return "unknown URL"
         if len(normalized_url) > _MAX_REQUEST_URL_DISPLAY_LENGTH:
@@ -192,7 +191,7 @@ def _truncate_error_message(message: str) -> str:
 
 
 def _normalize_response_text_for_error_message(response_text: Any) -> str:
-    if isinstance(response_text, str):
+    if type(response_text) is str:
         try:
             normalized_response_text = "".join(character for character in response_text)
             if type(normalized_response_text) is not str:
@@ -200,6 +199,8 @@ def _normalize_response_text_for_error_message(response_text: Any) -> str:
             return normalized_response_text
         except Exception:
             return _safe_to_string(response_text)
+    if isinstance(response_text, str):
+        return _safe_to_string(response_text)
     if isinstance(response_text, (bytes, bytearray, memoryview)):
         try:
             return memoryview(response_text).tobytes().decode("utf-8")
@@ -211,7 +212,7 @@ def _normalize_response_text_for_error_message(response_text: Any) -> str:
 def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if _depth > 10:
         return _safe_to_string(value)
-    if isinstance(value, str):
+    if type(value) is str:
         try:
             normalized_value = "".join(character for character in value)
             if type(normalized_value) is not str:
@@ -219,6 +220,8 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
             return normalized_value
         except Exception:
             return _safe_to_string(value)
+    if isinstance(value, str):
+        return _safe_to_string(value)
     if isinstance(value, Mapping):
         for key in ("message", "error", "detail", "errors", "msg", "title", "reason"):
             try:
@@ -289,7 +292,7 @@ def extract_error_message(response: httpx.Response, fallback_error: Exception) -
                     break
         else:
             extracted_message = _stringify_error_value(error_data)
-    elif isinstance(error_data, str):
+    elif type(error_data) is str:
         extracted_message = error_data
     else:
         extracted_message = _stringify_error_value(error_data)
