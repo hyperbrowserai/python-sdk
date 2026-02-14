@@ -157,7 +157,7 @@ def merge_headers(
 def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str]]:
     if raw_headers is None:
         return None
-    if not isinstance(raw_headers, str):
+    if type(raw_headers) is not str:
         raise HyperbrowserError("HYPERBROWSER_HEADERS must be a string")
     try:
         normalized_raw_headers = raw_headers.strip()

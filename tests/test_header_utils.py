@@ -45,12 +45,6 @@ class _StringSubclassStripResultHeaderName(str):
         return self._NormalizedKey("X-Trace-Id")
 
 
-class _BrokenHeadersEnvString(str):
-    def strip(self, chars=None):  # type: ignore[override]
-        _ = chars
-        raise RuntimeError("headers env strip exploded")
-
-
 class _NonStringHeadersEnvStripResult(str):
     def strip(self, chars=None):  # type: ignore[override]
         _ = chars
@@ -168,45 +162,16 @@ def test_parse_headers_env_json_rejects_non_string_input():
         parse_headers_env_json(123)  # type: ignore[arg-type]
 
 
-def test_parse_headers_env_json_wraps_strip_runtime_errors():
+def test_parse_headers_env_json_rejects_string_subclass_input_values():
     with pytest.raises(
-        HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
-    ) as exc_info:
-        parse_headers_env_json(_BrokenHeadersEnvString('{"X-Trace-Id":"abc123"}'))
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_parse_headers_env_json_preserves_hyperbrowser_strip_errors():
-    class _BrokenHeadersEnvString(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise HyperbrowserError("custom headers strip failure")
-
-    with pytest.raises(
-        HyperbrowserError, match="custom headers strip failure"
-    ) as exc_info:
-        parse_headers_env_json(_BrokenHeadersEnvString('{"X-Trace-Id":"abc123"}'))
-
-    assert exc_info.value.original_error is None
-
-
-def test_parse_headers_env_json_wraps_non_string_strip_results():
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
-    ) as exc_info:
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be a string"
+    ):
         parse_headers_env_json(_NonStringHeadersEnvStripResult('{"X-Trace-Id":"abc123"}'))
 
-    assert isinstance(exc_info.value.original_error, TypeError)
-
-
-def test_parse_headers_env_json_wraps_string_subclass_strip_results():
     with pytest.raises(
-        HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
-    ) as exc_info:
+        HyperbrowserError, match="HYPERBROWSER_HEADERS must be a string"
+    ):
         parse_headers_env_json(_StringSubclassHeadersEnvStripResult('{"X-Trace-Id":"abc123"}'))
-
-    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_parse_headers_env_json_rejects_invalid_json():

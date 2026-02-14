@@ -333,21 +333,7 @@ def test_client_config_normalize_base_url_wraps_non_string_strip_results():
     assert isinstance(exc_info.value.original_error, TypeError)
 
 
-def test_client_config_resolve_base_url_from_env_wraps_strip_runtime_errors():
-    class _BrokenBaseUrl(str):
-        def strip(self, chars=None):  # type: ignore[override]
-            _ = chars
-            raise RuntimeError("environment base_url strip exploded")
-
-    with pytest.raises(
-        HyperbrowserError, match="Failed to normalize HYPERBROWSER_BASE_URL"
-    ) as exc_info:
-        ClientConfig.resolve_base_url_from_env(_BrokenBaseUrl("https://example.local"))
-
-    assert isinstance(exc_info.value.original_error, RuntimeError)
-
-
-def test_client_config_resolve_base_url_from_env_wraps_string_subclass_strip_results():
+def test_client_config_resolve_base_url_from_env_rejects_string_subclass_inputs():
     class _BrokenBaseUrl(str):
         class _NormalizedBaseUrl(str):
             pass
@@ -357,11 +343,9 @@ def test_client_config_resolve_base_url_from_env_wraps_string_subclass_strip_res
             return self._NormalizedBaseUrl("https://example.local")
 
     with pytest.raises(
-        HyperbrowserError, match="Failed to normalize HYPERBROWSER_BASE_URL"
-    ) as exc_info:
+        HyperbrowserError, match="HYPERBROWSER_BASE_URL must be a string"
+    ):
         ClientConfig.resolve_base_url_from_env(_BrokenBaseUrl("https://example.local"))
-
-    assert isinstance(exc_info.value.original_error, TypeError)
 
 
 def test_client_config_wraps_api_key_strip_runtime_errors():
