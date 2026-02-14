@@ -1,4 +1,7 @@
-from typing import Type, TypeVar
+from typing import Type, TypeVar, cast
+
+from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.type_utils import is_plain_int
 
 DEFAULT_PAGE_BATCH_SIZE = 100
 
@@ -11,5 +14,20 @@ def build_page_batch_params(
     page: int,
     batch_size: int = DEFAULT_PAGE_BATCH_SIZE,
 ) -> T:
-    params_model_obj = params_model
-    return params_model_obj(page=page, batch_size=batch_size)  # type: ignore[call-arg]
+    if not is_plain_int(page):
+        raise HyperbrowserError("page must be a plain integer")
+    if page <= 0:
+        raise HyperbrowserError("page must be a positive integer")
+    if not is_plain_int(batch_size):
+        raise HyperbrowserError("batch_size must be a plain integer")
+    if batch_size <= 0:
+        raise HyperbrowserError("batch_size must be a positive integer")
+    try:
+        return cast(T, params_model(page=page, batch_size=batch_size))
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to build paginated page params",
+            original_error=exc,
+        ) from exc
