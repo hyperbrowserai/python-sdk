@@ -39,3 +39,31 @@ def test_async_computer_action_manager_raises_hyperbrowser_error_without_endpoin
             await manager.screenshot(session)
 
     asyncio.run(run())
+
+
+def test_sync_computer_action_manager_rejects_string_subclass_session_ids():
+    class _SessionId(str):
+        pass
+
+    manager = SyncComputerActionManager(_DummyClient())
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="session must be a plain string session ID or SessionDetail",
+    ):
+        manager.screenshot(_SessionId("sess_123"))
+
+
+def test_async_computer_action_manager_rejects_string_subclass_session_ids():
+    class _SessionId(str):
+        pass
+
+    async def run() -> None:
+        manager = AsyncComputerActionManager(_DummyClient())
+        with pytest.raises(
+            HyperbrowserError,
+            match="session must be a plain string session ID or SessionDetail",
+        ):
+            await manager.screenshot(_SessionId("sess_123"))
+
+    asyncio.run(run())

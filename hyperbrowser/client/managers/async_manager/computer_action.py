@@ -30,8 +30,12 @@ class ComputerActionManager:
     async def _execute_request(
         self, session: Union[SessionDetail, str], params: ComputerActionParams
     ) -> ComputerActionResponse:
-        if isinstance(session, str):
+        if type(session) is str:
             session = await self._client.sessions.get(session)
+        elif isinstance(session, str):
+            raise HyperbrowserError(
+                "session must be a plain string session ID or SessionDetail"
+            )
 
         if not session.computer_action_endpoint:
             raise HyperbrowserError(
