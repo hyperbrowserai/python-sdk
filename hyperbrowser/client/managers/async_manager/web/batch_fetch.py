@@ -9,6 +9,7 @@ from hyperbrowser.models import (
 )
 from ...page_params_utils import build_page_batch_params
 from ...job_status_utils import is_default_terminal_job_status
+from ...web_operation_metadata import BATCH_FETCH_OPERATION_METADATA
 from ...web_route_constants import BATCH_FETCH_JOB_ROUTE_PREFIX
 from ...web_payload_utils import build_batch_fetch_start_payload
 from ...web_payload_utils import build_batch_fetch_get_params
@@ -35,6 +36,7 @@ from ...start_job_utils import build_started_job_context
 
 
 class BatchFetchManager:
+    _OPERATION_METADATA = BATCH_FETCH_OPERATION_METADATA
     _ROUTE_PREFIX = BATCH_FETCH_JOB_ROUTE_PREFIX
 
     def __init__(self, client):
@@ -52,7 +54,7 @@ class BatchFetchManager:
         return parse_response_model(
             response.data,
             model=StartBatchFetchJobResponse,
-            operation_name="batch fetch start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get_status(self, job_id: str) -> BatchFetchJobStatusResponse:
@@ -62,7 +64,7 @@ class BatchFetchManager:
         return parse_response_model(
             response.data,
             model=BatchFetchJobStatusResponse,
-            operation_name="batch fetch status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def get(
@@ -76,7 +78,7 @@ class BatchFetchManager:
         return parse_response_model(
             response.data,
             model=BatchFetchJobResponse,
-            operation_name="batch fetch job",
+            operation_name=self._OPERATION_METADATA.job_operation_name,
         )
 
     async def start_and_wait(
@@ -90,8 +92,8 @@ class BatchFetchManager:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start batch fetch job",
-            operation_name_prefix="batch fetch job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         job_status = await poll_until_terminal_status_async(

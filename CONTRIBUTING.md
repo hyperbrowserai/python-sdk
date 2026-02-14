@@ -133,6 +133,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_started_job_helper_boundary.py` (centralization boundary enforcement for started-job helper primitives),
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
   - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),
+  - `tests/test_web_operation_metadata_usage.py` (web manager operation-metadata usage enforcement),
   - `tests/test_web_pagination_internal_reuse.py` (web pagination helper internal reuse of shared job pagination helpers),
   - `tests/test_web_payload_helper_usage.py` (web manager payload-helper usage enforcement),
   - `tests/test_web_route_constants_usage.py` (web manager route-constant usage enforcement).

@@ -9,6 +9,7 @@ from hyperbrowser.models import (
 )
 from ...page_params_utils import build_page_batch_params
 from ...job_status_utils import is_default_terminal_job_status
+from ...web_operation_metadata import WEB_CRAWL_OPERATION_METADATA
 from ...web_route_constants import WEB_CRAWL_JOB_ROUTE_PREFIX
 from ...web_payload_utils import build_web_crawl_start_payload
 from ...web_payload_utils import build_web_crawl_get_params
@@ -35,6 +36,7 @@ from ...start_job_utils import build_started_job_context
 
 
 class WebCrawlManager:
+    _OPERATION_METADATA = WEB_CRAWL_OPERATION_METADATA
     _ROUTE_PREFIX = WEB_CRAWL_JOB_ROUTE_PREFIX
 
     def __init__(self, client):
@@ -50,7 +52,7 @@ class WebCrawlManager:
         return parse_response_model(
             response.data,
             model=StartWebCrawlJobResponse,
-            operation_name="web crawl start",
+            operation_name=self._OPERATION_METADATA.start_operation_name,
         )
 
     async def get_status(self, job_id: str) -> WebCrawlJobStatusResponse:
@@ -60,7 +62,7 @@ class WebCrawlManager:
         return parse_response_model(
             response.data,
             model=WebCrawlJobStatusResponse,
-            operation_name="web crawl status",
+            operation_name=self._OPERATION_METADATA.status_operation_name,
         )
 
     async def get(
@@ -74,7 +76,7 @@ class WebCrawlManager:
         return parse_response_model(
             response.data,
             model=WebCrawlJobResponse,
-            operation_name="web crawl job",
+            operation_name=self._OPERATION_METADATA.job_operation_name,
         )
 
     async def start_and_wait(
@@ -88,8 +90,8 @@ class WebCrawlManager:
         job_start_resp = await self.start(params)
         job_id, operation_name = build_started_job_context(
             started_job_id=job_start_resp.job_id,
-            start_error_message="Failed to start web crawl job",
-            operation_name_prefix="web crawl job ",
+            start_error_message=self._OPERATION_METADATA.start_error_message,
+            operation_name_prefix=self._OPERATION_METADATA.operation_name_prefix,
         )
 
         job_status = await poll_until_terminal_status_async(
