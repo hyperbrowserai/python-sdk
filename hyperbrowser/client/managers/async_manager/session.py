@@ -36,9 +36,20 @@ class SessionEventLogsManager:
         params: Optional[SessionEventLogListParams] = None,
     ) -> SessionEventLogListResponse:
         params_obj = params or SessionEventLogListParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize session event log params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize session event log params")
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{session_id}/event-logs"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_session_response_model(
             response.data,
@@ -57,13 +68,22 @@ class SessionManager:
     async def create(
         self, params: Optional[CreateSessionParams] = None
     ) -> SessionDetail:
+        payload = {}
+        if params is not None:
+            try:
+                payload = params.model_dump(exclude_none=True, by_alias=True)
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to serialize session create params",
+                    original_error=exc,
+                ) from exc
+            if type(payload) is not dict:
+                raise HyperbrowserError("Failed to serialize session create params")
         response = await self._client.transport.post(
             self._client._build_url("/session"),
-            data=(
-                {}
-                if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
-            ),
+            data=payload,
         )
         return parse_session_response_model(
             response.data,
@@ -75,9 +95,20 @@ class SessionManager:
         self, id: str, params: Optional[SessionGetParams] = None
     ) -> SessionDetail:
         params_obj = params or SessionGetParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize session get params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize session get params")
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{id}"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_session_response_model(
             response.data,
@@ -99,9 +130,20 @@ class SessionManager:
         self, params: Optional[SessionListParams] = None
     ) -> SessionListResponse:
         params_obj = params or SessionListParams()
+        try:
+            query_params = params_obj.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize session list params",
+                original_error=exc,
+            ) from exc
+        if type(query_params) is not dict:
+            raise HyperbrowserError("Failed to serialize session list params")
         response = await self._client.transport.get(
             self._client._build_url("/sessions"),
-            params=params_obj.model_dump(exclude_none=True, by_alias=True),
+            params=query_params,
         )
         return parse_session_response_model(
             response.data,
