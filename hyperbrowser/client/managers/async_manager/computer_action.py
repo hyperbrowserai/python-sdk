@@ -47,9 +47,47 @@ class ComputerActionManager:
                 original_error=exc,
             ) from exc
 
-        if not computer_action_endpoint:
+        if computer_action_endpoint is None:
             raise HyperbrowserError(
                 "Computer action endpoint not available for this session"
+            )
+        if type(computer_action_endpoint) is not str:
+            raise HyperbrowserError("session computer_action_endpoint must be a string")
+        try:
+            normalized_computer_action_endpoint = computer_action_endpoint.strip()
+            if type(normalized_computer_action_endpoint) is not str:
+                raise TypeError("normalized computer_action_endpoint must be a string")
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to normalize session computer_action_endpoint",
+                original_error=exc,
+            ) from exc
+
+        if not normalized_computer_action_endpoint:
+            raise HyperbrowserError(
+                "Computer action endpoint not available for this session"
+            )
+        if normalized_computer_action_endpoint != computer_action_endpoint:
+            raise HyperbrowserError(
+                "session computer_action_endpoint must not contain leading or trailing whitespace"
+            )
+        try:
+            contains_control_character = any(
+                ord(character) < 32 or ord(character) == 127
+                for character in normalized_computer_action_endpoint
+            )
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to validate session computer_action_endpoint characters",
+                original_error=exc,
+            ) from exc
+        if contains_control_character:
+            raise HyperbrowserError(
+                "session computer_action_endpoint must not contain control characters"
             )
 
         if isinstance(params, BaseModel):
@@ -58,7 +96,7 @@ class ComputerActionManager:
             payload = params
 
         response = await self._client.transport.post(
-            computer_action_endpoint,
+            normalized_computer_action_endpoint,
             data=payload,
         )
         return parse_response_model(
