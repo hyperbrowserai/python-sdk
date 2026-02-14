@@ -19,6 +19,7 @@ test:
 
 architecture-check:
 	$(PYTHON) -m pytest -q \
+		tests/test_guardrail_ast_utils.py \
 		tests/test_manager_model_dump_usage.py \
 		tests/test_mapping_reader_usage.py \
 		tests/test_mapping_keys_access_usage.py \

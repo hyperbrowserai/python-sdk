@@ -74,6 +74,7 @@ This runs lint, format checks, compile checks, tests, and package build.
 - Keep sync/async behavior in parity where applicable.
 - Prefer deterministic unit tests over network-dependent tests.
 - Preserve architectural guardrails with focused tests. Current guard suites include:
+  - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
   - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
   - `tests/test_mapping_reader_usage.py` (shared mapping-read parser usage),
   - `tests/test_mapping_keys_access_usage.py` (centralized key-iteration boundaries),
