@@ -173,6 +173,38 @@ def test_async_session_upload_file_wraps_invalid_pathlike_state_errors():
     asyncio.run(run())
 
 
+def test_sync_session_upload_file_preserves_hyperbrowser_pathlike_state_errors():
+    manager = SyncSessionManager(_FakeClient(_SyncTransport()))
+
+    class _BrokenPathLike(PathLike[str]):
+        def __fspath__(self) -> str:
+            raise HyperbrowserError("custom pathlike fspath failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom pathlike fspath failure"
+    ) as exc_info:
+        manager.upload_file("session_123", _BrokenPathLike())
+
+    assert exc_info.value.original_error is None
+
+
+def test_async_session_upload_file_preserves_hyperbrowser_pathlike_state_errors():
+    manager = AsyncSessionManager(_FakeClient(_AsyncTransport()))
+
+    class _BrokenPathLike(PathLike[str]):
+        def __fspath__(self) -> str:
+            raise HyperbrowserError("custom pathlike fspath failure")
+
+    async def run():
+        with pytest.raises(
+            HyperbrowserError, match="custom pathlike fspath failure"
+        ) as exc_info:
+            await manager.upload_file("session_123", _BrokenPathLike())
+        assert exc_info.value.original_error is None
+
+    asyncio.run(run())
+
+
 def test_sync_session_upload_file_rejects_non_callable_read_attribute():
     manager = SyncSessionManager(_FakeClient(_SyncTransport()))
     fake_file = type("FakeFile", (), {"read": "not-callable"})()
