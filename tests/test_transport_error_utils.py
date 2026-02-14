@@ -304,6 +304,18 @@ class _StringifiesToBrokenSubclass:
         return self._BrokenString("broken\tfallback\nvalue")
 
 
+class _StringifiesToStringSubclass:
+    class _StringSubclass(str):
+        pass
+
+    def __str__(self) -> str:
+        return self._StringSubclass("subclass fallback value")
+
+
+class _MessageStringSubclass(str):
+    pass
+
+
 def test_extract_request_error_context_uses_unknown_when_request_unset():
     method, url = extract_request_error_context(httpx.RequestError("network down"))
 
@@ -972,31 +984,31 @@ def test_extract_error_message_sanitizes_control_characters_in_fallback_error_te
     assert message == "bad?fallback?text"
 
 
-def test_extract_error_message_falls_back_when_message_strip_fails():
+def test_extract_error_message_normalizes_message_values_when_strip_fails():
     message = extract_error_message(
         _DummyResponse({"message": _BrokenStripString("broken message")}),
         RuntimeError("fallback detail"),
     )
 
-    assert message == "fallback detail"
+    assert message == "broken message"
 
 
-def test_extract_error_message_falls_back_when_message_length_check_fails():
+def test_extract_error_message_normalizes_message_values_when_length_check_fails():
     message = extract_error_message(
         _DummyResponse({"message": _BrokenLenString("broken message")}),
         RuntimeError("fallback detail"),
     )
 
-    assert message == "fallback detail"
+    assert message == "broken message"
 
 
-def test_extract_error_message_falls_back_when_response_text_strip_fails():
+def test_extract_error_message_normalizes_response_text_values_when_strip_fails():
     message = extract_error_message(
         _DummyResponse("   ", text=_BrokenStripString("response body")),
         RuntimeError("fallback detail"),
     )
 
-    assert message == "fallback detail"
+    assert message == "response body"
 
 
 def test_extract_error_message_handles_response_text_sanitization_iteration_failures():
@@ -1031,6 +1043,24 @@ def test_extract_error_message_handles_fallback_errors_with_broken_string_subcla
     )
 
     assert message == "<_StringifiesToBrokenSubclass>"
+
+
+def test_extract_error_message_handles_fallback_errors_with_string_subclass_results():
+    message = extract_error_message(
+        _DummyResponse("   ", text="   "),
+        _StringifiesToStringSubclass(),
+    )
+
+    assert message == "<_StringifiesToStringSubclass>"
+
+
+def test_extract_error_message_normalizes_string_subclass_message_values():
+    message = extract_error_message(
+        _DummyResponse({"message": _MessageStringSubclass("detail from subclass")}),
+        RuntimeError("fallback detail"),
+    )
+
+    assert message == "detail from subclass"
 
 
 def test_extract_error_message_sanitizes_control_characters_in_json_message():

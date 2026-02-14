@@ -51,13 +51,15 @@ def _safe_to_string(value: Any) -> str:
         normalized_value = str(value)
     except Exception:
         return f"<unstringifiable {type(value).__name__}>"
-    if not isinstance(normalized_value, str):
+    if type(normalized_value) is not str:
         return f"<{type(value).__name__}>"
     try:
         sanitized_value = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in normalized_value
         )
+        if type(sanitized_value) is not str:
+            return f"<{type(value).__name__}>"
         if sanitized_value.strip():
             return sanitized_value
     except Exception:
@@ -189,7 +191,13 @@ def _truncate_error_message(message: str) -> str:
 
 def _normalize_response_text_for_error_message(response_text: Any) -> str:
     if isinstance(response_text, str):
-        return response_text
+        try:
+            normalized_response_text = "".join(character for character in response_text)
+            if type(normalized_response_text) is not str:
+                raise TypeError("normalized response text must be a string")
+            return normalized_response_text
+        except Exception:
+            return _safe_to_string(response_text)
     if isinstance(response_text, (bytes, bytearray, memoryview)):
         try:
             return memoryview(response_text).tobytes().decode("utf-8")
@@ -202,7 +210,13 @@ def _stringify_error_value(value: Any, *, _depth: int = 0) -> str:
     if _depth > 10:
         return _safe_to_string(value)
     if isinstance(value, str):
-        return value
+        try:
+            normalized_value = "".join(character for character in value)
+            if type(normalized_value) is not str:
+                raise TypeError("normalized error value must be a string")
+            return normalized_value
+        except Exception:
+            return _safe_to_string(value)
     if isinstance(value, Mapping):
         for key in ("message", "error", "detail", "errors", "msg", "title", "reason"):
             try:
