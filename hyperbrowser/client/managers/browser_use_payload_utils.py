@@ -3,11 +3,11 @@ from typing import Any, Dict
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
 
 from ..schema_utils import inject_resolved_schema
-from .serialization_utils import serialize_model_dump_to_dict
+from .agent_payload_utils import build_agent_start_payload
 
 
 def build_browser_use_start_payload(params: StartBrowserUseTaskParams) -> Dict[str, Any]:
-    payload = serialize_model_dump_to_dict(
+    payload = build_agent_start_payload(
         params,
         error_message="Failed to serialize browser-use start params",
     )
