@@ -64,6 +64,7 @@ def parse_response_model(
         normalized_operation_name_input = operation_name.strip()
         if not isinstance(normalized_operation_name_input, str):
             raise TypeError("normalized operation_name must be a string")
+        is_empty_operation_name = len(normalized_operation_name_input) == 0
     except HyperbrowserError:
         raise
     except Exception as exc:
@@ -71,7 +72,7 @@ def parse_response_model(
             "Failed to normalize operation_name",
             original_error=exc,
         ) from exc
-    if not normalized_operation_name_input:
+    if is_empty_operation_name:
         raise HyperbrowserError("operation_name must be a non-empty string")
     normalized_operation_name = _normalize_operation_name_for_error(operation_name)
     if not isinstance(response_data, Mapping):

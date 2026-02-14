@@ -256,6 +256,48 @@ def test_parse_response_model_wraps_non_string_operation_name_strip_results():
     assert isinstance(exc_info.value.original_error, TypeError)
 
 
+def test_parse_response_model_wraps_operation_name_empty_check_length_failures():
+    class _BrokenOperationName(str):
+        class _NormalizedName(str):
+            def __len__(self):
+                raise RuntimeError("operation name length exploded")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedName("basic operation")
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize operation_name") as exc_info:
+        parse_response_model(
+            {"success": True},
+            model=BasicResponse,
+            operation_name=_BrokenOperationName("basic operation"),
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_parse_response_model_preserves_hyperbrowser_operation_name_empty_check_length_failures():
+    class _BrokenOperationName(str):
+        class _NormalizedName(str):
+            def __len__(self):
+                raise HyperbrowserError("custom operation name length failure")
+
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self._NormalizedName("basic operation")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom operation name length failure"
+    ) as exc_info:
+        parse_response_model(
+            {"success": True},
+            model=BasicResponse,
+            operation_name=_BrokenOperationName("basic operation"),
+        )
+
+    assert exc_info.value.original_error is None
+
+
 def test_parse_response_model_truncates_operation_name_in_errors():
     long_operation_name = "basic operation " + ("x" * 200)
 
