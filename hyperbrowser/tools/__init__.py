@@ -137,13 +137,44 @@ def _to_param_dict(params: Mapping[str, Any]) -> Dict[str, Any]:
         ) from exc
     for key in param_keys:
         if isinstance(key, str):
-            if not key.strip():
+            try:
+                normalized_key = key.strip()
+                if not isinstance(normalized_key, str):
+                    raise TypeError("normalized tool param key must be a string")
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to normalize tool param key",
+                    original_error=exc,
+                ) from exc
+            if not normalized_key:
                 raise HyperbrowserError("tool params keys must not be empty")
-            if key != key.strip():
+            try:
+                has_surrounding_whitespace = key != normalized_key
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to normalize tool param key",
+                    original_error=exc,
+                ) from exc
+            if has_surrounding_whitespace:
                 raise HyperbrowserError(
                     "tool params keys must not contain leading or trailing whitespace"
                 )
-            if any(ord(character) < 32 or ord(character) == 127 for character in key):
+            try:
+                contains_control_character = any(
+                    ord(character) < 32 or ord(character) == 127 for character in key
+                )
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to validate tool param key characters",
+                    original_error=exc,
+                ) from exc
+            if contains_control_character:
                 raise HyperbrowserError(
                     "tool params keys must not contain control characters"
                 )

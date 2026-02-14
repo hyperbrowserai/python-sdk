@@ -48,6 +48,19 @@ class _AsyncExtractClient:
         self.extract = _AsyncExtractManager()
 
 
+def _run_scrape_tool_sync(params: Mapping[str, object]) -> None:
+    client = _Client()
+    WebsiteScrapeTool.runnable(client, params)
+
+
+def _run_scrape_tool_async(params: Mapping[str, object]) -> None:
+    async def run() -> None:
+        client = _AsyncClient()
+        await WebsiteScrapeTool.async_runnable(client, params)
+
+    asyncio.run(run())
+
+
 def test_tool_wrappers_accept_mapping_inputs():
     client = _Client()
     params = MappingProxyType({"url": "https://example.com"})
@@ -205,5 +218,88 @@ def test_tool_wrappers_preserve_hyperbrowser_param_value_read_failures():
         HyperbrowserError, match="custom param value read failure"
     ) as exc_info:
         WebsiteScrapeTool.runnable(client, _BrokenValueMapping())
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_wrap_param_key_strip_failures(runner):
+    class _BrokenStripKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("tool param key strip exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize tool param key"
+    ) as exc_info:
+        runner({_BrokenStripKey("url"): "https://example.com"})
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_preserve_hyperbrowser_param_key_strip_failures(runner):
+    class _BrokenStripKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise HyperbrowserError("custom tool param key strip failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom tool param key strip failure"
+    ) as exc_info:
+        runner({_BrokenStripKey("url"): "https://example.com"})
+
+    assert exc_info.value.original_error is None
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_wrap_non_string_param_key_strip_results(runner):
+    class _BrokenStripKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return object()
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize tool param key"
+    ) as exc_info:
+        runner({_BrokenStripKey("url"): "https://example.com"})
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_wrap_param_key_character_validation_failures(runner):
+    class _BrokenIterKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self
+
+        def __iter__(self):
+            raise RuntimeError("tool param key iteration exploded")
+
+    with pytest.raises(
+        HyperbrowserError, match="Failed to validate tool param key characters"
+    ) as exc_info:
+        runner({_BrokenIterKey("url"): "https://example.com"})
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+@pytest.mark.parametrize("runner", [_run_scrape_tool_sync, _run_scrape_tool_async])
+def test_tool_wrappers_preserve_hyperbrowser_param_key_character_validation_failures(
+    runner,
+):
+    class _BrokenIterKey(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return self
+
+        def __iter__(self):
+            raise HyperbrowserError("custom tool param key iteration failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom tool param key iteration failure"
+    ) as exc_info:
+        runner({_BrokenIterKey("url"): "https://example.com"})
 
     assert exc_info.value.original_error is None
