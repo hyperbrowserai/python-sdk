@@ -349,6 +349,15 @@ def test_build_open_file_error_message_uses_default_prefix_for_blank_string():
     assert message == "Failed to open file at path: /tmp/path.txt"
 
 
+def test_build_open_file_error_message_sanitizes_control_chars_in_prefix():
+    message = build_open_file_error_message(
+        "/tmp/path.txt",
+        prefix="Failed\topen",
+    )
+
+    assert message == "Failed?open: /tmp/path.txt"
+
+
 def test_ensure_existing_file_path_wraps_invalid_path_os_errors(monkeypatch):
     def raising_exists(path: str) -> bool:
         raise OSError("invalid path")

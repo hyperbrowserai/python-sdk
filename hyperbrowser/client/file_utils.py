@@ -50,7 +50,11 @@ def build_open_file_error_message(file_path: object, *, prefix: str) -> str:
         normalized_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
     else:
         try:
-            stripped_prefix = normalized_prefix.strip()
+            sanitized_prefix = "".join(
+                "?" if ord(character) < 32 or ord(character) == 127 else character
+                for character in normalized_prefix
+            )
+            stripped_prefix = sanitized_prefix.strip()
         except Exception:
             stripped_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
         if not is_plain_string(stripped_prefix) or not stripped_prefix:
