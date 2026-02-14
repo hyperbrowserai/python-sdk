@@ -161,8 +161,9 @@ def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str
         raise HyperbrowserError("HYPERBROWSER_HEADERS must be a string")
     try:
         normalized_raw_headers = raw_headers.strip()
-        if not isinstance(normalized_raw_headers, str):
+        if type(normalized_raw_headers) is not str:
             raise TypeError("normalized headers payload must be a string")
+        is_empty_headers_payload = len(normalized_raw_headers) == 0
     except HyperbrowserError:
         raise
     except Exception as exc:
@@ -170,7 +171,7 @@ def parse_headers_env_json(raw_headers: Optional[str]) -> Optional[Dict[str, str
             "Failed to normalize HYPERBROWSER_HEADERS",
             original_error=exc,
         ) from exc
-    if not normalized_raw_headers:
+    if is_empty_headers_payload:
         return None
     try:
         parsed_headers = json.loads(normalized_raw_headers)

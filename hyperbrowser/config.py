@@ -354,8 +354,9 @@ class ClientConfig:
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must be a string")
         try:
             normalized_env_base_url = raw_base_url.strip()
-            if not isinstance(normalized_env_base_url, str):
+            if type(normalized_env_base_url) is not str:
                 raise TypeError("normalized environment base_url must be a string")
+            is_empty_env_base_url = len(normalized_env_base_url) == 0
         except HyperbrowserError:
             raise
         except Exception as exc:
@@ -363,6 +364,6 @@ class ClientConfig:
                 "Failed to normalize HYPERBROWSER_BASE_URL",
                 original_error=exc,
             ) from exc
-        if not normalized_env_base_url:
+        if is_empty_env_base_url:
             raise HyperbrowserError("HYPERBROWSER_BASE_URL must not be empty when set")
         return ClientConfig.normalize_base_url(normalized_env_base_url)

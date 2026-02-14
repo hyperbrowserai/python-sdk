@@ -81,6 +81,15 @@ class _NonStringHeadersEnvStripResult(str):
         return object()
 
 
+class _StringSubclassHeadersEnvStripResult(str):
+    class _NormalizedHeaders(str):
+        pass
+
+    def strip(self, chars=None):  # type: ignore[override]
+        _ = chars
+        return self._NormalizedHeaders('{"X-Trace-Id":"abc123"}')
+
+
 class _BrokenHeaderValueContains(str):
     def __contains__(self, item):  # type: ignore[override]
         _ = item
@@ -264,6 +273,15 @@ def test_parse_headers_env_json_wraps_non_string_strip_results():
         HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
     ) as exc_info:
         parse_headers_env_json(_NonStringHeadersEnvStripResult('{"X-Trace-Id":"abc123"}'))
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
+def test_parse_headers_env_json_wraps_string_subclass_strip_results():
+    with pytest.raises(
+        HyperbrowserError, match="Failed to normalize HYPERBROWSER_HEADERS"
+    ) as exc_info:
+        parse_headers_env_json(_StringSubclassHeadersEnvStripResult('{"X-Trace-Id":"abc123"}'))
 
     assert isinstance(exc_info.value.original_error, TypeError)
 
