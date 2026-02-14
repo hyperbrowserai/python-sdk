@@ -1,7 +1,7 @@
-from collections.abc import Mapping
 from typing import Any, Callable, List, TypeVar
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.mapping_utils import read_string_key_mapping
 
 T = TypeVar("T")
 
@@ -29,37 +29,22 @@ def parse_mapping_list_items(
 ) -> List[T]:
     parsed_items: List[T] = []
     for index, item in enumerate(items):
-        if not isinstance(item, Mapping):
-            raise HyperbrowserError(
+        item_payload = read_string_key_mapping(
+            item,
+            expected_mapping_error=(
                 f"Expected {item_label} object at index {index} but got {type(item).__name__}"
-            )
-        try:
-            item_keys = list(item.keys())
-        except HyperbrowserError:
-            raise
-        except Exception as exc:
-            raise HyperbrowserError(
-                f"Failed to read {item_label} object at index {index}",
-                original_error=exc,
-            ) from exc
-        for key in item_keys:
-            if type(key) is str:
-                continue
-            raise HyperbrowserError(
+            ),
+            read_keys_error=f"Failed to read {item_label} object at index {index}",
+            non_string_key_error_builder=lambda _key: (
                 f"Expected {item_label} object keys to be strings at index {index}"
-            )
-        item_payload: dict[str, object] = {}
-        for key in item_keys:
-            try:
-                item_payload[key] = item[key]
-            except HyperbrowserError:
-                raise
-            except Exception as exc:
-                key_text = _safe_key_display_for_error(key, key_display=key_display)
-                raise HyperbrowserError(
-                    f"Failed to read {item_label} object value for key '{key_text}' at index {index}",
-                    original_error=exc,
-                ) from exc
+            ),
+            read_value_error_builder=lambda key_text: (
+                f"Failed to read {item_label} object value for key '{key_text}' at index {index}"
+            ),
+            key_display=lambda key: _safe_key_display_for_error(
+                key, key_display=key_display
+            ),
+        )
         try:
             parsed_items.append(parse_item(item_payload))
         except HyperbrowserError:
