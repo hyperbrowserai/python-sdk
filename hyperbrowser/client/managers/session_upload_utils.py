@@ -32,12 +32,10 @@ def normalize_upload_file_input(
             missing_file_message=build_file_path_error_message(
                 raw_file_path,
                 prefix="Upload file not found at path",
-                default_prefix="Upload file not found at path",
             ),
             not_file_message=build_file_path_error_message(
                 raw_file_path,
                 prefix="Upload file path must point to a file",
-                default_prefix="Upload file path must point to a file",
             ),
         )
         return file_path, None

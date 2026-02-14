@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 from os import PathLike
-from typing import BinaryIO, Iterator, Union
+from typing import BinaryIO, Iterator, Optional, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_int, is_plain_string
@@ -76,9 +76,12 @@ def build_file_path_error_message(
     file_path: object,
     *,
     prefix: str,
-    default_prefix: str,
+    default_prefix: Optional[str] = None,
 ) -> str:
-    normalized_prefix = _normalize_error_prefix(prefix, default_prefix=default_prefix)
+    normalized_prefix = _normalize_error_prefix(
+        prefix,
+        default_prefix=prefix if default_prefix is None else default_prefix,
+    )
     file_path_display = format_file_path_for_error(file_path)
     return f"{normalized_prefix}: {file_path_display}"
 

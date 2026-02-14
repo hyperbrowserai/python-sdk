@@ -342,6 +342,15 @@ def test_build_file_path_error_message_uses_prefix_and_sanitized_path():
     assert message == "Upload file not found at path: bad?path.txt"
 
 
+def test_build_file_path_error_message_defaults_default_prefix_to_prefix():
+    message = build_file_path_error_message(
+        "bad\tpath.txt",
+        prefix="Upload file not found at path",
+    )
+
+    assert message == "Upload file not found at path: bad?path.txt"
+
+
 def test_build_file_path_error_message_uses_default_for_non_string_prefix():
     message = build_file_path_error_message(
         "/tmp/path.txt",
