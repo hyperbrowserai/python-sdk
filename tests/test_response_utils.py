@@ -206,6 +206,56 @@ def test_parse_response_model_sanitizes_operation_name_in_errors():
         )
 
 
+def test_parse_response_model_wraps_operation_name_strip_failures():
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise RuntimeError("operation name strip exploded")
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize operation_name") as exc_info:
+        parse_response_model(
+            {"success": True},
+            model=BasicResponse,
+            operation_name=_BrokenOperationName("basic operation"),
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
+
+
+def test_parse_response_model_preserves_hyperbrowser_operation_name_strip_failures():
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            raise HyperbrowserError("custom operation name strip failure")
+
+    with pytest.raises(
+        HyperbrowserError, match="custom operation name strip failure"
+    ) as exc_info:
+        parse_response_model(
+            {"success": True},
+            model=BasicResponse,
+            operation_name=_BrokenOperationName("basic operation"),
+        )
+
+    assert exc_info.value.original_error is None
+
+
+def test_parse_response_model_wraps_non_string_operation_name_strip_results():
+    class _BrokenOperationName(str):
+        def strip(self, chars=None):  # type: ignore[override]
+            _ = chars
+            return object()
+
+    with pytest.raises(HyperbrowserError, match="Failed to normalize operation_name") as exc_info:
+        parse_response_model(
+            {"success": True},
+            model=BasicResponse,
+            operation_name=_BrokenOperationName("basic operation"),
+        )
+
+    assert isinstance(exc_info.value.original_error, TypeError)
+
+
 def test_parse_response_model_truncates_operation_name_in_errors():
     long_operation_name = "basic operation " + ("x" * 200)
 
@@ -221,6 +271,35 @@ def test_parse_response_model_truncates_operation_name_in_errors():
             model=BasicResponse,
             operation_name=long_operation_name,
         )
+
+
+def test_parse_response_model_falls_back_for_unreadable_key_display():
+    class _BrokenKey(str):
+        def __iter__(self):
+            raise RuntimeError("key iteration exploded")
+
+    class _BrokenValueLookupMapping(Mapping[str, object]):
+        def __iter__(self):
+            yield _BrokenKey("success")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read value")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read basic operation response value for key '<unreadable key>'",
+    ) as exc_info:
+        parse_response_model(
+            _BrokenValueLookupMapping(),
+            model=BasicResponse,
+            operation_name="basic operation",
+        )
+
+    assert isinstance(exc_info.value.original_error, RuntimeError)
 
 
 def test_parse_response_model_wraps_mapping_read_failures():

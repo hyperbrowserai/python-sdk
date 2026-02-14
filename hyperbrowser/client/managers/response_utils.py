@@ -11,10 +11,15 @@ _TRUNCATED_KEY_DISPLAY_SUFFIX = "... (truncated)"
 
 
 def _normalize_operation_name_for_error(operation_name: str) -> str:
-    normalized_name = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in operation_name
-    ).strip()
+    try:
+        normalized_name = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in operation_name
+        ).strip()
+        if not isinstance(normalized_name, str):
+            raise TypeError("normalized operation name must be a string")
+    except Exception:
+        return "operation"
     if not normalized_name:
         return "operation"
     if len(normalized_name) <= _MAX_OPERATION_NAME_DISPLAY_LENGTH:
@@ -28,10 +33,15 @@ def _normalize_operation_name_for_error(operation_name: str) -> str:
 
 
 def _normalize_response_key_for_error(key: str) -> str:
-    normalized_key = "".join(
-        "?" if ord(character) < 32 or ord(character) == 127 else character
-        for character in key
-    ).strip()
+    try:
+        normalized_key = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in key
+        ).strip()
+        if not isinstance(normalized_key, str):
+            raise TypeError("normalized response key must be a string")
+    except Exception:
+        return "<unreadable key>"
     if not normalized_key:
         return "<blank key>"
     if len(normalized_key) <= _MAX_KEY_DISPLAY_LENGTH:
@@ -48,7 +58,20 @@ def parse_response_model(
     model: Type[T],
     operation_name: str,
 ) -> T:
-    if not isinstance(operation_name, str) or not operation_name.strip():
+    if not isinstance(operation_name, str):
+        raise HyperbrowserError("operation_name must be a non-empty string")
+    try:
+        normalized_operation_name_input = operation_name.strip()
+        if not isinstance(normalized_operation_name_input, str):
+            raise TypeError("normalized operation_name must be a string")
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(
+            "Failed to normalize operation_name",
+            original_error=exc,
+        ) from exc
+    if not normalized_operation_name_input:
         raise HyperbrowserError("operation_name must be a non-empty string")
     normalized_operation_name = _normalize_operation_name_for_error(operation_name)
     if not isinstance(response_data, Mapping):
