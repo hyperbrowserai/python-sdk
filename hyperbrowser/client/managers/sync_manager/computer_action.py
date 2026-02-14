@@ -1,10 +1,9 @@
-from pydantic import BaseModel
 from typing import Union, List, Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string, is_string_subclass_instance
 from ..computer_action_utils import normalize_computer_action_endpoint
+from ..computer_action_payload_utils import build_computer_action_payload
 from ..response_utils import parse_response_model
-from ..serialization_utils import serialize_model_dump_to_dict
 from hyperbrowser.models import (
     SessionDetail,
     ComputerActionParams,
@@ -44,15 +43,7 @@ class ComputerActionManager:
             session
         )
 
-        if isinstance(params, BaseModel):
-            payload = serialize_model_dump_to_dict(
-                params,
-                error_message="Failed to serialize computer action params",
-                by_alias=True,
-                exclude_none=True,
-            )
-        else:
-            payload = params
+        payload = build_computer_action_payload(params)
 
         response = self._client.transport.post(
             normalized_computer_action_endpoint,
