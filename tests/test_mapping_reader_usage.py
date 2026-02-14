@@ -10,7 +10,7 @@ from tests.guardrail_ast_utils import (
 
 pytestmark = pytest.mark.architecture
 
-_TARGET_FILES = (
+MAPPING_READER_TARGET_FILES = (
     Path("hyperbrowser/client/managers/response_utils.py"),
     Path("hyperbrowser/transport/base.py"),
     Path("hyperbrowser/client/managers/list_parsing_utils.py"),
@@ -21,7 +21,7 @@ def test_core_mapping_parsers_use_shared_mapping_reader():
     violations: list[str] = []
     missing_reader_calls: list[str] = []
 
-    for relative_path in _TARGET_FILES:
+    for relative_path in MAPPING_READER_TARGET_FILES:
         module = read_module_ast(relative_path)
         list_keys_calls = collect_list_keys_call_lines(module)
         if list_keys_calls:

@@ -3,16 +3,13 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_mapping_reader_usage import MAPPING_READER_TARGET_FILES
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_MAPPING_UTILS_IMPORTERS = (
-    "hyperbrowser/client/managers/list_parsing_utils.py",
-    "hyperbrowser/client/managers/response_utils.py",
-    "hyperbrowser/tools/__init__.py",
-    "hyperbrowser/transport/base.py",
-    "tests/test_mapping_utils.py",
-)
+EXPECTED_MAPPING_EXTRA_IMPORTERS = ("tests/test_mapping_utils.py",)
+MAPPING_TOOL_IMPORTER = Path("hyperbrowser/tools/__init__.py")
 
 
 def _imports_mapping_utils(module_text: str) -> bool:
@@ -39,4 +36,8 @@ def test_mapping_utils_imports_are_centralized():
         if _imports_mapping_utils(module_text):
             discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_MAPPING_UTILS_IMPORTERS)
+    expected_runtime_modules = sorted(
+        [*(path.as_posix() for path in MAPPING_READER_TARGET_FILES), MAPPING_TOOL_IMPORTER.as_posix()]
+    )
+    expected_modules = sorted([*expected_runtime_modules, *EXPECTED_MAPPING_EXTRA_IMPORTERS])
+    assert discovered_modules == expected_modules
