@@ -37,7 +37,17 @@ class ComputerActionManager:
                 "session must be a plain string session ID or SessionDetail"
             )
 
-        if not session.computer_action_endpoint:
+        try:
+            computer_action_endpoint = session.computer_action_endpoint
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "session must include computer_action_endpoint",
+                original_error=exc,
+            ) from exc
+
+        if not computer_action_endpoint:
             raise HyperbrowserError(
                 "Computer action endpoint not available for this session"
             )
@@ -48,7 +58,7 @@ class ComputerActionManager:
             payload = params
 
         response = await self._client.transport.post(
-            session.computer_action_endpoint,
+            computer_action_endpoint,
             data=payload,
         )
         return parse_response_model(

@@ -41,6 +41,29 @@ def test_async_computer_action_manager_raises_hyperbrowser_error_without_endpoin
     asyncio.run(run())
 
 
+def test_sync_computer_action_manager_wraps_missing_endpoint_attribute():
+    manager = SyncComputerActionManager(_DummyClient())
+
+    with pytest.raises(
+        HyperbrowserError, match="session must include computer_action_endpoint"
+    ) as exc_info:
+        manager.screenshot(SimpleNamespace())
+
+    assert isinstance(exc_info.value.original_error, AttributeError)
+
+
+def test_async_computer_action_manager_wraps_missing_endpoint_attribute():
+    async def run() -> None:
+        manager = AsyncComputerActionManager(_DummyClient())
+        with pytest.raises(
+            HyperbrowserError, match="session must include computer_action_endpoint"
+        ) as exc_info:
+            await manager.screenshot(SimpleNamespace())
+        assert isinstance(exc_info.value.original_error, AttributeError)
+
+    asyncio.run(run())
+
+
 def test_sync_computer_action_manager_rejects_string_subclass_session_ids():
     class _SessionId(str):
         pass
