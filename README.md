@@ -263,6 +263,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/async_profile_list.py`
 - `examples/async_scrape.py`
 - `examples/async_session_list.py`
+- `examples/async_team_credit_info.py`
 - `examples/async_web_crawl.py`
 - `examples/async_web_fetch.py`
 - `examples/async_web_search.py`
@@ -272,6 +273,7 @@ Ready-to-run examples are available in `examples/`:
 - `examples/sync_profile_list.py`
 - `examples/sync_scrape.py`
 - `examples/sync_session_list.py`
+- `examples/sync_team_credit_info.py`
 - `examples/sync_web_crawl.py`
 - `examples/sync_web_fetch.py`
 - `examples/sync_web_search.py`
