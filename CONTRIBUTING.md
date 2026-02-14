@@ -10,7 +10,7 @@ Thanks for contributing! This guide keeps local development and CI behavior alig
 ## Local setup
 
 ```bash
-python -m pip install -e . pytest ruff build
+python3 -m pip install -e . pytest ruff build
 ```
 
 Or with Make:
@@ -31,8 +31,8 @@ make install
 ### Linting and formatting
 
 ```bash
-python -m ruff check .
-python -m ruff format --check .
+python3 -m ruff check .
+python3 -m ruff format --check .
 ```
 
 Or:
@@ -45,7 +45,7 @@ make format-check
 ### Tests
 
 ```bash
-python -m pytest -q
+python3 -m pytest -q
 ```
 
 Or:
