@@ -178,6 +178,24 @@ def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys
         parse_extension_list_response_data({_BrokenStringKey(): "value"})
 
 
+def test_parse_extension_list_response_data_missing_key_handles_string_subclass_str_results():
+    class _StringSubclassKey:
+        class _RenderedKey(str):
+            pass
+
+        def __str__(self) -> str:
+            return self._RenderedKey("subclass-key")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            "\\[<unprintable _StringSubclassKey>\\] keys"
+        ),
+    ):
+        parse_extension_list_response_data({_StringSubclassKey(): "value"})
+
+
 def test_parse_extension_list_response_data_missing_key_handles_unreadable_keys():
     class _BrokenKeysMapping(dict):
         def keys(self):
@@ -371,7 +389,7 @@ def test_parse_extension_list_response_data_falls_back_for_unreadable_value_read
 
     with pytest.raises(
         HyperbrowserError,
-        match="Failed to read extension object value for key '<unreadable key>' at index 0",
+        match="Failed to read extension object value for key '<unprintable _BrokenKey>' at index 0",
     ) as exc_info:
         parse_extension_list_response_data(
             {"extensions": [_BrokenValueLookupMapping()]}

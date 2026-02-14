@@ -15,7 +15,10 @@ def _get_type_name(value: Any) -> str:
 
 def _safe_stringify_key(value: object) -> str:
     try:
-        return str(value)
+        normalized_key = str(value)
+        if type(normalized_key) is not str:
+            raise TypeError("normalized key must be a string")
+        return normalized_key
     except Exception:
         return f"<unprintable {_get_type_name(value)}>"
 
@@ -23,13 +26,13 @@ def _safe_stringify_key(value: object) -> str:
 def _format_key_display(value: object) -> str:
     try:
         normalized_key = _safe_stringify_key(value)
-        if not isinstance(normalized_key, str):
+        if type(normalized_key) is not str:
             raise TypeError("normalized key display must be a string")
         normalized_key = "".join(
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in normalized_key
         ).strip()
-        if not isinstance(normalized_key, str):
+        if type(normalized_key) is not str:
             raise TypeError("normalized key display must be a string")
     except Exception:
         return "<unreadable key>"

@@ -16,7 +16,7 @@ def _format_recording_key_display(key: str) -> str:
             "?" if ord(character) < 32 or ord(character) == 127 else character
             for character in key
         ).strip()
-        if not isinstance(normalized_key, str):
+        if type(normalized_key) is not str:
             raise TypeError("normalized recording key display must be a string")
     except Exception:
         return "<unreadable key>"
