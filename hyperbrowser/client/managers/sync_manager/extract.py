@@ -21,7 +21,17 @@ class ExtractManager:
         if not params.schema_ and not params.prompt:
             raise HyperbrowserError("Either schema or prompt must be provided")
 
-        payload = params.model_dump(exclude_none=True, by_alias=True)
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize extract start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize extract start params")
         if params.schema_:
             payload["schema"] = resolve_schema_input(params.schema_)
 

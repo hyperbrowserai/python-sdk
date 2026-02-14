@@ -1,5 +1,6 @@
 from typing import Optional
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
@@ -24,9 +25,20 @@ class CrawlManager:
         self._client = client
 
     async def start(self, params: StartCrawlJobParams) -> StartCrawlJobResponse:
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize crawl start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize crawl start params")
         response = await self._client.transport.post(
             self._client._build_url("/crawl"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return parse_response_model(
             response.data,

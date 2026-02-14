@@ -1,5 +1,6 @@
 from typing import Optional
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from ...polling import (
     build_fetch_operation_name,
@@ -29,9 +30,20 @@ class BatchScrapeManager:
         self._client = client
 
     def start(self, params: StartBatchScrapeJobParams) -> StartBatchScrapeJobResponse:
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize batch scrape start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize batch scrape start params")
         response = self._client.transport.post(
             self._client._build_url("/scrape/batch"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return parse_response_model(
             response.data,
@@ -141,9 +153,20 @@ class ScrapeManager:
         self.batch = BatchScrapeManager(client)
 
     def start(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
+        try:
+            payload = params.model_dump(exclude_none=True, by_alias=True)
+        except HyperbrowserError:
+            raise
+        except Exception as exc:
+            raise HyperbrowserError(
+                "Failed to serialize scrape start params",
+                original_error=exc,
+            ) from exc
+        if type(payload) is not dict:
+            raise HyperbrowserError("Failed to serialize scrape start params")
         response = self._client.transport.post(
             self._client._build_url("/scrape"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return parse_response_model(
             response.data,
