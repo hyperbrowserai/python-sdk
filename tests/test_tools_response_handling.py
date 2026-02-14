@@ -838,7 +838,7 @@ def test_crawl_tool_uses_unknown_url_for_blank_page_urls():
     assert "page body" in output
 
 
-def test_crawl_tool_wraps_response_iteration_failures():
+def test_crawl_tool_rejects_list_subclass_response_data():
     class _BrokenList(list):
         def __iter__(self):
             raise RuntimeError("cannot iterate pages")
@@ -846,11 +846,11 @@ def test_crawl_tool_wraps_response_iteration_failures():
     client = _SyncCrawlClient(_Response(data=_BrokenList([SimpleNamespace()])))
 
     with pytest.raises(
-        HyperbrowserError, match="Failed to iterate crawl tool response data"
+        HyperbrowserError, match="crawl tool response data must be a list"
     ) as exc_info:
         WebsiteCrawlTool.runnable(client, {"url": "https://example.com"})
 
-    assert exc_info.value.original_error is not None
+    assert exc_info.value.original_error is None
 
 
 def test_browser_use_tool_rejects_non_string_final_result():
@@ -1150,6 +1150,24 @@ def test_async_crawl_tool_rejects_non_object_page_items():
             await WebsiteCrawlTool.async_runnable(
                 client, {"url": "https://example.com"}
             )
+
+    asyncio.run(run())
+
+
+def test_async_crawl_tool_rejects_list_subclass_response_data():
+    class _BrokenList(list):
+        def __iter__(self):
+            raise RuntimeError("cannot iterate pages")
+
+    async def run() -> None:
+        client = _AsyncCrawlClient(_Response(data=_BrokenList([SimpleNamespace()])))
+        with pytest.raises(
+            HyperbrowserError, match="crawl tool response data must be a list"
+        ) as exc_info:
+            await WebsiteCrawlTool.async_runnable(
+                client, {"url": "https://example.com"}
+            )
+        assert exc_info.value.original_error is None
 
     asyncio.run(run())
 

@@ -426,7 +426,7 @@ def _read_crawl_page_field(page: Any, *, field_name: str, page_index: int) -> An
 def _render_crawl_markdown_output(response_data: Any) -> str:
     if response_data is None:
         return ""
-    if not isinstance(response_data, list):
+    if type(response_data) is not list:
         raise HyperbrowserError("crawl tool response data must be a list")
     try:
         crawl_pages = list(response_data)
