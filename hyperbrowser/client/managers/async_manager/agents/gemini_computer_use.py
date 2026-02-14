@@ -1,7 +1,10 @@
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
-from ....polling import build_operation_name, wait_for_job_result_async
+from ....polling import (
+    build_operation_name,
+    ensure_started_job_id,
+    wait_for_job_result_async,
+)
 from ...response_utils import parse_response_model
 
 from .....models import (
@@ -69,9 +72,10 @@ class GeminiComputerUseManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> GeminiComputerUseTaskResponse:
         job_start_resp = await self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start Gemini Computer Use task job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start Gemini Computer Use task job",
+        )
         operation_name = build_operation_name("Gemini Computer Use task job ", job_id)
 
         return await wait_for_job_result_async(

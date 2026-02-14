@@ -5,6 +5,7 @@ from ...polling import (
     build_fetch_operation_name,
     build_operation_name,
     collect_paginated_results_async,
+    ensure_started_job_id,
     poll_until_terminal_status_async,
     retry_operation_async,
     wait_for_job_result_async,
@@ -21,7 +22,6 @@ from ....models.scrape import (
     StartScrapeJobParams,
     StartScrapeJobResponse,
 )
-from ....exceptions import HyperbrowserError
 
 
 class BatchScrapeManager:
@@ -74,9 +74,10 @@ class BatchScrapeManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BatchScrapeJobResponse:
         job_start_resp = await self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start batch scrape job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start batch scrape job",
+        )
         operation_name = build_operation_name("batch scrape job ", job_id)
 
         job_status = await poll_until_terminal_status_async(
@@ -180,9 +181,10 @@ class ScrapeManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> ScrapeJobResponse:
         job_start_resp = await self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start scrape job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start scrape job",
+        )
         operation_name = build_operation_name("scrape job ", job_id)
 
         return await wait_for_job_result_async(

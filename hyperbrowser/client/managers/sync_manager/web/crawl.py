@@ -8,11 +8,11 @@ from hyperbrowser.models import (
     WebCrawlJobResponse,
     POLLING_ATTEMPTS,
 )
-from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
     collect_paginated_results,
+    ensure_started_job_id,
     poll_until_terminal_status,
     retry_operation,
 )
@@ -73,9 +73,10 @@ class WebCrawlManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> WebCrawlJobResponse:
         job_start_resp = self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start web crawl job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start web crawl job",
+        )
         operation_name = build_operation_name("web crawl job ", job_id)
 
         job_status = poll_until_terminal_status(

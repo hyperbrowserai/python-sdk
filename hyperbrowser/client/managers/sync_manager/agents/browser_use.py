@@ -1,7 +1,6 @@
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
-from ....polling import build_operation_name, wait_for_job_result
+from ....polling import build_operation_name, ensure_started_job_id, wait_for_job_result
 from ....schema_utils import resolve_schema_input
 from ...response_utils import parse_response_model
 
@@ -73,9 +72,10 @@ class BrowserUseManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BrowserUseTaskResponse:
         job_start_resp = self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start browser-use task job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start browser-use task job",
+        )
         operation_name = build_operation_name("browser-use task job ", job_id)
 
         return wait_for_job_result(

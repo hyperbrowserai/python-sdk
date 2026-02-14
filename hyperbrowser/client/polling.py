@@ -231,6 +231,23 @@ def build_fetch_operation_name(operation_name: object) -> str:
     )
 
 
+def ensure_started_job_id(job_id: object, *, error_message: str) -> str:
+    if not isinstance(job_id, str):
+        raise HyperbrowserError(error_message)
+    try:
+        normalized_job_id = job_id.strip()
+        if type(normalized_job_id) is not str:
+            raise TypeError("normalized job_id must be a string")
+        is_empty_job_id = len(normalized_job_id) == 0
+    except HyperbrowserError:
+        raise
+    except Exception as exc:
+        raise HyperbrowserError(error_message, original_error=exc) from exc
+    if is_empty_job_id:
+        raise HyperbrowserError(error_message)
+    return normalized_job_id
+
+
 def _ensure_boolean_terminal_result(result: object, *, operation_name: str) -> bool:
     _ensure_non_awaitable(
         result, callback_name="is_terminal_status", operation_name=operation_name

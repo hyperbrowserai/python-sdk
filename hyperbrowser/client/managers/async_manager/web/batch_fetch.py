@@ -8,11 +8,11 @@ from hyperbrowser.models import (
     BatchFetchJobResponse,
     POLLING_ATTEMPTS,
 )
-from hyperbrowser.exceptions import HyperbrowserError
 from ....polling import (
     build_fetch_operation_name,
     build_operation_name,
     collect_paginated_results_async,
+    ensure_started_job_id,
     poll_until_terminal_status_async,
     retry_operation_async,
 )
@@ -75,9 +75,10 @@ class BatchFetchManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> BatchFetchJobResponse:
         job_start_resp = await self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start batch fetch job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start batch fetch job",
+        )
         operation_name = build_operation_name("batch fetch job ", job_id)
 
         job_status = await poll_until_terminal_status_async(

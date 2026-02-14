@@ -8,7 +8,11 @@ from hyperbrowser.models.extract import (
     StartExtractJobParams,
     StartExtractJobResponse,
 )
-from ...polling import build_operation_name, wait_for_job_result_async
+from ...polling import (
+    build_operation_name,
+    ensure_started_job_id,
+    wait_for_job_result_async,
+)
 from ...schema_utils import resolve_schema_input
 from ..response_utils import parse_response_model
 
@@ -63,9 +67,10 @@ class ExtractManager:
         max_status_failures: int = POLLING_ATTEMPTS,
     ) -> ExtractJobResponse:
         job_start_resp = await self.start(params)
-        job_id = job_start_resp.job_id
-        if not job_id:
-            raise HyperbrowserError("Failed to start extract job")
+        job_id = ensure_started_job_id(
+            job_start_resp.job_id,
+            error_message="Failed to start extract job",
+        )
         operation_name = build_operation_name("extract job ", job_id)
 
         return await wait_for_job_result_async(
