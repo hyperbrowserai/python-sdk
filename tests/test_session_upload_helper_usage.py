@@ -16,3 +16,5 @@ def test_session_managers_use_shared_upload_input_normalizer():
         module_text = Path(module_path).read_text(encoding="utf-8")
         assert "normalize_upload_file_input(" in module_text
         assert "os.fspath(" not in module_text
+        assert "ensure_existing_file_path(" not in module_text
+        assert 'getattr(file_input, "read"' not in module_text
