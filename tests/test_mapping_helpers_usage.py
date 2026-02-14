@@ -3,17 +3,19 @@ from pathlib import Path
 import pytest
 
 from tests.guardrail_ast_utils import collect_name_call_lines, read_module_ast
+from tests.test_tool_mapping_reader_usage import TOOLS_MODULE
 
 pytestmark = pytest.mark.architecture
 
 HYPERBROWSER_ROOT = Path(__file__).resolve().parents[1] / "hyperbrowser"
+TOOLS_MODULE_UNDER_HYPERBROWSER = TOOLS_MODULE.relative_to("hyperbrowser")
 ALLOWED_READ_KEYS_CALL_FILES = {
     Path("mapping_utils.py"),
-    Path("tools/__init__.py"),
+    TOOLS_MODULE_UNDER_HYPERBROWSER,
 }
 ALLOWED_COPY_VALUES_CALL_FILES = {
     Path("mapping_utils.py"),
-    Path("tools/__init__.py"),
+    TOOLS_MODULE_UNDER_HYPERBROWSER,
 }
 
 
