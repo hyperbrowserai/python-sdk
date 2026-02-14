@@ -12,6 +12,13 @@ ALLOWED_NORMALIZE_DISPLAY_CALL_FILES = {
     Path("client/managers/response_utils.py"),
     Path("transport/base.py"),
 }
+ALLOWED_KEY_FORMAT_CALL_FILES = {
+    Path("client/managers/extension_utils.py"),
+    Path("client/managers/response_utils.py"),
+    Path("client/managers/session_utils.py"),
+    Path("tools/__init__.py"),
+    Path("transport/base.py"),
+}
 
 
 def _python_files() -> list[Path]:
@@ -35,7 +42,7 @@ def test_normalize_display_text_usage_is_centralized():
     assert violations == []
 
 
-def test_key_formatting_helper_is_used_outside_display_module():
+def test_key_formatting_helper_usage_is_centralized():
     helper_usage_files: set[Path] = set()
 
     for path in _python_files():
@@ -46,4 +53,4 @@ def test_key_formatting_helper_is_used_outside_display_module():
         if collect_name_call_lines(module, "format_string_key_for_error"):
             helper_usage_files.add(relative_path)
 
-    assert helper_usage_files != set()
+    assert helper_usage_files == ALLOWED_KEY_FORMAT_CALL_FILES
