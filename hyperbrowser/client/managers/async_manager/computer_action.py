@@ -91,7 +91,15 @@ class ComputerActionManager:
             )
 
         if isinstance(params, BaseModel):
-            payload = params.model_dump(by_alias=True, exclude_none=True)
+            try:
+                payload = params.model_dump(by_alias=True, exclude_none=True)
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to serialize computer action params",
+                    original_error=exc,
+                ) from exc
         else:
             payload = params
 
