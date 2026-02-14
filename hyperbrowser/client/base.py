@@ -38,7 +38,18 @@ class HyperbrowserBase:
                 )
             if not isinstance(resolved_api_key, str):
                 raise HyperbrowserError("api_key must be a string")
-            if not resolved_api_key.strip():
+            try:
+                normalized_resolved_api_key = resolved_api_key.strip()
+                if not isinstance(normalized_resolved_api_key, str):
+                    raise TypeError("normalized api_key must be a string")
+            except HyperbrowserError:
+                raise
+            except Exception as exc:
+                raise HyperbrowserError(
+                    "Failed to normalize api_key",
+                    original_error=exc,
+                ) from exc
+            if not normalized_resolved_api_key:
                 if api_key_from_constructor:
                     raise HyperbrowserError("api_key must not be empty")
                 raise HyperbrowserError(
