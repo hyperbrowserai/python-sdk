@@ -1,5 +1,6 @@
 from hyperbrowser.client.managers.web_operation_metadata import (
     BATCH_FETCH_OPERATION_METADATA,
+    WEB_REQUEST_OPERATION_METADATA,
     WEB_CRAWL_OPERATION_METADATA,
 )
 
@@ -24,3 +25,8 @@ def test_web_crawl_operation_metadata_values():
         == "Failed to start web crawl job"
     )
     assert WEB_CRAWL_OPERATION_METADATA.operation_name_prefix == "web crawl job "
+
+
+def test_web_request_operation_metadata_values():
+    assert WEB_REQUEST_OPERATION_METADATA.fetch_operation_name == "web fetch"
+    assert WEB_REQUEST_OPERATION_METADATA.search_operation_name == "web search"

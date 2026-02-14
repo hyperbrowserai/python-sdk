@@ -10,6 +10,12 @@ class WebOperationMetadata:
     operation_name_prefix: str
 
 
+@dataclass(frozen=True)
+class WebRequestOperationMetadata:
+    fetch_operation_name: str
+    search_operation_name: str
+
+
 BATCH_FETCH_OPERATION_METADATA = WebOperationMetadata(
     start_operation_name="batch fetch start",
     status_operation_name="batch fetch status",
@@ -24,4 +30,9 @@ WEB_CRAWL_OPERATION_METADATA = WebOperationMetadata(
     job_operation_name="web crawl job",
     start_error_message="Failed to start web crawl job",
     operation_name_prefix="web crawl job ",
+)
+
+WEB_REQUEST_OPERATION_METADATA = WebRequestOperationMetadata(
+    fetch_operation_name="web fetch",
+    search_operation_name="web search",
 )
