@@ -112,6 +112,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extension_route_constants_usage.py` (extension manager route-constant usage enforcement),
   - `tests/test_extract_payload_helper_usage.py` (extract start-payload helper usage enforcement),
   - `tests/test_guardrail_ast_utils.py` (shared AST guard utility contract),
+  - `tests/test_helper_transport_usage_boundary.py` (manager-helper transport usage boundary enforcement through shared model request helpers),
   - `tests/test_job_fetch_helper_boundary.py` (centralization boundary enforcement for retry/paginated-fetch helper primitives),
   - `tests/test_job_fetch_helper_usage.py` (shared retry/paginated-fetch defaults helper usage enforcement),
   - `tests/test_job_operation_metadata_usage.py` (shared scrape/crawl/extract operation-metadata usage enforcement),
