@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, Type, TypeVar
 
+from .job_route_builders import build_job_route, build_job_status_route
 from .response_utils import parse_response_model
 
 T = TypeVar("T")
@@ -33,7 +34,7 @@ def get_web_job_status(
     operation_name: str,
 ) -> T:
     response = client.transport.get(
-        client._build_url(f"{route_prefix}/{job_id}/status"),
+        client._build_url(build_job_status_route(route_prefix, job_id)),
     )
     return parse_response_model(
         response.data,
@@ -52,7 +53,7 @@ def get_web_job(
     operation_name: str,
 ) -> T:
     response = client.transport.get(
-        client._build_url(f"{route_prefix}/{job_id}"),
+        client._build_url(build_job_route(route_prefix, job_id)),
         params=params,
     )
     return parse_response_model(
@@ -90,7 +91,7 @@ async def get_web_job_status_async(
     operation_name: str,
 ) -> T:
     response = await client.transport.get(
-        client._build_url(f"{route_prefix}/{job_id}/status"),
+        client._build_url(build_job_status_route(route_prefix, job_id)),
     )
     return parse_response_model(
         response.data,
@@ -109,7 +110,7 @@ async def get_web_job_async(
     operation_name: str,
 ) -> T:
     response = await client.transport.get(
-        client._build_url(f"{route_prefix}/{job_id}"),
+        client._build_url(build_job_route(route_prefix, job_id)),
         params=params,
     )
     return parse_response_model(

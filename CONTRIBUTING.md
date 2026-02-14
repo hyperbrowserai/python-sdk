@@ -116,6 +116,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_job_poll_helper_usage.py` (shared terminal-status polling helper usage enforcement),
   - `tests/test_job_query_params_helper_usage.py` (shared scrape/crawl query-param helper usage enforcement),
   - `tests/test_job_request_helper_usage.py` (shared scrape/crawl/extract request-helper usage enforcement),
+  - `tests/test_job_route_builder_usage.py` (shared job/web request-helper route-builder usage enforcement),
   - `tests/test_job_route_constants_usage.py` (shared scrape/crawl/extract route-constant usage enforcement),
   - `tests/test_job_start_payload_helper_usage.py` (shared scrape/crawl start-payload helper usage enforcement),
   - `tests/test_job_wait_helper_boundary.py` (centralization boundary enforcement for wait-for-job helper primitives),
