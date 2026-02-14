@@ -3,7 +3,7 @@ import json
 from collections.abc import Mapping as MappingABC
 from typing import Any, Dict, Mapping
 
-from hyperbrowser.display_utils import normalize_display_text
+from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import copy_mapping_values_by_string_keys
 from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
@@ -54,13 +54,7 @@ def _has_declared_attribute(
 
 
 def _format_tool_param_key_for_error(key: str) -> str:
-    normalized_key = normalize_display_text(
-        key,
-        max_length=_MAX_KEY_DISPLAY_LENGTH,
-    )
-    if not normalized_key:
-        return "<blank key>"
-    return normalized_key
+    return format_string_key_for_error(key, max_length=_MAX_KEY_DISPLAY_LENGTH)
 
 
 def _normalize_extract_schema_mapping(

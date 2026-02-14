@@ -1,6 +1,6 @@
 from typing import Any, Type, TypeVar
 
-from hyperbrowser.display_utils import normalize_display_text
+from hyperbrowser.display_utils import format_string_key_for_error, normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
 
@@ -20,13 +20,7 @@ def _normalize_operation_name_for_error(operation_name: str) -> str:
 
 
 def _normalize_response_key_for_error(key: str) -> str:
-    normalized_key = normalize_display_text(
-        key,
-        max_length=_MAX_KEY_DISPLAY_LENGTH,
-    )
-    if not normalized_key:
-        return "<blank key>"
-    return normalized_key
+    return format_string_key_for_error(key, max_length=_MAX_KEY_DISPLAY_LENGTH)
 
 
 def parse_response_model(

@@ -1,6 +1,6 @@
 from typing import Any, List, Type, TypeVar
 
-from hyperbrowser.display_utils import normalize_display_text
+from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.session import SessionRecording
 from .list_parsing_utils import parse_mapping_list_items
@@ -11,13 +11,7 @@ _MAX_KEY_DISPLAY_LENGTH = 120
 
 
 def _format_recording_key_display(key: str) -> str:
-    normalized_key = normalize_display_text(
-        key,
-        max_length=_MAX_KEY_DISPLAY_LENGTH,
-    )
-    if not normalized_key:
-        return "<blank key>"
-    return normalized_key
+    return format_string_key_for_error(key, max_length=_MAX_KEY_DISPLAY_LENGTH)
 
 
 def parse_session_response_model(

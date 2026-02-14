@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
-from hyperbrowser.display_utils import normalize_display_text
+from hyperbrowser.display_utils import format_string_key_for_error, normalize_display_text
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.mapping_utils import read_string_key_mapping
 
@@ -31,16 +31,10 @@ def _safe_model_name(model: object) -> str:
 
 
 def _format_mapping_key_for_error(key: str) -> str:
-    normalized_key = normalize_display_text(
-        key, max_length=_MAX_MAPPING_KEY_DISPLAY_LENGTH
+    return format_string_key_for_error(
+        key,
+        max_length=_MAX_MAPPING_KEY_DISPLAY_LENGTH,
     )
-    if normalized_key:
-        return normalized_key
-    try:
-        _ = "".join(character for character in key)
-    except Exception:
-        return "<unreadable key>"
-    return "<blank key>"
 
 
 def _normalize_transport_api_key(api_key: str) -> str:

@@ -19,3 +19,15 @@ def normalize_display_text(value: str, *, max_length: int) -> str:
         return f"{sanitized_value[:available_length]}{_TRUNCATED_DISPLAY_SUFFIX}"
     except Exception:
         return ""
+
+
+def format_string_key_for_error(
+    key: str,
+    *,
+    max_length: int,
+    blank_fallback: str = "<blank key>",
+) -> str:
+    normalized_key = normalize_display_text(key, max_length=max_length)
+    if not normalized_key:
+        return blank_fallback
+    return normalized_key
