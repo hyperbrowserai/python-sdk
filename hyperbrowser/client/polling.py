@@ -116,7 +116,7 @@ def _normalize_non_negative_real(value: float, *, field_name: str) -> float:
 
 
 def _validate_operation_name(operation_name: str) -> None:
-    if not isinstance(operation_name, str):
+    if type(operation_name) is not str:
         raise HyperbrowserError("operation_name must be a string")
     try:
         normalized_operation_name = operation_name.strip()
