@@ -1,24 +1,9 @@
 from typing import Any, Callable, List, TypeVar
 
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.mapping_utils import read_string_key_mapping
-from hyperbrowser.type_utils import is_plain_string
+from hyperbrowser.mapping_utils import read_string_key_mapping, safe_key_display_for_error
 
 T = TypeVar("T")
-
-
-def _safe_key_display_for_error(
-    key: str,
-    *,
-    key_display: Callable[[str], str],
-) -> str:
-    try:
-        key_text = key_display(key)
-        if not is_plain_string(key_text):
-            raise TypeError("key display must be a string")
-        return key_text
-    except Exception:
-        return "<unreadable key>"
 
 
 def parse_mapping_list_items(
@@ -42,7 +27,7 @@ def parse_mapping_list_items(
             read_value_error_builder=lambda key_text: (
                 f"Failed to read {item_label} object value for key '{key_text}' at index {index}"
             ),
-            key_display=lambda key: _safe_key_display_for_error(
+            key_display=lambda key: safe_key_display_for_error(
                 key, key_display=key_display
             ),
         )

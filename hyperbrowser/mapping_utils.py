@@ -5,7 +5,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.type_utils import is_plain_string
 
 
-def _safe_key_display_for_error(
+def safe_key_display_for_error(
     key: str, *, key_display: Callable[[str], str]
 ) -> str:
     try:
@@ -66,7 +66,7 @@ def read_string_key_mapping(
         except HyperbrowserError:
             raise
         except Exception as exc:
-            key_text = _safe_key_display_for_error(key, key_display=key_display)
+            key_text = safe_key_display_for_error(key, key_display=key_display)
             raise HyperbrowserError(
                 read_value_error_builder(key_text),
                 original_error=exc,
@@ -90,7 +90,7 @@ def copy_mapping_values_by_string_keys(
         except HyperbrowserError:
             raise
         except Exception as exc:
-            key_text = _safe_key_display_for_error(key, key_display=key_display)
+            key_text = safe_key_display_for_error(key, key_display=key_display)
             raise HyperbrowserError(
                 read_value_error_builder(key_text),
                 original_error=exc,
