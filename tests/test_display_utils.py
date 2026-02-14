@@ -73,6 +73,10 @@ def test_format_string_key_for_error_returns_blank_fallback_for_empty_keys():
     assert format_string_key_for_error("   ", max_length=20) == "<blank key>"
 
 
+def test_format_string_key_for_error_preserves_placeholder_for_control_only_keys():
+    assert format_string_key_for_error("\n\t\r", max_length=20) == "???"
+
+
 def test_format_string_key_for_error_supports_custom_blank_fallback():
     assert (
         format_string_key_for_error("   ", max_length=20, blank_fallback="<empty>")
@@ -126,3 +130,7 @@ def test_format_string_key_for_error_truncates_custom_blank_fallback():
         )
         == "... (truncated)"
     )
+
+
+def test_normalize_display_text_preserves_placeholder_for_control_only_values():
+    assert normalize_display_text("\n\t\r", max_length=20) == "???"
