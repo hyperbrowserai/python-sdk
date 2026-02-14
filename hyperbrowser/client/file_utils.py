@@ -10,15 +10,21 @@ _MAX_FILE_PATH_DISPLAY_LENGTH = 200
 _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX = "Failed to open file at path"
 
 
+def _sanitize_control_characters(value: str) -> str:
+    return "".join(
+        "?" if ord(character) < 32 or ord(character) == 127 else character
+        for character in value
+    )
+
+
 def _normalize_error_prefix(prefix: object, *, default_prefix: str) -> str:
     normalized_default_prefix = default_prefix
     if not is_plain_string(normalized_default_prefix):
         normalized_default_prefix = _DEFAULT_OPEN_ERROR_MESSAGE_PREFIX
     else:
         try:
-            sanitized_default_prefix = "".join(
-                "?" if ord(character) < 32 or ord(character) == 127 else character
-                for character in normalized_default_prefix
+            sanitized_default_prefix = _sanitize_control_characters(
+                normalized_default_prefix
             )
             stripped_default_prefix = sanitized_default_prefix.strip()
         except Exception:
@@ -30,10 +36,7 @@ def _normalize_error_prefix(prefix: object, *, default_prefix: str) -> str:
     if not is_plain_string(prefix):
         return normalized_default_prefix
     try:
-        sanitized_prefix = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in prefix
-        )
+        sanitized_prefix = _sanitize_control_characters(prefix)
         stripped_prefix = sanitized_prefix.strip()
     except Exception:
         stripped_prefix = normalized_default_prefix
@@ -60,10 +63,7 @@ def format_file_path_for_error(
     if not is_plain_string(path_value):
         return "<provided path>"
     try:
-        sanitized_path = "".join(
-            "?" if ord(character) < 32 or ord(character) == 127 else character
-            for character in path_value
-        )
+        sanitized_path = _sanitize_control_characters(path_value)
     except Exception:
         return "<provided path>"
     if not is_plain_string(sanitized_path):
