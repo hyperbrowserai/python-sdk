@@ -14,6 +14,7 @@ EXPECTED_EXTRA_IMPORTERS = (
     "tests/test_display_utils.py",
     "tests/test_display_utils_import_boundary.py",
     "tests/test_extension_key_display_import_boundary.py",
+    "tests/test_session_recording_key_display_import_boundary.py",
 )
 
 
