@@ -132,6 +132,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_extension_create_helper_usage.py` (extension create-input normalization helper usage enforcement),
   - `tests/test_extension_create_metadata_usage.py` (extension create-helper shared operation-metadata prefix usage enforcement),
   - `tests/test_extension_key_display_helper_usage.py` (extension missing-key display helper usage enforcement),
+  - `tests/test_extension_key_display_import_boundary.py` (extension key-display helper import boundary enforcement),
   - `tests/test_extension_operation_metadata_import_boundary.py` (extension operation-metadata import boundary enforcement),
   - `tests/test_extension_operation_metadata_usage.py` (extension manager operation-metadata usage enforcement),
   - `tests/test_extension_parse_usage_boundary.py` (centralized extension list parse-helper usage boundary enforcement),
