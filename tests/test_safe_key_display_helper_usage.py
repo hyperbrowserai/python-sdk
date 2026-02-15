@@ -9,6 +9,7 @@ pytestmark = pytest.mark.architecture
 HYPERBROWSER_ROOT = Path(__file__).resolve().parents[1] / "hyperbrowser"
 ALLOWED_SAFE_KEY_DISPLAY_CALL_FILES = {
     Path("mapping_utils.py"),
+    Path("client/managers/extension_utils.py"),
     Path("client/managers/list_parsing_utils.py"),
 }
 

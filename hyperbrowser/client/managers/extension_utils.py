@@ -3,6 +3,7 @@ from typing import Any, List
 
 from hyperbrowser.display_utils import format_string_key_for_error
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.mapping_utils import safe_key_display_for_error
 from hyperbrowser.models.extension import ExtensionResponse
 from hyperbrowser.type_utils import is_plain_string
 from .list_parsing_utils import parse_mapping_list_items, read_plain_list_items
@@ -20,20 +21,30 @@ def _safe_stringify_key(value: object) -> str:
         normalized_key = str(value)
         if not is_plain_string(normalized_key):
             raise TypeError("normalized key must be a string")
-        return normalized_key
+        sanitized_key = "".join(
+            "?" if ord(character) < 32 or ord(character) == 127 else character
+            for character in normalized_key
+        )
+        if not is_plain_string(sanitized_key):
+            raise TypeError("sanitized key must be a string")
+        return sanitized_key
     except Exception:
         return f"<unprintable {_get_type_name(value)}>"
 
 
 def _format_key_display(value: object) -> str:
-    try:
-        normalized_key = _safe_stringify_key(value)
-        if not is_plain_string(normalized_key):
-            raise TypeError("normalized key display must be a string")
-    except Exception:
-        return "<unreadable key>"
-    return format_string_key_for_error(
+    normalized_key = _safe_stringify_key(value)
+    if not normalized_key.strip():
+        return format_string_key_for_error(
+            "",
+            max_length=_MAX_DISPLAYED_MISSING_KEY_LENGTH,
+        )
+    safe_key_text = safe_key_display_for_error(
         normalized_key,
+        key_display=lambda key: key,
+    )
+    return format_string_key_for_error(
+        safe_key_text,
         max_length=_MAX_DISPLAYED_MISSING_KEY_LENGTH,
     )
 
