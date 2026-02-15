@@ -202,6 +202,36 @@ def test_parse_extension_list_response_data_missing_key_handles_unprintable_keys
         parse_extension_list_response_data({_BrokenStringKey(): "value"})
 
 
+def test_parse_extension_list_response_data_missing_key_handles_blank_stringified_keys():
+    class _BlankStringKey:
+        def __str__(self) -> str:
+            return "   "
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            "\\[<blank key>\\] keys"
+        ),
+    ):
+        parse_extension_list_response_data({_BlankStringKey(): "value"})
+
+
+def test_parse_extension_list_response_data_missing_key_handles_control_stringified_keys():
+    class _ControlStringKey:
+        def __str__(self) -> str:
+            return "\n\t"
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            "\\[\\?\\?\\] keys"
+        ),
+    ):
+        parse_extension_list_response_data({_ControlStringKey(): "value"})
+
+
 def test_parse_extension_list_response_data_missing_key_handles_string_subclass_str_results():
     class _StringSubclassKey:
         class _RenderedKey(str):
