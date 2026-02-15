@@ -170,6 +170,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_list_parsing_helper_usage.py` (list parsing shared helper usage centralization),
   - `tests/test_list_parsing_helpers_import_boundary.py` (list parsing helper import boundary enforcement),
   - `tests/test_list_parsing_key_display_helper_usage.py` (list parsing safe key-display helper usage enforcement),
+  - `tests/test_list_parsing_key_display_import_boundary.py` (list parsing safe key-display helper import boundary enforcement),
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
   - `tests/test_manager_helper_import_boundary.py` (manager helper-import boundary enforcement for low-level parse modules),
   - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
