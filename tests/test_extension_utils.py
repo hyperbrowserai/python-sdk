@@ -232,6 +232,21 @@ def test_parse_extension_list_response_data_missing_key_handles_control_stringif
         parse_extension_list_response_data({_ControlStringKey(): "value"})
 
 
+def test_parse_extension_list_response_data_missing_key_handles_strip_and_sanitize_stringified_keys():
+    class _MixedStringKey:
+        def __str__(self) -> str:
+            return "  bad\tkey  "
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Expected 'extensions' key in response but got "
+            "\\[bad\\?key\\] keys"
+        ),
+    ):
+        parse_extension_list_response_data({_MixedStringKey(): "value"})
+
+
 def test_parse_extension_list_response_data_missing_key_handles_string_subclass_str_results():
     class _StringSubclassKey:
         class _RenderedKey(str):
