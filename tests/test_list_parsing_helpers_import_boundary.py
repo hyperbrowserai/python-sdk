@@ -3,8 +3,7 @@ from pathlib import Path
 import pytest
 
 from tests.test_list_parsing_helper_usage import (
-    ALLOWED_PARSE_MAPPING_LIST_CALL_FILES,
-    ALLOWED_READ_PLAIN_LIST_CALL_FILES,
+    LIST_PARSING_HELPER_RUNTIME_MODULES,
 )
 
 pytestmark = pytest.mark.architecture
@@ -33,10 +32,7 @@ def test_list_parsing_helper_imports_are_centralized():
 
     expected_runtime_modules = sorted(
         f"hyperbrowser/{path.as_posix()}"
-        for path in {
-            *ALLOWED_PARSE_MAPPING_LIST_CALL_FILES,
-            *ALLOWED_READ_PLAIN_LIST_CALL_FILES,
-        }
+        for path in LIST_PARSING_HELPER_RUNTIME_MODULES
         if path != Path("client/managers/list_parsing_utils.py")
     )
     expected_modules = sorted(
