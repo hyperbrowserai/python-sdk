@@ -131,6 +131,32 @@ def test_parse_mapping_list_items_falls_back_when_key_display_returns_non_string
         )
 
 
+def test_parse_mapping_list_items_falls_back_when_key_display_returns_blank_string():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read demo object value for key '<unreadable key>' at index 0",
+    ):
+        parse_mapping_list_items(
+            [_ExplodingValueMapping()],
+            item_label="demo",
+            parse_item=lambda payload: payload,
+            key_display=lambda key: f"  {key[:0]}  ",
+        )
+
+
+def test_parse_mapping_list_items_falls_back_when_key_display_returns_control_chars():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Failed to read demo object value for key '<unreadable key>' at index 0",
+    ):
+        parse_mapping_list_items(
+            [_ExplodingValueMapping()],
+            item_label="demo",
+            parse_item=lambda payload: payload,
+            key_display=lambda key: f"{key}\n\t",
+        )
+
+
 def test_parse_mapping_list_items_wraps_parse_failures():
     with pytest.raises(
         HyperbrowserError,
