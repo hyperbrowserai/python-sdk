@@ -2,12 +2,15 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_list_parsing_helper_usage import (
+    ALLOWED_PARSE_MAPPING_LIST_CALL_FILES,
+    ALLOWED_READ_PLAIN_LIST_CALL_FILES,
+)
+
 pytestmark = pytest.mark.architecture
 
 
-EXPECTED_LIST_PARSING_HELPER_IMPORTERS = (
-    "hyperbrowser/client/managers/extension_utils.py",
-    "hyperbrowser/client/managers/session_utils.py",
+EXPECTED_LIST_PARSING_EXTRA_IMPORTERS = (
     "tests/test_list_parsing_helpers_import_boundary.py",
     "tests/test_list_parsing_utils.py",
 )
@@ -28,4 +31,15 @@ def test_list_parsing_helper_imports_are_centralized():
             continue
         discovered_modules.append(module_path.as_posix())
 
-    assert discovered_modules == list(EXPECTED_LIST_PARSING_HELPER_IMPORTERS)
+    expected_runtime_modules = sorted(
+        f"hyperbrowser/{path.as_posix()}"
+        for path in {
+            *ALLOWED_PARSE_MAPPING_LIST_CALL_FILES,
+            *ALLOWED_READ_PLAIN_LIST_CALL_FILES,
+        }
+        if path != Path("client/managers/list_parsing_utils.py")
+    )
+    expected_modules = sorted(
+        [*expected_runtime_modules, *EXPECTED_LIST_PARSING_EXTRA_IMPORTERS]
+    )
+    assert discovered_modules == expected_modules
