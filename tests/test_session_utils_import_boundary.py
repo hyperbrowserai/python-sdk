@@ -1,11 +1,10 @@
 import ast
-from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.architecture
+from tests.test_session_utils_helper_usage import SESSION_UTILS_MODULE
 
-SESSION_UTILS_MODULE = Path("hyperbrowser/client/managers/session_utils.py")
+pytestmark = pytest.mark.architecture
 
 
 def _imports_symbol_from_module(
