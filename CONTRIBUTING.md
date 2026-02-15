@@ -165,6 +165,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_job_start_payload_helper_usage.py` (shared scrape/crawl start-payload helper usage enforcement),
   - `tests/test_job_wait_helper_boundary.py` (centralization boundary enforcement for wait-for-job helper primitives),
   - `tests/test_job_wait_helper_usage.py` (shared wait-for-job defaults helper usage enforcement),
+  - `tests/test_list_parsing_key_display_helper_usage.py` (list parsing safe key-display helper usage enforcement),
   - `tests/test_makefile_quality_targets.py` (Makefile quality-gate target enforcement),
   - `tests/test_manager_helper_import_boundary.py` (manager helper-import boundary enforcement for low-level parse modules),
   - `tests/test_manager_model_dump_usage.py` (manager serialization centralization),
