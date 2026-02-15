@@ -227,6 +227,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_session_upload_helper_usage.py` (session upload-input normalization helper usage enforcement),
   - `tests/test_session_upload_metadata_usage.py` (session upload-helper shared operation-metadata prefix usage enforcement),
   - `tests/test_session_utils_helper_usage.py` (session parsing helper usage enforcement),
+  - `tests/test_session_utils_import_boundary.py` (session helper import boundary enforcement),
   - `tests/test_start_and_wait_default_constants_usage.py` (shared start-and-wait default-constant usage enforcement),
   - `tests/test_start_job_context_helper_usage.py` (shared started-job context helper usage enforcement),
   - `tests/test_started_job_helper_boundary.py` (centralization boundary enforcement for started-job helper primitives),

@@ -159,6 +159,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_session_route_constants_usage.py",
     "tests/test_session_upload_helper_usage.py",
     "tests/test_session_upload_metadata_usage.py",
+    "tests/test_session_utils_import_boundary.py",
     "tests/test_session_utils_helper_usage.py",
     "tests/test_start_and_wait_default_constants_usage.py",
     "tests/test_start_job_context_helper_usage.py",
