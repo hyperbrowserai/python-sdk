@@ -226,6 +226,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_team_route_constants_usage.py` (team manager route-constant usage enforcement),
   - `tests/test_tool_mapping_reader_usage.py` (tools mapping-helper usage),
   - `tests/test_type_utils_usage.py` (type `__mro__` boundary centralization in `hyperbrowser/type_utils.py`),
+  - `tests/test_unreadable_key_literal_boundary.py` (unreadable-key display literal centralization in mapping/extension helper modules),
   - `tests/test_web_fetch_search_usage.py` (web fetch/search manager shared route/metadata/request-helper usage enforcement),
   - `tests/test_web_operation_metadata_usage.py` (web manager operation-metadata usage enforcement),
   - `tests/test_web_pagination_internal_reuse.py` (web pagination helper internal reuse of shared job pagination helpers),

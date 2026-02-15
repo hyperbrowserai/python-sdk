@@ -136,6 +136,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_computer_action_request_internal_reuse.py",
     "tests/test_safe_key_display_helper_import_boundary.py",
     "tests/test_safe_key_display_helper_usage.py",
+    "tests/test_unreadable_key_literal_boundary.py",
     "tests/test_schema_injection_helper_usage.py",
     "tests/test_session_operation_metadata_import_boundary.py",
     "tests/test_session_operation_metadata_usage.py",
