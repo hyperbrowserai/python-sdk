@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_mapping_helpers_usage import ALLOWED_COPY_VALUES_CALL_FILES
 from tests.test_mapping_utils_import_boundary import EXPECTED_MAPPING_EXTRA_IMPORTERS
-from tests.test_tool_mapping_reader_usage import TOOLS_MODULE
 
 pytestmark = pytest.mark.architecture
 
@@ -34,7 +34,12 @@ def test_copy_mapping_values_by_string_keys_imports_are_centralized():
         if _imports_copy_mapping_values_by_string_keys(module_text):
             discovered_modules.append(module_path.as_posix())
 
+    expected_runtime_modules = sorted(
+        f"hyperbrowser/{path.as_posix()}"
+        for path in ALLOWED_COPY_VALUES_CALL_FILES
+        if path != Path("mapping_utils.py")
+    )
     expected_modules = sorted(
-        [TOOLS_MODULE.as_posix(), *EXPECTED_MAPPING_EXTRA_IMPORTERS]
+        [*expected_runtime_modules, *EXPECTED_MAPPING_EXTRA_IMPORTERS]
     )
     assert discovered_modules == expected_modules
