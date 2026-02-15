@@ -107,6 +107,7 @@ ARCHITECTURE_GUARD_MODULES = (
     "tests/test_extension_operation_metadata_import_boundary.py",
     "tests/test_extension_operation_metadata_usage.py",
     "tests/test_extension_parse_usage_boundary.py",
+    "tests/test_extension_key_display_helper_usage.py",
     "tests/test_extension_request_function_parse_boundary.py",
     "tests/test_extension_request_helper_usage.py",
     "tests/test_extension_request_internal_reuse.py",
