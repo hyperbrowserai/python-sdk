@@ -12,6 +12,10 @@ def safe_key_display_for_error(
         key_text = key_display(key)
         if not is_plain_string(key_text):
             raise TypeError("mapping key display must be a string")
+        if not key_text.strip():
+            raise ValueError("mapping key display must not be blank")
+        if any(ord(character) < 32 or ord(character) == 127 for character in key_text):
+            raise ValueError("mapping key display must not contain control characters")
         return key_text
     except Exception:
         return "<unreadable key>"

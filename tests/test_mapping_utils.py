@@ -163,6 +163,26 @@ def test_safe_key_display_for_error_rejects_string_subclass_display_results():
     )
 
 
+def test_safe_key_display_for_error_returns_unreadable_key_for_blank_display_values():
+    assert (
+        safe_key_display_for_error(
+            "field",
+            key_display=lambda key: f"  {key[:0]}  ",
+        )
+        == "<unreadable key>"
+    )
+
+
+def test_safe_key_display_for_error_returns_unreadable_key_for_control_display_values():
+    assert (
+        safe_key_display_for_error(
+            "field",
+            key_display=lambda key: f"{key}\n\t",
+        )
+        == "<unreadable key>"
+    )
+
+
 def test_read_string_mapping_keys_returns_string_keys():
     assert read_string_mapping_keys(
         {"a": 1, "b": 2},
