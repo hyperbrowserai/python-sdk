@@ -3,12 +3,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_mapping_utils_import_boundary import EXPECTED_MAPPING_EXTRA_IMPORTERS
 from tests.test_mapping_reader_usage import MAPPING_READER_TARGET_FILES
 
 pytestmark = pytest.mark.architecture
-
-
-EXPECTED_READ_HELPER_EXTRA_IMPORTERS = ("tests/test_mapping_utils.py",)
 
 
 def _imports_read_string_key_mapping(module_text: str) -> bool:
@@ -40,6 +38,6 @@ def test_read_string_key_mapping_imports_are_centralized():
         path.as_posix() for path in MAPPING_READER_TARGET_FILES
     )
     expected_modules = sorted(
-        [*expected_runtime_modules, *EXPECTED_READ_HELPER_EXTRA_IMPORTERS]
+        [*expected_runtime_modules, *EXPECTED_MAPPING_EXTRA_IMPORTERS]
     )
     assert discovered_modules == expected_modules
