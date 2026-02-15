@@ -13,3 +13,4 @@ def test_session_utils_uses_format_string_key_for_error():
     assert "format_string_key_for_error(" in module_text
     assert "_MAX_KEY_DISPLAY_LENGTH" in module_text
     assert "_format_recording_key_display(" in module_text
+    assert "max_length=_MAX_KEY_DISPLAY_LENGTH" in module_text
