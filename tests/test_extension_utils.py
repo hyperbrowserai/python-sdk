@@ -171,6 +171,14 @@ def test_parse_extension_list_response_data_missing_key_normalizes_control_chara
         parse_extension_list_response_data({"bad\tkey": "value"})
 
 
+def test_parse_extension_list_response_data_missing_key_strips_and_sanitizes_key_text():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected 'extensions' key in response but got \\[bad\\?key\\] keys",
+    ):
+        parse_extension_list_response_data({"  bad\tkey  ": "value"})
+
+
 def test_parse_extension_list_response_data_missing_key_preserves_control_placeholders():
     with pytest.raises(
         HyperbrowserError,
