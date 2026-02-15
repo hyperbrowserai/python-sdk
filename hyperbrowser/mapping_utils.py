@@ -9,13 +9,19 @@ def safe_key_display_for_error(
     key: object, *, key_display: Callable[[object], object]
 ) -> str:
     try:
-        key_text = key_display(key)
-        if not is_plain_string(key_text):
+        raw_key_text = key_display(key)
+        if not is_plain_string(raw_key_text):
             raise TypeError("mapping key display must be a string")
-        if not key_text.strip():
-            raise ValueError("mapping key display must not be blank")
-        if any(ord(character) < 32 or ord(character) == 127 for character in key_text):
+        if any(
+            ord(character) < 32 or ord(character) == 127
+            for character in raw_key_text
+        ):
             raise ValueError("mapping key display must not contain control characters")
+        key_text = raw_key_text.strip()
+        if not is_plain_string(key_text):
+            raise TypeError("normalized mapping key display must be a string")
+        if not key_text:
+            raise ValueError("mapping key display must not be blank")
         return key_text
     except Exception:
         return "<unreadable key>"

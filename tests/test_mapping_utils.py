@@ -140,6 +140,13 @@ def test_safe_key_display_for_error_returns_display_value():
     )
 
 
+def test_safe_key_display_for_error_strips_whitespace_from_display_value():
+    assert (
+        safe_key_display_for_error("field", key_display=lambda key: f"  {key}  ")
+        == "field"
+    )
+
+
 def test_safe_key_display_for_error_returns_unreadable_key_on_failures():
     assert (
         safe_key_display_for_error(
