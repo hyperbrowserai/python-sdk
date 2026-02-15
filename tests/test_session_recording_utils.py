@@ -297,6 +297,30 @@ def test_parse_session_recordings_response_data_sanitizes_recording_value_keys()
     assert exc_info.value.original_error is not None
 
 
+def test_parse_session_recordings_response_data_strips_and_sanitizes_value_keys():
+    class _BrokenValueLookupMapping(Mapping[str, object]):
+        def __iter__(self) -> Iterator[str]:
+            yield "  bad\tkey  "
+
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, key: str) -> object:
+            _ = key
+            raise RuntimeError("cannot read recording value")
+
+    with pytest.raises(
+        HyperbrowserError,
+        match=(
+            "Failed to read session recording object value "
+            "for key 'bad\\?key' at index 0"
+        ),
+    ) as exc_info:
+        parse_session_recordings_response_data([_BrokenValueLookupMapping()])
+
+    assert exc_info.value.original_error is not None
+
+
 def test_parse_session_recordings_response_data_strips_surrounding_whitespace_in_value_keys():
     class _BrokenValueLookupMapping(Mapping[str, object]):
         def __iter__(self) -> Iterator[str]:
