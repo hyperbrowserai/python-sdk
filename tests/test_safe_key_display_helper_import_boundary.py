@@ -4,11 +4,9 @@ from pathlib import Path
 import pytest
 
 from tests.test_safe_key_display_helper_usage import ALLOWED_SAFE_KEY_DISPLAY_CALL_FILES
+from tests.test_mapping_utils_import_boundary import EXPECTED_MAPPING_EXTRA_IMPORTERS
 
 pytestmark = pytest.mark.architecture
-
-
-EXPECTED_SAFE_KEY_DISPLAY_EXTRA_IMPORTERS = ("tests/test_mapping_utils.py",)
 
 
 def _imports_safe_key_display_helper(module_text: str) -> bool:
@@ -42,6 +40,6 @@ def test_safe_key_display_helper_imports_are_centralized():
         if path != Path("mapping_utils.py")
     )
     expected_modules = sorted(
-        [*expected_runtime_modules, *EXPECTED_SAFE_KEY_DISPLAY_EXTRA_IMPORTERS]
+        [*expected_runtime_modules, *EXPECTED_MAPPING_EXTRA_IMPORTERS]
     )
     assert discovered_modules == expected_modules
