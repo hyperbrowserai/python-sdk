@@ -214,6 +214,7 @@ This runs lint, format checks, compile checks, tests, and package build.
   - `tests/test_session_operation_metadata_usage.py` (session manager operation-metadata usage enforcement),
   - `tests/test_session_parse_usage_boundary.py` (centralized session parse-helper usage boundary enforcement),
   - `tests/test_session_profile_update_helper_usage.py` (session profile-update parameter helper usage enforcement),
+  - `tests/test_session_recording_key_display_helper_usage.py` (session recording key-display helper usage enforcement),
   - `tests/test_session_recordings_follow_redirects_boundary.py` (session recordings wrapper follow-redirect enforcement boundary),
   - `tests/test_session_request_function_parse_boundary.py` (session-request function-level parse boundary enforcement between parsed wrappers and resource helpers),
   - `tests/test_session_request_helper_usage.py` (session manager request-helper usage enforcement),
