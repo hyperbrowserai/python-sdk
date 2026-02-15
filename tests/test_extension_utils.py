@@ -155,6 +155,14 @@ def test_parse_extension_list_response_data_missing_key_normalizes_blank_key_nam
         parse_extension_list_response_data({"   ": "value"})
 
 
+def test_parse_extension_list_response_data_missing_key_strips_surrounding_whitespace():
+    with pytest.raises(
+        HyperbrowserError,
+        match="Expected 'extensions' key in response but got \\[spaced-key\\] keys",
+    ):
+        parse_extension_list_response_data({"  spaced-key  ": "value"})
+
+
 def test_parse_extension_list_response_data_missing_key_normalizes_control_characters():
     with pytest.raises(
         HyperbrowserError,
