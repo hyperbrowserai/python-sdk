@@ -101,6 +101,9 @@ class SessionLaunchState(BaseModel):
         default=None, alias="enableWindowManagerTaskbar"
     )
     view_only_live_view: Optional[bool] = Field(default=None, alias="viewOnlyLiveView")
+    allow_on_geolocation_prompt: Optional[bool] = Field(
+        default=None, alias="allowOnGeolocationPrompt"
+    )
     disable_password_manager: Optional[bool] = Field(
         default=None, alias="disablePasswordManager"
     )
@@ -314,6 +317,9 @@ class CreateSessionParams(BaseModel):
     region: Optional[SessionRegion] = Field(default=None, serialization_alias="region")
     view_only_live_view: Optional[bool] = Field(
         default=None, serialization_alias="viewOnlyLiveView"
+    )
+    allow_on_geolocation_prompt: Optional[bool] = Field(
+        default=None, serialization_alias="allowOnGeolocationPrompt"
     )
     disable_password_manager: Optional[bool] = Field(
         default=None, serialization_alias="disablePasswordManager"
