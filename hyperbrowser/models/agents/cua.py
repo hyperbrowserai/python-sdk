@@ -30,7 +30,9 @@ class StartCuaTaskParams(BaseModel):
     )
 
     task: str
-    llm: Optional[CuaLlm] = Field(default=None, serialization_alias="llm")
+    llm: Optional[CuaLlm] = Field(
+        default="computer-use-preview", serialization_alias="llm"
+    )
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     max_steps: Optional[int] = Field(default=None, serialization_alias="maxSteps")
