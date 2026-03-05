@@ -2,6 +2,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..consts import CuaLlm
 from ..session import CreateSessionParams
 
 CuaTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
@@ -29,6 +30,7 @@ class StartCuaTaskParams(BaseModel):
     )
 
     task: str
+    llm: Optional[CuaLlm] = Field(default=None, serialization_alias="llm")
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     max_steps: Optional[int] = Field(default=None, serialization_alias="maxSteps")
