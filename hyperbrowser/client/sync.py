@@ -9,6 +9,7 @@ from .managers.sync_manager.crawl import CrawlManager
 from .managers.sync_manager.extension import ExtensionManager
 from .managers.sync_manager.extract import ExtractManager
 from .managers.sync_manager.profile import ProfileManager
+from .managers.sync_manager.sandbox import SandboxManager
 from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.team import TeamManager
@@ -26,6 +27,7 @@ class Hyperbrowser(HyperbrowserBase):
         timeout: Optional[int] = 30,
     ):
         super().__init__(SyncTransport, config, api_key, base_url)
+        self.timeout = timeout or 30
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
         self.web = WebManager(self)
@@ -37,6 +39,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.agents = Agents(self)
         self.team = TeamManager(self)
         self.computer_action = ComputerActionManager(self)
+        self.sandboxes = SandboxManager(self)
 
     def close(self) -> None:
         self.transport.close()

@@ -1,5 +1,7 @@
 # exceptions.py
-from typing import Optional, Any
+from typing import Any, Literal, Optional
+
+HyperbrowserService = Literal["control", "runtime"]
 
 
 class HyperbrowserError(Exception):
@@ -11,11 +13,23 @@ class HyperbrowserError(Exception):
         status_code: Optional[int] = None,
         response: Optional[Any] = None,
         original_error: Optional[Exception] = None,
+        code: Optional[str] = None,
+        request_id: Optional[str] = None,
+        retryable: bool = False,
+        service: Optional[HyperbrowserService] = None,
+        details: Optional[Any] = None,
+        cause: Optional[Any] = None,
     ):
         super().__init__(message)
         self.status_code = status_code
         self.response = response
         self.original_error = original_error
+        self.code = code
+        self.request_id = request_id
+        self.retryable = retryable
+        self.service = service
+        self.details = details
+        self.cause = cause if cause is not None else original_error
 
     def __str__(self) -> str:
         """Custom string representation to show a cleaner error message"""
