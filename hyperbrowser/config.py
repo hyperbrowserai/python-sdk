@@ -9,6 +9,7 @@ class ClientConfig:
 
     api_key: str
     base_url: str = "https://api.hyperbrowser.ai"
+    runtime_proxy_override: Optional[str] = None
 
     @classmethod
     def from_env(cls) -> "ClientConfig":

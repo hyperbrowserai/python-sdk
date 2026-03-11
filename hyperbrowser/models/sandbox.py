@@ -1,10 +1,9 @@
-from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from datetime import datetime, timezone
+from typing import Callable, Dict, Iterable, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .consts import SessionRegion
-from .session import BasicResponse, SessionLaunchState, SessionStatus
+from .session import SessionLaunchState, SessionStatus
 
 SandboxStatus = SessionStatus
 SandboxRegion = Literal[
@@ -24,12 +23,17 @@ SandboxProcessStatus = Literal[
     "killed",
     "timed_out",
 ]
-SandboxFileWatchRoute = Literal["ws", "stream"]
+SandboxFileType = Literal["file", "dir"]
 SandboxFileEncoding = Literal["utf8", "base64"]
+SandboxFileReadFormat = Literal["text", "bytes", "blob", "stream"]
+SandboxFileWatchRoute = Literal["ws", "stream"]
+SandboxFileSystemEventType = Literal["chmod", "create", "remove", "rename", "write"]
 
 
-class SandboxBaseModel(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+def _parse_optional_datetime(value):
+    if value in (None, ""):
+        return None
+    return value
 
 
 def _parse_optional_int(value):
@@ -42,10 +46,20 @@ def _parse_optional_int(value):
     return value
 
 
-def _parse_optional_datetime(value):
+def _parse_optional_datetime_from_millis(value):
     if value in (None, ""):
         return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(float(value) / 1000.0, tz=timezone.utc)
     return value
+
+
+class SandboxBaseModel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class SandboxRuntimeTarget(SandboxBaseModel):
@@ -117,20 +131,29 @@ class SandboxRuntimeSession(SandboxBaseModel):
 
 
 class CreateSandboxParams(SandboxBaseModel):
-    sandbox_name: str = Field(alias="sandboxName")
+    sandbox_name: Optional[str] = Field(default=None, alias="sandboxName")
+    snapshot_name: Optional[str] = Field(default=None, alias="snapshotName")
+    snapshot_id: Optional[str] = Field(default=None, alias="snapshotId")
+    image_name: Optional[str] = Field(default=None, alias="imageName")
+    image_id: Optional[str] = Field(default=None, alias="imageId")
     region: Optional[SandboxRegion] = None
     enable_recording: Optional[bool] = Field(default=None, alias="enableRecording")
     timeout_minutes: Optional[int] = Field(default=None, alias="timeoutMinutes")
-    snapshot_id: Optional[str] = Field(default=None, alias="snapshotId")
-    snapshot_name: Optional[str] = Field(default=None, alias="snapshotName")
-    snapshot_namespace: Optional[str] = Field(
-        default=None, alias="snapshotNamespace"
-    )
 
     @model_validator(mode="after")
-    def validate_snapshot_selector(self):
-        if bool(self.snapshot_id) == bool(self.snapshot_name):
-            raise ValueError("Exactly one of snapshot_id or snapshot_name is required")
+    def validate_launch_source(self):
+        source_count = sum(
+            bool(value)
+            for value in [self.sandbox_name, self.snapshot_name, self.image_name]
+        )
+        if source_count != 1:
+            raise ValueError(
+                "Provide exactly one start source: sandbox_name, snapshot_name, or image_name"
+            )
+        if self.snapshot_id and not self.snapshot_name:
+            raise ValueError("snapshot_id requires snapshot_name")
+        if self.image_id and not self.image_name:
+            raise ValueError("image_id requires image_name")
         return self
 
 
@@ -150,6 +173,31 @@ class SandboxListResponse(SandboxBaseModel):
     total_count: int = Field(alias="totalCount")
     page: int
     per_page: int = Field(alias="perPage")
+
+
+class SandboxMemorySnapshotParams(SandboxBaseModel):
+    snapshot_name: Optional[str] = Field(default=None, alias="snapshotName")
+
+
+class SandboxMemorySnapshotResult(SandboxBaseModel):
+    snapshot_name: str = Field(alias="snapshotName")
+    snapshot_id: str = Field(alias="snapshotId")
+    namespace: str
+    status: str
+    image_name: str = Field(alias="imageName")
+    image_id: str = Field(alias="imageId")
+    image_namespace: str = Field(alias="imageNamespace")
+
+
+class SandboxExposeParams(SandboxBaseModel):
+    port: int
+    auth: Optional[bool] = None
+
+
+class SandboxExposeResult(SandboxBaseModel):
+    port: int
+    auth: bool
+    url: str
 
 
 class SandboxExecParams(SandboxBaseModel):
@@ -189,8 +237,8 @@ class SandboxProcessListParams(SandboxBaseModel):
     status: Optional[Union[SandboxProcessStatus, List[SandboxProcessStatus]]] = None
     limit: Optional[int] = None
     cursor: Optional[Union[str, int]] = None
-    created_after: Optional[int] = Field(default=None, alias="created_after")
-    created_before: Optional[int] = Field(default=None, alias="created_before")
+    created_after: Optional[int] = Field(default=None, alias="createdAfter")
+    created_before: Optional[int] = Field(default=None, alias="createdBefore")
 
 
 class SandboxProcessListResponse(SandboxBaseModel):
@@ -224,29 +272,52 @@ class SandboxProcessExitEvent(SandboxBaseModel):
 SandboxProcessStreamEvent = Union[SandboxProcessOutputEvent, SandboxProcessExitEvent]
 
 
-class SandboxFileEntry(SandboxBaseModel):
+class SandboxFileInfo(SandboxBaseModel):
     path: str
     name: str
-    type: str
+    type: SandboxFileType
     size: int
-    mode: str
-    mod_time: int = Field(alias="modTime")
+    mode: int
+    permissions: str
+    owner: str
+    group: str
+    modified_time: Optional[datetime] = Field(default=None, alias="modifiedTime")
+    symlink_target: Optional[str] = Field(default=None, alias="symlinkTarget")
+
+    @field_validator("modified_time", mode="before")
+    @classmethod
+    def parse_modified_time(cls, value):
+        return _parse_optional_datetime_from_millis(value)
+
+
+class SandboxFileWriteInfo(SandboxBaseModel):
+    path: str
+    name: str
+    type: Optional[SandboxFileType] = None
+
+
+SandboxFileEntry = SandboxFileInfo
+
+
+class SandboxFileListOptions(SandboxBaseModel):
+    depth: Optional[int] = None
 
 
 class SandboxFileListParams(SandboxBaseModel):
     path: str
-    recursive: Optional[bool] = None
-    limit: Optional[int] = None
-    cursor: Optional[int] = None
+    depth: Optional[int] = None
 
 
 class SandboxFileListResponse(SandboxBaseModel):
     path: str
-    entries: List[SandboxFileEntry]
-    limit: int
-    cursor: int
-    recursive: bool
-    next_cursor: Optional[int] = Field(default=None, alias="nextCursor")
+    depth: int
+    entries: List[SandboxFileInfo]
+
+
+class SandboxFileReadOptions(SandboxBaseModel):
+    offset: Optional[int] = None
+    length: Optional[int] = None
+    format: Optional[SandboxFileReadFormat] = None
 
 
 class SandboxFileReadParams(SandboxBaseModel):
@@ -264,6 +335,24 @@ class SandboxFileReadResult(SandboxBaseModel):
     content_type: Optional[str] = Field(default=None, alias="contentType")
 
 
+SandboxFileWriteData = Union[str, bytes]
+
+
+class SandboxFileWriteEntry(SandboxBaseModel):
+    path: str
+    data: SandboxFileWriteData
+
+
+class SandboxFileTextWriteOptions(SandboxBaseModel):
+    append: Optional[bool] = None
+    mode: Optional[str] = None
+
+
+class SandboxFileBytesWriteOptions(SandboxBaseModel):
+    append: Optional[bool] = None
+    mode: Optional[str] = None
+
+
 class SandboxFileWriteTextParams(SandboxBaseModel):
     path: str
     data: str
@@ -279,8 +368,7 @@ class SandboxFileWriteBytesParams(SandboxBaseModel):
 
 
 class SandboxFileWriteResult(SandboxBaseModel):
-    bytes_written: int = Field(alias="bytesWritten")
-    path: str
+    files: List[SandboxFileWriteInfo]
 
 
 class SandboxFileUploadParams(SandboxBaseModel):
@@ -288,9 +376,23 @@ class SandboxFileUploadParams(SandboxBaseModel):
     data: Union[bytes, str]
 
 
+class SandboxFileTransferResult(SandboxBaseModel):
+    path: str
+    bytes_written: int = Field(alias="bytesWritten")
+
+
+class SandboxFileRemoveOptions(SandboxBaseModel):
+    recursive: Optional[bool] = None
+
+
 class SandboxFileDeleteParams(SandboxBaseModel):
     path: str
     recursive: Optional[bool] = None
+
+
+class SandboxFileMakeDirOptions(SandboxBaseModel):
+    parents: Optional[bool] = None
+    mode: Optional[str] = None
 
 
 class SandboxFileMkdirParams(SandboxBaseModel):
@@ -327,16 +429,11 @@ class SandboxFileChownParams(SandboxBaseModel):
 
 class SandboxFileMutationResult(SandboxBaseModel):
     path: str
-
-
-class SandboxFileTransferResult(SandboxBaseModel):
-    path: str
-    bytes_written: int = Field(alias="bytesWritten")
+    created: Optional[bool] = None
 
 
 class SandboxFileMoveCopyResult(SandboxBaseModel):
-    from_path: str = Field(alias="from")
-    to: str
+    entry: SandboxFileInfo
 
 
 class SandboxFileWatchParams(SandboxBaseModel):
@@ -386,6 +483,14 @@ SandboxFileWatchStreamEvent = Union[
 ]
 
 
+class SandboxFileSystemEvent(SandboxBaseModel):
+    type: SandboxFileSystemEventType
+    name: str
+
+
+SandboxWatchDirExitCallback = Callable[[Optional[BaseException]], object]
+
+
 class SandboxPresignFileParams(SandboxBaseModel):
     path: str
     expires_in_seconds: Optional[int] = Field(default=None, alias="expiresInSeconds")
@@ -411,6 +516,13 @@ class SandboxTerminalCreateParams(SandboxBaseModel):
     timeout_ms: Optional[int] = Field(default=None, alias="timeoutMs")
 
 
+class SandboxTerminalOutputChunk(SandboxBaseModel):
+    seq: int
+    data: str
+    raw: bytes
+    timestamp: int
+
+
 class SandboxTerminalStatus(SandboxBaseModel):
     id: str
     command: str
@@ -425,6 +537,7 @@ class SandboxTerminalStatus(SandboxBaseModel):
     cols: int
     started_at: int = Field(alias="startedAt")
     finished_at: Optional[int] = Field(default=None, alias="finishedAt")
+    output: Optional[List[SandboxTerminalOutputChunk]] = None
 
 
 class SandboxTerminalWaitParams(SandboxBaseModel):

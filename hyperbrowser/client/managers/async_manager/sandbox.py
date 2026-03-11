@@ -1,8 +1,12 @@
+import asyncio
 import base64
+import io
+import inspect
 import json
+import posixpath
 import socket
 from datetime import datetime, timedelta, timezone
-from typing import AsyncIterator, Dict, Optional, Union
+from typing import AsyncIterator, Callable, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 import httpx
@@ -16,18 +20,20 @@ from ....models.sandbox import (
     SandboxExecParams,
     SandboxFileChmodParams,
     SandboxFileChownParams,
+    SandboxFileCopyParams,
     SandboxFileDeleteParams,
-    SandboxFileEntry,
-    SandboxFileListResponse,
-    SandboxFileMoveCopyResult,
-    SandboxFileMutationResult,
+    SandboxFileInfo,
     SandboxFileReadResult,
+    SandboxFileSystemEvent,
+    SandboxFileWriteEntry,
     SandboxFileTransferResult,
     SandboxFileWatchDoneEvent,
     SandboxFileWatchEventMessage,
     SandboxFileWatchStatus,
-    SandboxListParams,
-    SandboxListResponse,
+    SandboxMemorySnapshotParams,
+    SandboxMemorySnapshotResult,
+    SandboxExposeParams,
+    SandboxExposeResult,
     SandboxPresignFileParams,
     SandboxPresignedUrl,
     SandboxProcessExitEvent,
@@ -55,7 +61,20 @@ from ....sandbox_common import (
     resolve_runtime_transport_target,
     to_websocket_transport_target,
 )
-from ..sync_manager.sandbox import _build_query_path, _copy_model, _normalize_websocket_error
+from ..sync_manager.sandbox import (
+    DEFAULT_WATCH_TIMEOUT_MS,
+    _build_sandbox_exposed_url,
+    _build_query_path,
+    _copy_model,
+    _encode_write_data,
+    _normalize_event_type,
+    _normalize_file_info,
+    _normalize_terminal_output_chunk,
+    _normalize_terminal_status,
+    _normalize_websocket_error,
+    _normalize_write_info,
+    _relative_watch_name,
+)
 
 DEFAULT_PROCESS_KILL_WAIT_SECONDS = 5.0
 DEFAULT_TERMINAL_KILL_WAIT_SECONDS = 5.0
@@ -73,9 +92,15 @@ def _expires_within_buffer(expires_at):
 
 
 class RuntimeTransport:
-    def __init__(self, resolve_connection, timeout: float = 30.0):
+    def __init__(
+        self,
+        resolve_connection,
+        timeout: float = 30.0,
+        runtime_proxy_override: Optional[str] = None,
+    ):
         self._resolve_connection = resolve_connection
         self._timeout = timeout
+        self._runtime_proxy_override = runtime_proxy_override
 
     async def request_json(
         self,
@@ -240,7 +265,11 @@ class RuntimeTransport:
         headers: Optional[Dict[str, str]],
     ) -> httpx.Response:
         request_path = _build_query_path(path, params)
-        target = resolve_runtime_transport_target(connection.base_url, request_path)
+        target = resolve_runtime_transport_target(
+            connection.base_url,
+            request_path,
+            self._runtime_proxy_override,
+        )
         merged_headers = build_headers(connection.token, headers, target.host_header)
         client = httpx.AsyncClient(timeout=self._timeout)
 
@@ -272,7 +301,11 @@ class RuntimeTransport:
         params: Optional[Dict[str, object]],
     ):
         request_path = _build_query_path(path, params)
-        target = resolve_runtime_transport_target(connection.base_url, request_path)
+        target = resolve_runtime_transport_target(
+            connection.base_url,
+            request_path,
+            self._runtime_proxy_override,
+        )
         headers = build_headers(
             connection.token,
             {"Accept": "text/event-stream"},
@@ -488,10 +521,17 @@ class SandboxProcessesApi:
 
 
 class SandboxFileWatchHandle:
-    def __init__(self, transport: RuntimeTransport, get_connection_info, status):
+    def __init__(
+        self,
+        transport: RuntimeTransport,
+        get_connection_info,
+        status,
+        runtime_proxy_override: Optional[str] = None,
+    ):
         self._transport = transport
         self._get_connection_info = get_connection_info
         self._status = status
+        self._runtime_proxy_override = runtime_proxy_override
 
     @property
     def id(self) -> str:
@@ -544,6 +584,7 @@ class SandboxFileWatchHandle:
         target = to_websocket_transport_target(
             connection.base_url,
             f"/sandbox/files/watch/{self.id}/{route}?{query}",
+            self._runtime_proxy_override,
         )
         headers = build_headers(connection.token, host_header=target.host_header)
         connect_kwargs = {}
@@ -598,40 +639,126 @@ class SandboxFileWatchHandle:
             await websocket.close()
 
 
+class SandboxWatchDirHandle:
+    def __init__(
+        self,
+        watch: SandboxFileWatchHandle,
+        on_event: Callable[[SandboxFileSystemEvent], object],
+        *,
+        on_exit: Optional[Callable[[Optional[BaseException]], object]] = None,
+        timeout_ms: Optional[int] = None,
+    ):
+        self._watch = watch
+        self._root_path = watch.current.path
+        self._on_event = on_event
+        self._on_exit = on_exit
+        self._stop_requested = False
+        self._exit_notified = False
+        self._task = asyncio.create_task(self._run())
+        effective_timeout = DEFAULT_WATCH_TIMEOUT_MS if timeout_ms is None else timeout_ms
+        self._timeout_task = (
+            asyncio.create_task(self._auto_stop(effective_timeout))
+            if effective_timeout > 0
+            else None
+        )
+
+    async def stop(self) -> None:
+        if self._stop_requested:
+            return
+        self._stop_requested = True
+
+        if self._timeout_task is not None:
+            self._timeout_task.cancel()
+            self._timeout_task = None
+
+        try:
+            await self._watch.stop()
+        except HyperbrowserError as error:
+            if error.status_code not in {404, 409}:
+                raise
+
+        if asyncio.current_task() is not self._task:
+            await self._task
+
+    async def _auto_stop(self, timeout_ms: int) -> None:
+        try:
+            await asyncio.sleep(timeout_ms / 1000.0)
+            await self.stop()
+        except asyncio.CancelledError:
+            return
+
+    async def _run(self) -> None:
+        exit_error = None
+        try:
+            async for message in self._watch.events():
+                event_type = _normalize_event_type(message.event.op)
+                if not event_type:
+                    continue
+                result = self._on_event(
+                    SandboxFileSystemEvent(
+                        type=event_type,
+                        name=_relative_watch_name(self._root_path, message.event.path),
+                    )
+                )
+                if inspect.isawaitable(result):
+                    await result
+        except BaseException as error:
+            exit_error = error
+        finally:
+            if self._timeout_task is not None:
+                self._timeout_task.cancel()
+                self._timeout_task = None
+            if not self._exit_notified:
+                self._exit_notified = True
+                if self._on_exit is not None:
+                    result = self._on_exit(exit_error)
+                    if inspect.isawaitable(result):
+                        await result
+
+
 class SandboxFilesApi:
-    def __init__(self, transport: RuntimeTransport, get_connection_info):
+    def __init__(
+        self,
+        transport: RuntimeTransport,
+        get_connection_info,
+        runtime_proxy_override: Optional[str] = None,
+    ):
         self._transport = transport
         self._get_connection_info = get_connection_info
+        self._runtime_proxy_override = runtime_proxy_override
 
     async def list(
         self,
         path: str,
         *,
-        recursive: Optional[bool] = None,
-        limit: Optional[int] = None,
-        cursor: Optional[int] = None,
-    ) -> SandboxFileListResponse:
+        depth: Optional[int] = None,
+    ) -> List[SandboxFileInfo]:
+        depth = 1 if depth is None else depth
+        if depth < 1:
+            raise ValueError("depth should be at least one")
+
         payload = await self._transport.request_json(
             "/sandbox/files",
             params={
                 "path": path,
-                "recursive": recursive,
-                "limit": limit,
-                "cursor": cursor,
+                "depth": depth,
             },
         )
-        return SandboxFileListResponse(**payload)
+        return [_normalize_file_info(entry) for entry in payload.get("entries", [])]
 
-    async def stat(self, path: str):
+    async def get_info(self, path: str) -> SandboxFileInfo:
         payload = await self._transport.request_json(
             "/sandbox/files/stat",
             params={"path": path},
         )
-        return SandboxFileEntry(**payload["file"])
+        return _normalize_file_info(payload["file"])
+
+    async def stat(self, path: str) -> SandboxFileInfo:
+        return await self.get_info(path)
 
     async def exists(self, path: str) -> bool:
         try:
-            await self.stat(path)
+            await self.get_info(path)
             return True
         except HyperbrowserError as error:
             if error.status_code == 404:
@@ -646,20 +773,30 @@ class SandboxFilesApi:
         *,
         offset: Optional[int] = None,
         length: Optional[int] = None,
-        encoding: str = "utf8",
-    ) -> SandboxFileReadResult:
-        payload = await self._transport.request_json(
-            "/sandbox/files/read",
-            method="POST",
-            json_body={
-                "path": path,
-                "offset": offset,
-                "length": length,
-                "encoding": encoding,
-            },
-            headers={"content-type": "application/json"},
+        format: str = "text",
+    ):
+        if format == "text":
+            return (
+                await self._read_wire(
+                    path,
+                    offset=offset,
+                    length=length,
+                    encoding="utf8",
+                )
+            ).content
+
+        response = await self._read_wire(
+            path,
+            offset=offset,
+            length=length,
+            encoding="base64",
         )
-        return SandboxFileReadResult(**payload)
+        content = base64.b64decode(response.content)
+        if format in {"bytes", "blob"}:
+            return content
+        if format == "stream":
+            return io.BytesIO(content)
+        raise ValueError("format should be one of: text, bytes, blob, stream")
 
     async def read_text(
         self,
@@ -668,7 +805,7 @@ class SandboxFilesApi:
         offset: Optional[int] = None,
         length: Optional[int] = None,
     ) -> str:
-        return (await self.read(path, offset=offset, length=length, encoding="utf8")).content
+        return await self.read(path, offset=offset, length=length, format="text")
 
     async def read_bytes(
         self,
@@ -677,8 +814,51 @@ class SandboxFilesApi:
         offset: Optional[int] = None,
         length: Optional[int] = None,
     ) -> bytes:
-        result = await self.read(path, offset=offset, length=length, encoding="base64")
-        return base64.b64decode(result.content)
+        return await self.read(path, offset=offset, length=length, format="bytes")
+
+    async def write(
+        self,
+        path_or_files: Union[str, List[Union[SandboxFileWriteEntry, Dict[str, object]]]],
+        data: Optional[Union[str, bytes, bytearray]] = None,
+    ):
+        if isinstance(path_or_files, str):
+            if data is None:
+                raise ValueError("Path and data are required")
+            payload = await self._transport.request_json(
+                "/sandbox/files/write",
+                method="POST",
+                json_body={
+                    "path": path_or_files,
+                    **_encode_write_data(data),
+                },
+                headers={"content-type": "application/json"},
+            )
+            return _normalize_write_info(payload["files"][0])
+
+        if not path_or_files:
+            return []
+
+        encoded_files = []
+        for entry in path_or_files:
+            normalized = (
+                entry
+                if isinstance(entry, SandboxFileWriteEntry)
+                else SandboxFileWriteEntry(**entry)
+            )
+            encoded_files.append(
+                {
+                    "path": normalized.path,
+                    **_encode_write_data(normalized.data),
+                }
+            )
+
+        payload = await self._transport.request_json(
+            "/sandbox/files/write",
+            method="POST",
+            json_body={"files": encoded_files},
+            headers={"content-type": "application/json"},
+        )
+        return [_normalize_write_info(entry) for entry in payload.get("files", [])]
 
     async def write_text(
         self,
@@ -688,7 +868,7 @@ class SandboxFilesApi:
         append: Optional[bool] = None,
         mode: Optional[str] = None,
     ):
-        return await self._write(
+        return await self._write_single(
             path,
             data,
             append=append,
@@ -704,7 +884,7 @@ class SandboxFilesApi:
         append: Optional[bool] = None,
         mode: Optional[str] = None,
     ):
-        return await self._write(
+        return await self._write_single(
             path,
             base64.b64encode(data).decode("ascii"),
             append=append,
@@ -728,25 +908,13 @@ class SandboxFilesApi:
             params={"path": path},
         )
 
-    async def delete(self, path: str, *, recursive: Optional[bool] = None):
-        payload = await self._transport.request_json(
-            "/sandbox/files/delete",
-            method="POST",
-            json_body=SandboxFileDeleteParams(
-                path=path,
-                recursive=recursive,
-            ).model_dump(exclude_none=True),
-            headers={"content-type": "application/json"},
-        )
-        return SandboxFileMutationResult(**payload)
-
-    async def mkdir(
+    async def make_dir(
         self,
         path: str,
         *,
         parents: Optional[bool] = None,
         mode: Optional[str] = None,
-    ):
+    ) -> bool:
         payload = await self._transport.request_json(
             "/sandbox/files/mkdir",
             method="POST",
@@ -757,7 +925,28 @@ class SandboxFilesApi:
             },
             headers={"content-type": "application/json"},
         )
-        return SandboxFileMutationResult(**payload)
+        return bool(payload.get("created"))
+
+    async def mkdir(
+        self,
+        path: str,
+        *,
+        parents: Optional[bool] = None,
+        mode: Optional[str] = None,
+    ) -> bool:
+        return await self.make_dir(path, parents=parents, mode=mode)
+
+    async def rename(self, old_path: str, new_path: str) -> SandboxFileInfo:
+        payload = await self._transport.request_json(
+            "/sandbox/files/move",
+            method="POST",
+            json_body={
+                "from": old_path,
+                "to": new_path,
+            },
+            headers={"content-type": "application/json"},
+        )
+        return _normalize_file_info(payload["entry"])
 
     async def move(
         self,
@@ -765,73 +954,109 @@ class SandboxFilesApi:
         source: str,
         destination: str,
         overwrite: Optional[bool] = None,
-    ) -> SandboxFileMoveCopyResult:
-        payload = await self._transport.request_json(
-            "/sandbox/files/move",
+    ) -> SandboxFileInfo:
+        return await self.rename(source, destination)
+
+    async def remove(self, path: str, *, recursive: Optional[bool] = None) -> None:
+        await self._transport.request_json(
+            "/sandbox/files/delete",
             method="POST",
-            json_body={
-                "from": source,
-                "to": destination,
-                "overwrite": overwrite,
-            },
+            json_body=SandboxFileDeleteParams(
+                path=path,
+                recursive=recursive,
+            ).model_dump(exclude_none=True),
             headers={"content-type": "application/json"},
         )
-        return SandboxFileMoveCopyResult(**payload)
+
+    async def delete(self, path: str, *, recursive: Optional[bool] = None) -> None:
+        await self.remove(path, recursive=recursive)
 
     async def copy(
         self,
+        params: Optional[Union[SandboxFileCopyParams, Dict[str, object]]] = None,
         *,
-        source: str,
-        destination: str,
+        source: Optional[str] = None,
+        destination: Optional[str] = None,
         recursive: Optional[bool] = None,
         overwrite: Optional[bool] = None,
-    ) -> SandboxFileMoveCopyResult:
+    ) -> SandboxFileInfo:
+        if params is None:
+            normalized = SandboxFileCopyParams(
+                source=source,
+                destination=destination,
+                recursive=recursive,
+                overwrite=overwrite,
+            )
+        elif isinstance(params, SandboxFileCopyParams):
+            normalized = params
+        else:
+            normalized = SandboxFileCopyParams(**params)
+
         payload = await self._transport.request_json(
             "/sandbox/files/copy",
             method="POST",
             json_body={
-                "from": source,
-                "to": destination,
-                "recursive": recursive,
-                "overwrite": overwrite,
+                "from": normalized.source,
+                "to": normalized.destination,
+                "recursive": normalized.recursive,
+                "overwrite": normalized.overwrite,
             },
             headers={"content-type": "application/json"},
         )
-        return SandboxFileMoveCopyResult(**payload)
+        return _normalize_file_info(payload["entry"])
 
-    async def chmod(self, *, path: str, mode: str, recursive: Optional[bool] = None):
-        payload = await self._transport.request_json(
+    async def chmod(
+        self,
+        params: Optional[Union[SandboxFileChmodParams, Dict[str, object]]] = None,
+        *,
+        path: Optional[str] = None,
+        mode: Optional[str] = None,
+        recursive: Optional[bool] = None,
+    ) -> None:
+        normalized = (
+            params
+            if isinstance(params, SandboxFileChmodParams)
+            else SandboxFileChmodParams(
+                **(params or {"path": path, "mode": mode, "recursive": recursive})
+            )
+        )
+        await self._transport.request_json(
             "/sandbox/files/chmod",
             method="POST",
-            json_body=SandboxFileChmodParams(
-                path=path,
-                mode=mode,
-                recursive=recursive,
-            ).model_dump(exclude_none=True),
+            json_body=normalized.model_dump(exclude_none=True),
             headers={"content-type": "application/json"},
         )
-        return SandboxFileMutationResult(**payload)
 
     async def chown(
         self,
+        params: Optional[Union[SandboxFileChownParams, Dict[str, object]]] = None,
         *,
-        path: str,
+        path: Optional[str] = None,
         uid: Optional[int] = None,
         gid: Optional[int] = None,
         recursive: Optional[bool] = None,
-    ):
-        payload = await self._transport.request_json(
+    ) -> None:
+        normalized = (
+            params
+            if isinstance(params, SandboxFileChownParams)
+            else SandboxFileChownParams(
+                **(
+                    params
+                    or {
+                        "path": path,
+                        "uid": uid,
+                        "gid": gid,
+                        "recursive": recursive,
+                    }
+                )
+            )
+        )
+        await self._transport.request_json(
             "/sandbox/files/chown",
             method="POST",
-            json_body=SandboxFileChownParams(
-                path=path,
-                uid=uid,
-                gid=gid,
-                recursive=recursive,
-            ).model_dump(exclude_none=True),
+            json_body=normalized.model_dump(exclude_none=True),
             headers={"content-type": "application/json"},
         )
-        return SandboxFileMutationResult(**payload)
 
     async def watch(self, path: str, *, recursive: Optional[bool] = None):
         payload = await self._transport.request_json(
@@ -847,6 +1072,23 @@ class SandboxFilesApi:
             self._transport,
             self._get_connection_info,
             SandboxFileWatchStatus(**payload["watch"]),
+            self._runtime_proxy_override,
+        )
+
+    async def watch_dir(
+        self,
+        path: str,
+        on_event: Callable[[SandboxFileSystemEvent], object],
+        *,
+        recursive: Optional[bool] = None,
+        timeout_ms: Optional[int] = None,
+        on_exit: Optional[Callable[[Optional[BaseException]], object]] = None,
+    ) -> SandboxWatchDirHandle:
+        return SandboxWatchDirHandle(
+            await self.watch(path, recursive=recursive),
+            on_event,
+            on_exit=on_exit,
+            timeout_ms=timeout_ms,
         )
 
     async def get_watch(
@@ -860,6 +1102,7 @@ class SandboxFilesApi:
             self._transport,
             self._get_connection_info,
             SandboxFileWatchStatus(**payload["watch"]),
+            self._runtime_proxy_override,
         )
 
     async def upload_url(
@@ -900,7 +1143,28 @@ class SandboxFilesApi:
         )
         return SandboxPresignedUrl(**payload)
 
-    async def _write(
+    async def _read_wire(
+        self,
+        path: str,
+        *,
+        offset: Optional[int] = None,
+        length: Optional[int] = None,
+        encoding: str,
+    ) -> SandboxFileReadResult:
+        payload = await self._transport.request_json(
+            "/sandbox/files/read",
+            method="POST",
+            json_body={
+                "path": path,
+                "offset": offset,
+                "length": length,
+                "encoding": encoding,
+            },
+            headers={"content-type": "application/json"},
+        )
+        return SandboxFileReadResult(**payload)
+
+    async def _write_single(
         self,
         path: str,
         data: str,
@@ -921,7 +1185,7 @@ class SandboxFilesApi:
             },
             headers={"content-type": "application/json"},
         )
-        return SandboxFileTransferResult(**payload)
+        return _normalize_write_info(payload["files"][0])
 
 
 class SandboxTerminalConnection:
@@ -939,18 +1203,15 @@ class SandboxTerminalConnection:
                 message = message.decode("utf-8")
             parsed = json.loads(message)
             if parsed["type"] == "output":
-                raw = base64.b64decode(parsed["data"])
+                normalized = _normalize_terminal_output_chunk(parsed)
                 yield SandboxTerminalOutputEvent(
                     type="output",
-                    seq=parsed["seq"],
-                    data=raw.decode("utf-8", errors="replace"),
-                    raw=raw,
-                    timestamp=parsed["timestamp"],
+                    **normalized,
                 )
             elif parsed["type"] == "exit":
                 yield SandboxTerminalExitEvent(
                     type="exit",
-                    status=SandboxTerminalStatus(**parsed["status"]),
+                    status=_normalize_terminal_status(parsed["status"]),
                 )
 
     async def write(self, data: Union[str, bytes, bytearray]) -> None:
@@ -978,10 +1239,17 @@ class SandboxTerminalConnection:
 
 
 class SandboxTerminalHandle:
-    def __init__(self, transport: RuntimeTransport, get_connection_info, status):
+    def __init__(
+        self,
+        transport: RuntimeTransport,
+        get_connection_info,
+        status,
+        runtime_proxy_override: Optional[str] = None,
+    ):
         self._transport = transport
         self._get_connection_info = get_connection_info
         self._status = status
+        self._runtime_proxy_override = runtime_proxy_override
 
     @property
     def id(self) -> str:
@@ -1002,7 +1270,7 @@ class SandboxTerminalHandle:
             f"/sandbox/pty/{self.id}",
             params={"includeOutput": True} if include_output else None,
         )
-        self._status = SandboxTerminalStatus(**payload["pty"])
+        self._status = _normalize_terminal_status(payload["pty"])
         return self
 
     async def wait(
@@ -1019,7 +1287,7 @@ class SandboxTerminalHandle:
             ).model_dump(exclude_none=True, by_alias=True),
             headers={"content-type": "application/json"},
         )
-        self._status = SandboxTerminalStatus(**payload["pty"])
+        self._status = _normalize_terminal_status(payload["pty"])
         return self.current
 
     async def signal(self, signal: Optional[str] = None) -> SandboxTerminalStatus:
@@ -1029,7 +1297,7 @@ class SandboxTerminalHandle:
             json_body={"signal": signal},
             headers={"content-type": "application/json"},
         )
-        self._status = SandboxTerminalStatus(**payload["pty"])
+        self._status = _normalize_terminal_status(payload["pty"])
         return self.current
 
     async def kill(
@@ -1050,7 +1318,7 @@ class SandboxTerminalHandle:
             json_body={"rows": rows, "cols": cols},
             headers={"content-type": "application/json"},
         )
-        self._status = SandboxTerminalStatus(**payload["pty"])
+        self._status = _normalize_terminal_status(payload["pty"])
         return self.current
 
     async def attach(self) -> SandboxTerminalConnection:
@@ -1058,6 +1326,7 @@ class SandboxTerminalHandle:
         target = to_websocket_transport_target(
             connection.base_url,
             f"/sandbox/pty/{self.id}/ws?sessionId={connection.sandbox_id}",
+            self._runtime_proxy_override,
         )
         headers = build_headers(connection.token, host_header=target.host_header)
         connect_kwargs = {}
@@ -1083,9 +1352,15 @@ class SandboxTerminalHandle:
 
 
 class SandboxTerminalApi:
-    def __init__(self, transport: RuntimeTransport, get_connection_info):
+    def __init__(
+        self,
+        transport: RuntimeTransport,
+        get_connection_info,
+        runtime_proxy_override: Optional[str] = None,
+    ):
         self._transport = transport
         self._get_connection_info = get_connection_info
+        self._runtime_proxy_override = runtime_proxy_override
 
     async def create(
         self,
@@ -1105,7 +1380,8 @@ class SandboxTerminalApi:
         return SandboxTerminalHandle(
             self._transport,
             self._get_connection_info,
-            SandboxTerminalStatus(**payload["pty"]),
+            _normalize_terminal_status(payload["pty"]),
+            self._runtime_proxy_override,
         )
 
     async def get(
@@ -1118,7 +1394,8 @@ class SandboxTerminalApi:
         return SandboxTerminalHandle(
             self._transport,
             self._get_connection_info,
-            SandboxTerminalStatus(**payload["pty"]),
+            _normalize_terminal_status(payload["pty"]),
+            self._runtime_proxy_override,
         )
 
 
@@ -1130,12 +1407,18 @@ class SandboxHandle:
         self._transport = RuntimeTransport(
             self._resolve_runtime_connection,
             service.runtime_timeout,
+            service.runtime_proxy_override,
         )
         self.processes = SandboxProcessesApi(self._transport)
-        self.files = SandboxFilesApi(self._transport, self._resolve_runtime_socket_info)
+        self.files = SandboxFilesApi(
+            self._transport,
+            self._resolve_runtime_socket_info,
+            service.runtime_proxy_override,
+        )
         self.terminal = SandboxTerminalApi(
             self._transport,
             self._resolve_runtime_socket_info,
+            service.runtime_proxy_override,
         )
         self.pty = self.terminal
 
@@ -1187,6 +1470,29 @@ class SandboxHandle:
         self._clear_runtime_session("closed")
         return response
 
+    async def create_memory_snapshot(
+        self, params: Optional[Union[SandboxMemorySnapshotParams, Dict[str, object]]] = None
+    ) -> SandboxMemorySnapshotResult:
+        normalized = (
+            params
+            if isinstance(params, SandboxMemorySnapshotParams)
+            else SandboxMemorySnapshotParams(**(params or {}))
+        )
+        return await self._service.create_memory_snapshot(self.id, normalized)
+
+    async def expose(
+        self, params: Union[SandboxExposeParams, Dict[str, object]]
+    ) -> SandboxExposeResult:
+        normalized = (
+            params
+            if isinstance(params, SandboxExposeParams)
+            else SandboxExposeParams(**params)
+        )
+        return await self._service.expose(self.id, normalized, runtime=self.runtime)
+
+    def get_exposed_url(self, port: int) -> str:
+        return _build_sandbox_exposed_url(self.runtime, port)
+
     async def create_runtime_session(
         self, force_refresh: bool = False
     ) -> SandboxRuntimeSession:
@@ -1198,9 +1504,17 @@ class SandboxHandle:
         ):
             return _copy_model(self._runtime_session)
 
-        session = await self._service.get_runtime_session(self.id)
-        self._apply_runtime_session(session)
-        return _copy_model(session)
+        detail = await self._service.get_detail(self.id)
+        self._hydrate(detail)
+        if self._runtime_session is None:
+            raise HyperbrowserError(
+                f"Sandbox {self.id} is not running",
+                status_code=409,
+                code="sandbox_not_running",
+                retryable=False,
+                service="runtime",
+            )
+        return _copy_model(self._runtime_session)
 
     async def exec(self, input: Union[str, SandboxExecParams, Dict[str, object]]):
         if isinstance(input, str):
@@ -1286,16 +1600,25 @@ class SandboxManager:
     def __init__(self, client):
         self._client = client
         self.runtime_timeout = getattr(client, "timeout", 30)
+        self.runtime_proxy_override = getattr(
+            client.config,
+            "runtime_proxy_override",
+            None,
+        )
 
-    async def create(self, params: CreateSandboxParams) -> SandboxHandle:
-        detail = await self._create_detail(params)
+    async def create(
+        self, params: Union[CreateSandboxParams, Dict[str, object]]
+    ) -> SandboxHandle:
+        normalized = (
+            params if isinstance(params, CreateSandboxParams) else CreateSandboxParams(**params)
+        )
+        detail = await self._create_detail(normalized)
         return self.attach(detail)
 
     async def start_from_snapshot(
-        self, params: StartSandboxFromSnapshotParams
+        self, params: Union[StartSandboxFromSnapshotParams, Dict[str, object]]
     ) -> SandboxHandle:
-        detail = await self._start_from_snapshot_detail(params)
-        return self.attach(detail)
+        return await self.create(params)
 
     async def get(self, sandbox_id: str) -> SandboxHandle:
         return self.attach(await self.get_detail(sandbox_id))
@@ -1305,47 +1628,67 @@ class SandboxManager:
         await sandbox.connect()
         return sandbox
 
-    async def list(
-        self, params: Optional[SandboxListParams] = None
-    ) -> SandboxListResponse:
-        payload = await self._request(
-            "GET",
-            "/sandboxes",
-            params=(params or SandboxListParams()).model_dump(
-                exclude_none=True, by_alias=True
-            ),
-        )
-        return SandboxListResponse(**payload)
-
     async def stop(self, sandbox_id: str) -> BasicResponse:
-        payload = await self._request("POST", f"/sandboxes/{sandbox_id}/stop")
+        payload = await self._request("PUT", f"/sandbox/{sandbox_id}/stop")
         return BasicResponse(**payload)
 
     async def get_runtime_session(self, sandbox_id: str) -> SandboxRuntimeSession:
-        payload = await self._request("POST", f"/sandboxes/{sandbox_id}/runtime-session")
-        return SandboxRuntimeSession(**payload)
+        detail = await self.get_detail(sandbox_id)
+        session = SandboxHandle._to_runtime_session(detail)
+        if session is None:
+            raise HyperbrowserError(
+                f"Sandbox {sandbox_id} is not running",
+                status_code=409,
+                code="sandbox_not_running",
+                retryable=False,
+                service="runtime",
+            )
+        return session
 
     async def get_detail(self, sandbox_id: str) -> SandboxDetail:
-        payload = await self._request("GET", f"/sandboxes/{sandbox_id}")
+        payload = await self._request("GET", f"/sandbox/{sandbox_id}")
         return SandboxDetail(**payload)
 
     def attach(self, detail: SandboxDetail) -> SandboxHandle:
         return SandboxHandle(self, detail)
 
+    async def create_memory_snapshot(
+        self,
+        sandbox_id: str,
+        params: Optional[SandboxMemorySnapshotParams] = None,
+    ) -> SandboxMemorySnapshotResult:
+        payload = await self._request(
+            "POST",
+            f"/sandbox/{sandbox_id}/snapshot",
+            data=(params or SandboxMemorySnapshotParams()).model_dump(
+                exclude_none=True, by_alias=True
+            ),
+        )
+        return SandboxMemorySnapshotResult(**payload)
+
+    async def expose(
+        self,
+        sandbox_id: str,
+        params: SandboxExposeParams,
+        *,
+        runtime=None,
+    ) -> SandboxExposeResult:
+        payload = await self._request(
+            "POST",
+            f"/sandbox/{sandbox_id}/expose",
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        target_runtime = runtime or (await self.get_detail(sandbox_id)).runtime
+        return SandboxExposeResult(
+            port=payload["port"],
+            auth=payload["auth"],
+            url=_build_sandbox_exposed_url(target_runtime, payload["port"]),
+        )
+
     async def _create_detail(self, params: CreateSandboxParams) -> SandboxDetail:
         payload = await self._request(
             "POST",
-            "/sandboxes",
-            data=params.model_dump(exclude_none=True, by_alias=True),
-        )
-        return SandboxDetail(**payload)
-
-    async def _start_from_snapshot_detail(
-        self, params: StartSandboxFromSnapshotParams
-    ) -> SandboxDetail:
-        payload = await self._request(
-            "POST",
-            "/sandboxes/startFromSnapshot",
+            "/sandbox",
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
         return SandboxDetail(**payload)

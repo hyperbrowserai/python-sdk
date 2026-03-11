@@ -1,39 +1,76 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 
-from hyperbrowser import AsyncHyperbrowser
-from hyperbrowser.models import SandboxListParams, SandboxRuntimeSession
+from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.models import SandboxRuntimeSession
 
+from tests.helpers.config import DEFAULT_IMAGE_NAME, create_async_client
 from tests.helpers.errors import expect_hyperbrowser_error_async
+from tests.helpers.http import get_image_by_name_async
 from tests.helpers.sandbox import (
     default_sandbox_params,
     stop_sandbox_if_running_async,
     wait_for_runtime_ready_async,
 )
 
+CUSTOM_IMAGE_NAME = "node"
+SNAPSHOT_CREATE_RETRY_DELAY_SECONDS = 0.5
+SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS = 60
+
+
+async def _create_sandbox_with_snapshot_retry(client, params):
+    deadline = asyncio.get_running_loop().time() + SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS
+    last_error = None
+
+    while asyncio.get_running_loop().time() < deadline:
+        try:
+            return await client.sandboxes.create(params)
+        except HyperbrowserError as error:
+            is_snapshot_catalog_race = (
+                error.status_code == 404
+                and isinstance(str(error), str)
+                and "snapshot not found" in str(error).lower()
+            )
+            if not is_snapshot_catalog_race:
+                raise
+            last_error = error
+            await asyncio.sleep(SNAPSHOT_CREATE_RETRY_DELAY_SECONDS)
+
+    if isinstance(last_error, Exception):
+        raise last_error
+    raise RuntimeError("snapshot create retry failed")
+
 
 @pytest.mark.anyio
 async def test_async_sandbox_lifecycle_e2e():
-    client = AsyncHyperbrowser()
+    client = create_async_client()
     sandbox = None
     stale_handle = None
     secondary = None
+    image_sandbox = None
+    custom_image_sandbox = None
+    custom_snapshot_sandbox = None
+    memory_snapshot = None
+    custom_image_memory_snapshot = None
+    custom_image = None
 
     try:
         sandbox = await client.sandboxes.create(default_sandbox_params("py-async-lifecycle"))
         stale_handle = await client.sandboxes.get(sandbox.id)
+        custom_image = await get_image_by_name_async(CUSTOM_IMAGE_NAME)
         await wait_for_runtime_ready_async(sandbox)
 
-        assert sandbox.to_dict()["token"]
+        detail = sandbox.to_dict()
+        assert detail["token"]
         assert sandbox.runtime.base_url
         assert sandbox.token_expires_at is not None
 
-        session = await sandbox.create_runtime_session()
-        assert session.token
-        assert session.sandbox_id == sandbox.id
-        assert session.runtime.base_url == sandbox.runtime.base_url
+        stale_detail = stale_handle.to_dict()
+        assert stale_detail["token"]
+        assert stale_handle.runtime.base_url == sandbox.runtime.base_url
 
         info = await sandbox.info()
         assert info.id == sandbox.id
@@ -43,27 +80,41 @@ async def test_async_sandbox_lifecycle_e2e():
         await sandbox.connect()
         assert sandbox.status == "active"
 
-        original_create_runtime_session = sandbox.create_runtime_session
-        valid_session = await original_create_runtime_session(force_refresh=True)
+        memory_snapshot = await sandbox.create_memory_snapshot()
+        assert memory_snapshot.snapshot_name
+        assert memory_snapshot.snapshot_id
+        assert memory_snapshot.namespace
+        assert memory_snapshot.status
+        assert memory_snapshot.image_name
+        assert memory_snapshot.image_id
+        assert memory_snapshot.image_namespace
+
+        valid_detail = await sandbox.info()
         invalid_jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.invalid-signature"
         refresh_count = 0
+        original_get_detail = sandbox._service.get_detail
 
-        async def patched_create_runtime_session(force_refresh: bool = False):
+        sandbox._runtime_session = SandboxRuntimeSession(
+            sandbox_id=sandbox.id,
+            status=valid_detail.status,
+            region=valid_detail.region,
+            token=invalid_jwt,
+            token_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            runtime=valid_detail.runtime,
+        )
+        sandbox._detail = valid_detail.model_copy(
+            update={
+                "token": invalid_jwt,
+                "token_expires_at": sandbox._runtime_session.token_expires_at,
+            }
+        )
+
+        async def patched_get_detail(sandbox_id: str):
             nonlocal refresh_count
-            if force_refresh:
-                refresh_count += 1
-                return await original_create_runtime_session(force_refresh=True)
+            refresh_count += 1
+            return await original_get_detail(sandbox_id)
 
-            return SandboxRuntimeSession(
-                sandbox_id=valid_session.sandbox_id,
-                status=valid_session.status,
-                region=valid_session.region,
-                token=invalid_jwt,
-                token_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
-                runtime=valid_session.runtime,
-            )
-
-        sandbox.create_runtime_session = patched_create_runtime_session
+        sandbox._service.get_detail = patched_get_detail
         try:
             result = await sandbox.exec("echo runtime-refresh-ok")
             assert result.exit_code == 0
@@ -72,16 +123,83 @@ async def test_async_sandbox_lifecycle_e2e():
             assert sandbox.to_dict()["token"]
             assert sandbox.to_dict()["token"] != invalid_jwt
         finally:
-            sandbox.create_runtime_session = original_create_runtime_session
+            sandbox._service.get_detail = original_get_detail
 
-        listing = await client.sandboxes.list(
-            SandboxListParams(search=sandbox.id, limit=20)
+        image_sandbox = await client.sandboxes.create({"imageName": DEFAULT_IMAGE_NAME})
+        assert image_sandbox.id
+        assert image_sandbox.status == "active"
+        response = await image_sandbox.stop()
+        assert response.success is True
+        assert image_sandbox.status == "closed"
+
+        custom_image_sandbox = await client.sandboxes.create(
+            {
+                "imageName": custom_image["imageName"],
+                "imageId": custom_image["id"],
+            }
         )
-        assert any(entry.id == sandbox.id for entry in listing.sandboxes)
+        assert custom_image_sandbox.id
+        assert custom_image_sandbox.status == "active"
+        await wait_for_runtime_ready_async(custom_image_sandbox)
+
+        custom_image_memory_snapshot = await custom_image_sandbox.create_memory_snapshot()
+        assert custom_image_memory_snapshot.image_name == custom_image["imageName"]
+        assert custom_image_memory_snapshot.image_id == custom_image["id"]
+        assert custom_image_memory_snapshot.image_namespace == custom_image["namespace"]
+
+        custom_snapshot_sandbox = await _create_sandbox_with_snapshot_retry(
+            client,
+            {
+                "snapshotName": custom_image_memory_snapshot.snapshot_name,
+                "snapshotId": custom_image_memory_snapshot.snapshot_id,
+            },
+        )
+        assert custom_snapshot_sandbox.id
+        assert custom_snapshot_sandbox.status == "active"
+        response = await custom_snapshot_sandbox.stop()
+        assert response.success is True
+        assert custom_snapshot_sandbox.status == "closed"
+
+        await expect_hyperbrowser_error_async(
+            "mismatched image selector",
+            lambda: client.sandboxes.create(
+                {
+                    "imageName": custom_image["imageName"],
+                    "imageId": str(uuid4()),
+                }
+            ),
+            status_code=404,
+            service="control",
+            retryable=False,
+            message_includes_any=["image not found", "not found"],
+        )
+
+        await expect_hyperbrowser_error_async(
+            "mismatched snapshot selector",
+            lambda: client.sandboxes.create(
+                {
+                    "snapshotName": memory_snapshot.snapshot_name,
+                    "snapshotId": str(uuid4()),
+                }
+            ),
+            status_code=404,
+            service="control",
+            retryable=False,
+            message_includes_any=["snapshot not found", "not found"],
+        )
 
         response = await sandbox.stop()
         assert response.success is True
         assert sandbox.status == "closed"
+
+        await expect_hyperbrowser_error_async(
+            "stopped sandbox memory snapshot",
+            lambda: sandbox.create_memory_snapshot(),
+            status_code=409,
+            service="control",
+            retryable=False,
+            message_includes="Sandbox is not running",
+        )
 
         await expect_hyperbrowser_error_async(
             "stopped sandbox connect",
@@ -107,9 +225,10 @@ async def test_async_sandbox_lifecycle_e2e():
             "stale sandbox connect",
             lambda: stale_handle.connect(),
             status_code=409,
-            service="control",
+            code="sandbox_not_running",
+            service="runtime",
             retryable=False,
-            message_includes="Sandbox is not running",
+            message_includes="not running",
         )
 
         await expect_hyperbrowser_error_async(
@@ -131,8 +250,12 @@ async def test_async_sandbox_lifecycle_e2e():
             message_includes="not found",
         )
 
-        secondary = await client.sandboxes.start_from_snapshot(
-            default_sandbox_params("py-async-secondary")
+        secondary = await _create_sandbox_with_snapshot_retry(
+            client,
+            {
+                "snapshotName": memory_snapshot.snapshot_name,
+                "snapshotId": memory_snapshot.snapshot_id,
+            },
         )
         response = await secondary.stop()
         assert response.success is True
@@ -141,4 +264,7 @@ async def test_async_sandbox_lifecycle_e2e():
         await stop_sandbox_if_running_async(sandbox)
         await stop_sandbox_if_running_async(stale_handle)
         await stop_sandbox_if_running_async(secondary)
+        await stop_sandbox_if_running_async(image_sandbox)
+        await stop_sandbox_if_running_async(custom_image_sandbox)
+        await stop_sandbox_if_running_async(custom_snapshot_sandbox)
         await client.close()

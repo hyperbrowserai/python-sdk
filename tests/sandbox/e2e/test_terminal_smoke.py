@@ -1,3 +1,5 @@
+import time
+
 from tests.helpers.config import create_client
 from tests.helpers.errors import expect_hyperbrowser_error
 from tests.helpers.sandbox import (
@@ -21,6 +23,32 @@ def _collect_terminal_session(connection):
         break
 
     return output, exit_code
+
+
+def _terminal_status_output(status) -> str:
+    return "".join(chunk.data for chunk in ((status.output if status else None) or []))
+
+
+def _terminal_status_raw_output(status) -> str:
+    return b"".join(chunk.raw for chunk in ((status.output if status else None) or [])).decode(
+        "utf-8"
+    )
+
+
+def _wait_for_terminal_status_output(read_status, marker: str, timeout_seconds: float = 5.0):
+    deadline = time.monotonic() + timeout_seconds
+    last_status = None
+
+    while time.monotonic() < deadline:
+        last_status = read_status()
+        if marker in _terminal_status_output(last_status):
+            return last_status
+        time.sleep(0.1)
+
+    raise AssertionError(
+        f"timed out waiting for terminal output {marker!r}; "
+        f"last output={_terminal_status_output(last_status)!r}"
+    )
 
 
 def test_sandbox_terminal_e2e():
@@ -83,6 +111,66 @@ def test_sandbox_terminal_e2e():
 
         status = terminal.wait(timeout_ms=2000)
         assert status.running is False
+
+        marker = "terminal-get-output"
+        terminal = sandbox.terminal.create(
+            {
+                "command": "bash",
+                "args": ["-lc", f"printf '{marker}' && sleep 1"],
+                "rows": 24,
+                "cols": 80,
+            }
+        )
+        without_output = sandbox.terminal.get(terminal.id)
+        assert without_output.current.output is None
+        fetched = _wait_for_terminal_status_output(
+            lambda: sandbox.terminal.get(terminal.id, include_output=True).current,
+            marker,
+        )
+        assert marker in _terminal_status_output(fetched)
+        assert marker in _terminal_status_raw_output(fetched)
+        assert fetched.output
+        status = terminal.wait(timeout_ms=2000)
+        assert status.running is False
+        assert status.exit_code == 0
+
+        marker = "terminal-refresh-output"
+        terminal = sandbox.terminal.create(
+            {
+                "command": "bash",
+                "args": ["-lc", f"printf '{marker}' && sleep 1"],
+                "rows": 24,
+                "cols": 80,
+            }
+        )
+        without_output = terminal.refresh()
+        assert without_output.current.output is None
+        refreshed = _wait_for_terminal_status_output(
+            lambda: terminal.refresh(include_output=True).current,
+            marker,
+        )
+        assert marker in _terminal_status_output(refreshed)
+        assert marker in _terminal_status_raw_output(refreshed)
+        assert refreshed.output
+        status = terminal.wait(timeout_ms=2000)
+        assert status.running is False
+        assert status.exit_code == 0
+
+        marker = "terminal-wait-output"
+        terminal = sandbox.terminal.create(
+            {
+                "command": "bash",
+                "args": ["-lc", f"printf '{marker}'"],
+                "rows": 24,
+                "cols": 80,
+            }
+        )
+        status = terminal.wait(timeout_ms=2000, include_output=True)
+        assert status.running is False
+        assert status.exit_code == 0
+        assert marker in _terminal_status_output(status)
+        assert marker in _terminal_status_raw_output(status)
+        assert status.output
 
         timeout_terminal = sandbox.pty.create(
             {

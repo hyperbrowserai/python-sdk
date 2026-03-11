@@ -1,7 +1,6 @@
 import pytest
 
-from hyperbrowser import AsyncHyperbrowser
-
+from tests.helpers.config import create_async_client
 from tests.helpers.errors import expect_hyperbrowser_error_async
 from tests.helpers.sandbox import (
     default_sandbox_params,
@@ -21,7 +20,7 @@ async def _collect_process_stream(events):
 
 @pytest.mark.anyio
 async def test_async_sandbox_process_e2e():
-    client = AsyncHyperbrowser()
+    client = create_async_client()
     sandbox = None
 
     try:

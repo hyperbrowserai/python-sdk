@@ -3,13 +3,12 @@ import time
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import CreateSandboxParams
 
-from tests.helpers.config import DEFAULT_SNAPSHOT_NAME, make_test_name
+from tests.helpers.config import DEFAULT_IMAGE_NAME
 
 
 def default_sandbox_params(prefix: str) -> CreateSandboxParams:
     return CreateSandboxParams(
-        sandbox_name=make_test_name(prefix),
-        snapshot_name=DEFAULT_SNAPSHOT_NAME,
+        image_name=DEFAULT_IMAGE_NAME,
     )
 
 

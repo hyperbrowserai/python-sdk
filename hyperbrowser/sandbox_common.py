@@ -1,5 +1,4 @@
 import json
-import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -10,7 +9,6 @@ from .exceptions import HyperbrowserError, HyperbrowserService
 
 RETRYABLE_STATUS_CODES = {429, 502, 503, 504}
 RUNTIME_SESSION_REFRESH_BUFFER_MS = 60_000
-REGIONAL_PROXY_DEV_HOST = os.environ.get("REGIONAL_PROXY_DEV_HOST", "").strip()
 
 
 @dataclass(frozen=True)
@@ -119,18 +117,20 @@ def has_scheme(value: str) -> bool:
 
 
 def resolve_runtime_transport_target(
-    base_url: str, path: str
+    base_url: str,
+    path: str,
+    runtime_proxy_override: Optional[str] = None,
 ) -> RuntimeTransportTarget:
     normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
     url = urljoin(normalized_base, path.lstrip("/"))
 
-    if not REGIONAL_PROXY_DEV_HOST:
+    if not runtime_proxy_override:
         return RuntimeTransportTarget(url=url)
 
     override_raw = (
-        REGIONAL_PROXY_DEV_HOST
-        if has_scheme(REGIONAL_PROXY_DEV_HOST)
-        else f"{urlsplit(url).scheme}://{REGIONAL_PROXY_DEV_HOST}"
+        runtime_proxy_override
+        if has_scheme(runtime_proxy_override)
+        else f"{urlsplit(url).scheme}://{runtime_proxy_override}"
     )
     original = urlsplit(url)
     override = urlsplit(override_raw)
@@ -148,7 +148,9 @@ def resolve_runtime_transport_target(
 
 
 def to_websocket_transport_target(
-    base_url: str, path: str
+    base_url: str,
+    path: str,
+    runtime_proxy_override: Optional[str] = None,
 ) -> RuntimeTransportTarget:
     normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
     url = urljoin(normalized_base, path.lstrip("/"))
@@ -162,13 +164,13 @@ def to_websocket_transport_target(
         (scheme, parts.netloc, parts.path, parts.query, parts.fragment)
     )
 
-    if not REGIONAL_PROXY_DEV_HOST:
+    if not runtime_proxy_override:
         return RuntimeTransportTarget(url=websocket_url)
 
     override = urlsplit(
-        REGIONAL_PROXY_DEV_HOST
-        if has_scheme(REGIONAL_PROXY_DEV_HOST)
-        else f"{parts.scheme}://{REGIONAL_PROXY_DEV_HOST}"
+        runtime_proxy_override
+        if has_scheme(runtime_proxy_override)
+        else f"{parts.scheme}://{runtime_proxy_override}"
     )
     connect_port = override.port
     if connect_port is None:

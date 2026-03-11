@@ -15,6 +15,7 @@ class HyperbrowserBase:
         config: Optional[ClientConfig] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        runtime_proxy_override: Optional[str] = None,
     ):
         if config is None:
             config = ClientConfig(
@@ -30,6 +31,7 @@ class HyperbrowserBase:
                         "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
                     )
                 ),
+                runtime_proxy_override=runtime_proxy_override,
             )
 
         if not config.api_key:
