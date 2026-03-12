@@ -210,7 +210,7 @@ class SandboxExecParams(SandboxBaseModel):
     cwd: Optional[str] = None
     env: Optional[Dict[str, str]] = None
     timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
-    timeout_sec: Optional[int] = Field(default=None, serialization_alias="timeoutSec")
+    timeout_sec: Optional[int] = None
     use_shell: Optional[bool] = Field(default=None, serialization_alias="useShell")
 
 
@@ -241,12 +241,8 @@ class SandboxProcessListParams(SandboxBaseModel):
     status: Optional[Union[SandboxProcessStatus, List[SandboxProcessStatus]]] = None
     limit: Optional[int] = None
     cursor: Optional[Union[str, int]] = None
-    created_after: Optional[int] = Field(
-        default=None, serialization_alias="createdAfter"
-    )
-    created_before: Optional[int] = Field(
-        default=None, serialization_alias="createdBefore"
-    )
+    created_after: Optional[int] = None
+    created_before: Optional[int] = None
 
 
 class SandboxProcessListResponse(SandboxBaseModel):
@@ -256,7 +252,7 @@ class SandboxProcessListResponse(SandboxBaseModel):
 
 class SandboxProcessWaitParams(SandboxBaseModel):
     timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
-    timeout_sec: Optional[int] = Field(default=None, serialization_alias="timeoutSec")
+    timeout_sec: Optional[int] = None
 
 
 class SandboxProcessStdinParams(SandboxBaseModel):
