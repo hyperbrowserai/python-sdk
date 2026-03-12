@@ -4,7 +4,7 @@ import json
 import socket
 import threading
 from datetime import datetime
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, List, Optional, Union
 from urllib.parse import urlencode
 
 from websockets.exceptions import ConnectionClosed
@@ -327,9 +327,7 @@ class SandboxFilesApi:
 
     def write(
         self,
-        path_or_files: Union[
-            str, List[Union[SandboxFileWriteEntry, Dict[str, object]]]
-        ],
+        path_or_files: Union[str, List[SandboxFileWriteEntry]],
         data: Optional[Union[str, bytes, bytearray]] = None,
     ):
         if isinstance(path_or_files, str):
@@ -351,15 +349,12 @@ class SandboxFilesApi:
 
         encoded_files = []
         for entry in path_or_files:
-            normalized = (
-                entry
-                if isinstance(entry, SandboxFileWriteEntry)
-                else SandboxFileWriteEntry(**entry)
-            )
+            if not isinstance(entry, SandboxFileWriteEntry):
+                raise TypeError("files must contain SandboxFileWriteEntry instances")
             encoded_files.append(
                 {
-                    "path": normalized.path,
-                    **_encode_write_data(normalized.data),
+                    "path": entry.path,
+                    **_encode_write_data(entry.data),
                 }
             )
 
@@ -484,7 +479,7 @@ class SandboxFilesApi:
 
     def copy(
         self,
-        params: Optional[Union[SandboxFileCopyParams, Dict[str, object]]] = None,
+        params: Optional[SandboxFileCopyParams] = None,
         *,
         source: Optional[str] = None,
         destination: Optional[str] = None,
@@ -501,7 +496,7 @@ class SandboxFilesApi:
         elif isinstance(params, SandboxFileCopyParams):
             normalized = params
         else:
-            normalized = SandboxFileCopyParams(**params)
+            raise TypeError("params must be a SandboxFileCopyParams instance")
 
         payload = self._transport.request_json(
             "/sandbox/files/copy",
@@ -518,19 +513,22 @@ class SandboxFilesApi:
 
     def chmod(
         self,
-        params: Optional[Union[SandboxFileChmodParams, Dict[str, object]]] = None,
+        params: Optional[SandboxFileChmodParams] = None,
         *,
         path: Optional[str] = None,
         mode: Optional[str] = None,
         recursive: Optional[bool] = None,
     ) -> None:
-        normalized = (
-            params
-            if isinstance(params, SandboxFileChmodParams)
-            else SandboxFileChmodParams(
-                **(params or {"path": path, "mode": mode, "recursive": recursive})
+        if params is None:
+            normalized = SandboxFileChmodParams(
+                path=path,
+                mode=mode,
+                recursive=recursive,
             )
-        )
+        elif isinstance(params, SandboxFileChmodParams):
+            normalized = params
+        else:
+            raise TypeError("params must be a SandboxFileChmodParams instance")
         self._transport.request_json(
             "/sandbox/files/chmod",
             method="POST",
@@ -540,28 +538,24 @@ class SandboxFilesApi:
 
     def chown(
         self,
-        params: Optional[Union[SandboxFileChownParams, Dict[str, object]]] = None,
+        params: Optional[SandboxFileChownParams] = None,
         *,
         path: Optional[str] = None,
         uid: Optional[int] = None,
         gid: Optional[int] = None,
         recursive: Optional[bool] = None,
     ) -> None:
-        normalized = (
-            params
-            if isinstance(params, SandboxFileChownParams)
-            else SandboxFileChownParams(
-                **(
-                    params
-                    or {
-                        "path": path,
-                        "uid": uid,
-                        "gid": gid,
-                        "recursive": recursive,
-                    }
-                )
+        if params is None:
+            normalized = SandboxFileChownParams(
+                path=path,
+                uid=uid,
+                gid=gid,
+                recursive=recursive,
             )
-        )
+        elif isinstance(params, SandboxFileChownParams):
+            normalized = params
+        else:
+            raise TypeError("params must be a SandboxFileChownParams instance")
         self._transport.request_json(
             "/sandbox/files/chown",
             method="POST",

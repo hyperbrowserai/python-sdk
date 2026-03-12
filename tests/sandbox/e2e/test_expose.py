@@ -1,5 +1,7 @@
 import time
 
+from hyperbrowser.models import SandboxExecParams, SandboxExposeParams
+
 from tests.helpers.config import create_client
 from tests.helpers.errors import expect_hyperbrowser_error
 from tests.helpers.http import fetch_runtime_url
@@ -46,9 +48,9 @@ def test_sandbox_expose_e2e():
         wait_for_runtime_ready(sandbox)
 
         server_process = sandbox.processes.start(
-            {
-                "command": "node",
-                "args": [
+            SandboxExecParams(
+                command="node",
+                args=[
                     "-e",
                     " ".join(
                         [
@@ -66,7 +68,7 @@ def test_sandbox_expose_e2e():
                         ]
                     ),
                 ],
-            }
+            )
         )
 
         token = sandbox.to_dict()["token"]
@@ -79,14 +81,14 @@ def test_sandbox_expose_e2e():
 
         expect_hyperbrowser_error(
             "reserved receiver port expose",
-            lambda: sandbox.expose({"port": 4001}),
+            lambda: sandbox.expose(SandboxExposeParams(port=4001)),
             status_code=400,
             service="control",
             retryable=False,
             message_includes="cannot be exposed",
         )
 
-        exposure = sandbox.expose({"port": HTTP_PORT, "auth": False})
+        exposure = sandbox.expose(SandboxExposeParams(port=HTTP_PORT, auth=False))
         assert exposure.port == HTTP_PORT
         assert exposure.auth is False
         assert exposure.url == sandbox.get_exposed_url(HTTP_PORT)
@@ -100,7 +102,7 @@ def test_sandbox_expose_e2e():
         assert status == 200
         assert "sdk-exposed:GET:/" in body
 
-        exposure = sandbox.expose({"port": HTTP_PORT, "auth": True})
+        exposure = sandbox.expose(SandboxExposeParams(port=HTTP_PORT, auth=True))
         assert exposure.auth is True
 
         status, _ = _wait_for_http_response(

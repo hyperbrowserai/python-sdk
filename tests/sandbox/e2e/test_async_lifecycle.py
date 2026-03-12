@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.models import SandboxRuntimeSession
+from hyperbrowser.models import CreateSandboxParams, SandboxRuntimeSession
 
 from tests.helpers.config import DEFAULT_IMAGE_NAME, create_async_client
 from tests.helpers.errors import expect_hyperbrowser_error_async
@@ -21,7 +21,7 @@ SNAPSHOT_CREATE_RETRY_DELAY_SECONDS = 0.5
 SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS = 60
 
 
-async def _create_sandbox_with_snapshot_retry(client, params):
+async def _create_sandbox_with_snapshot_retry(client, params: CreateSandboxParams):
     deadline = asyncio.get_running_loop().time() + SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS
     last_error = None
 
@@ -131,7 +131,7 @@ async def test_async_sandbox_lifecycle_e2e():
             sandbox._service.get_detail = original_get_detail
 
         image_sandbox = await client.sandboxes.create(
-            {"image_name": DEFAULT_IMAGE_NAME}
+            CreateSandboxParams(image_name=DEFAULT_IMAGE_NAME)
         )
         assert image_sandbox.id
         assert image_sandbox.status == "active"
@@ -140,10 +140,10 @@ async def test_async_sandbox_lifecycle_e2e():
         assert image_sandbox.status == "closed"
 
         custom_image_sandbox = await client.sandboxes.create(
-            {
-                "image_name": custom_image["imageName"],
-                "image_id": custom_image["id"],
-            }
+            CreateSandboxParams(
+                image_name=custom_image["imageName"],
+                image_id=custom_image["id"],
+            )
         )
         assert custom_image_sandbox.id
         assert custom_image_sandbox.status == "active"
@@ -158,10 +158,10 @@ async def test_async_sandbox_lifecycle_e2e():
 
         custom_snapshot_sandbox = await _create_sandbox_with_snapshot_retry(
             client,
-            {
-                "snapshot_name": custom_image_memory_snapshot.snapshot_name,
-                "snapshot_id": custom_image_memory_snapshot.snapshot_id,
-            },
+            CreateSandboxParams(
+                snapshot_name=custom_image_memory_snapshot.snapshot_name,
+                snapshot_id=custom_image_memory_snapshot.snapshot_id,
+            ),
         )
         assert custom_snapshot_sandbox.id
         assert custom_snapshot_sandbox.status == "active"
@@ -172,10 +172,10 @@ async def test_async_sandbox_lifecycle_e2e():
         await expect_hyperbrowser_error_async(
             "mismatched image selector",
             lambda: client.sandboxes.create(
-                {
-                    "image_name": custom_image["imageName"],
-                    "image_id": str(uuid4()),
-                }
+                CreateSandboxParams(
+                    image_name=custom_image["imageName"],
+                    image_id=str(uuid4()),
+                )
             ),
             status_code=404,
             service="control",
@@ -186,10 +186,10 @@ async def test_async_sandbox_lifecycle_e2e():
         await expect_hyperbrowser_error_async(
             "mismatched snapshot selector",
             lambda: client.sandboxes.create(
-                {
-                    "snapshot_name": memory_snapshot.snapshot_name,
-                    "snapshot_id": str(uuid4()),
-                }
+                CreateSandboxParams(
+                    snapshot_name=memory_snapshot.snapshot_name,
+                    snapshot_id=str(uuid4()),
+                )
             ),
             status_code=404,
             service="control",
@@ -261,10 +261,10 @@ async def test_async_sandbox_lifecycle_e2e():
 
         secondary = await _create_sandbox_with_snapshot_retry(
             client,
-            {
-                "snapshot_name": memory_snapshot.snapshot_name,
-                "snapshot_id": memory_snapshot.snapshot_id,
-            },
+            CreateSandboxParams(
+                snapshot_name=memory_snapshot.snapshot_name,
+                snapshot_id=memory_snapshot.snapshot_id,
+            ),
         )
         response = await secondary.stop()
         assert response.success is True

@@ -201,17 +201,14 @@ class SandboxTerminalApi:
 
     def create(
         self,
-        input: Union[SandboxTerminalCreateParams, Dict[str, object]],
+        input: SandboxTerminalCreateParams,
     ) -> SandboxTerminalHandle:
-        params = (
-            input
-            if isinstance(input, SandboxTerminalCreateParams)
-            else SandboxTerminalCreateParams(**input)
-        )
+        if not isinstance(input, SandboxTerminalCreateParams):
+            raise TypeError("input must be a SandboxTerminalCreateParams instance")
         payload = self._transport.request_json(
             "/sandbox/pty",
             method="POST",
-            json_body=params.model_dump(exclude_none=True, by_alias=True),
+            json_body=input.model_dump(exclude_none=True, by_alias=True),
             headers={"content-type": "application/json"},
         )
         return SandboxTerminalHandle(

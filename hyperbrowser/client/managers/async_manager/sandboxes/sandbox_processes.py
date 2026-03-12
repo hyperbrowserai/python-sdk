@@ -147,34 +147,24 @@ class SandboxProcessesApi:
     def __init__(self, transport: RuntimeTransport):
         self._transport = transport
 
-    async def exec(
-        self, input: Union[SandboxExecParams, Dict[str, object]]
-    ) -> SandboxProcessResult:
-        params = (
-            input
-            if isinstance(input, SandboxExecParams)
-            else SandboxExecParams(**input)
-        )
+    async def exec(self, input: SandboxExecParams) -> SandboxProcessResult:
+        if not isinstance(input, SandboxExecParams):
+            raise TypeError("input must be a SandboxExecParams instance")
         payload = await self._transport.request_json(
             "/sandbox/exec",
             method="POST",
-            json_body=params.model_dump(exclude_none=True, by_alias=True),
+            json_body=input.model_dump(exclude_none=True, by_alias=True),
             headers={"content-type": "application/json"},
         )
         return SandboxProcessResult(**payload["result"])
 
-    async def start(
-        self, input: Union[SandboxExecParams, Dict[str, object]]
-    ) -> SandboxProcessHandle:
-        params = (
-            input
-            if isinstance(input, SandboxExecParams)
-            else SandboxExecParams(**input)
-        )
+    async def start(self, input: SandboxExecParams) -> SandboxProcessHandle:
+        if not isinstance(input, SandboxExecParams):
+            raise TypeError("input must be a SandboxExecParams instance")
         payload = await self._transport.request_json(
             "/sandbox/processes",
             method="POST",
-            json_body=params.model_dump(exclude_none=True, by_alias=True),
+            json_body=input.model_dump(exclude_none=True, by_alias=True),
             headers={"content-type": "application/json"},
         )
         return SandboxProcessHandle(

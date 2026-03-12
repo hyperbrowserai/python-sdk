@@ -1,3 +1,5 @@
+from hyperbrowser.models import SandboxExecParams
+
 from tests.helpers.config import create_client
 from tests.helpers.errors import expect_hyperbrowser_error
 from tests.helpers.sandbox import (
@@ -30,19 +32,19 @@ def test_sandbox_process_e2e():
         assert "process-exec-ok" in result.stdout
 
         result = sandbox.exec(
-            {
-                "command": "bash",
-                "args": ["-lc", "echo process-exec-fail 1>&2; exit 7"],
-            }
+            SandboxExecParams(
+                command="bash",
+                args=["-lc", "echo process-exec-fail 1>&2; exit 7"],
+            )
         )
         assert result.exit_code == 7
         assert "process-exec-fail" in result.stderr
 
         stdin_process = sandbox.processes.start(
-            {
-                "command": "bash",
-                "args": ["-lc", "read line; echo stdout:$line; echo stderr:$line 1>&2"],
-            }
+            SandboxExecParams(
+                command="bash",
+                args=["-lc", "read line; echo stdout:$line; echo stderr:$line 1>&2"],
+            )
         )
         fetched = sandbox.get_process(stdin_process.id)
         assert fetched.id == stdin_process.id
@@ -57,7 +59,7 @@ def test_sandbox_process_e2e():
         assert "stderr:sdk-stdin" in result.stderr
 
         running_process = sandbox.processes.start(
-            {"command": "bash", "args": ["-lc", "sleep 30"]}
+            SandboxExecParams(command="bash", args=["-lc", "sleep 30"])
         )
         refreshed = running_process.refresh()
         assert refreshed.status in {"queued", "running"}
@@ -65,10 +67,10 @@ def test_sandbox_process_e2e():
         assert result.status not in {"queued", "running"}
 
         streamed = sandbox.processes.start(
-            {
-                "command": "bash",
-                "args": ["-lc", "echo stream-out; echo stream-err 1>&2"],
-            }
+            SandboxExecParams(
+                command="bash",
+                args=["-lc", "echo stream-out; echo stream-err 1>&2"],
+            )
         )
         events = _collect_process_stream(streamed.stream())
         assert any(
@@ -80,20 +82,20 @@ def test_sandbox_process_e2e():
         assert any(event.type == "exit" for event in events)
 
         result_process = sandbox.processes.start(
-            {"command": "bash", "args": ["-lc", "echo result-alias-ok"]}
+            SandboxExecParams(command="bash", args=["-lc", "echo result-alias-ok"])
         )
         result = result_process.result()
         assert result.exit_code == 0
         assert "result-alias-ok" in result.stdout
 
         noisy_process = sandbox.processes.start(
-            {
-                "command": "bash",
-                "args": [
+            SandboxExecParams(
+                command="bash",
+                args=[
                     "-lc",
                     'yes "process-replay-window-overflow-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" | head -n 120000',
                 ],
-            }
+            )
         )
         result = noisy_process.result()
         assert len(result.stdout) > 3 * 1024 * 1024
@@ -109,7 +111,7 @@ def test_sandbox_process_e2e():
         )
 
         timeout_process = sandbox.processes.start(
-            {"command": "bash", "args": ["-lc", "sleep 10"]}
+            SandboxExecParams(command="bash", args=["-lc", "sleep 10"])
         )
         expect_hyperbrowser_error(
             "process wait timeout",
@@ -124,7 +126,7 @@ def test_sandbox_process_e2e():
         assert result.status in {"exited", "failed", "killed", "timed_out"}
 
         kill_process = sandbox.processes.start(
-            {"command": "bash", "args": ["-lc", "sleep 30"]}
+            SandboxExecParams(command="bash", args=["-lc", "sleep 30"])
         )
         result = kill_process.kill()
         assert result.status not in {"queued", "running"}

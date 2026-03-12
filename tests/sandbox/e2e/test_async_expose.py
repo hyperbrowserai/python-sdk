@@ -2,6 +2,8 @@ import asyncio
 
 import pytest
 
+from hyperbrowser.models import SandboxExecParams, SandboxExposeParams
+
 from tests.helpers.config import create_async_client
 from tests.helpers.errors import expect_hyperbrowser_error_async
 from tests.helpers.http import fetch_runtime_url
@@ -14,7 +16,9 @@ from tests.helpers.sandbox import (
 HTTP_PORT = 3210
 
 
-async def _wait_for_http_response(url: str, *, headers=None, predicate, attempts: int = 15):
+async def _wait_for_http_response(
+    url: str, *, headers=None, predicate, attempts: int = 15
+):
     last_status = 0
     last_body = ""
 
@@ -45,13 +49,15 @@ async def test_async_sandbox_expose_e2e():
     server_process = None
 
     try:
-        sandbox = await client.sandboxes.create(default_sandbox_params("py-async-expose"))
+        sandbox = await client.sandboxes.create(
+            default_sandbox_params("py-async-expose")
+        )
         await wait_for_runtime_ready_async(sandbox)
 
         server_process = await sandbox.processes.start(
-            {
-                "command": "node",
-                "args": [
+            SandboxExecParams(
+                command="node",
+                args=[
                     "-e",
                     " ".join(
                         [
@@ -69,7 +75,7 @@ async def test_async_sandbox_expose_e2e():
                         ]
                     ),
                 ],
-            }
+            )
         )
 
         token = sandbox.to_dict()["token"]
@@ -82,14 +88,14 @@ async def test_async_sandbox_expose_e2e():
 
         await expect_hyperbrowser_error_async(
             "reserved receiver port expose",
-            lambda: sandbox.expose({"port": 4001}),
+            lambda: sandbox.expose(SandboxExposeParams(port=4001)),
             status_code=400,
             service="control",
             retryable=False,
             message_includes="cannot be exposed",
         )
 
-        exposure = await sandbox.expose({"port": HTTP_PORT, "auth": False})
+        exposure = await sandbox.expose(SandboxExposeParams(port=HTTP_PORT, auth=False))
         assert exposure.port == HTTP_PORT
         assert exposure.auth is False
         assert exposure.url == sandbox.get_exposed_url(HTTP_PORT)
@@ -103,7 +109,7 @@ async def test_async_sandbox_expose_e2e():
         assert status == 200
         assert "sdk-exposed:GET:/" in body
 
-        exposure = await sandbox.expose({"port": HTTP_PORT, "auth": True})
+        exposure = await sandbox.expose(SandboxExposeParams(port=HTTP_PORT, auth=True))
         assert exposure.auth is True
 
         status, _ = await _wait_for_http_response(

@@ -134,24 +134,20 @@ class SandboxHandle:
 
     async def create_memory_snapshot(
         self,
-        params: Optional[Union[SandboxMemorySnapshotParams, Dict[str, object]]] = None,
+        params: Optional[SandboxMemorySnapshotParams] = None,
     ) -> SandboxMemorySnapshotResult:
-        normalized = (
-            params
-            if isinstance(params, SandboxMemorySnapshotParams)
-            else SandboxMemorySnapshotParams(**(params or {}))
-        )
+        if params is None:
+            normalized = SandboxMemorySnapshotParams()
+        elif isinstance(params, SandboxMemorySnapshotParams):
+            normalized = params
+        else:
+            raise TypeError("params must be a SandboxMemorySnapshotParams instance")
         return await self._service.create_memory_snapshot(self.id, normalized)
 
-    async def expose(
-        self, params: Union[SandboxExposeParams, Dict[str, object]]
-    ) -> SandboxExposeResult:
-        normalized = (
-            params
-            if isinstance(params, SandboxExposeParams)
-            else SandboxExposeParams(**params)
-        )
-        return await self._service.expose(self.id, normalized, runtime=self.runtime)
+    async def expose(self, params: SandboxExposeParams) -> SandboxExposeResult:
+        if not isinstance(params, SandboxExposeParams):
+            raise TypeError("params must be a SandboxExposeParams instance")
+        return await self._service.expose(self.id, params, runtime=self.runtime)
 
     def get_exposed_url(self, port: int) -> str:
         return _build_sandbox_exposed_url(self.runtime, port)
@@ -179,13 +175,15 @@ class SandboxHandle:
             )
         return _copy_model(self._runtime_session)
 
-    async def exec(self, input: Union[str, SandboxExecParams, Dict[str, object]]):
+    async def exec(self, input: Union[str, SandboxExecParams]):
         if isinstance(input, str):
             params = SandboxExecParams(command=input)
-        elif isinstance(input, SandboxExecParams):
-            params = input
         else:
-            params = SandboxExecParams(**input)
+            if not isinstance(input, SandboxExecParams):
+                raise TypeError(
+                    "input must be a command string or SandboxExecParams instance"
+                )
+            params = input
         return await self.processes.exec(params)
 
     async def get_process(self, process_id: str) -> SandboxProcessHandle:
@@ -269,20 +267,17 @@ class SandboxManager:
             None,
         )
 
-    async def create(
-        self, params: Union[CreateSandboxParams, Dict[str, object]]
-    ) -> SandboxHandle:
-        normalized = (
-            params
-            if isinstance(params, CreateSandboxParams)
-            else CreateSandboxParams(**params)
-        )
-        detail = await self._create_detail(normalized)
+    async def create(self, params: CreateSandboxParams) -> SandboxHandle:
+        if not isinstance(params, CreateSandboxParams):
+            raise TypeError("params must be a CreateSandboxParams instance")
+        detail = await self._create_detail(params)
         return self.attach(detail)
 
     async def start_from_snapshot(
-        self, params: Union[StartSandboxFromSnapshotParams, Dict[str, object]]
+        self, params: StartSandboxFromSnapshotParams
     ) -> SandboxHandle:
+        if not isinstance(params, StartSandboxFromSnapshotParams):
+            raise TypeError("params must be a StartSandboxFromSnapshotParams instance")
         return await self.create(params)
 
     async def get(self, sandbox_id: str) -> SandboxHandle:

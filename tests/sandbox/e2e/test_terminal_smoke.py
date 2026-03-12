@@ -1,5 +1,7 @@
 import time
 
+from hyperbrowser.models import SandboxTerminalCreateParams
+
 from tests.helpers.config import create_client
 from tests.helpers.errors import expect_hyperbrowser_error
 from tests.helpers.sandbox import (
@@ -30,12 +32,14 @@ def _terminal_status_output(status) -> str:
 
 
 def _terminal_status_raw_output(status) -> str:
-    return b"".join(chunk.raw for chunk in ((status.output if status else None) or [])).decode(
-        "utf-8"
-    )
+    return b"".join(
+        chunk.raw for chunk in ((status.output if status else None) or [])
+    ).decode("utf-8")
 
 
-def _wait_for_terminal_status_output(read_status, marker: str, timeout_seconds: float = 5.0):
+def _wait_for_terminal_status_output(
+    read_status, marker: str, timeout_seconds: float = 5.0
+):
     deadline = time.monotonic() + timeout_seconds
     last_status = None
 
@@ -61,12 +65,12 @@ def test_sandbox_terminal_e2e():
         assert sandbox.pty is sandbox.terminal
 
         terminal = sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-l"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-l"],
+                rows=24,
+                cols=80,
+            )
         )
         fetched = sandbox.terminal.get(terminal.id)
         assert fetched.id == terminal.id
@@ -89,12 +93,12 @@ def test_sandbox_terminal_e2e():
         assert status.exit_code == 0
 
         terminal = sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-l"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-l"],
+                rows=24,
+                cols=80,
+            )
         )
         connection = terminal.attach()
         try:
@@ -114,12 +118,12 @@ def test_sandbox_terminal_e2e():
 
         marker = "terminal-get-output"
         terminal = sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-lc", f"printf '{marker}' && sleep 1"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", f"printf '{marker}' && sleep 1"],
+                rows=24,
+                cols=80,
+            )
         )
         without_output = sandbox.terminal.get(terminal.id)
         assert without_output.current.output is None
@@ -136,12 +140,12 @@ def test_sandbox_terminal_e2e():
 
         marker = "terminal-refresh-output"
         terminal = sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-lc", f"printf '{marker}' && sleep 1"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", f"printf '{marker}' && sleep 1"],
+                rows=24,
+                cols=80,
+            )
         )
         without_output = terminal.refresh()
         assert without_output.current.output is None
@@ -158,12 +162,12 @@ def test_sandbox_terminal_e2e():
 
         marker = "terminal-wait-output"
         terminal = sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-lc", f"printf '{marker}'"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", f"printf '{marker}'"],
+                rows=24,
+                cols=80,
+            )
         )
         status = terminal.wait(timeout_ms=2000, include_output=True)
         assert status.running is False
@@ -173,12 +177,12 @@ def test_sandbox_terminal_e2e():
         assert status.output
 
         timeout_terminal = sandbox.pty.create(
-            {
-                "command": "bash",
-                "args": ["-lc", "sleep 10"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", "sleep 10"],
+                rows=24,
+                cols=80,
+            )
         )
         expect_hyperbrowser_error(
             "terminal wait timeout",
@@ -194,12 +198,12 @@ def test_sandbox_terminal_e2e():
         assert status.running is False
 
         kill_terminal = sandbox.pty.create(
-            {
-                "command": "bash",
-                "args": ["-lc", "sleep 30"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", "sleep 30"],
+                rows=24,
+                cols=80,
+            )
         )
         status = kill_terminal.kill()
         assert status.running is False

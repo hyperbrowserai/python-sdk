@@ -2,6 +2,8 @@ import asyncio
 
 import pytest
 
+from hyperbrowser.models import SandboxTerminalCreateParams
+
 from tests.helpers.config import create_async_client
 from tests.helpers.errors import expect_hyperbrowser_error_async
 from tests.helpers.sandbox import (
@@ -30,9 +32,9 @@ def _terminal_status_output(status) -> str:
 
 
 def _terminal_status_raw_output(status) -> str:
-    return b"".join(chunk.raw for chunk in ((status.output if status else None) or [])).decode(
-        "utf-8"
-    )
+    return b"".join(
+        chunk.raw for chunk in ((status.output if status else None) or [])
+    ).decode("utf-8")
 
 
 async def _wait_for_terminal_status_output(
@@ -61,18 +63,20 @@ async def test_async_sandbox_terminal_e2e():
     sandbox = None
 
     try:
-        sandbox = await client.sandboxes.create(default_sandbox_params("py-async-terminal"))
+        sandbox = await client.sandboxes.create(
+            default_sandbox_params("py-async-terminal")
+        )
         await wait_for_runtime_ready_async(sandbox)
 
         assert sandbox.pty is sandbox.terminal
 
         terminal = await sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-l"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-l"],
+                rows=24,
+                cols=80,
+            )
         )
         fetched = await sandbox.terminal.get(terminal.id)
         assert fetched.id == terminal.id
@@ -95,12 +99,12 @@ async def test_async_sandbox_terminal_e2e():
         assert status.exit_code == 0
 
         terminal = await sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-l"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-l"],
+                rows=24,
+                cols=80,
+            )
         )
         connection = await terminal.attach()
         try:
@@ -120,12 +124,12 @@ async def test_async_sandbox_terminal_e2e():
 
         marker = "terminal-get-output"
         terminal = await sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-lc", f"printf '{marker}' && sleep 1"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", f"printf '{marker}' && sleep 1"],
+                rows=24,
+                cols=80,
+            )
         )
         without_output = await sandbox.terminal.get(terminal.id)
         assert without_output.current.output is None
@@ -142,12 +146,12 @@ async def test_async_sandbox_terminal_e2e():
 
         marker = "terminal-refresh-output"
         terminal = await sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-lc", f"printf '{marker}' && sleep 1"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", f"printf '{marker}' && sleep 1"],
+                rows=24,
+                cols=80,
+            )
         )
         without_output = await terminal.refresh()
         assert without_output.current.output is None
@@ -164,12 +168,12 @@ async def test_async_sandbox_terminal_e2e():
 
         marker = "terminal-wait-output"
         terminal = await sandbox.terminal.create(
-            {
-                "command": "bash",
-                "args": ["-lc", f"printf '{marker}'"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", f"printf '{marker}'"],
+                rows=24,
+                cols=80,
+            )
         )
         status = await terminal.wait(timeout_ms=2000, include_output=True)
         assert status.running is False
@@ -179,12 +183,12 @@ async def test_async_sandbox_terminal_e2e():
         assert status.output
 
         timeout_terminal = await sandbox.pty.create(
-            {
-                "command": "bash",
-                "args": ["-lc", "sleep 10"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", "sleep 10"],
+                rows=24,
+                cols=80,
+            )
         )
         await expect_hyperbrowser_error_async(
             "terminal wait timeout",
@@ -200,12 +204,12 @@ async def test_async_sandbox_terminal_e2e():
         assert status.running is False
 
         kill_terminal = await sandbox.pty.create(
-            {
-                "command": "bash",
-                "args": ["-lc", "sleep 30"],
-                "rows": 24,
-                "cols": 80,
-            }
+            SandboxTerminalCreateParams(
+                command="bash",
+                args=["-lc", "sleep 30"],
+                rows=24,
+                cols=80,
+            )
         )
         status = await kill_terminal.kill()
         assert status.running is False
@@ -224,8 +228,12 @@ async def test_async_sandbox_terminal_e2e():
         await client.close()
 
 
-async def _get_terminal_status(sandbox, terminal_id: str, *, include_output: bool = False):
-    return (await sandbox.terminal.get(terminal_id, include_output=include_output)).current
+async def _get_terminal_status(
+    sandbox, terminal_id: str, *, include_output: bool = False
+):
+    return (
+        await sandbox.terminal.get(terminal_id, include_output=include_output)
+    ).current
 
 
 async def _refresh_terminal_status(terminal, *, include_output: bool = False):
