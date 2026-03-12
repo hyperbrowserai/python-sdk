@@ -19,6 +19,11 @@ def test_create_sandbox_params_accepts_snapshot_source():
     }
 
 
+def test_create_sandbox_params_rejects_camel_case_input():
+    with pytest.raises(ValidationError, match="Provide exactly one start source"):
+        CreateSandboxParams(**{"imageName": "node"})
+
+
 @pytest.mark.parametrize(
     "payload",
     [

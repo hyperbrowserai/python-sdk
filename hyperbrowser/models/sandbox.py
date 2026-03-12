@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Callable, Dict, Iterable, List, Literal, Optional, Union
+from typing import Callable, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -78,9 +78,7 @@ class Sandbox(SandboxBaseModel):
     updated_at: datetime = Field(alias="updatedAt")
     close_reason: Optional[str] = Field(default=None, alias="closeReason")
     data_consumed: Optional[int] = Field(default=None, alias="dataConsumed")
-    proxy_data_consumed: Optional[int] = Field(
-        default=None, alias="proxyDataConsumed"
-    )
+    proxy_data_consumed: Optional[int] = Field(default=None, alias="proxyDataConsumed")
     usage_type: Optional[str] = Field(default=None, alias="usageType")
     job_id: Optional[str] = Field(default=None, alias="jobId")
     launch_state: Optional[SessionLaunchState] = Field(
@@ -131,13 +129,19 @@ class SandboxRuntimeSession(SandboxBaseModel):
 
 
 class CreateSandboxParams(SandboxBaseModel):
-    snapshot_name: Optional[str] = Field(default=None, alias="snapshotName")
-    snapshot_id: Optional[str] = Field(default=None, alias="snapshotId")
-    image_name: Optional[str] = Field(default=None, alias="imageName")
-    image_id: Optional[str] = Field(default=None, alias="imageId")
+    snapshot_name: Optional[str] = Field(
+        default=None, serialization_alias="snapshotName"
+    )
+    snapshot_id: Optional[str] = Field(default=None, serialization_alias="snapshotId")
+    image_name: Optional[str] = Field(default=None, serialization_alias="imageName")
+    image_id: Optional[str] = Field(default=None, serialization_alias="imageId")
     region: Optional[SandboxRegion] = None
-    enable_recording: Optional[bool] = Field(default=None, alias="enableRecording")
-    timeout_minutes: Optional[int] = Field(default=None, alias="timeoutMinutes")
+    enable_recording: Optional[bool] = Field(
+        default=None, serialization_alias="enableRecording"
+    )
+    timeout_minutes: Optional[int] = Field(
+        default=None, serialization_alias="timeoutMinutes"
+    )
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -145,7 +149,9 @@ class CreateSandboxParams(SandboxBaseModel):
             raise ValueError("snapshot_id requires snapshot_name")
         if self.image_id and not self.image_name:
             raise ValueError("image_id requires image_name")
-        source_count = sum(bool(value) for value in [self.snapshot_name, self.image_name])
+        source_count = sum(
+            bool(value) for value in [self.snapshot_name, self.image_name]
+        )
         if source_count != 1:
             raise ValueError(
                 "Provide exactly one start source: snapshot_name or image_name"
@@ -172,7 +178,9 @@ class SandboxListResponse(SandboxBaseModel):
 
 
 class SandboxMemorySnapshotParams(SandboxBaseModel):
-    snapshot_name: Optional[str] = Field(default=None, alias="snapshotName")
+    snapshot_name: Optional[str] = Field(
+        default=None, serialization_alias="snapshotName"
+    )
 
 
 class SandboxMemorySnapshotResult(SandboxBaseModel):
@@ -201,9 +209,9 @@ class SandboxExecParams(SandboxBaseModel):
     args: Optional[List[str]] = None
     cwd: Optional[str] = None
     env: Optional[Dict[str, str]] = None
-    timeout_ms: Optional[int] = Field(default=None, alias="timeoutMs")
-    timeout_sec: Optional[int] = Field(default=None, alias="timeoutSec")
-    use_shell: Optional[bool] = Field(default=None, alias="useShell")
+    timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
+    timeout_sec: Optional[int] = Field(default=None, serialization_alias="timeoutSec")
+    use_shell: Optional[bool] = Field(default=None, serialization_alias="useShell")
 
 
 class SandboxProcessSummary(SandboxBaseModel):
@@ -233,8 +241,12 @@ class SandboxProcessListParams(SandboxBaseModel):
     status: Optional[Union[SandboxProcessStatus, List[SandboxProcessStatus]]] = None
     limit: Optional[int] = None
     cursor: Optional[Union[str, int]] = None
-    created_after: Optional[int] = Field(default=None, alias="createdAfter")
-    created_before: Optional[int] = Field(default=None, alias="createdBefore")
+    created_after: Optional[int] = Field(
+        default=None, serialization_alias="createdAfter"
+    )
+    created_before: Optional[int] = Field(
+        default=None, serialization_alias="createdBefore"
+    )
 
 
 class SandboxProcessListResponse(SandboxBaseModel):
@@ -243,8 +255,8 @@ class SandboxProcessListResponse(SandboxBaseModel):
 
 
 class SandboxProcessWaitParams(SandboxBaseModel):
-    timeout_ms: Optional[int] = Field(default=None, alias="timeoutMs")
-    timeout_sec: Optional[int] = Field(default=None, alias="timeoutSec")
+    timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
+    timeout_sec: Optional[int] = Field(default=None, serialization_alias="timeoutSec")
 
 
 class SandboxProcessStdinParams(SandboxBaseModel):
@@ -489,8 +501,10 @@ SandboxWatchDirExitCallback = Callable[[Optional[BaseException]], object]
 
 class SandboxPresignFileParams(SandboxBaseModel):
     path: str
-    expires_in_seconds: Optional[int] = Field(default=None, alias="expiresInSeconds")
-    one_time: Optional[bool] = Field(default=None, alias="oneTime")
+    expires_in_seconds: Optional[int] = Field(
+        default=None, serialization_alias="expiresInSeconds"
+    )
+    one_time: Optional[bool] = Field(default=None, serialization_alias="oneTime")
 
 
 class SandboxPresignedUrl(SandboxBaseModel):
@@ -506,10 +520,10 @@ class SandboxTerminalCreateParams(SandboxBaseModel):
     args: Optional[List[str]] = None
     cwd: Optional[str] = None
     env: Optional[Dict[str, str]] = None
-    use_shell: Optional[bool] = Field(default=None, alias="useShell")
+    use_shell: Optional[bool] = Field(default=None, serialization_alias="useShell")
     rows: Optional[int] = None
     cols: Optional[int] = None
-    timeout_ms: Optional[int] = Field(default=None, alias="timeoutMs")
+    timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
 
 
 class SandboxTerminalOutputChunk(SandboxBaseModel):
@@ -537,13 +551,15 @@ class SandboxTerminalStatus(SandboxBaseModel):
 
 
 class SandboxTerminalWaitParams(SandboxBaseModel):
-    timeout_ms: Optional[int] = Field(default=None, alias="timeoutMs")
-    include_output: Optional[bool] = Field(default=None, alias="includeOutput")
+    timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
+    include_output: Optional[bool] = Field(
+        default=None, serialization_alias="includeOutput"
+    )
 
 
 class SandboxTerminalKillParams(SandboxBaseModel):
     signal: Optional[str] = None
-    timeout_ms: Optional[int] = Field(default=None, alias="timeoutMs")
+    timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
 
 
 class SandboxTerminalOutputEvent(SandboxBaseModel):

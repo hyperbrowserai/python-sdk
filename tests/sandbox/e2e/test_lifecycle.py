@@ -126,7 +126,7 @@ def test_sandbox_lifecycle_e2e():
         finally:
             sandbox._service.get_detail = original_get_detail
 
-        image_sandbox = client.sandboxes.create({"imageName": DEFAULT_IMAGE_NAME})
+        image_sandbox = client.sandboxes.create({"image_name": DEFAULT_IMAGE_NAME})
         assert image_sandbox.id
         assert image_sandbox.status == "active"
         response = image_sandbox.stop()
@@ -135,8 +135,8 @@ def test_sandbox_lifecycle_e2e():
 
         custom_image_sandbox = client.sandboxes.create(
             {
-                "imageName": custom_image["imageName"],
-                "imageId": custom_image["id"],
+                "image_name": custom_image["imageName"],
+                "image_id": custom_image["id"],
             }
         )
         assert custom_image_sandbox.id
@@ -150,8 +150,8 @@ def test_sandbox_lifecycle_e2e():
 
         custom_snapshot_sandbox = _create_sandbox_with_snapshot_retry(
             {
-                "snapshotName": custom_image_memory_snapshot.snapshot_name,
-                "snapshotId": custom_image_memory_snapshot.snapshot_id,
+                "snapshot_name": custom_image_memory_snapshot.snapshot_name,
+                "snapshot_id": custom_image_memory_snapshot.snapshot_id,
             }
         )
         assert custom_snapshot_sandbox.id
@@ -164,8 +164,8 @@ def test_sandbox_lifecycle_e2e():
             "mismatched image selector",
             lambda: client.sandboxes.create(
                 {
-                    "imageName": custom_image["imageName"],
-                    "imageId": str(uuid4()),
+                    "image_name": custom_image["imageName"],
+                    "image_id": str(uuid4()),
                 }
             ),
             status_code=404,
@@ -178,8 +178,8 @@ def test_sandbox_lifecycle_e2e():
             "mismatched snapshot selector",
             lambda: client.sandboxes.create(
                 {
-                    "snapshotName": memory_snapshot.snapshot_name,
-                    "snapshotId": str(uuid4()),
+                    "snapshot_name": memory_snapshot.snapshot_name,
+                    "snapshot_id": str(uuid4()),
                 }
             ),
             status_code=404,
@@ -252,8 +252,8 @@ def test_sandbox_lifecycle_e2e():
 
         secondary = _create_sandbox_with_snapshot_retry(
             {
-                "snapshotName": memory_snapshot.snapshot_name,
-                "snapshotId": memory_snapshot.snapshot_id,
+                "snapshot_name": memory_snapshot.snapshot_name,
+                "snapshot_id": memory_snapshot.snapshot_id,
             }
         )
         response = secondary.stop()
