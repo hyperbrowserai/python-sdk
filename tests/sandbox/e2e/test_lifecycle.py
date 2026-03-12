@@ -87,6 +87,9 @@ def test_sandbox_lifecycle_e2e():
         assert memory_snapshot.image_id
         assert memory_snapshot.image_namespace
 
+        # Snapshot creation can briefly disrupt the next fast exec on the same handle.
+        wait_for_runtime_ready(sandbox)
+
         valid_detail = sandbox.info()
         invalid_jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.invalid-signature"
         refresh_count = 0
