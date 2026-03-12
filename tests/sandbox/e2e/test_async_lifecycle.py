@@ -58,7 +58,9 @@ async def test_async_sandbox_lifecycle_e2e():
     custom_image = None
 
     try:
-        sandbox = await client.sandboxes.create(default_sandbox_params("py-async-lifecycle"))
+        sandbox = await client.sandboxes.create(
+            default_sandbox_params("py-async-lifecycle")
+        )
         stale_handle = await client.sandboxes.get(sandbox.id)
         custom_image = await get_image_by_name_async(CUSTOM_IMAGE_NAME)
         await wait_for_runtime_ready_async(sandbox)
@@ -145,7 +147,9 @@ async def test_async_sandbox_lifecycle_e2e():
         assert custom_image_sandbox.status == "active"
         await wait_for_runtime_ready_async(custom_image_sandbox)
 
-        custom_image_memory_snapshot = await custom_image_sandbox.create_memory_snapshot()
+        custom_image_memory_snapshot = (
+            await custom_image_sandbox.create_memory_snapshot()
+        )
         assert custom_image_memory_snapshot.image_name == custom_image["imageName"]
         assert custom_image_memory_snapshot.image_id == custom_image["id"]
         assert custom_image_memory_snapshot.image_namespace == custom_image["namespace"]
