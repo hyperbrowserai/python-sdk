@@ -327,6 +327,35 @@ async def test_async_sandbox_files_e2e():
         assert await sandbox.files.read_text(existing_target) == "existing target"
         assert (await sandbox.files.get_info(destination_link)).symlink_target is None
 
+        move_source = f"{base_dir}/move-overwrite/source.txt"
+        move_existing_target = f"{base_dir}/move-overwrite/existing-target.txt"
+        move_destination_link = f"{base_dir}/move-overwrite/destination-link.txt"
+        await sandbox.files.write_text(move_source, "move source payload")
+        await sandbox.files.write_text(move_existing_target, "move existing target")
+        result = await sandbox.exec(
+            _bash_exec(
+                f'mkdir -p "{base_dir}/move-overwrite" && ln -sfn "{move_existing_target}" "{move_destination_link}"'
+            )
+        )
+        assert result.exit_code == 0
+        await sandbox.files.move(
+            source=move_source,
+            destination=move_destination_link,
+            overwrite=True,
+        )
+        assert (
+            await sandbox.files.read_text(move_destination_link)
+            == "move source payload"
+        )
+        assert (
+            await sandbox.files.read_text(move_existing_target)
+            == "move existing target"
+        )
+        assert (
+            await sandbox.files.get_info(move_destination_link)
+        ).symlink_target is None
+        assert await sandbox.files.exists(move_source) is False
+
         chmod_path = f"{base_dir}/chmod/file.txt"
         await sandbox.files.write_text(chmod_path, "chmod me")
         await sandbox.files.chmod(path=chmod_path, mode="0640")
