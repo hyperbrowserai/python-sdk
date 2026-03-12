@@ -45,7 +45,9 @@ def is_retryable_network_error(error: BaseException) -> bool:
     )
 
 
-def parse_error_payload(raw_text: str, fallback_message: str) -> Tuple[str, Optional[str], Any]:
+def parse_error_payload(
+    raw_text: str, fallback_message: str
+) -> Tuple[str, Optional[str], Any]:
     if not raw_text:
         return fallback_message, None, None
 
@@ -55,11 +57,7 @@ def parse_error_payload(raw_text: str, fallback_message: str) -> Tuple[str, Opti
         return raw_text, None, raw_text
 
     if isinstance(parsed, dict):
-        message = (
-            parsed.get("message")
-            or parsed.get("error")
-            or fallback_message
-        )
+        message = parsed.get("message") or parsed.get("error") or fallback_message
         code = parsed.get("code") if isinstance(parsed.get("code"), str) else None
         return message, code, parsed
 

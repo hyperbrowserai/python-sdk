@@ -3,9 +3,7 @@ from typing import Callable, Iterable, Optional
 from hyperbrowser.exceptions import HyperbrowserError
 
 
-def _normalize_messages(
-    value: Optional[Iterable[str]], single: Optional[str]
-):
+def _normalize_messages(value: Optional[Iterable[str]], single: Optional[str]):
     if single is not None:
         return [single]
     if value is None:
@@ -28,9 +26,9 @@ def expect_hyperbrowser_error(
     try:
         action()
     except HyperbrowserError as error:
-        assert "Unknown error occurred" not in str(error), (
-            f"{label}: unexpected generic error message {error!r}"
-        )
+        assert "Unknown error occurred" not in str(
+            error
+        ), f"{label}: unexpected generic error message {error!r}"
 
         if status_code is not None:
             assert error.status_code == status_code, (
@@ -38,15 +36,17 @@ def expect_hyperbrowser_error(
                 f"got {error.status_code}"
             )
         if code is not None:
-            assert error.code == code, f"{label}: expected code={code}, got {error.code}"
+            assert (
+                error.code == code
+            ), f"{label}: expected code={code}, got {error.code}"
         if service is not None:
-            assert error.service == service, (
-                f"{label}: expected service={service}, got {error.service}"
-            )
+            assert (
+                error.service == service
+            ), f"{label}: expected service={service}, got {error.service}"
         if retryable is not None:
-            assert error.retryable == retryable, (
-                f"{label}: expected retryable={retryable}, got {error.retryable}"
-            )
+            assert (
+                error.retryable == retryable
+            ), f"{label}: expected retryable={retryable}, got {error.retryable}"
 
         for text in _normalize_messages(message_includes_many, message_includes):
             assert text in str(error), (
@@ -80,9 +80,9 @@ async def expect_hyperbrowser_error_async(
     try:
         await action()
     except HyperbrowserError as error:
-        assert "Unknown error occurred" not in str(error), (
-            f"{label}: unexpected generic error message {error!r}"
-        )
+        assert "Unknown error occurred" not in str(
+            error
+        ), f"{label}: unexpected generic error message {error!r}"
 
         if status_code is not None:
             assert error.status_code == status_code, (
@@ -90,15 +90,17 @@ async def expect_hyperbrowser_error_async(
                 f"got {error.status_code}"
             )
         if code is not None:
-            assert error.code == code, f"{label}: expected code={code}, got {error.code}"
+            assert (
+                error.code == code
+            ), f"{label}: expected code={code}, got {error.code}"
         if service is not None:
-            assert error.service == service, (
-                f"{label}: expected service={service}, got {error.service}"
-            )
+            assert (
+                error.service == service
+            ), f"{label}: expected service={service}, got {error.service}"
         if retryable is not None:
-            assert error.retryable == retryable, (
-                f"{label}: expected retryable={retryable}, got {error.retryable}"
-            )
+            assert (
+                error.retryable == retryable
+            ), f"{label}: expected retryable={retryable}, got {error.retryable}"
 
         for text in _normalize_messages(message_includes_many, message_includes):
             assert text in str(error), (

@@ -69,7 +69,9 @@ def get_image_by_name(image_name: str):
     response.raise_for_status()
     payload = response.json()
     images = payload.get("data", {}).get("images") or payload.get("images") or []
-    image = next((entry for entry in images if entry.get("imageName") == image_name), None)
+    image = next(
+        (entry for entry in images if entry.get("imageName") == image_name), None
+    )
     if image is None:
         raise RuntimeError(f"custom image {image_name!r} not found in /api/images")
     return image
@@ -84,7 +86,9 @@ async def get_image_by_name_async(image_name: str):
     response.raise_for_status()
     payload = response.json()
     images = payload.get("data", {}).get("images") or payload.get("images") or []
-    image = next((entry for entry in images if entry.get("imageName") == image_name), None)
+    image = next(
+        (entry for entry in images if entry.get("imageName") == image_name), None
+    )
     if image is None:
         raise RuntimeError(f"custom image {image_name!r} not found in /api/images")
     return image
