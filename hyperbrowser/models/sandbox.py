@@ -131,7 +131,6 @@ class SandboxRuntimeSession(SandboxBaseModel):
 
 
 class CreateSandboxParams(SandboxBaseModel):
-    sandbox_name: Optional[str] = Field(default=None, alias="sandboxName")
     snapshot_name: Optional[str] = Field(default=None, alias="snapshotName")
     snapshot_id: Optional[str] = Field(default=None, alias="snapshotId")
     image_name: Optional[str] = Field(default=None, alias="imageName")
@@ -142,18 +141,15 @@ class CreateSandboxParams(SandboxBaseModel):
 
     @model_validator(mode="after")
     def validate_launch_source(self):
-        source_count = sum(
-            bool(value)
-            for value in [self.sandbox_name, self.snapshot_name, self.image_name]
-        )
-        if source_count != 1:
-            raise ValueError(
-                "Provide exactly one start source: sandbox_name, snapshot_name, or image_name"
-            )
         if self.snapshot_id and not self.snapshot_name:
             raise ValueError("snapshot_id requires snapshot_name")
         if self.image_id and not self.image_name:
             raise ValueError("image_id requires image_name")
+        source_count = sum(bool(value) for value in [self.snapshot_name, self.image_name])
+        if source_count != 1:
+            raise ValueError(
+                "Provide exactly one start source: snapshot_name or image_name"
+            )
         return self
 
 
