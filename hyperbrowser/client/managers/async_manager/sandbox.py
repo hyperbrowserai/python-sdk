@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
@@ -7,9 +7,14 @@ from ....models.sandbox import (
     SandboxExecParams,
     SandboxExposeParams,
     SandboxExposeResult,
+    SandboxImageSummary,
+    SandboxListParams,
+    SandboxListResponse,
     SandboxMemorySnapshotParams,
     SandboxMemorySnapshotResult,
     SandboxRuntimeSession,
+    SandboxSnapshotListParams,
+    SandboxSnapshotSummary,
     StartSandboxFromSnapshotParams,
 )
 from ....models.session import BasicResponse
@@ -287,6 +292,34 @@ class SandboxManager:
         sandbox = await self.get(sandbox_id)
         await sandbox.connect()
         return sandbox
+
+    async def list(
+        self, params: SandboxListParams = SandboxListParams()
+    ) -> SandboxListResponse:
+        if not isinstance(params, SandboxListParams):
+            raise TypeError("params must be a SandboxListParams instance")
+        payload = await self._request(
+            "GET",
+            "/sandboxes",
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SandboxListResponse(**payload)
+
+    async def list_images(self) -> List[SandboxImageSummary]:
+        payload = await self._request("GET", "/images")
+        return [SandboxImageSummary(**image) for image in payload["images"]]
+
+    async def list_snapshots(
+        self, params: SandboxSnapshotListParams = SandboxSnapshotListParams()
+    ) -> List[SandboxSnapshotSummary]:
+        if not isinstance(params, SandboxSnapshotListParams):
+            raise TypeError("params must be a SandboxSnapshotListParams instance")
+        payload = await self._request(
+            "GET",
+            "/snapshots",
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return [SandboxSnapshotSummary(**snapshot) for snapshot in payload["snapshots"]]
 
     async def stop(self, sandbox_id: str) -> BasicResponse:
         payload = await self._request("PUT", f"/sandbox/{sandbox_id}/stop")

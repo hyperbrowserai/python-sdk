@@ -23,6 +23,7 @@ SandboxProcessStatus = Literal[
     "killed",
     "timed_out",
 ]
+SandboxSnapshotStatus = Literal["creating", "created", "failed"]
 SandboxFileType = Literal["file", "dir"]
 SandboxFileEncoding = Literal["utf8", "base64"]
 SandboxFileReadFormat = Literal["text", "bytes", "blob", "stream"]
@@ -164,10 +165,9 @@ class StartSandboxFromSnapshotParams(CreateSandboxParams):
 
 
 class SandboxListParams(SandboxBaseModel):
-    status: Optional[SandboxStatus] = None
-    page: Optional[int] = None
-    limit: Optional[int] = None
-    search: Optional[str] = None
+    status: Optional[SandboxStatus] = Field(default=None, exclude=None)
+    page: int = Field(default=1, ge=1)
+    limit: int = Field(default=10, ge=1)
 
 
 class SandboxListResponse(SandboxBaseModel):
@@ -175,6 +175,35 @@ class SandboxListResponse(SandboxBaseModel):
     total_count: int = Field(alias="totalCount")
     page: int
     per_page: int = Field(alias="perPage")
+
+
+class SandboxImageSummary(SandboxBaseModel):
+    id: str
+    image_name: str = Field(alias="imageName")
+    namespace: str
+    uploaded: bool
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class SandboxSnapshotSummary(SandboxBaseModel):
+    id: str
+    snapshot_name: str = Field(alias="snapshotName")
+    namespace: str
+    image_namespace: str = Field(alias="imageNamespace")
+    image_name: str = Field(alias="imageName")
+    image_id: str = Field(alias="imageId")
+    status: SandboxSnapshotStatus
+    compatibility_tag: str = Field(alias="compatibilityTag")
+    metadata: Dict[str, object]
+    uploaded: bool
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class SandboxSnapshotListParams(SandboxBaseModel):
+    status: Optional[SandboxSnapshotStatus] = Field(default=None, exclude=None)
+    limit: Optional[int] = Field(default=None, ge=1)
 
 
 class SandboxMemorySnapshotParams(SandboxBaseModel):

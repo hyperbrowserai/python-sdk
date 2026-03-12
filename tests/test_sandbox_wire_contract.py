@@ -26,6 +26,7 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import
 from hyperbrowser.models import (
     CreateSandboxParams,
     SandboxExecParams,
+    SandboxListParams,
     SandboxMemorySnapshotParams,
     SandboxPresignFileParams,
     SandboxProcessListParams,
@@ -72,6 +73,39 @@ SNAPSHOT_RESULT_PAYLOAD = {
     "imageName": "img",
     "imageId": "iid",
     "imageNamespace": "ins",
+}
+
+SANDBOX_LIST_PAYLOAD = {
+    "sandboxes": [
+        {
+            "id": "sbx_123",
+            "teamId": "team_1",
+            "status": "active",
+            "endTime": None,
+            "startTime": 123,
+            "createdAt": "2026-03-12T00:00:00Z",
+            "updatedAt": "2026-03-12T00:00:01Z",
+            "closeReason": None,
+            "dataConsumed": 1,
+            "proxyDataConsumed": 2,
+            "usageType": "sandbox",
+            "jobId": None,
+            "launchState": None,
+            "creditsUsed": 0.1,
+            "region": "us",
+            "sessionUrl": "https://example.com/session",
+            "duration": 10,
+            "proxyBytesUsed": 3,
+            "runtime": {
+                "transport": "regional_proxy",
+                "host": "runtime.example.com",
+                "baseUrl": "https://runtime.example.com",
+            },
+        }
+    ],
+    "totalCount": 1,
+    "page": 2,
+    "perPage": 5,
 }
 
 PROCESS_RESULT_PAYLOAD = {
@@ -186,7 +220,9 @@ class RecordingHTTPClient:
             }
         )
 
-        if url.endswith("/sandbox"):
+        if url.endswith("/sandboxes"):
+            payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
         elif url.endswith("/snapshot"):
             payload = SNAPSHOT_RESULT_PAYLOAD
@@ -292,7 +328,9 @@ class RecordingAsyncHTTPClient:
             }
         )
 
-        if url.endswith("/sandbox"):
+        if url.endswith("/sandboxes"):
+            payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
         elif url.endswith("/snapshot"):
             payload = SNAPSHOT_RESULT_PAYLOAD
@@ -318,6 +356,16 @@ class FakeAsyncClient:
 
 
 def test_sandbox_request_models_serialize_expected_wire_keys():
+    assert SandboxListParams(
+        status="active",
+        page=2,
+        limit=5,
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "status": "active",
+        "page": 2,
+        "limit": 5,
+    }
+
     assert CreateSandboxParams(
         image_name="node",
         image_id="img-id",
@@ -415,6 +463,13 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeSyncClient()
     manager = SandboxManager(client)
 
+    listed = manager.list(
+        SandboxListParams(
+            status="active",
+            page=2,
+            limit=5,
+        )
+    )
     manager.create(
         CreateSandboxParams(
             image_name="node",
@@ -428,9 +483,18 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
         SandboxMemorySnapshotParams(snapshot_name="snap"),
     )
 
-    create_call = client.transport.client.calls[0]
-    snapshot_call = client.transport.client.calls[1]
+    list_call = client.transport.client.calls[0]
+    create_call = client.transport.client.calls[1]
+    snapshot_call = client.transport.client.calls[2]
 
+    assert list_call["params"] == {
+        "status": "active",
+        "page": 2,
+        "limit": 5,
+    }
+    assert listed.total_count == 1
+    assert listed.page == 2
+    assert listed.per_page == 5
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
@@ -545,6 +609,13 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeAsyncClient()
     manager = AsyncSandboxManager(client)
 
+    listed = await manager.list(
+        SandboxListParams(
+            status="active",
+            page=2,
+            limit=5,
+        )
+    )
     await manager.create(
         CreateSandboxParams(
             image_name="node",
@@ -558,9 +629,18 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
         SandboxMemorySnapshotParams(snapshot_name="snap"),
     )
 
-    create_call = client.transport.client.calls[0]
-    snapshot_call = client.transport.client.calls[1]
+    list_call = client.transport.client.calls[0]
+    create_call = client.transport.client.calls[1]
+    snapshot_call = client.transport.client.calls[2]
 
+    assert list_call["params"] == {
+        "status": "active",
+        "page": 2,
+        "limit": 5,
+    }
+    assert listed.total_count == 1
+    assert listed.page == 2
+    assert listed.per_page == 5
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
