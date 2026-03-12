@@ -1,0 +1,210 @@
+import base64
+import posixpath
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Optional, Union
+from urllib.parse import urlencode, urlsplit, urlunsplit
+
+from ....exceptions import HyperbrowserError
+from ....models.sandbox import (
+    SandboxFileInfo,
+    SandboxFileWriteInfo,
+    SandboxTerminalStatus,
+)
+from ....sandbox_common import (
+    RUNTIME_SESSION_REFRESH_BUFFER_MS,
+    normalize_network_error,
+    parse_error_payload,
+)
+
+DEFAULT_WATCH_TIMEOUT_MS = 60_000
+
+
+def _copy_model(model):
+    return model.model_copy(deep=True)
+
+
+def _build_sandbox_exposed_url(runtime, port: int) -> str:
+    parsed = urlsplit(runtime.base_url)
+    hostname = parsed.hostname
+    if not hostname:
+        return runtime.base_url.rstrip("/")
+
+    exposed_host = f"{port}-{hostname}"
+    netloc = exposed_host
+    if parsed.port:
+        netloc = f"{netloc}:{parsed.port}"
+    if parsed.username:
+        credentials = parsed.username
+        if parsed.password:
+            credentials = f"{credentials}:{parsed.password}"
+        netloc = f"{credentials}@{netloc}"
+
+    return urlunsplit(
+        (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
+    ).rstrip("/")
+
+
+def _expires_within_buffer(expires_at: Optional[datetime]) -> bool:
+    if expires_at is None:
+        return False
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    threshold = datetime.now(timezone.utc) + timedelta(
+        milliseconds=RUNTIME_SESSION_REFRESH_BUFFER_MS
+    )
+    return expires_at <= threshold
+
+
+def _build_query_path(path: str, params: Optional[Dict[str, object]] = None) -> str:
+    if not params:
+        return path
+
+    filtered = []
+    for key, value in params.items():
+        if value is None:
+            continue
+        filtered.append((key, str(value)))
+
+    if not filtered:
+        return path
+
+    return f"{path}?{urlencode(filtered)}"
+
+
+def _normalize_websocket_error(error: BaseException) -> HyperbrowserError:
+    if isinstance(error, HyperbrowserError):
+        return error
+
+    response = getattr(error, "response", None)
+    if response is not None:
+        status_code = getattr(response, "status_code", None)
+        headers = getattr(response, "headers", {}) or {}
+        body = getattr(response, "body", b"")
+        if isinstance(body, memoryview):
+            body = body.tobytes()
+        if isinstance(body, bytearray):
+            body = bytes(body)
+        if isinstance(body, bytes):
+            raw_text = body.decode("utf-8", errors="replace")
+        elif isinstance(body, str):
+            raw_text = body
+        else:
+            raw_text = ""
+
+        message, code, details = parse_error_payload(
+            raw_text,
+            f"Runtime websocket request failed: {status_code or 0}",
+        )
+        request_id = None
+        if isinstance(headers, dict):
+            request_id = headers.get("x-request-id") or headers.get("request-id")
+        else:
+            request_id = headers.get("x-request-id") or headers.get("request-id")
+
+        return HyperbrowserError(
+            message,
+            status_code=status_code,
+            code=code,
+            request_id=request_id,
+            retryable=bool(status_code in {429, 502, 503, 504}),
+            service="runtime",
+            details=details,
+            cause=error,
+            original_error=error if isinstance(error, Exception) else None,
+        )
+
+    status_code = getattr(error, "status_code", None)
+    headers = getattr(error, "headers", None)
+    if status_code is not None:
+        request_id = None
+        if headers is not None:
+            request_id = headers.get("x-request-id") or headers.get("request-id")
+        return HyperbrowserError(
+            f"Runtime websocket request failed: {status_code}",
+            status_code=status_code,
+            request_id=request_id,
+            retryable=bool(status_code in {429, 502, 503, 504}),
+            service="runtime",
+            cause=error,
+            original_error=error if isinstance(error, Exception) else None,
+        )
+
+    return normalize_network_error(
+        error,
+        "runtime",
+        "Unknown runtime websocket error",
+    )
+
+
+def _normalize_file_type(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    return "dir" if value in {"dir", "directory"} else "file"
+
+
+def _normalize_file_info(entry: Dict[str, object]) -> SandboxFileInfo:
+    normalized = dict(entry)
+    normalized["type"] = _normalize_file_type(normalized.get("type"))
+    return SandboxFileInfo(**normalized)
+
+
+def _normalize_write_info(entry: Dict[str, object]) -> SandboxFileWriteInfo:
+    normalized = dict(entry)
+    normalized["type"] = _normalize_file_type(normalized.get("type"))
+    return SandboxFileWriteInfo(**normalized)
+
+
+def _normalize_event_type(operation: str) -> Optional[str]:
+    lower = operation.lower()
+    if "chmod" in lower:
+        return "chmod"
+    if "create" in lower:
+        return "create"
+    if "remove" in lower or "delete" in lower:
+        return "remove"
+    if "rename" in lower:
+        return "rename"
+    if "write" in lower:
+        return "write"
+    return None
+
+
+def _relative_watch_name(root: str, absolute_path: str) -> str:
+    relative = posixpath.relpath(absolute_path, root)
+    if relative in {"", "."}:
+        return posixpath.basename(absolute_path)
+    return relative
+
+
+def _encode_write_data(data: Union[str, bytes, bytearray]) -> Dict[str, str]:
+    if isinstance(data, str):
+        return {
+            "data": data,
+            "encoding": "utf8",
+        }
+    return {
+        "data": base64.b64encode(bytes(data)).decode("ascii"),
+        "encoding": "base64",
+    }
+
+
+def _normalize_terminal_output_chunk(entry: Dict[str, object]) -> Dict[str, object]:
+    raw = base64.b64decode(entry["data"])
+    return {
+        "seq": entry["seq"],
+        "data": raw.decode("utf-8", errors="replace"),
+        "raw": raw,
+        "timestamp": entry["timestamp"],
+    }
+
+
+def _normalize_terminal_status(entry: Dict[str, object]) -> SandboxTerminalStatus:
+    normalized = dict(entry)
+    output = normalized.get("output")
+    if isinstance(output, list):
+        normalized["output"] = [
+            _normalize_terminal_output_chunk(chunk)
+            for chunk in output
+            if isinstance(chunk, dict)
+        ]
+    return SandboxTerminalStatus(**normalized)

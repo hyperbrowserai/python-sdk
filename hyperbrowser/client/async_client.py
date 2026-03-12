@@ -9,6 +9,7 @@ from .managers.async_manager.crawl import CrawlManager
 from .managers.async_manager.extension import ExtensionManager
 from .managers.async_manager.extract import ExtractManager
 from .managers.async_manager.profile import ProfileManager
+from .managers.async_manager.sandbox import SandboxManager
 from .managers.async_manager.scrape import ScrapeManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.team import TeamManager
@@ -24,8 +25,16 @@ class AsyncHyperbrowser(HyperbrowserBase):
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: Optional[int] = 30,
+        runtime_proxy_override: Optional[str] = None,
     ):
-        super().__init__(AsyncTransport, config, api_key, base_url)
+        super().__init__(
+            AsyncTransport,
+            config,
+            api_key,
+            base_url,
+            runtime_proxy_override,
+        )
+        self.timeout = timeout or 30
         self.transport.client.timeout = timeout
         self.sessions = SessionManager(self)
         self.web = WebManager(self)
@@ -37,6 +46,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.agents = Agents(self)
         self.team = TeamManager(self)
         self.computer_action = ComputerActionManager(self)
+        self.sandboxes = SandboxManager(self)
 
     async def close(self) -> None:
         await self.transport.close()
