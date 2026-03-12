@@ -17,6 +17,7 @@ from .....models.sandbox import (
     SandboxFileCopyParams,
     SandboxFileDeleteParams,
     SandboxFileInfo,
+    SandboxFileMoveParams,
     SandboxFileReadResult,
     SandboxFileSystemEvent,
     SandboxFileWriteEntry,
@@ -442,14 +443,24 @@ class SandboxFilesApi:
     ) -> bool:
         return self.make_dir(path, parents=parents, mode=mode)
 
-    def rename(self, old_path: str, new_path: str) -> SandboxFileInfo:
+    def rename(
+        self,
+        old_path: str,
+        new_path: str,
+        *,
+        overwrite: Optional[bool] = None,
+    ) -> SandboxFileInfo:
+        payload = SandboxFileMoveParams(
+            source=old_path,
+            destination=new_path,
+            overwrite=overwrite,
+        ).model_dump(exclude_none=True)
+        payload["from"] = payload.pop("source")
+        payload["to"] = payload.pop("destination")
         payload = self._transport.request_json(
             "/sandbox/files/move",
             method="POST",
-            json_body={
-                "from": old_path,
-                "to": new_path,
-            },
+            json_body=payload,
             headers={"content-type": "application/json"},
         )
         return _normalize_file_info(payload["entry"])
@@ -461,7 +472,7 @@ class SandboxFilesApi:
         destination: str,
         overwrite: Optional[bool] = None,
     ) -> SandboxFileInfo:
-        return self.rename(source, destination)
+        return self.rename(source, destination, overwrite=overwrite)
 
     def remove(self, path: str, *, recursive: Optional[bool] = None) -> None:
         self._transport.request_json(
