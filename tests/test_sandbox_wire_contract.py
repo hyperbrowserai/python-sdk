@@ -108,6 +108,38 @@ SANDBOX_LIST_PAYLOAD = {
     "perPage": 5,
 }
 
+IMAGE_LIST_PAYLOAD = {
+    "images": [
+        {
+            "id": "img_123",
+            "imageName": "node",
+            "namespace": "team_1",
+            "uploaded": True,
+            "createdAt": "2026-03-12T00:00:00Z",
+            "updatedAt": "2026-03-12T00:00:01Z",
+        }
+    ]
+}
+
+SNAPSHOT_LIST_PAYLOAD = {
+    "snapshots": [
+        {
+            "id": "snap_123",
+            "snapshotName": "snapshot-1",
+            "namespace": "team_1",
+            "imageNamespace": "team_1",
+            "imageName": "node",
+            "imageId": "img_123",
+            "status": "created",
+            "compatibilityTag": None,
+            "metadata": {},
+            "uploaded": True,
+            "createdAt": "2026-03-12T00:00:00Z",
+            "updatedAt": "2026-03-12T00:00:01Z",
+        }
+    ]
+}
+
 PROCESS_RESULT_PAYLOAD = {
     "result": {
         "id": "proc_1",
@@ -222,6 +254,10 @@ class RecordingHTTPClient:
 
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/images"):
+            payload = IMAGE_LIST_PAYLOAD
+        elif url.endswith("/snapshots"):
+            payload = SNAPSHOT_LIST_PAYLOAD
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
         elif url.endswith("/snapshot"):
@@ -330,6 +366,10 @@ class RecordingAsyncHTTPClient:
 
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/images"):
+            payload = IMAGE_LIST_PAYLOAD
+        elif url.endswith("/snapshots"):
+            payload = SNAPSHOT_LIST_PAYLOAD
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
         elif url.endswith("/snapshot"):
@@ -470,6 +510,8 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
             limit=5,
         )
     )
+    images = manager.list_images()
+    snapshots = manager.list_snapshots()
     manager.create(
         CreateSandboxParams(
             image_name="node",
@@ -484,8 +526,10 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     )
 
     list_call = client.transport.client.calls[0]
-    create_call = client.transport.client.calls[1]
-    snapshot_call = client.transport.client.calls[2]
+    images_call = client.transport.client.calls[1]
+    snapshots_call = client.transport.client.calls[2]
+    create_call = client.transport.client.calls[3]
+    snapshot_call = client.transport.client.calls[4]
 
     assert list_call["params"] == {
         "status": "active",
@@ -495,6 +539,10 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert listed.total_count == 1
     assert listed.page == 2
     assert listed.per_page == 5
+    assert images_call["url"].endswith("/images")
+    assert images[0].image_name == "node"
+    assert snapshots_call["url"].endswith("/snapshots")
+    assert snapshots[0].compatibility_tag is None
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
@@ -616,6 +664,8 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
             limit=5,
         )
     )
+    images = await manager.list_images()
+    snapshots = await manager.list_snapshots()
     await manager.create(
         CreateSandboxParams(
             image_name="node",
@@ -630,8 +680,10 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     )
 
     list_call = client.transport.client.calls[0]
-    create_call = client.transport.client.calls[1]
-    snapshot_call = client.transport.client.calls[2]
+    images_call = client.transport.client.calls[1]
+    snapshots_call = client.transport.client.calls[2]
+    create_call = client.transport.client.calls[3]
+    snapshot_call = client.transport.client.calls[4]
 
     assert list_call["params"] == {
         "status": "active",
@@ -641,6 +693,10 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert listed.total_count == 1
     assert listed.page == 2
     assert listed.per_page == 5
+    assert images_call["url"].endswith("/images")
+    assert images[0].image_name == "node"
+    assert snapshots_call["url"].endswith("/snapshots")
+    assert snapshots[0].compatibility_tag is None
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",

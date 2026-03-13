@@ -194,7 +194,7 @@ class SandboxSnapshotSummary(SandboxBaseModel):
     image_name: str = Field(alias="imageName")
     image_id: str = Field(alias="imageId")
     status: SandboxSnapshotStatus
-    compatibility_tag: str = Field(alias="compatibilityTag")
+    compatibility_tag: Optional[str] = Field(alias="compatibilityTag")
     metadata: Dict[str, object]
     uploaded: bool
     created_at: datetime = Field(alias="createdAt")
