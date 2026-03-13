@@ -31,6 +31,7 @@ from hyperbrowser.models import (
     SandboxPresignFileParams,
     SandboxProcessListParams,
     SandboxProcessWaitParams,
+    SandboxSnapshotSummary,
     SandboxTerminalCreateParams,
     SandboxTerminalKillParams,
     SandboxTerminalWaitParams,
@@ -138,6 +139,20 @@ SNAPSHOT_LIST_PAYLOAD = {
             "updatedAt": "2026-03-12T00:00:01Z",
         }
     ]
+}
+
+SNAPSHOT_PAYLOAD_WITHOUT_COMPATIBILITY_TAG = {
+    "id": "snap_omitted",
+    "snapshotName": "snapshot-omitted",
+    "namespace": "team_1",
+    "imageNamespace": "team_1",
+    "imageName": "node",
+    "imageId": "img_123",
+    "status": "created",
+    "metadata": {},
+    "uploaded": True,
+    "createdAt": "2026-03-12T00:00:00Z",
+    "updatedAt": "2026-03-12T00:00:01Z",
 }
 
 PROCESS_RESULT_PAYLOAD = {
@@ -552,6 +567,12 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+
+
+def test_snapshot_summary_allows_missing_compatibility_tag():
+    snapshot = SandboxSnapshotSummary(**SNAPSHOT_PAYLOAD_WITHOUT_COMPATIBILITY_TAG)
+
+    assert snapshot.compatibility_tag is None
 
 
 def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
