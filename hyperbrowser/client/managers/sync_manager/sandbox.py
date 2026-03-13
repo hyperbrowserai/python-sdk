@@ -7,9 +7,14 @@ from ....models.sandbox import (
     SandboxExecParams,
     SandboxExposeParams,
     SandboxExposeResult,
+    SandboxImageListResponse,
+    SandboxListParams,
+    SandboxListResponse,
     SandboxMemorySnapshotParams,
     SandboxMemorySnapshotResult,
     SandboxRuntimeSession,
+    SandboxSnapshotListParams,
+    SandboxSnapshotListResponse,
     StartSandboxFromSnapshotParams,
 )
 from ....models.session import BasicResponse
@@ -287,6 +292,34 @@ class SandboxManager:
         sandbox = self.get(sandbox_id)
         sandbox.connect()
         return sandbox
+
+    def list(
+        self, params: SandboxListParams = SandboxListParams()
+    ) -> SandboxListResponse:
+        if not isinstance(params, SandboxListParams):
+            raise TypeError("params must be a SandboxListParams instance")
+        payload = self._request(
+            "GET",
+            "/sandboxes",
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SandboxListResponse(**payload)
+
+    def list_images(self) -> SandboxImageListResponse:
+        payload = self._request("GET", "/images")
+        return SandboxImageListResponse(**payload)
+
+    def list_snapshots(
+        self, params: SandboxSnapshotListParams = SandboxSnapshotListParams()
+    ) -> SandboxSnapshotListResponse:
+        if not isinstance(params, SandboxSnapshotListParams):
+            raise TypeError("params must be a SandboxSnapshotListParams instance")
+        payload = self._request(
+            "GET",
+            "/snapshots",
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SandboxSnapshotListResponse(**payload)
 
     def stop(self, sandbox_id: str) -> BasicResponse:
         payload = self._request("PUT", f"/sandbox/{sandbox_id}/stop")
