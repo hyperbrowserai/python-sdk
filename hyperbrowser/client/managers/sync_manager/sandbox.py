@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
@@ -7,14 +7,14 @@ from ....models.sandbox import (
     SandboxExecParams,
     SandboxExposeParams,
     SandboxExposeResult,
-    SandboxImageSummary,
+    SandboxImageListResponse,
     SandboxListParams,
     SandboxListResponse,
     SandboxMemorySnapshotParams,
     SandboxMemorySnapshotResult,
     SandboxRuntimeSession,
     SandboxSnapshotListParams,
-    SandboxSnapshotSummary,
+    SandboxSnapshotListResponse,
     StartSandboxFromSnapshotParams,
 )
 from ....models.session import BasicResponse
@@ -305,13 +305,13 @@ class SandboxManager:
         )
         return SandboxListResponse(**payload)
 
-    def list_images(self) -> List[SandboxImageSummary]:
+    def list_images(self) -> SandboxImageListResponse:
         payload = self._request("GET", "/images")
-        return [SandboxImageSummary(**image) for image in payload["images"]]
+        return SandboxImageListResponse(**payload)
 
     def list_snapshots(
         self, params: SandboxSnapshotListParams = SandboxSnapshotListParams()
-    ) -> List[SandboxSnapshotSummary]:
+    ) -> SandboxSnapshotListResponse:
         if not isinstance(params, SandboxSnapshotListParams):
             raise TypeError("params must be a SandboxSnapshotListParams instance")
         payload = self._request(
@@ -319,7 +319,7 @@ class SandboxManager:
             "/snapshots",
             params=params.model_dump(exclude_none=True, by_alias=True),
         )
-        return [SandboxSnapshotSummary(**snapshot) for snapshot in payload["snapshots"]]
+        return SandboxSnapshotListResponse(**payload)
 
     def stop(self, sandbox_id: str) -> BasicResponse:
         payload = self._request("PUT", f"/sandbox/{sandbox_id}/stop")

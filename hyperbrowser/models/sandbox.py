@@ -186,6 +186,14 @@ class SandboxImageSummary(SandboxBaseModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class SandboxImageListResponse(SandboxBaseModel):
+    images: List[SandboxImageSummary]
+    # TODO: add pagination metadata when /api/images supports it.
+    # total_count: Optional[int] = Field(default=None, alias="totalCount")
+    # page: Optional[int] = None
+    # per_page: Optional[int] = Field(default=None, alias="perPage")
+
+
 class SandboxSnapshotSummary(SandboxBaseModel):
     id: str
     snapshot_name: str = Field(alias="snapshotName")
@@ -204,6 +212,14 @@ class SandboxSnapshotSummary(SandboxBaseModel):
 class SandboxSnapshotListParams(SandboxBaseModel):
     status: Optional[SandboxSnapshotStatus] = Field(default=None, exclude=None)
     limit: Optional[int] = Field(default=None, ge=1)
+
+
+class SandboxSnapshotListResponse(SandboxBaseModel):
+    snapshots: List[SandboxSnapshotSummary]
+    # TODO: add pagination metadata when /api/snapshots supports it.
+    # total_count: Optional[int] = Field(default=None, alias="totalCount")
+    # page: Optional[int] = None
+    # per_page: Optional[int] = Field(default=None, alias="perPage")
 
 
 class SandboxMemorySnapshotParams(SandboxBaseModel):
