@@ -57,10 +57,13 @@ def _wait_for_created_snapshot(snapshot_id: str):
     deadline = time.monotonic() + LIST_POLL_TIMEOUT_SECONDS
 
     while time.monotonic() < deadline:
-        snapshots = client.sandboxes.list_snapshots(
+        response = client.sandboxes.list_snapshots(
             SandboxSnapshotListParams(limit=SNAPSHOT_LIST_LIMIT)
         )
-        match = next((entry for entry in snapshots if entry.id == snapshot_id), None)
+        match = next(
+            (entry for entry in response.snapshots if entry.id == snapshot_id),
+            None,
+        )
         if match is not None and match.status == "created":
             return match
 
@@ -93,7 +96,7 @@ def test_sandbox_list_e2e():
 
         images = client.sandboxes.list_images()
         listed_image = next(
-            (entry for entry in images if entry.id == memory_snapshot.image_id),
+            (entry for entry in images.images if entry.id == memory_snapshot.image_id),
             None,
         )
         assert listed_image is not None
@@ -116,6 +119,8 @@ def test_sandbox_list_e2e():
                 limit=SNAPSHOT_LIST_LIMIT,
             )
         )
-        assert any(entry.id == listed_snapshot.id for entry in created_snapshots)
+        assert any(
+            entry.id == listed_snapshot.id for entry in created_snapshots.snapshots
+        )
     finally:
         stop_sandbox_if_running(sandbox)

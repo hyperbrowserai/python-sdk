@@ -540,9 +540,9 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert listed.page == 2
     assert listed.per_page == 5
     assert images_call["url"].endswith("/images")
-    assert images[0].image_name == "node"
+    assert images.images[0].image_name == "node"
     assert snapshots_call["url"].endswith("/snapshots")
-    assert snapshots[0].compatibility_tag is None
+    assert snapshots.snapshots[0].compatibility_tag is None
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
@@ -694,9 +694,9 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert listed.page == 2
     assert listed.per_page == 5
     assert images_call["url"].endswith("/images")
-    assert images[0].image_name == "node"
+    assert images.images[0].image_name == "node"
     assert snapshots_call["url"].endswith("/snapshots")
-    assert snapshots[0].compatibility_tag is None
+    assert snapshots.snapshots[0].compatibility_tag is None
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",

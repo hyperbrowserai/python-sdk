@@ -57,10 +57,13 @@ async def _wait_for_created_snapshot(client, snapshot_id: str):
     deadline = asyncio.get_running_loop().time() + LIST_POLL_TIMEOUT_SECONDS
 
     while asyncio.get_running_loop().time() < deadline:
-        snapshots = await client.sandboxes.list_snapshots(
+        response = await client.sandboxes.list_snapshots(
             SandboxSnapshotListParams(limit=SNAPSHOT_LIST_LIMIT)
         )
-        match = next((entry for entry in snapshots if entry.id == snapshot_id), None)
+        match = next(
+            (entry for entry in response.snapshots if entry.id == snapshot_id),
+            None,
+        )
         if match is not None and match.status == "created":
             return match
 
@@ -95,7 +98,7 @@ async def test_async_sandbox_list_e2e():
 
         images = await client.sandboxes.list_images()
         listed_image = next(
-            (entry for entry in images if entry.id == memory_snapshot.image_id),
+            (entry for entry in images.images if entry.id == memory_snapshot.image_id),
             None,
         )
         assert listed_image is not None
@@ -120,7 +123,9 @@ async def test_async_sandbox_list_e2e():
                 limit=SNAPSHOT_LIST_LIMIT,
             )
         )
-        assert any(entry.id == listed_snapshot.id for entry in created_snapshots)
+        assert any(
+            entry.id == listed_snapshot.id for entry in created_snapshots.snapshots
+        )
     finally:
         await stop_sandbox_if_running_async(sandbox)
         await client.close()
