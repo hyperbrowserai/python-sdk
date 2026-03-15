@@ -13,8 +13,8 @@ from ....models.session import (
     UploadFileResponse,
     SessionEventLogListParams,
     SessionEventLogListResponse,
-    SessionEventLog,
     UpdateSessionProfileParams,
+    UpdateSessionProxyParams,
     SessionGetParams,
 )
 
@@ -175,6 +175,20 @@ class SessionManager:
             data={
                 "type": "profile",
                 "params": params_obj.model_dump(exclude_none=True, by_alias=True),
+            },
+        )
+        return BasicResponse(**response.data)
+
+    def update_proxy_params(
+        self,
+        id: str,
+        params: UpdateSessionProxyParams,
+    ) -> BasicResponse:
+        response = self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={
+                "type": "proxy",
+                "params": params.model_dump(exclude_none=True, by_alias=True),
             },
         )
         return BasicResponse(**response.data)
