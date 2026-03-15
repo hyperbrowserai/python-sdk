@@ -234,6 +234,8 @@ from .session import (
     UploadFileResponse,
     ImageCaptchaParam,
     UpdateSessionProfileParams,
+    UpdateSessionProxyLocationParams,
+    UpdateSessionProxyParams,
 )
 from .sandbox import (
     SandboxStatus,
@@ -485,6 +487,8 @@ __all__ = [
     "UploadFileResponse",
     "ImageCaptchaParam",
     "UpdateSessionProfileParams",
+    "UpdateSessionProxyLocationParams",
+    "UpdateSessionProxyParams",
     # sandbox
     "SandboxStatus",
     "SandboxRegion",

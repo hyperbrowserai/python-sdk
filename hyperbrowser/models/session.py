@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Any, List, Literal, Optional, Union, Dict
-from .computer_action import ComputerActionParams, ComputerActionResponse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -67,6 +66,37 @@ class UpdateSessionProfileParams(BaseModel):
     persist_network_cache: Optional[bool] = Field(
         default=None,
         serialization_alias="persistNetworkCache",
+    )
+
+
+class UpdateSessionProxyLocationParams(BaseModel):
+    """
+    Managed proxy geolocation overrides for a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    country: Optional[Country] = Field(default=None, serialization_alias="country")
+    state: Optional[State] = Field(default=None, serialization_alias="state")
+    city: Optional[str] = Field(default=None, serialization_alias="city")
+
+
+class UpdateSessionProxyParams(BaseModel):
+    """
+    Parameters for enabling, disabling, or reconfiguring a session proxy.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    enabled: bool = Field(serialization_alias="enabled")
+    static_ip_id: Optional[str] = Field(default=None, serialization_alias="staticIpId")
+    location: Optional[UpdateSessionProxyLocationParams] = Field(
+        default=None,
+        serialization_alias="location",
     )
 
 
