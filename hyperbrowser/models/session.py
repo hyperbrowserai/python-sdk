@@ -148,6 +148,24 @@ class SessionLaunchState(BaseModel):
     )
 
 
+class SessionCreditBreakdown(BaseModel):
+    """
+    Breakdown of credits used by a session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    credits_used: Optional[float] = Field(default=None, alias="creditsUsed")
+    browser_time_credits_used: Optional[float] = Field(
+        default=None, alias="browserTimeCreditsUsed"
+    )
+    proxy_data_credits_used: Optional[float] = Field(
+        default=None, alias="proxyDataCreditsUsed"
+    )
+
+
 class Session(BaseModel):
     """
     Represents a basic session in the Hyperbrowser system.
@@ -171,6 +189,9 @@ class Session(BaseModel):
         default=None, alias="launchState"
     )
     credits_used: Optional[float] = Field(default=None, alias="creditsUsed")
+    credit_breakdown: Optional[SessionCreditBreakdown] = Field(
+        default=None, alias="creditBreakdown"
+    )
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
