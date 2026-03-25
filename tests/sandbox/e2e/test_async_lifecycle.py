@@ -1,10 +1,8 @@
-import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 
-from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import CreateSandboxParams, SandboxRuntimeSession
 
 from tests.helpers.config import DEFAULT_IMAGE_NAME, create_async_client
@@ -13,35 +11,11 @@ from tests.helpers.http import get_image_by_name_async
 from tests.helpers.sandbox import (
     default_sandbox_params,
     stop_sandbox_if_running_async,
+    wait_for_created_snapshot_async,
     wait_for_runtime_ready_async,
 )
 
 CUSTOM_IMAGE_NAME = "node"
-SNAPSHOT_CREATE_RETRY_DELAY_SECONDS = 0.5
-SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS = 60
-
-
-async def _create_sandbox_with_snapshot_retry(client, params: CreateSandboxParams):
-    deadline = asyncio.get_running_loop().time() + SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS
-    last_error = None
-
-    while asyncio.get_running_loop().time() < deadline:
-        try:
-            return await client.sandboxes.create(params)
-        except HyperbrowserError as error:
-            is_snapshot_catalog_race = (
-                error.status_code == 404
-                and isinstance(str(error), str)
-                and "snapshot not found" in str(error).lower()
-            )
-            if not is_snapshot_catalog_race:
-                raise
-            last_error = error
-            await asyncio.sleep(SNAPSHOT_CREATE_RETRY_DELAY_SECONDS)
-
-    if isinstance(last_error, Exception):
-        raise last_error
-    raise RuntimeError("snapshot create retry failed")
 
 
 @pytest.mark.anyio
@@ -156,8 +130,10 @@ async def test_async_sandbox_lifecycle_e2e():
         assert custom_image_memory_snapshot.image_id == custom_image["id"]
         assert custom_image_memory_snapshot.image_namespace == custom_image["namespace"]
 
-        custom_snapshot_sandbox = await _create_sandbox_with_snapshot_retry(
-            client,
+        await wait_for_created_snapshot_async(
+            client, custom_image_memory_snapshot.snapshot_id
+        )
+        custom_snapshot_sandbox = await client.sandboxes.create(
             CreateSandboxParams(
                 snapshot_name=custom_image_memory_snapshot.snapshot_name,
                 snapshot_id=custom_image_memory_snapshot.snapshot_id,
@@ -259,8 +235,8 @@ async def test_async_sandbox_lifecycle_e2e():
             message_includes="not found",
         )
 
-        secondary = await _create_sandbox_with_snapshot_retry(
-            client,
+        await wait_for_created_snapshot_async(client, memory_snapshot.snapshot_id)
+        secondary = await client.sandboxes.create(
             CreateSandboxParams(
                 snapshot_name=memory_snapshot.snapshot_name,
                 snapshot_id=memory_snapshot.snapshot_id,

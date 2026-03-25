@@ -7,6 +7,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
     SandboxFileInfo,
+    SandboxFileWriteEntry,
     SandboxFileWriteInfo,
     SandboxTerminalStatus,
 )
@@ -27,7 +28,7 @@ def _build_sandbox_exposed_url(runtime, port: int) -> str:
     parsed = urlsplit(runtime.base_url)
     hostname = parsed.hostname
     if not hostname:
-        return runtime.base_url.rstrip("/")
+        return runtime.base_url
 
     exposed_host = f"{port}-{hostname}"
     netloc = exposed_host
@@ -39,9 +40,9 @@ def _build_sandbox_exposed_url(runtime, port: int) -> str:
             credentials = f"{credentials}:{parsed.password}"
         netloc = f"{credentials}@{netloc}"
 
-    return urlunsplit(
-        (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
-    ).rstrip("/")
+    path = parsed.path or "/"
+
+    return urlunsplit((parsed.scheme, netloc, path, parsed.query, parsed.fragment))
 
 
 def _expires_within_buffer(expires_at: Optional[datetime]) -> bool:
@@ -186,6 +187,32 @@ def _encode_write_data(data: Union[str, bytes, bytearray]) -> Dict[str, str]:
         "data": base64.b64encode(bytes(data)).decode("ascii"),
         "encoding": "base64",
     }
+
+
+def _encode_batch_write_entry(entry: SandboxFileWriteEntry) -> Dict[str, object]:
+    if isinstance(entry.data, str):
+        encoding = entry.encoding or "utf8"
+        if encoding not in {"utf8", "base64"}:
+            raise ValueError("encoding should be one of: utf8, base64")
+        payload: Dict[str, object] = {
+            "path": entry.path,
+            "data": entry.data,
+            "encoding": encoding,
+        }
+    else:
+        if entry.encoding not in {None, "base64"}:
+            raise ValueError("encoding must be base64 when data is bytes")
+        payload = {
+            "path": entry.path,
+            "data": base64.b64encode(bytes(entry.data)).decode("ascii"),
+            "encoding": "base64",
+        }
+
+    if entry.append is not None:
+        payload["append"] = entry.append
+    if entry.mode is not None:
+        payload["mode"] = entry.mode
+    return payload
 
 
 def _normalize_terminal_output_chunk(entry: Dict[str, object]) -> Dict[str, object]:

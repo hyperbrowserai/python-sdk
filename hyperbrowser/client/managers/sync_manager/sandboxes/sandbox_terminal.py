@@ -2,6 +2,7 @@ import base64
 import json
 import socket
 from typing import Dict, Optional, Union
+from urllib.parse import urlencode
 
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect as sync_ws_connect
@@ -160,11 +161,17 @@ class SandboxTerminalHandle:
         self._status = _normalize_terminal_status(payload["pty"])
         return self.current
 
-    def attach(self) -> SandboxTerminalConnection:
+    def attach(self, cursor: Optional[int] = None) -> SandboxTerminalConnection:
         connection = self._get_connection_info()
+        query = urlencode(
+            [
+                ("sessionId", connection.sandbox_id),
+                *([("cursor", str(cursor))] if cursor is not None else []),
+            ]
+        )
         target = to_websocket_transport_target(
             connection.base_url,
-            f"/sandbox/pty/{self.id}/ws?sessionId={connection.sandbox_id}",
+            f"/sandbox/pty/{self.id}/ws?{query}",
             self._runtime_proxy_override,
         )
         headers = build_headers(connection.token, host_header=target.host_header)

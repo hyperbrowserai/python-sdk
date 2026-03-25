@@ -3,9 +3,12 @@ from pydantic import ValidationError
 
 from hyperbrowser.models import (
     CreateSandboxParams,
+    SandboxExposeParams,
+    SandboxFileWriteEntry,
     SandboxExecParams,
     SandboxProcessListParams,
     SandboxProcessWaitParams,
+    SandboxSnapshotListParams,
 )
 
 
@@ -13,6 +16,18 @@ def test_create_sandbox_params_accepts_image_source():
     params = CreateSandboxParams(image_name="node")
 
     assert params.model_dump(by_alias=True, exclude_none=True) == {"imageName": "node"}
+
+
+def test_create_sandbox_params_serializes_exposed_ports():
+    params = CreateSandboxParams(
+        image_name="node",
+        exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
+    )
+
+    assert params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "node",
+        "exposedPorts": [{"port": 3000, "auth": True}],
+    }
 
 
 def test_create_sandbox_params_accepts_snapshot_source():
@@ -97,4 +112,36 @@ def test_sandbox_process_list_params_serialize_created_filters_as_snake_case():
         "cursor": "cursor-1",
         "created_after": 100,
         "created_before": 200,
+    }
+
+
+def test_sandbox_snapshot_list_params_serialize_image_name_as_camel_case():
+    params = SandboxSnapshotListParams(
+        status="created",
+        limit=10,
+        image_name="node",
+    )
+
+    assert params.model_dump(by_alias=True, exclude_none=True) == {
+        "status": "created",
+        "limit": 10,
+        "imageName": "node",
+    }
+
+
+def test_sandbox_file_write_entry_supports_batch_write_options():
+    entry = SandboxFileWriteEntry(
+        path="/tmp/example.txt",
+        data="hello",
+        encoding="base64",
+        append=True,
+        mode="600",
+    )
+
+    assert entry.model_dump(exclude_none=True) == {
+        "path": "/tmp/example.txt",
+        "data": "hello",
+        "encoding": "base64",
+        "append": True,
+        "mode": "600",
     }

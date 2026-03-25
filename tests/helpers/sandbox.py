@@ -1,9 +1,13 @@
 import time
 
 from hyperbrowser.exceptions import HyperbrowserError
-from hyperbrowser.models import CreateSandboxParams
+from hyperbrowser.models import CreateSandboxParams, SandboxSnapshotListParams
 
 from tests.helpers.config import DEFAULT_IMAGE_NAME
+
+SNAPSHOT_LIST_LIMIT = 200
+LIST_POLL_DELAY_SECONDS = 0.5
+LIST_POLL_TIMEOUT_SECONDS = 90
 
 
 def default_sandbox_params(prefix: str) -> CreateSandboxParams:
@@ -54,6 +58,34 @@ def wait_for_runtime_ready(
     raise RuntimeError("sandbox runtime did not become ready")
 
 
+def wait_for_created_snapshot(
+    client,
+    snapshot_id: str,
+    *,
+    limit: int = SNAPSHOT_LIST_LIMIT,
+    delay_seconds: float = LIST_POLL_DELAY_SECONDS,
+    timeout_seconds: float = LIST_POLL_TIMEOUT_SECONDS,
+):
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        response = client.sandboxes.list_snapshots(
+            SandboxSnapshotListParams(limit=limit)
+        )
+        match = next(
+            (entry for entry in response.snapshots if entry.id == snapshot_id),
+            None,
+        )
+        if match is not None and match.status == "created":
+            return match
+
+        time.sleep(delay_seconds)
+
+    raise RuntimeError(
+        f"snapshot {snapshot_id} did not appear as created in list_snapshots()"
+    )
+
+
 async def stop_sandbox_if_running_async(sandbox) -> None:
     if sandbox is None:
         return
@@ -96,3 +128,33 @@ async def wait_for_runtime_ready_async(
     if isinstance(last_error, Exception):
         raise last_error
     raise RuntimeError("sandbox runtime did not become ready")
+
+
+async def wait_for_created_snapshot_async(
+    client,
+    snapshot_id: str,
+    *,
+    limit: int = SNAPSHOT_LIST_LIMIT,
+    delay_seconds: float = LIST_POLL_DELAY_SECONDS,
+    timeout_seconds: float = LIST_POLL_TIMEOUT_SECONDS,
+):
+    import asyncio
+
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+
+    while asyncio.get_running_loop().time() < deadline:
+        response = await client.sandboxes.list_snapshots(
+            SandboxSnapshotListParams(limit=limit)
+        )
+        match = next(
+            (entry for entry in response.snapshots if entry.id == snapshot_id),
+            None,
+        )
+        if match is not None and match.status == "created":
+            return match
+
+        await asyncio.sleep(delay_seconds)
+
+    raise RuntimeError(
+        f"snapshot {snapshot_id} did not appear as created in list_snapshots()"
+    )

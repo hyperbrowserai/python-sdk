@@ -69,6 +69,32 @@ class SandboxRuntimeTarget(SandboxBaseModel):
     base_url: str = Field(alias="baseUrl")
 
 
+class SandboxExposeParams(SandboxBaseModel):
+    port: int
+    auth: Optional[bool] = None
+
+
+class SandboxExposeResult(SandboxBaseModel):
+    port: int
+    auth: bool
+    url: str
+    browser_url: Optional[str] = Field(default=None, alias="browserUrl")
+    browser_url_expires_at: Optional[datetime] = Field(
+        default=None,
+        alias="browserUrlExpiresAt",
+    )
+
+    @field_validator("browser_url_expires_at", mode="before")
+    @classmethod
+    def parse_browser_url_expires_at(cls, value):
+        return _parse_optional_datetime(value)
+
+
+class SandboxUnexposeResult(SandboxBaseModel):
+    port: int
+    exposed: bool
+
+
 class Sandbox(SandboxBaseModel):
     id: str
     team_id: str = Field(alias="teamId")
@@ -91,6 +117,10 @@ class Sandbox(SandboxBaseModel):
     duration: int
     proxy_bytes_used: Optional[int] = Field(default=None, alias="proxyBytesUsed")
     runtime: SandboxRuntimeTarget
+    exposed_ports: List[SandboxExposeResult] = Field(
+        default_factory=list,
+        alias="exposedPorts",
+    )
 
     @field_validator(
         "end_time",
@@ -140,6 +170,10 @@ class CreateSandboxParams(SandboxBaseModel):
     enable_recording: Optional[bool] = Field(
         default=None, serialization_alias="enableRecording"
     )
+    exposed_ports: Optional[List[SandboxExposeParams]] = Field(
+        default=None,
+        serialization_alias="exposedPorts",
+    )
     timeout_minutes: Optional[int] = Field(
         default=None, serialization_alias="timeoutMinutes"
     )
@@ -168,6 +202,9 @@ class SandboxListParams(SandboxBaseModel):
     status: Optional[SandboxStatus] = Field(default=None, exclude=None)
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=10, ge=1)
+    start: Optional[int] = None
+    end: Optional[int] = None
+    search: Optional[str] = None
 
 
 class SandboxListResponse(SandboxBaseModel):
@@ -212,6 +249,7 @@ class SandboxSnapshotSummary(SandboxBaseModel):
 class SandboxSnapshotListParams(SandboxBaseModel):
     status: Optional[SandboxSnapshotStatus] = Field(default=None, exclude=None)
     limit: Optional[int] = Field(default=None, ge=1)
+    image_name: Optional[str] = Field(default=None, serialization_alias="imageName")
 
 
 class SandboxSnapshotListResponse(SandboxBaseModel):
@@ -236,17 +274,6 @@ class SandboxMemorySnapshotResult(SandboxBaseModel):
     image_name: str = Field(alias="imageName")
     image_id: str = Field(alias="imageId")
     image_namespace: str = Field(alias="imageNamespace")
-
-
-class SandboxExposeParams(SandboxBaseModel):
-    port: int
-    auth: Optional[bool] = None
-
-
-class SandboxExposeResult(SandboxBaseModel):
-    port: int
-    auth: bool
-    url: str
 
 
 class SandboxExecParams(SandboxBaseModel):
@@ -390,6 +417,9 @@ SandboxFileWriteData = Union[str, bytes]
 class SandboxFileWriteEntry(SandboxBaseModel):
     path: str
     data: SandboxFileWriteData
+    encoding: Optional[SandboxFileEncoding] = None
+    append: Optional[bool] = None
+    mode: Optional[str] = None
 
 
 class SandboxFileTextWriteOptions(SandboxBaseModel):

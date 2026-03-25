@@ -100,6 +100,118 @@ def main():
 # Run the asyncio event loop
 main()
 ```
+
+## Sandboxes
+
+The sync and async clients expose the same sandbox APIs through `client.sandboxes`.
+
+### Create a sandbox with pre-exposed ports
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import CreateSandboxParams, SandboxExposeParams
+
+client = Hyperbrowser(api_key="test-key")
+sandbox = client.sandboxes.create(
+    CreateSandboxParams(
+        image_name="node",
+        exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
+    )
+)
+
+print(sandbox.exposed_ports[0].browser_url)
+sandbox.stop()
+client.close()
+```
+
+### List sandboxes with filters
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import SandboxListParams
+
+client = Hyperbrowser(api_key="test-key")
+result = client.sandboxes.list(
+    SandboxListParams(
+        status="active",
+        search="sandbox",
+        start=1711929600000,
+        end=1712016000000,
+        limit=20,
+    )
+)
+
+for sandbox in result.sandboxes:
+    print(sandbox.id, sandbox.status)
+```
+
+### List snapshots for a specific image
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import SandboxSnapshotListParams
+
+client = Hyperbrowser(api_key="test-key")
+snapshots = client.sandboxes.list_snapshots(
+    SandboxSnapshotListParams(image_name="node", status="created", limit=10)
+)
+```
+
+### Expose and unexpose ports
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import CreateSandboxParams, SandboxExposeParams
+
+client = Hyperbrowser(api_key="test-key")
+sandbox = client.sandboxes.create(CreateSandboxParams(image_name="node"))
+
+result = sandbox.expose(SandboxExposeParams(port=8080, auth=True))
+print(result.url, result.browser_url)
+
+sandbox.unexpose(8080)
+```
+
+### Batch file writes with per-file options
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import CreateSandboxParams, SandboxFileWriteEntry
+
+client = Hyperbrowser(api_key="test-key")
+sandbox = client.sandboxes.create(CreateSandboxParams(image_name="node"))
+
+sandbox.files.write(
+    [
+        SandboxFileWriteEntry(
+            path="/tmp/config.json",
+            data='{"debug":true}\n',
+            append=True,
+            mode="600",
+        ),
+        SandboxFileWriteEntry(
+            path="/tmp/blob.bin",
+            data=b"\x00\x01\x02",
+        ),
+    ]
+)
+```
+
+### Resume terminal output after reconnect
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import CreateSandboxParams, SandboxTerminalCreateParams
+
+client = Hyperbrowser(api_key="test-key")
+sandbox = client.sandboxes.create(CreateSandboxParams(image_name="node"))
+terminal = sandbox.terminal.create(SandboxTerminalCreateParams(command="bash"))
+
+connection = terminal.attach(cursor=10)
+for event in connection.events():
+    print(event)
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

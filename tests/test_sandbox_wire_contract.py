@@ -1,5 +1,7 @@
 import httpx
 import pytest
+import hyperbrowser.client.managers.async_manager.sandboxes.sandbox_terminal as async_terminal_module
+import hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal as sync_terminal_module
 
 from hyperbrowser.client.managers.async_manager.sandbox import (
     SandboxManager as AsyncSandboxManager,
@@ -25,16 +27,20 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import
 )
 from hyperbrowser.models import (
     CreateSandboxParams,
+    SandboxExposeParams,
     SandboxExecParams,
+    SandboxFileWriteEntry,
     SandboxListParams,
     SandboxMemorySnapshotParams,
     SandboxPresignFileParams,
     SandboxProcessListParams,
     SandboxProcessWaitParams,
+    SandboxSnapshotListParams,
     SandboxSnapshotSummary,
     SandboxTerminalCreateParams,
     SandboxTerminalKillParams,
     SandboxTerminalWaitParams,
+    SandboxUnexposeResult,
 )
 
 
@@ -62,6 +68,15 @@ SANDBOX_DETAIL_PAYLOAD = {
         "host": "runtime.example.com",
         "baseUrl": "https://runtime.example.com",
     },
+    "exposedPorts": [
+        {
+            "port": 3000,
+            "auth": True,
+            "url": "https://3000-runtime.example.com/",
+            "browserUrl": "https://3000-runtime.example.com/_hb/auth?grant=test&next=%2F",
+            "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
+        }
+    ],
     "token": "tok",
     "tokenExpiresAt": "2026-03-12T01:00:00Z",
 }
@@ -102,6 +117,14 @@ SANDBOX_LIST_PAYLOAD = {
                 "host": "runtime.example.com",
                 "baseUrl": "https://runtime.example.com",
             },
+            "exposedPorts": [
+                {
+                    "port": 3000,
+                    "auth": False,
+                    "url": "https://3000-runtime.example.com/",
+                    "browserUrl": "https://3000-runtime.example.com/",
+                }
+            ],
         }
     ],
     "totalCount": 1,
@@ -252,6 +275,29 @@ MOVE_FILE_PAYLOAD = {
     }
 }
 
+WRITE_FILE_PAYLOAD = {
+    "files": [
+        {
+            "path": "/tmp/a.txt",
+            "name": "a.txt",
+            "type": "file",
+        }
+    ]
+}
+
+EXPOSE_PAYLOAD = {
+    "port": 3000,
+    "auth": True,
+    "url": "https://3000-runtime.example.com/",
+    "browserUrl": "https://3000-runtime.example.com/_hb/auth?grant=test&next=%2F",
+    "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
+}
+
+UNEXPOSE_PAYLOAD = {
+    "port": 3000,
+    "exposed": False,
+}
+
 
 class RecordingHTTPClient:
     def __init__(self):
@@ -275,6 +321,10 @@ class RecordingHTTPClient:
             payload = SNAPSHOT_LIST_PAYLOAD
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
+        elif url.endswith("/expose"):
+            payload = EXPOSE_PAYLOAD
+        elif url.endswith("/unexpose"):
+            payload = UNEXPOSE_PAYLOAD
         elif url.endswith("/snapshot"):
             payload = SNAPSHOT_RESULT_PAYLOAD
         else:
@@ -328,6 +378,8 @@ class RecordingTransport:
             return UPLOAD_PRESIGN_PAYLOAD
         if path == "/sandbox/files/presign-download":
             return DOWNLOAD_PRESIGN_PAYLOAD
+        if path == "/sandbox/files/write":
+            return WRITE_FILE_PAYLOAD
         if path == "/sandbox/files/move":
             return MOVE_FILE_PAYLOAD
         raise AssertionError(f"Unexpected request path: {path}")
@@ -387,6 +439,10 @@ class RecordingAsyncHTTPClient:
             payload = SNAPSHOT_LIST_PAYLOAD
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
+        elif url.endswith("/expose"):
+            payload = EXPOSE_PAYLOAD
+        elif url.endswith("/unexpose"):
+            payload = UNEXPOSE_PAYLOAD
         elif url.endswith("/snapshot"):
             payload = SNAPSHOT_RESULT_PAYLOAD
         else:
@@ -415,21 +471,29 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         status="active",
         page=2,
         limit=5,
+        start=100,
+        end=200,
+        search="sandbox",
     ).model_dump(by_alias=True, exclude_none=True) == {
         "status": "active",
         "page": 2,
         "limit": 5,
+        "start": 100,
+        "end": 200,
+        "search": "sandbox",
     }
 
     assert CreateSandboxParams(
         image_name="node",
         image_id="img-id",
         enable_recording=True,
+        exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
         timeout_minutes=15,
     ).model_dump(by_alias=True, exclude_none=True) == {
         "imageName": "node",
         "imageId": "img-id",
         "enableRecording": True,
+        "exposedPorts": [{"port": 3000, "auth": True}],
         "timeoutMinutes": 15,
     }
 
@@ -471,6 +535,16 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         "cursor": "cursor-1",
         "created_after": 100,
         "created_before": 200,
+    }
+
+    assert SandboxSnapshotListParams(
+        status="created",
+        limit=10,
+        image_name="node",
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "status": "created",
+        "limit": 10,
+        "imageName": "node",
     }
 
     assert SandboxPresignFileParams(
@@ -517,21 +591,28 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
 def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeSyncClient()
     manager = SandboxManager(client)
+    runtime = type("Runtime", (), {"base_url": "https://runtime.example.com"})()
 
     listed = manager.list(
         SandboxListParams(
             status="active",
             page=2,
             limit=5,
+            start=100,
+            end=200,
+            search="sandbox",
         )
     )
     images = manager.list_images()
-    snapshots = manager.list_snapshots()
-    manager.create(
+    snapshots = manager.list_snapshots(
+        SandboxSnapshotListParams(status="created", limit=10, image_name="node")
+    )
+    sandbox = manager.create(
         CreateSandboxParams(
             image_name="node",
             image_id="img-id",
             enable_recording=True,
+            exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
             timeout_minutes=15,
         )
     )
@@ -539,17 +620,28 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
         "sbx_123",
         SandboxMemorySnapshotParams(snapshot_name="snap"),
     )
+    exposed = manager.expose(
+        "sbx_123",
+        SandboxExposeParams(port=3000, auth=True),
+        runtime=runtime,
+    )
+    unexposed = manager.unexpose("sbx_123", 3000)
 
     list_call = client.transport.client.calls[0]
     images_call = client.transport.client.calls[1]
     snapshots_call = client.transport.client.calls[2]
     create_call = client.transport.client.calls[3]
     snapshot_call = client.transport.client.calls[4]
+    expose_call = client.transport.client.calls[5]
+    unexpose_call = client.transport.client.calls[6]
 
     assert list_call["params"] == {
         "status": "active",
         "page": 2,
         "limit": 5,
+        "start": 100,
+        "end": 200,
+        "search": "sandbox",
     }
     assert listed.total_count == 1
     assert listed.page == 2
@@ -557,16 +649,29 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert images_call["url"].endswith("/images")
     assert images.images[0].image_name == "node"
     assert snapshots_call["url"].endswith("/snapshots")
+    assert snapshots_call["params"] == {
+        "status": "created",
+        "limit": 10,
+        "imageName": "node",
+    }
     assert snapshots.snapshots[0].compatibility_tag is None
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
         "enableRecording": True,
+        "exposedPorts": [{"port": 3000, "auth": True}],
         "timeoutMinutes": 15,
     }
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+    assert sandbox.exposed_ports[0].browser_url is not None
+    assert expose_call["json"] == {"port": 3000, "auth": True}
+    assert exposed.browser_url is not None
+    assert expose_call["url"].endswith("/sandbox/sbx_123/expose")
+    assert isinstance(unexposed, SandboxUnexposeResult)
+    assert unexpose_call["json"] == {"port": 3000}
+    assert unexpose_call["url"].endswith("/sandbox/sbx_123/unexpose")
 
 
 def test_snapshot_summary_allows_missing_compatibility_tag():
@@ -611,6 +716,17 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
     terminal_handle.wait(timeout_ms=800, include_output=True)
 
     files = SandboxFilesApi(transport, lambda: None)
+    files.write(
+        [
+            SandboxFileWriteEntry(
+                path="/tmp/a.txt",
+                data="aGVsbG8=",
+                encoding="base64",
+                append=True,
+                mode="600",
+            )
+        ]
+    )
     files.get_watch("watch_1", include_events=True)
     files.upload_url("/tmp/file.txt", expires_in_seconds=60, one_time=True)
     files.download_url("/tmp/file.txt", expires_in_seconds=30, one_time=False)
@@ -655,18 +771,29 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
         "timeoutMs": 800,
         "includeOutput": True,
     }
-    assert transport.calls[7]["params"] == {"includeEvents": True}
-    assert transport.calls[8]["json_body"] == {
+    assert transport.calls[7]["json_body"] == {
+        "files": [
+            {
+                "path": "/tmp/a.txt",
+                "data": "aGVsbG8=",
+                "encoding": "base64",
+                "append": True,
+                "mode": "600",
+            }
+        ]
+    }
+    assert transport.calls[8]["params"] == {"includeEvents": True}
+    assert transport.calls[9]["json_body"] == {
         "path": "/tmp/file.txt",
         "expiresInSeconds": 60,
         "oneTime": True,
     }
-    assert transport.calls[9]["json_body"] == {
+    assert transport.calls[10]["json_body"] == {
         "path": "/tmp/file.txt",
         "expiresInSeconds": 30,
         "oneTime": False,
     }
-    assert transport.calls[10]["json_body"] == {
+    assert transport.calls[11]["json_body"] == {
         "from": "/tmp/source.txt",
         "to": "/tmp/destination.txt",
         "overwrite": True,
@@ -677,21 +804,28 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
 async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeAsyncClient()
     manager = AsyncSandboxManager(client)
+    runtime = type("Runtime", (), {"base_url": "https://runtime.example.com"})()
 
     listed = await manager.list(
         SandboxListParams(
             status="active",
             page=2,
             limit=5,
+            start=100,
+            end=200,
+            search="sandbox",
         )
     )
     images = await manager.list_images()
-    snapshots = await manager.list_snapshots()
-    await manager.create(
+    snapshots = await manager.list_snapshots(
+        SandboxSnapshotListParams(status="created", limit=10, image_name="node")
+    )
+    sandbox = await manager.create(
         CreateSandboxParams(
             image_name="node",
             image_id="img-id",
             enable_recording=True,
+            exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
             timeout_minutes=15,
         )
     )
@@ -699,17 +833,28 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
         "sbx_123",
         SandboxMemorySnapshotParams(snapshot_name="snap"),
     )
+    exposed = await manager.expose(
+        "sbx_123",
+        SandboxExposeParams(port=3000, auth=True),
+        runtime=runtime,
+    )
+    unexposed = await manager.unexpose("sbx_123", 3000)
 
     list_call = client.transport.client.calls[0]
     images_call = client.transport.client.calls[1]
     snapshots_call = client.transport.client.calls[2]
     create_call = client.transport.client.calls[3]
     snapshot_call = client.transport.client.calls[4]
+    expose_call = client.transport.client.calls[5]
+    unexpose_call = client.transport.client.calls[6]
 
     assert list_call["params"] == {
         "status": "active",
         "page": 2,
         "limit": 5,
+        "start": 100,
+        "end": 200,
+        "search": "sandbox",
     }
     assert listed.total_count == 1
     assert listed.page == 2
@@ -717,16 +862,27 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert images_call["url"].endswith("/images")
     assert images.images[0].image_name == "node"
     assert snapshots_call["url"].endswith("/snapshots")
+    assert snapshots_call["params"] == {
+        "status": "created",
+        "limit": 10,
+        "imageName": "node",
+    }
     assert snapshots.snapshots[0].compatibility_tag is None
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
         "enableRecording": True,
+        "exposedPorts": [{"port": 3000, "auth": True}],
         "timeoutMinutes": 15,
     }
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+    assert sandbox.exposed_ports[0].browser_url is not None
+    assert expose_call["json"] == {"port": 3000, "auth": True}
+    assert exposed.browser_url is not None
+    assert isinstance(unexposed, SandboxUnexposeResult)
+    assert unexpose_call["json"] == {"port": 3000}
 
 
 @pytest.mark.anyio
@@ -766,6 +922,17 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
     await terminal_handle.wait(timeout_ms=800, include_output=True)
 
     files = AsyncSandboxFilesApi(transport, lambda: None)
+    await files.write(
+        [
+            SandboxFileWriteEntry(
+                path="/tmp/a.txt",
+                data="aGVsbG8=",
+                encoding="base64",
+                append=True,
+                mode="600",
+            )
+        ]
+    )
     await files.get_watch("watch_1", include_events=True)
     await files.upload_url("/tmp/file.txt", expires_in_seconds=60, one_time=True)
     await files.download_url("/tmp/file.txt", expires_in_seconds=30, one_time=False)
@@ -810,19 +977,114 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
         "timeoutMs": 800,
         "includeOutput": True,
     }
-    assert transport.calls[7]["params"] == {"includeEvents": True}
-    assert transport.calls[8]["json_body"] == {
+    assert transport.calls[7]["json_body"] == {
+        "files": [
+            {
+                "path": "/tmp/a.txt",
+                "data": "aGVsbG8=",
+                "encoding": "base64",
+                "append": True,
+                "mode": "600",
+            }
+        ]
+    }
+    assert transport.calls[8]["params"] == {"includeEvents": True}
+    assert transport.calls[9]["json_body"] == {
         "path": "/tmp/file.txt",
         "expiresInSeconds": 60,
         "oneTime": True,
     }
-    assert transport.calls[9]["json_body"] == {
+    assert transport.calls[10]["json_body"] == {
         "path": "/tmp/file.txt",
         "expiresInSeconds": 30,
         "oneTime": False,
     }
-    assert transport.calls[10]["json_body"] == {
+    assert transport.calls[11]["json_body"] == {
         "from": "/tmp/source.txt",
         "to": "/tmp/destination.txt",
         "overwrite": True,
     }
+
+
+def test_sync_terminal_attach_includes_cursor(monkeypatch):
+    captured = {}
+
+    class DummyTarget:
+        url = "wss://runtime.example.com/sandbox/pty/pty_1/ws?sessionId=sbx_123&cursor=7"
+        host_header = None
+        connect_host = None
+        connect_port = None
+
+    def fake_target(base_url, path, runtime_proxy_override):
+        captured["path"] = path
+        return DummyTarget()
+
+    def fake_connect(url, additional_headers=None, open_timeout=None, **kwargs):
+        captured["url"] = url
+        return object()
+
+    monkeypatch.setattr(sync_terminal_module, "to_websocket_transport_target", fake_target)
+    monkeypatch.setattr(sync_terminal_module, "sync_ws_connect", fake_connect)
+
+    handle = sync_terminal_module.SandboxTerminalHandle(
+        transport=type("Transport", (), {"_timeout": 30})(),
+        get_connection_info=lambda: type(
+            "Conn",
+            (),
+            {
+                "sandbox_id": "sbx_123",
+                "base_url": "https://runtime.example.com",
+                "token": "tok",
+            },
+        )(),
+        status=sync_terminal_module._normalize_terminal_status(PTY_PAYLOAD["pty"]),
+    )
+
+    handle.attach(cursor=7)
+
+    assert "cursor=7" in captured["path"]
+    assert "cursor=7" in captured["url"]
+
+
+@pytest.mark.anyio
+async def test_async_terminal_attach_includes_cursor(monkeypatch):
+    captured = {}
+
+    class DummyTarget:
+        url = "wss://runtime.example.com/sandbox/pty/pty_1/ws?sessionId=sbx_123&cursor=7"
+        host_header = None
+        connect_host = None
+        connect_port = None
+
+    def fake_target(base_url, path, runtime_proxy_override):
+        captured["path"] = path
+        return DummyTarget()
+
+    async def fake_connect(url, additional_headers=None, open_timeout=None, **kwargs):
+        captured["url"] = url
+        return object()
+
+    monkeypatch.setattr(async_terminal_module, "to_websocket_transport_target", fake_target)
+    monkeypatch.setattr(async_terminal_module, "async_ws_connect", fake_connect)
+
+    async def get_connection_info():
+        return type(
+            "Conn",
+            (),
+            {
+                "sandbox_id": "sbx_123",
+                "base_url": "https://runtime.example.com",
+                "token": "tok",
+            },
+        )()
+
+    handle = async_terminal_module.SandboxTerminalHandle(
+        transport=type("Transport", (), {"_timeout": 30})(),
+        get_connection_info=get_connection_info,
+        status=async_terminal_module._normalize_terminal_status(PTY_PAYLOAD["pty"]),
+    )
+
+    await handle.attach(cursor=7)
+
+    assert "cursor=7" in captured["path"]
+    assert "cursor=7" in captured["url"]
