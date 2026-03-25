@@ -2,6 +2,7 @@ import base64
 import json
 import socket
 from typing import AsyncIterator, Dict, Optional, Union
+from urllib.parse import urlencode
 
 from websockets.asyncio.client import connect as async_ws_connect
 from websockets.exceptions import ConnectionClosed
@@ -160,11 +161,20 @@ class SandboxTerminalHandle:
         self._status = _normalize_terminal_status(payload["pty"])
         return self.current
 
-    async def attach(self) -> SandboxTerminalConnection:
+    async def attach(
+        self,
+        cursor: Optional[int] = None,
+    ) -> SandboxTerminalConnection:
         connection = await self._get_connection_info()
+        query = urlencode(
+            [
+                ("sessionId", connection.sandbox_id),
+                *([("cursor", str(cursor))] if cursor is not None else []),
+            ]
+        )
         target = to_websocket_transport_target(
             connection.base_url,
-            f"/sandbox/pty/{self.id}/ws?sessionId={connection.sandbox_id}",
+            f"/sandbox/pty/{self.id}/ws?{query}",
             self._runtime_proxy_override,
         )
         headers = build_headers(connection.token, host_header=target.host_header)

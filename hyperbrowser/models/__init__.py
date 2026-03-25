@@ -259,6 +259,7 @@ from .sandbox import (
     SandboxMemorySnapshotResult,
     SandboxExposeParams,
     SandboxExposeResult,
+    SandboxUnexposeResult,
     SandboxProcessStatus,
     SandboxExecParams,
     SandboxProcessSummary,

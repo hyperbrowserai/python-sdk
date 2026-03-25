@@ -32,6 +32,7 @@ from .....models.sandbox import (
 from .....sandbox_common import build_headers, to_websocket_transport_target
 from ...sandboxes.shared import (
     DEFAULT_WATCH_TIMEOUT_MS,
+    _encode_batch_write_entry,
     _copy_model,
     _encode_write_data,
     _normalize_event_type,
@@ -371,12 +372,7 @@ class SandboxFilesApi:
         for entry in path_or_files:
             if not isinstance(entry, SandboxFileWriteEntry):
                 raise TypeError("files must contain SandboxFileWriteEntry instances")
-            encoded_files.append(
-                {
-                    "path": entry.path,
-                    **_encode_write_data(entry.data),
-                }
-            )
+            encoded_files.append(_encode_batch_write_entry(entry))
 
         payload = await self._transport.request_json(
             "/sandbox/files/write",

@@ -15,6 +15,7 @@ from ....models.sandbox import (
     SandboxRuntimeSession,
     SandboxSnapshotListParams,
     SandboxSnapshotListResponse,
+    SandboxUnexposeResult,
     StartSandboxFromSnapshotParams,
 )
 from ....models.session import BasicResponse
@@ -113,6 +114,10 @@ class SandboxHandle:
     def session_url(self) -> str:
         return self._detail.session_url
 
+    @property
+    def exposed_ports(self):
+        return self._detail.exposed_ports
+
     def to_dict(self):
         return self._detail.model_dump()
 
@@ -152,7 +157,27 @@ class SandboxHandle:
     def expose(self, params: SandboxExposeParams) -> SandboxExposeResult:
         if not isinstance(params, SandboxExposeParams):
             raise TypeError("params must be a SandboxExposeParams instance")
-        return self._service.expose(self.id, params, runtime=self.runtime)
+        result = self._service.expose(self.id, params, runtime=self.runtime)
+        exposed_ports = [
+            port for port in self._detail.exposed_ports if port.port != result.port
+        ]
+        exposed_ports.append(result)
+        exposed_ports.sort(key=lambda port: port.port)
+        self._detail = self._detail.model_copy(update={"exposed_ports": exposed_ports})
+        return result
+
+    def unexpose(self, port: int) -> SandboxUnexposeResult:
+        result = self._service.unexpose(self.id, port)
+        self._detail = self._detail.model_copy(
+            update={
+                "exposed_ports": [
+                    exposed_port
+                    for exposed_port in self._detail.exposed_ports
+                    if exposed_port.port != port
+                ]
+            }
+        )
+        return result
 
     def get_exposed_url(self, port: int) -> str:
         return _build_sandbox_exposed_url(self.runtime, port)
@@ -372,11 +397,17 @@ class SandboxManager:
             data=params.model_dump(exclude_none=True, by_alias=True),
         )
         target_runtime = runtime or self.get_detail(sandbox_id).runtime
-        return SandboxExposeResult(
-            port=payload["port"],
-            auth=payload["auth"],
-            url=_build_sandbox_exposed_url(target_runtime, payload["port"]),
+        if "url" not in payload:
+            payload["url"] = _build_sandbox_exposed_url(target_runtime, payload["port"])
+        return SandboxExposeResult(**payload)
+
+    def unexpose(self, sandbox_id: str, port: int) -> SandboxUnexposeResult:
+        payload = self._request(
+            "POST",
+            f"/sandbox/{sandbox_id}/unexpose",
+            data={"port": port},
         )
+        return SandboxUnexposeResult(**payload)
 
     def _create_detail(self, params: CreateSandboxParams) -> SandboxDetail:
         payload = self._request(
