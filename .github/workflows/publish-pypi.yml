@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -39,7 +39,8 @@ jobs:
               print(tomllib.load(f)["tool"]["poetry"]["version"])
           PY
           )
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${{ github.event.release.tag_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
 
           echo "pyproject.toml: $PACKAGE_VERSION"
           echo "release tag:    $TAG_VERSION"
@@ -98,7 +99,7 @@ jobs:
         run: python -m twine check dist/*
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python-package-distributions
           path: dist/
@@ -111,7 +112,7 @@ jobs:
 
     steps:
       - name: Download distribution artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: python-package-distributions
           path: dist/
