@@ -1,0 +1,120 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: pypi-publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Show tool versions
+        run: |
+          python --version
+          pip --version
+
+      - name: Verify release tag matches pyproject version
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["tool"]["poetry"]["version"])
+          PY
+          )
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          echo "pyproject.toml: $PACKAGE_VERSION"
+          echo "release tag:    $TAG_VERSION"
+
+          test "$PACKAGE_VERSION" = "$TAG_VERSION"
+
+      - name: Check if version already exists on PyPI
+        shell: bash
+        run: |
+          PACKAGE_NAME=$(python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["tool"]["poetry"]["name"])
+          PY
+          )
+          PACKAGE_VERSION=$(python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["tool"]["poetry"]["version"])
+          PY
+          )
+
+          export PACKAGE_NAME PACKAGE_VERSION
+
+          python - <<'PY'
+          import os
+          import sys
+          from urllib.error import HTTPError
+          from urllib.request import urlopen
+
+          package_name = os.environ["PACKAGE_NAME"]
+          package_version = os.environ["PACKAGE_VERSION"]
+          url = f"https://pypi.org/pypi/{package_name}/{package_version}/json"
+
+          try:
+              with urlopen(url) as response:
+                  if response.status == 200:
+                      print(f"Version already published: {package_name}=={package_version}")
+                      sys.exit(1)
+          except HTTPError as exc:
+              if exc.code == 404:
+                  print(f"Version not published yet: {package_name}=={package_version}")
+                  sys.exit(0)
+              raise
+          PY
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check distribution metadata
+        run: python -m twine check dist/*
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
