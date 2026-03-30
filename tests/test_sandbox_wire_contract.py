@@ -63,6 +63,9 @@ SANDBOX_DETAIL_PAYLOAD = {
     "sessionUrl": "https://example.com/session",
     "duration": 10,
     "proxyBytesUsed": 3,
+    "vcpus": 2,
+    "memMiB": 2048,
+    "diskSizeMiB": 8192,
     "runtime": {
         "transport": "regional_proxy",
         "host": "runtime.example.com",
@@ -112,6 +115,9 @@ SANDBOX_LIST_PAYLOAD = {
             "sessionUrl": "https://example.com/session",
             "duration": 10,
             "proxyBytesUsed": 3,
+            "vcpus": 2,
+            "memMiB": 2048,
+            "diskSizeMiB": 8192,
             "runtime": {
                 "transport": "regional_proxy",
                 "host": "runtime.example.com",
@@ -486,12 +492,18 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
     assert CreateSandboxParams(
         image_name="node",
         image_id="img-id",
+        cpu=4,
+        memory_mib=4096,
+        disk_mib=8192,
         enable_recording=True,
         exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
         timeout_minutes=15,
     ).model_dump(by_alias=True, exclude_none=True) == {
         "imageName": "node",
         "imageId": "img-id",
+        "vcpus": 4,
+        "memMiB": 4096,
+        "diskSizeMiB": 8192,
         "enableRecording": True,
         "exposedPorts": [{"port": 3000, "auth": True}],
         "timeoutMinutes": 15,
@@ -611,6 +623,9 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
         CreateSandboxParams(
             image_name="node",
             image_id="img-id",
+            cpu=4,
+            memory_mib=4096,
+            disk_mib=8192,
             enable_recording=True,
             exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
             timeout_minutes=15,
@@ -658,6 +673,9 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
+        "vcpus": 4,
+        "memMiB": 4096,
+        "diskSizeMiB": 8192,
         "enableRecording": True,
         "exposedPorts": [{"port": 3000, "auth": True}],
         "timeoutMinutes": 15,
@@ -665,6 +683,9 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+    assert sandbox.cpu == 2
+    assert sandbox.memory_mib == 2048
+    assert sandbox.disk_mib == 8192
     assert sandbox.exposed_ports[0].browser_url is not None
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
@@ -824,6 +845,9 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
         CreateSandboxParams(
             image_name="node",
             image_id="img-id",
+            cpu=4,
+            memory_mib=4096,
+            disk_mib=8192,
             enable_recording=True,
             exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
             timeout_minutes=15,
@@ -871,6 +895,9 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
+        "vcpus": 4,
+        "memMiB": 4096,
+        "diskSizeMiB": 8192,
         "enableRecording": True,
         "exposedPorts": [{"port": 3000, "auth": True}],
         "timeoutMinutes": 15,
@@ -878,6 +905,9 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+    assert sandbox.cpu == 2
+    assert sandbox.memory_mib == 2048
+    assert sandbox.disk_mib == 8192
     assert sandbox.exposed_ports[0].browser_url is not None
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
@@ -1010,7 +1040,9 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
     captured = {}
 
     class DummyTarget:
-        url = "wss://runtime.example.com/sandbox/pty/pty_1/ws?sessionId=sbx_123&cursor=7"
+        url = (
+            "wss://runtime.example.com/sandbox/pty/pty_1/ws?sessionId=sbx_123&cursor=7"
+        )
         host_header = None
         connect_host = None
         connect_port = None
@@ -1023,7 +1055,9 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
         captured["url"] = url
         return object()
 
-    monkeypatch.setattr(sync_terminal_module, "to_websocket_transport_target", fake_target)
+    monkeypatch.setattr(
+        sync_terminal_module, "to_websocket_transport_target", fake_target
+    )
     monkeypatch.setattr(sync_terminal_module, "sync_ws_connect", fake_connect)
 
     handle = sync_terminal_module.SandboxTerminalHandle(
@@ -1051,7 +1085,9 @@ async def test_async_terminal_attach_includes_cursor(monkeypatch):
     captured = {}
 
     class DummyTarget:
-        url = "wss://runtime.example.com/sandbox/pty/pty_1/ws?sessionId=sbx_123&cursor=7"
+        url = (
+            "wss://runtime.example.com/sandbox/pty/pty_1/ws?sessionId=sbx_123&cursor=7"
+        )
         host_header = None
         connect_host = None
         connect_port = None
@@ -1064,7 +1100,9 @@ async def test_async_terminal_attach_includes_cursor(monkeypatch):
         captured["url"] = url
         return object()
 
-    monkeypatch.setattr(async_terminal_module, "to_websocket_transport_target", fake_target)
+    monkeypatch.setattr(
+        async_terminal_module, "to_websocket_transport_target", fake_target
+    )
     monkeypatch.setattr(async_terminal_module, "async_ws_connect", fake_connect)
 
     async def get_connection_info():

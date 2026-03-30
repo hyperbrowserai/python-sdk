@@ -115,6 +115,18 @@ class SandboxHandle:
         return self._detail.session_url
 
     @property
+    def cpu(self):
+        return self._detail.cpu
+
+    @property
+    def memory_mib(self):
+        return self._detail.memory_mib
+
+    @property
+    def disk_mib(self):
+        return self._detail.disk_mib
+
+    @property
     def exposed_ports(self):
         return self._detail.exposed_ports
 
