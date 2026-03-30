@@ -39,24 +39,24 @@ def test_sandbox_resource_config_e2e():
             CreateSandboxParams(
                 image_name=DEFAULT_IMAGE_NAME,
                 cpu=REQUESTED_CPU,
-                memory=REQUESTED_MEMORY_MIB,
-                disk=REQUESTED_DISK_MIB,
+                memory_mib=REQUESTED_MEMORY_MIB,
+                disk_mib=REQUESTED_DISK_MIB,
             )
         )
 
         assert sandbox.cpu == REQUESTED_CPU
-        assert sandbox.memory == REQUESTED_MEMORY_MIB
-        assert sandbox.disk == REQUESTED_DISK_MIB
+        assert sandbox.memory_mib == REQUESTED_MEMORY_MIB
+        assert sandbox.disk_mib == REQUESTED_DISK_MIB
 
         detail = sandbox.info()
         assert detail.cpu == REQUESTED_CPU
-        assert detail.memory == REQUESTED_MEMORY_MIB
-        assert detail.disk == REQUESTED_DISK_MIB
+        assert detail.memory_mib == REQUESTED_MEMORY_MIB
+        assert detail.disk_mib == REQUESTED_DISK_MIB
 
         reloaded = client.sandboxes.get(sandbox.id)
         assert reloaded.cpu == REQUESTED_CPU
-        assert reloaded.memory == REQUESTED_MEMORY_MIB
-        assert reloaded.disk == REQUESTED_DISK_MIB
+        assert reloaded.memory_mib == REQUESTED_MEMORY_MIB
+        assert reloaded.disk_mib == REQUESTED_DISK_MIB
 
         wait_for_runtime_ready(sandbox)
 
@@ -84,24 +84,24 @@ async def test_async_sandbox_resource_config_e2e():
             CreateSandboxParams(
                 image_name=DEFAULT_IMAGE_NAME,
                 cpu=REQUESTED_CPU,
-                memory=REQUESTED_MEMORY_MIB,
-                disk=REQUESTED_DISK_MIB,
+                memory_mib=REQUESTED_MEMORY_MIB,
+                disk_mib=REQUESTED_DISK_MIB,
             )
         )
 
         assert sandbox.cpu == REQUESTED_CPU
-        assert sandbox.memory == REQUESTED_MEMORY_MIB
-        assert sandbox.disk == REQUESTED_DISK_MIB
+        assert sandbox.memory_mib == REQUESTED_MEMORY_MIB
+        assert sandbox.disk_mib == REQUESTED_DISK_MIB
 
         detail = await sandbox.info()
         assert detail.cpu == REQUESTED_CPU
-        assert detail.memory == REQUESTED_MEMORY_MIB
-        assert detail.disk == REQUESTED_DISK_MIB
+        assert detail.memory_mib == REQUESTED_MEMORY_MIB
+        assert detail.disk_mib == REQUESTED_DISK_MIB
 
         reloaded = await client.sandboxes.get(sandbox.id)
         assert reloaded.cpu == REQUESTED_CPU
-        assert reloaded.memory == REQUESTED_MEMORY_MIB
-        assert reloaded.disk == REQUESTED_DISK_MIB
+        assert reloaded.memory_mib == REQUESTED_MEMORY_MIB
+        assert reloaded.disk_mib == REQUESTED_DISK_MIB
 
         await wait_for_runtime_ready_async(sandbox)
 

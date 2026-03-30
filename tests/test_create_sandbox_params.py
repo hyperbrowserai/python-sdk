@@ -22,8 +22,8 @@ def test_create_sandbox_params_serializes_exposed_ports():
     params = CreateSandboxParams(
         image_name="node",
         cpu=4,
-        memory=4096,
-        disk=8192,
+        memory_mib=4096,
+        disk_mib=8192,
         exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
     )
 
@@ -81,9 +81,9 @@ def test_create_sandbox_params_requires_snapshot_name_for_snapshot_id():
 def test_create_sandbox_params_rejects_resource_config_for_snapshot_source():
     with pytest.raises(
         ValidationError,
-        match="cpu, memory, and disk are only supported for image launches",
+        match="cpu, memory_mib, and disk_mib are only supported for image launches",
     ):
-        CreateSandboxParams(snapshot_name="snap", cpu=2, memory=2048, disk=8192)
+        CreateSandboxParams(snapshot_name="snap", cpu=2, memory_mib=2048, disk_mib=8192)
 
 
 def test_sandbox_exec_params_serialize_process_timeout_sec_as_snake_case():

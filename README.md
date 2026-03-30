@@ -116,20 +116,19 @@ sandbox = client.sandboxes.create(
     CreateSandboxParams(
         image_name="node",
         cpu=4,
-        memory=4096,
-        disk=8192,
+        memory_mib=4096,
+        disk_mib=8192,
         exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
     )
 )
 
 print(sandbox.exposed_ports[0].browser_url)
-print(sandbox.cpu, sandbox.memory, sandbox.disk)
+print(sandbox.cpu, sandbox.memory_mib, sandbox.disk_mib)
 sandbox.stop()
 client.close()
 ```
 
-`cpu`, `memory`, and `disk` are only supported for image launches. `memory` and
-`disk` are specified in MiB.
+`cpu`, `memory_mib`, and `disk_mib` are only supported for image launches.
 
 ### List sandboxes with filters
 
@@ -172,7 +171,9 @@ from hyperbrowser.models import CreateSandboxParams, SandboxExposeParams
 
 client = Hyperbrowser(api_key="test-key")
 sandbox = client.sandboxes.create(
-    CreateSandboxParams(image_name="node", cpu=2, memory=2048, disk=8192)
+    CreateSandboxParams(
+        image_name="node", cpu=2, memory_mib=2048, disk_mib=8192
+    )
 )
 
 result = sandbox.expose(SandboxExposeParams(port=8080, auth=True))

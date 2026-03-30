@@ -117,8 +117,8 @@ class Sandbox(SandboxBaseModel):
     duration: int
     proxy_bytes_used: Optional[int] = Field(default=None, alias="proxyBytesUsed")
     cpu: Optional[int] = Field(default=None, alias="vcpus")
-    memory: Optional[int] = Field(default=None, alias="memMiB")
-    disk: Optional[int] = Field(default=None, alias="diskSizeMiB")
+    memory_mib: Optional[int] = Field(default=None, alias="memMiB")
+    disk_mib: Optional[int] = Field(default=None, alias="diskSizeMiB")
     runtime: SandboxRuntimeTarget
     exposed_ports: List[SandboxExposeResult] = Field(
         default_factory=list,
@@ -132,8 +132,8 @@ class Sandbox(SandboxBaseModel):
         "proxy_data_consumed",
         "proxy_bytes_used",
         "cpu",
-        "memory",
-        "disk",
+        "memory_mib",
+        "disk_mib",
         mode="before",
     )
     @classmethod
@@ -184,8 +184,10 @@ class CreateSandboxParams(SandboxBaseModel):
         default=None, serialization_alias="timeoutMinutes"
     )
     cpu: Optional[int] = Field(default=None, ge=1, serialization_alias="vcpus")
-    memory: Optional[int] = Field(default=None, ge=1, serialization_alias="memMiB")
-    disk: Optional[int] = Field(default=None, ge=1, serialization_alias="diskSizeMiB")
+    memory_mib: Optional[int] = Field(default=None, ge=1, serialization_alias="memMiB")
+    disk_mib: Optional[int] = Field(
+        default=None, ge=1, serialization_alias="diskSizeMiB"
+    )
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -201,10 +203,10 @@ class CreateSandboxParams(SandboxBaseModel):
                 "Provide exactly one start source: snapshot_name or image_name"
             )
         if self.snapshot_name and any(
-            value is not None for value in (self.cpu, self.memory, self.disk)
+            value is not None for value in (self.cpu, self.memory_mib, self.disk_mib)
         ):
             raise ValueError(
-                "cpu, memory, and disk are only supported for image launches"
+                "cpu, memory_mib, and disk_mib are only supported for image launches"
             )
         return self
 

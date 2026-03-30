@@ -493,8 +493,8 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         image_name="node",
         image_id="img-id",
         cpu=4,
-        memory=4096,
-        disk=8192,
+        memory_mib=4096,
+        disk_mib=8192,
         enable_recording=True,
         exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
         timeout_minutes=15,
@@ -624,8 +624,8 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
             image_name="node",
             image_id="img-id",
             cpu=4,
-            memory=4096,
-            disk=8192,
+            memory_mib=4096,
+            disk_mib=8192,
             enable_recording=True,
             exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
             timeout_minutes=15,
@@ -684,8 +684,8 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
         "snapshotName": "snap",
     }
     assert sandbox.cpu == 2
-    assert sandbox.memory == 2048
-    assert sandbox.disk == 8192
+    assert sandbox.memory_mib == 2048
+    assert sandbox.disk_mib == 8192
     assert sandbox.exposed_ports[0].browser_url is not None
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
@@ -846,8 +846,8 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
             image_name="node",
             image_id="img-id",
             cpu=4,
-            memory=4096,
-            disk=8192,
+            memory_mib=4096,
+            disk_mib=8192,
             enable_recording=True,
             exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
             timeout_minutes=15,
@@ -906,8 +906,8 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
         "snapshotName": "snap",
     }
     assert sandbox.cpu == 2
-    assert sandbox.memory == 2048
-    assert sandbox.disk == 8192
+    assert sandbox.memory_mib == 2048
+    assert sandbox.disk_mib == 8192
     assert sandbox.exposed_ports[0].browser_url is not None
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
