@@ -21,11 +21,17 @@ def test_create_sandbox_params_accepts_image_source():
 def test_create_sandbox_params_serializes_exposed_ports():
     params = CreateSandboxParams(
         image_name="node",
+        cpu=4,
+        memory=4096,
+        disk=8192,
         exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
     )
 
     assert params.model_dump(by_alias=True, exclude_none=True) == {
         "imageName": "node",
+        "vcpus": 4,
+        "memMiB": 4096,
+        "diskSizeMiB": 8192,
         "exposedPorts": [{"port": 3000, "auth": True}],
     }
 
@@ -70,6 +76,14 @@ def test_create_sandbox_params_rejects_multiple_sources():
 def test_create_sandbox_params_requires_snapshot_name_for_snapshot_id():
     with pytest.raises(ValidationError, match="snapshot_id requires snapshot_name"):
         CreateSandboxParams(snapshot_id="snap-id")
+
+
+def test_create_sandbox_params_rejects_resource_config_for_snapshot_source():
+    with pytest.raises(
+        ValidationError,
+        match="cpu, memory, and disk are only supported for image launches",
+    ):
+        CreateSandboxParams(snapshot_name="snap", cpu=2, memory=2048, disk=8192)
 
 
 def test_sandbox_exec_params_serialize_process_timeout_sec_as_snake_case():

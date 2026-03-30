@@ -116,6 +116,9 @@ class Sandbox(SandboxBaseModel):
     session_url: str = Field(alias="sessionUrl")
     duration: int
     proxy_bytes_used: Optional[int] = Field(default=None, alias="proxyBytesUsed")
+    cpu: Optional[int] = Field(default=None, alias="vcpus")
+    memory: Optional[int] = Field(default=None, alias="memMiB")
+    disk: Optional[int] = Field(default=None, alias="diskSizeMiB")
     runtime: SandboxRuntimeTarget
     exposed_ports: List[SandboxExposeResult] = Field(
         default_factory=list,
@@ -128,6 +131,9 @@ class Sandbox(SandboxBaseModel):
         "data_consumed",
         "proxy_data_consumed",
         "proxy_bytes_used",
+        "cpu",
+        "memory",
+        "disk",
         mode="before",
     )
     @classmethod
@@ -177,6 +183,9 @@ class CreateSandboxParams(SandboxBaseModel):
     timeout_minutes: Optional[int] = Field(
         default=None, serialization_alias="timeoutMinutes"
     )
+    cpu: Optional[int] = Field(default=None, ge=1, serialization_alias="vcpus")
+    memory: Optional[int] = Field(default=None, ge=1, serialization_alias="memMiB")
+    disk: Optional[int] = Field(default=None, ge=1, serialization_alias="diskSizeMiB")
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -190,6 +199,12 @@ class CreateSandboxParams(SandboxBaseModel):
         if source_count != 1:
             raise ValueError(
                 "Provide exactly one start source: snapshot_name or image_name"
+            )
+        if self.snapshot_name and any(
+            value is not None for value in (self.cpu, self.memory, self.disk)
+        ):
+            raise ValueError(
+                "cpu, memory, and disk are only supported for image launches"
             )
         return self
 
