@@ -70,7 +70,10 @@ ClaudeComputerUseLlm = Literal[
     "claude-3-7-sonnet-20250219",
 ]
 CuaLlm = Literal["computer-use-preview", "gpt-5.4", "gpt-5.4-mini"]
-GeminiComputerUseLlm = Literal["gemini-2.5-computer-use-preview-10-2025",]
+GeminiComputerUseLlm = Literal[
+    "gemini-3-flash-preview",
+    "gemini-2.5-computer-use-preview-10-2025",
+]
 SessionRegion = Literal[
     "us-central",
     "asia-south",
