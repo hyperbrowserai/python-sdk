@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from hyperbrowser.models.scrape import ScrapeOptions
@@ -64,7 +64,7 @@ class CrawledPage(BaseModel):
     Data from a crawled page.
     """
 
-    metadata: Optional[dict[str, Union[str, list[str]]]] = None
+    metadata: Optional[dict[str, Any]] = None
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None

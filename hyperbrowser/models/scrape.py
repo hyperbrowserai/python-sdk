@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from hyperbrowser.models.consts import (
@@ -117,7 +117,7 @@ class ScrapeJobData(BaseModel):
     Data from a scraped site.
     """
 
-    metadata: Optional[dict[str, Union[str, list[str]]]] = None
+    metadata: Optional[dict[str, Any]] = None
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None
@@ -177,7 +177,7 @@ class ScrapedPage(BaseModel):
     url: str
     status: ScrapePageStatus
     error: Optional[str] = None
-    metadata: Optional[dict[str, Union[str, list[str]]]] = None
+    metadata: Optional[dict[str, Any]] = None
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None
