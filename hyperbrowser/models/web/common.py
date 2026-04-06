@@ -71,7 +71,7 @@ class PageData(BaseModel):
     url: str
     status: PageStatus
     error: Optional[str] = None
-    metadata: Optional[dict[str, Union[str, list[str]]]] = None
+    metadata: Optional[dict[str, Any]] = None
     markdown: Optional[str] = None
     html: Optional[str] = None
     links: Optional[list[str]] = None
