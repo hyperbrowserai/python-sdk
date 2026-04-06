@@ -147,7 +147,7 @@ class FetchBrowserOptions(BaseModel):
 
     screen: Optional[ScreenConfig] = Field(default=None, serialization_alias="screen")
     profile_id: Optional[str] = Field(default=None, serialization_alias="profileId")
-    solve_captchas: Optional[str] = Field(
+    solve_captchas: Optional[bool] = Field(
         default=None, serialization_alias="solveCaptchas"
     )
     location: Optional[FetchBrowserLocationOptions] = Field(
