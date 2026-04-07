@@ -300,6 +300,7 @@ class SandboxExecParams(SandboxBaseModel):
     env: Optional[Dict[str, str]] = None
     timeout_ms: Optional[int] = Field(default=None, serialization_alias="timeoutMs")
     timeout_sec: Optional[int] = None
+    run_as: Optional[str] = Field(default=None, serialization_alias="runAs")
     use_shell: Optional[bool] = Field(default=None, serialization_alias="useShell")
 
 

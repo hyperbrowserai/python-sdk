@@ -1,6 +1,8 @@
+import time
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import CreateSandboxParams, SandboxRuntimeSession
 
 from tests.helpers.config import DEFAULT_IMAGE_NAME, create_client
@@ -16,6 +18,33 @@ from tests.helpers.sandbox import (
 client = create_client()
 
 CUSTOM_IMAGE_NAME = "node"
+SNAPSHOT_SETTLE_DELAY_SECONDS = 30
+SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS = 120
+SNAPSHOT_CREATE_RETRY_DELAY_SECONDS = 5
+
+
+def _is_snapshot_not_ready_error(error: BaseException) -> bool:
+    return (
+        isinstance(error, HyperbrowserError)
+        and error.status_code == 404
+        and "snapshot not found" in str(error).lower()
+    )
+
+
+def _create_from_snapshot_eventually(snapshot_name: str, snapshot_id: str):
+    deadline = time.time() + SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS
+    while True:
+        try:
+            return client.sandboxes.create(
+                CreateSandboxParams(
+                    snapshot_name=snapshot_name,
+                    snapshot_id=snapshot_id,
+                )
+            )
+        except Exception as error:
+            if time.time() >= deadline or not _is_snapshot_not_ready_error(error):
+                raise
+            time.sleep(SNAPSHOT_CREATE_RETRY_DELAY_SECONDS)
 
 
 def test_sandbox_lifecycle_e2e():
@@ -125,11 +154,10 @@ def test_sandbox_lifecycle_e2e():
         assert custom_image_memory_snapshot.image_namespace == custom_image["namespace"]
 
         wait_for_created_snapshot(client, custom_image_memory_snapshot.snapshot_id)
-        custom_snapshot_sandbox = client.sandboxes.create(
-            CreateSandboxParams(
-                snapshot_name=custom_image_memory_snapshot.snapshot_name,
-                snapshot_id=custom_image_memory_snapshot.snapshot_id,
-            )
+        time.sleep(SNAPSHOT_SETTLE_DELAY_SECONDS)
+        custom_snapshot_sandbox = _create_from_snapshot_eventually(
+            custom_image_memory_snapshot.snapshot_name,
+            custom_image_memory_snapshot.snapshot_id,
         )
         assert custom_snapshot_sandbox.id
         assert custom_snapshot_sandbox.status == "active"
@@ -228,11 +256,10 @@ def test_sandbox_lifecycle_e2e():
         )
 
         wait_for_created_snapshot(client, memory_snapshot.snapshot_id)
-        secondary = client.sandboxes.create(
-            CreateSandboxParams(
-                snapshot_name=memory_snapshot.snapshot_name,
-                snapshot_id=memory_snapshot.snapshot_id,
-            )
+        time.sleep(SNAPSHOT_SETTLE_DELAY_SECONDS)
+        secondary = _create_from_snapshot_eventually(
+            memory_snapshot.snapshot_name,
+            memory_snapshot.snapshot_id,
         )
         response = secondary.stop()
         assert response.success is True

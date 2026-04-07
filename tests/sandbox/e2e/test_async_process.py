@@ -37,6 +37,15 @@ async def test_async_sandbox_process_e2e():
 
         result = await sandbox.exec(
             SandboxExecParams(
+                command="echo process-use-shell-ignored",
+                use_shell=False,
+            )
+        )
+        assert result.exit_code == 0
+        assert "process-use-shell-ignored" in result.stdout
+
+        result = await sandbox.exec(
+            SandboxExecParams(
                 command="bash",
                 args=["-lc", "echo process-exec-fail 1>&2; exit 7"],
             )

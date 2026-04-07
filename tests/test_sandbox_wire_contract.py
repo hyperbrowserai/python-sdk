@@ -27,6 +27,7 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import
 )
 from hyperbrowser.models import (
     CreateSandboxParams,
+    SandboxDetail,
     SandboxExposeParams,
     SandboxExecParams,
     SandboxFileWriteEntry,
@@ -519,11 +520,13 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         command="echo hi",
         timeout_ms=500,
         timeout_sec=7,
+        run_as="root",
         use_shell=True,
     ).model_dump(by_alias=True, exclude_none=True) == {
         "command": "echo hi",
         "timeoutMs": 500,
         "timeout_sec": 7,
+        "runAs": "root",
         "useShell": True,
     }
 
@@ -706,9 +709,11 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
 
     processes = SandboxProcessesApi(transport)
     process_input = SandboxExecParams(
-        command="echo hi",
+        command="echo",
+        args=["hi world"],
         timeout_ms=500,
         timeout_sec=7,
+        run_as="root",
         use_shell=True,
     )
 
@@ -758,16 +763,16 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
     )
 
     assert transport.calls[0]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
-        "useShell": True,
+        "runAs": "root",
     }
     assert transport.calls[1]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
-        "useShell": True,
+        "runAs": "root",
     }
     assert transport.calls[2]["json_body"] == {
         "timeoutMs": 250,
@@ -819,6 +824,66 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
         "to": "/tmp/destination.txt",
         "overwrite": True,
     }
+
+
+def test_sync_sandbox_process_string_calls_support_run_as():
+    transport = RecordingTransport()
+    processes = SandboxProcessesApi(transport)
+
+    processes.exec(
+        "whoami",
+        cwd="/tmp",
+        env={"FOO": "bar"},
+        timeout_ms=500,
+        timeout_sec=7,
+        run_as="root",
+    )
+    processes.start(
+        "sleep 30",
+        cwd="/tmp",
+        run_as="root",
+    )
+
+    assert transport.calls[0]["json_body"] == {
+        "command": "whoami",
+        "cwd": "/tmp",
+        "env": {"FOO": "bar"},
+        "timeoutMs": 500,
+        "timeout_sec": 7,
+        "runAs": "root",
+    }
+    assert transport.calls[1]["json_body"] == {
+        "command": "sleep 30",
+        "cwd": "/tmp",
+        "runAs": "root",
+    }
+
+
+def test_sync_sandbox_handle_exec_string_call_supports_run_as(monkeypatch):
+    manager = SandboxManager(FakeSyncClient())
+    sandbox = manager.attach(SandboxDetail(**SANDBOX_DETAIL_PAYLOAD))
+    calls = []
+
+    def fake_exec(input, **kwargs):
+        calls.append((input, kwargs))
+        return PROCESS_RESULT_PAYLOAD["result"]
+
+    monkeypatch.setattr(sandbox.processes, "exec", fake_exec)
+
+    sandbox.exec("whoami", run_as="root")
+
+    assert calls == [
+        (
+            "whoami",
+            {
+                "cwd": None,
+                "env": None,
+                "timeout_ms": None,
+                "timeout_sec": None,
+                "run_as": "root",
+            },
+        )
+    ]
 
 
 @pytest.mark.anyio
@@ -921,9 +986,11 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
 
     processes = AsyncSandboxProcessesApi(transport)
     process_input = SandboxExecParams(
-        command="echo hi",
+        command="echo",
+        args=["hi world"],
         timeout_ms=500,
         timeout_sec=7,
+        run_as="root",
         use_shell=True,
     )
 
@@ -973,16 +1040,16 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
     )
 
     assert transport.calls[0]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
-        "useShell": True,
+        "runAs": "root",
     }
     assert transport.calls[1]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
-        "useShell": True,
+        "runAs": "root",
     }
     assert transport.calls[2]["json_body"] == {
         "timeoutMs": 250,
@@ -1033,6 +1100,40 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
         "from": "/tmp/source.txt",
         "to": "/tmp/destination.txt",
         "overwrite": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_async_sandbox_process_string_calls_support_run_as():
+    transport = AsyncRecordingTransport()
+    processes = AsyncSandboxProcessesApi(transport)
+
+    await processes.exec(
+        "whoami",
+        cwd="/tmp",
+        env={"FOO": "bar"},
+        timeout_ms=500,
+        timeout_sec=7,
+        run_as="root",
+    )
+    await processes.start(
+        "sleep 30",
+        cwd="/tmp",
+        run_as="root",
+    )
+
+    assert transport.calls[0]["json_body"] == {
+        "command": "whoami",
+        "cwd": "/tmp",
+        "env": {"FOO": "bar"},
+        "timeoutMs": 500,
+        "timeout_sec": 7,
+        "runAs": "root",
+    }
+    assert transport.calls[1]["json_body"] == {
+        "command": "sleep 30",
+        "cwd": "/tmp",
+        "runAs": "root",
     }
 
 

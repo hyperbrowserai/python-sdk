@@ -15,8 +15,8 @@ from tests.helpers.sandbox import (
 client = create_client()
 
 
-def _bash_exec(command: str) -> SandboxExecParams:
-    return SandboxExecParams(command="bash", args=["-lc", command])
+def _bash_exec(command: str, run_as: str = "root") -> SandboxExecParams:
+    return SandboxExecParams(command="bash", args=["-lc", command], run_as=run_as)
 
 
 def _read_stream_text(stream) -> str:
@@ -65,16 +65,17 @@ def test_sandbox_files_e2e():
     try:
         sandbox = client.sandboxes.create(default_sandbox_params("py-sdk-files"))
         wait_for_runtime_ready(sandbox)
+        files = sandbox.files.with_run_as("root")
 
-        assert sandbox.files.exists(f"{base_dir}/missing.txt") is False
+        assert files.exists(f"{base_dir}/missing.txt") is False
 
         path = f"{base_dir}/dirs/root"
-        assert sandbox.files.make_dir(path) is True
-        assert sandbox.files.make_dir(path) is False
+        assert files.make_dir(path) is True
+        assert files.make_dir(path) is False
 
         info_path = f"{base_dir}/info/hello.txt"
-        sandbox.files.write_text(info_path, "hello from sdk files")
-        info = sandbox.files.get_info(info_path)
+        files.write_text(info_path, "hello from sdk files")
+        info = files.get_info(info_path)
         assert info.name == "hello.txt"
         assert info.path == info_path
         assert info.type == "file"
@@ -86,18 +87,18 @@ def test_sandbox_files_e2e():
         assert info.modified_time is not None
 
         list_dir = f"{base_dir}/list"
-        sandbox.files.make_dir(f"{list_dir}/nested/inner", parents=True)
-        sandbox.files.write_text(f"{list_dir}/root.txt", "root")
-        sandbox.files.write_text(f"{list_dir}/nested/child.txt", "child")
-        sandbox.files.write_text(
+        files.make_dir(f"{list_dir}/nested/inner", parents=True)
+        files.write_text(f"{list_dir}/root.txt", "root")
+        files.write_text(f"{list_dir}/nested/child.txt", "child")
+        files.write_text(
             f"{list_dir}/nested/inner/grandchild.txt", "grandchild"
         )
 
-        depth_one = sandbox.files.list(list_dir, depth=1)
+        depth_one = files.list(list_dir, depth=1)
         assert [entry.name for entry in depth_one] == ["nested", "root.txt"]
         assert [entry.type for entry in depth_one] == ["dir", "file"]
 
-        depth_two = sandbox.files.list(list_dir, depth=2)
+        depth_two = files.list(list_dir, depth=2)
         assert [entry.path for entry in depth_two] == [
             f"{list_dir}/nested",
             f"{list_dir}/nested/child.txt",
@@ -108,27 +109,27 @@ def test_sandbox_files_e2e():
         symlink_dir = f"{base_dir}/list-symlink"
         target = f"{symlink_dir}/target.txt"
         link = f"{symlink_dir}/link.txt"
-        sandbox.files.make_dir(symlink_dir)
-        sandbox.files.write_text(target, "payload")
+        files.make_dir(symlink_dir)
+        files.write_text(target, "payload")
         result = sandbox.exec(_bash_exec(f'ln -sfn "{target}" "{link}"'))
         assert result.exit_code == 0
         link_entry = next(
             entry
-            for entry in sandbox.files.list(symlink_dir, depth=1)
+            for entry in files.list(symlink_dir, depth=1)
             if entry.path == link
         )
         assert link_entry.symlink_target == target
 
         symlink_target = f"{base_dir}/symlink/target.txt"
         symlink_link = f"{base_dir}/symlink/link.txt"
-        sandbox.files.write_text(symlink_target, "target")
+        files.write_text(symlink_target, "target")
         result = sandbox.exec(
             _bash_exec(
                 f'mkdir -p "{base_dir}/symlink" && ln -sfn "{symlink_target}" "{symlink_link}"'
             )
         )
         assert result.exit_code == 0
-        assert sandbox.files.get_info(symlink_link).symlink_target == symlink_target
+        assert files.get_info(symlink_link).symlink_target == symlink_target
 
         broken_target = f"{base_dir}/symlink-broken/missing-target.txt"
         broken_link = f"{base_dir}/symlink-broken/link.txt"
@@ -138,28 +139,28 @@ def test_sandbox_files_e2e():
             )
         )
         assert result.exit_code == 0
-        assert sandbox.files.exists(broken_link) is True
-        assert sandbox.files.get_info(broken_link).symlink_target == broken_target
+        assert files.exists(broken_link) is True
+        assert files.get_info(broken_link).symlink_target == broken_target
 
         read_path = f"{base_dir}/read/readme.txt"
-        sandbox.files.write_text(read_path, "hello from sdk files")
-        assert sandbox.files.read(read_path) == "hello from sdk files"
+        files.write_text(read_path, "hello from sdk files")
+        assert files.read(read_path) == "hello from sdk files"
         assert (
-            sandbox.files.read(read_path, format="text", offset=6, length=4) == "from"
+            files.read(read_path, format="text", offset=6, length=4) == "from"
         )
-        assert sandbox.files.read(read_path, format="bytes") == b"hello from sdk files"
-        assert sandbox.files.read(read_path, format="blob") == b"hello from sdk files"
+        assert files.read(read_path, format="bytes") == b"hello from sdk files"
+        assert files.read(read_path, format="blob") == b"hello from sdk files"
         assert (
-            _read_stream_text(sandbox.files.read(read_path, format="stream"))
+            _read_stream_text(files.read(read_path, format="stream"))
             == "hello from sdk files"
         )
 
-        single = sandbox.files.write(f"{base_dir}/write/single.txt", "single file")
+        single = files.write(f"{base_dir}/write/single.txt", "single file")
         assert single.name == "single.txt"
         assert single.path == f"{base_dir}/write/single.txt"
-        assert sandbox.files.read_text(single.path) == "single file"
+        assert files.read_text(single.path) == "single file"
 
-        batch = sandbox.files.write(
+        batch = files.write(
             [
                 SandboxFileWriteEntry(
                     path=f"{base_dir}/write/batch-a.txt",
@@ -172,157 +173,157 @@ def test_sandbox_files_e2e():
             ]
         )
         assert [entry.name for entry in batch] == ["batch-a.txt", "batch-b.bin"]
-        assert sandbox.files.read_text(f"{base_dir}/write/batch-a.txt") == "batch-a"
-        assert sandbox.files.read_bytes(f"{base_dir}/write/batch-b.bin") == bytes(
+        assert files.read_text(f"{base_dir}/write/batch-a.txt") == "batch-a"
+        assert files.read_bytes(f"{base_dir}/write/batch-b.bin") == bytes(
             [1, 2, 3, 4]
         )
 
         text_path = f"{base_dir}/write-options/text.txt"
-        sandbox.files.write_text(text_path, "hello", mode="0640")
-        sandbox.files.write_text(text_path, " world", append=True)
-        assert sandbox.files.read_text(text_path) == "hello world"
-        assert sandbox.files.get_info(text_path).mode == 0o640
+        files.write_text(text_path, "hello", mode="0640")
+        files.write_text(text_path, " world", append=True)
+        assert files.read_text(text_path) == "hello world"
+        assert files.get_info(text_path).mode == 0o640
 
         bytes_path = f"{base_dir}/write-options/bytes.bin"
-        sandbox.files.write_bytes(bytes_path, bytes([1, 2]), mode="0600")
-        sandbox.files.write_bytes(bytes_path, bytes([3]), append=True)
-        assert sandbox.files.read_bytes(bytes_path) == bytes([1, 2, 3])
+        files.write_bytes(bytes_path, bytes([1, 2]), mode="0600")
+        files.write_bytes(bytes_path, bytes([3]), append=True)
+        assert files.read_bytes(bytes_path) == bytes([1, 2, 3])
 
         transfer_path = f"{base_dir}/transfer/upload.txt"
-        uploaded = sandbox.files.upload(transfer_path, "uploaded from sdk")
+        uploaded = files.upload(transfer_path, "uploaded from sdk")
         assert uploaded.bytes_written > 0
         assert (
-            sandbox.files.download(transfer_path).decode("utf-8") == "uploaded from sdk"
+            files.download(transfer_path).decode("utf-8") == "uploaded from sdk"
         )
 
         file_path = f"{base_dir}/rename/hello.txt"
         renamed_path = f"{base_dir}/rename/hello-renamed.txt"
-        sandbox.files.write_text(file_path, "rename me")
-        renamed = sandbox.files.rename(file_path, renamed_path)
+        files.write_text(file_path, "rename me")
+        renamed = files.rename(file_path, renamed_path)
         assert renamed.path == renamed_path
-        assert sandbox.files.exists(file_path) is False
-        assert sandbox.files.read_text(renamed_path) == "rename me"
+        assert files.exists(file_path) is False
+        assert files.read_text(renamed_path) == "rename me"
 
         link_path = f"{base_dir}/rename/hello-link.txt"
         copied_link_path = f"{base_dir}/rename/hello-link-copy.txt"
         renamed_link_path = f"{base_dir}/rename/hello-link-renamed.txt"
         result = sandbox.exec(_bash_exec(f'ln -sfn "{renamed_path}" "{link_path}"'))
         assert result.exit_code == 0
-        copied_link = sandbox.files.copy(source=link_path, destination=copied_link_path)
+        copied_link = files.copy(source=link_path, destination=copied_link_path)
         assert copied_link.path == copied_link_path
-        assert sandbox.files.get_info(copied_link_path).symlink_target == renamed_path
-        renamed_link = sandbox.files.rename(copied_link_path, renamed_link_path)
+        assert files.get_info(copied_link_path).symlink_target == renamed_path
+        renamed_link = files.rename(copied_link_path, renamed_link_path)
         assert renamed_link.path == renamed_link_path
-        assert sandbox.files.get_info(renamed_link_path).symlink_target == renamed_path
+        assert files.get_info(renamed_link_path).symlink_target == renamed_path
 
         target_dir = f"{base_dir}/rename-dir/target-dir"
         link_dir = f"{base_dir}/rename-dir/link-dir"
         renamed_link_dir = f"{base_dir}/rename-dir/link-dir-renamed"
-        sandbox.files.make_dir(target_dir)
-        sandbox.files.write_text(f"{target_dir}/child.txt", "child")
+        files.make_dir(target_dir)
+        files.write_text(f"{target_dir}/child.txt", "child")
         result = sandbox.exec(_bash_exec(f'ln -sfn "{target_dir}" "{link_dir}"'))
         assert result.exit_code == 0
-        renamed = sandbox.files.rename(link_dir, renamed_link_dir)
+        renamed = files.rename(link_dir, renamed_link_dir)
         assert renamed.path == renamed_link_dir
-        assert sandbox.files.get_info(renamed_link_dir).symlink_target == target_dir
+        assert files.get_info(renamed_link_dir).symlink_target == target_dir
         assert [
-            entry.path for entry in sandbox.files.list(renamed_link_dir, depth=1)
+            entry.path for entry in files.list(renamed_link_dir, depth=1)
         ] == [f"{target_dir}/child.txt"]
 
         source_dir = f"{base_dir}/copy-tree/source"
         nested_dir = f"{source_dir}/nested"
         nested_target = f"{nested_dir}/target.txt"
         destination_dir = f"{base_dir}/copy-tree/destination"
-        sandbox.files.make_dir(nested_dir)
-        sandbox.files.write_text(nested_target, "payload")
+        files.make_dir(nested_dir)
+        files.write_text(nested_target, "payload")
         result = sandbox.exec(
             _bash_exec(f'cd "{nested_dir}" && ln -sfn "target.txt" "link.txt"')
         )
         assert result.exit_code == 0
-        sandbox.files.copy(
+        files.copy(
             source=source_dir, destination=destination_dir, recursive=True
         )
         copied_target = f"{destination_dir}/nested/target.txt"
         copied_link = f"{destination_dir}/nested/link.txt"
-        assert sandbox.files.read_text(copied_target) == "payload"
-        assert sandbox.files.get_info(copied_link).symlink_target == copied_target
+        assert files.read_text(copied_target) == "payload"
+        assert files.get_info(copied_link).symlink_target == copied_target
 
         loop_dir = f"{base_dir}/loop-list"
         loop_nested_dir = f"{loop_dir}/nested"
-        sandbox.files.make_dir(loop_nested_dir)
-        sandbox.files.write_text(f"{loop_nested_dir}/child.txt", "payload")
+        files.make_dir(loop_nested_dir)
+        files.write_text(f"{loop_nested_dir}/child.txt", "payload")
         result = sandbox.exec(_bash_exec(f'cd "{loop_nested_dir}" && ln -sfn .. loop'))
         assert result.exit_code == 0
-        loop_entries = sandbox.files.list(loop_dir, depth=4)
+        loop_entries = files.list(loop_dir, depth=4)
         loop_paths = [entry.path for entry in loop_entries]
         assert f"{loop_nested_dir}/loop" in loop_paths
         assert not any("/loop/" in path for path in loop_paths)
         assert (
-            sandbox.files.get_info(f"{loop_nested_dir}/loop").symlink_target == loop_dir
+            files.get_info(f"{loop_nested_dir}/loop").symlink_target == loop_dir
         )
 
         source_dir = f"{base_dir}/loop-copy/source"
         nested_dir = f"{source_dir}/nested"
-        sandbox.files.make_dir(nested_dir)
-        sandbox.files.write_text(f"{nested_dir}/child.txt", "payload")
+        files.make_dir(nested_dir)
+        files.write_text(f"{nested_dir}/child.txt", "payload")
         result = sandbox.exec(_bash_exec(f'cd "{nested_dir}" && ln -sfn .. loop'))
         assert result.exit_code == 0
         destination_dir = f"{base_dir}/loop-copy/destination"
-        sandbox.files.copy(
+        files.copy(
             source=source_dir, destination=destination_dir, recursive=True
         )
         copied_loop = f"{destination_dir}/nested/loop"
-        assert sandbox.files.get_info(copied_loop).symlink_target == destination_dir
+        assert files.get_info(copied_loop).symlink_target == destination_dir
         assert not any(
             "/loop/" in entry.path
-            for entry in sandbox.files.list(destination_dir, depth=4)
+            for entry in files.list(destination_dir, depth=4)
         )
 
         source = f"{base_dir}/copy-overwrite/source.txt"
         existing_target = f"{base_dir}/copy-overwrite/existing-target.txt"
         destination_link = f"{base_dir}/copy-overwrite/destination-link.txt"
-        sandbox.files.write_text(source, "source payload")
-        sandbox.files.write_text(existing_target, "existing target")
+        files.write_text(source, "source payload")
+        files.write_text(existing_target, "existing target")
         result = sandbox.exec(
             _bash_exec(
                 f'mkdir -p "{base_dir}/copy-overwrite" && ln -sfn "{existing_target}" "{destination_link}"'
             )
         )
         assert result.exit_code == 0
-        sandbox.files.copy(source=source, destination=destination_link, overwrite=True)
-        assert sandbox.files.read_text(destination_link) == "source payload"
-        assert sandbox.files.read_text(existing_target) == "existing target"
-        assert sandbox.files.get_info(destination_link).symlink_target is None
+        files.copy(source=source, destination=destination_link, overwrite=True)
+        assert files.read_text(destination_link) == "source payload"
+        assert files.read_text(existing_target) == "existing target"
+        assert files.get_info(destination_link).symlink_target is None
 
         move_source = f"{base_dir}/move-overwrite/source.txt"
         move_existing_target = f"{base_dir}/move-overwrite/existing-target.txt"
         move_destination_link = f"{base_dir}/move-overwrite/destination-link.txt"
-        sandbox.files.write_text(move_source, "move source payload")
-        sandbox.files.write_text(move_existing_target, "move existing target")
+        files.write_text(move_source, "move source payload")
+        files.write_text(move_existing_target, "move existing target")
         result = sandbox.exec(
             _bash_exec(
                 f'mkdir -p "{base_dir}/move-overwrite" && ln -sfn "{move_existing_target}" "{move_destination_link}"'
             )
         )
         assert result.exit_code == 0
-        sandbox.files.move(
+        files.move(
             source=move_source,
             destination=move_destination_link,
             overwrite=True,
         )
-        assert sandbox.files.read_text(move_destination_link) == "move source payload"
-        assert sandbox.files.read_text(move_existing_target) == "move existing target"
-        assert sandbox.files.get_info(move_destination_link).symlink_target is None
-        assert sandbox.files.exists(move_source) is False
+        assert files.read_text(move_destination_link) == "move source payload"
+        assert files.read_text(move_existing_target) == "move existing target"
+        assert files.get_info(move_destination_link).symlink_target is None
+        assert files.exists(move_source) is False
 
         chmod_path = f"{base_dir}/chmod/file.txt"
-        sandbox.files.write_text(chmod_path, "chmod me")
-        sandbox.files.chmod(path=chmod_path, mode="0640")
-        assert sandbox.files.get_info(chmod_path).mode == 0o640
+        files.write_text(chmod_path, "chmod me")
+        files.chmod(path=chmod_path, mode="0640")
+        assert files.get_info(chmod_path).mode == 0o640
         try:
             expect_hyperbrowser_error(
                 "file chown",
-                lambda: sandbox.files.chown(path=chmod_path, uid=0, gid=0),
+                lambda: files.chown(path=chmod_path, uid=0, gid=0),
                 status_code=400,
                 service="runtime",
                 retryable=False,
@@ -331,75 +332,75 @@ def test_sandbox_files_e2e():
         except AssertionError as error:
             if "expected HyperbrowserError, but call succeeded" not in str(error):
                 raise
-            assert sandbox.files.get_info(chmod_path).name == "file.txt"
+            assert files.get_info(chmod_path).name == "file.txt"
 
         remove_path = f"{base_dir}/remove/file.txt"
-        sandbox.files.write_text(remove_path, "remove me")
-        sandbox.files.remove(remove_path)
-        assert sandbox.files.exists(remove_path) is False
-        sandbox.files.remove(remove_path)
-        sandbox.files.remove(f"{base_dir}/remove", recursive=True)
-        assert sandbox.files.exists(f"{base_dir}/remove") is False
+        files.write_text(remove_path, "remove me")
+        files.remove(remove_path)
+        assert files.exists(remove_path) is False
+        files.remove(remove_path)
+        files.remove(f"{base_dir}/remove", recursive=True)
+        assert files.exists(f"{base_dir}/remove") is False
 
         target = f"{base_dir}/remove-link/target.txt"
         link = f"{base_dir}/remove-link/link.txt"
-        sandbox.files.write_text(target, "keep me")
+        files.write_text(target, "keep me")
         result = sandbox.exec(
             _bash_exec(
                 f'mkdir -p "{base_dir}/remove-link" && ln -sfn "{target}" "{link}"'
             )
         )
         assert result.exit_code == 0
-        sandbox.files.remove(link)
-        assert sandbox.files.exists(link) is False
-        assert sandbox.files.read_text(target) == "keep me"
+        files.remove(link)
+        assert files.exists(link) is False
+        assert files.read_text(target) == "keep me"
 
         target_dir = f"{base_dir}/remove-recursive/target-dir"
         target_file = f"{target_dir}/child.txt"
         link_dir = f"{base_dir}/remove-recursive/link-dir"
-        sandbox.files.make_dir(target_dir)
-        sandbox.files.write_text(target_file, "keep tree")
+        files.make_dir(target_dir)
+        files.write_text(target_file, "keep tree")
         result = sandbox.exec(
             _bash_exec(
                 f'mkdir -p "{base_dir}/remove-recursive" && ln -sfn "{target_dir}" "{link_dir}"'
             )
         )
         assert result.exit_code == 0
-        sandbox.files.remove(link_dir, recursive=True)
-        assert sandbox.files.exists(link_dir) is False
-        assert sandbox.files.read_text(target_file) == "keep tree"
+        files.remove(link_dir, recursive=True)
+        assert files.exists(link_dir) is False
+        assert files.read_text(target_file) == "keep tree"
 
         link = f"{base_dir}/escape/file-link"
         result = sandbox.exec(
             _bash_exec(f'mkdir -p "{base_dir}/escape" && ln -sfn /etc/hosts "{link}"')
         )
         assert result.exit_code == 0
-        text = sandbox.files.read_text(link)
+        text = files.read_text(link)
         assert "localhost" in text
-        assert "localhost" in sandbox.files.download(link).decode("utf-8")
+        assert "localhost" in files.download(link).decode("utf-8")
 
         fixture = _create_parent_symlink_escape_fixture(
             sandbox, base_dir, "parent-escape-read"
         )
-        assert sandbox.files.read_text(fixture["escaped_file"]) == "outside secret"
+        assert files.read_text(fixture["escaped_file"]) == "outside secret"
         assert (
-            sandbox.files.download(fixture["escaped_file"]).decode("utf-8")
+            files.download(fixture["escaped_file"]).decode("utf-8")
             == "outside secret"
         )
         assert [
-            entry.path for entry in sandbox.files.list(fixture["link_dir"], depth=1)
+            entry.path for entry in files.list(fixture["link_dir"], depth=1)
         ] == [f"{fixture['outside_dir']}/secret.txt"]
         seen = Queue(maxsize=1)
-        handle = sandbox.files.watch_dir(
+        handle = files.watch_dir(
             fixture["link_dir"],
             lambda event: (
                 seen.put_nowait(event.name)
-                if event.type == "write" and event.name == "fresh.txt"
+                if event.type in {"create", "write"} and event.name == "fresh.txt"
                 else None
             ),
         )
         try:
-            sandbox.files.write_text(
+            files.write_text(
                 f"{fixture['outside_dir']}/fresh.txt", "watch parent link"
             )
             assert _await_queue_value(seen) == "fresh.txt"
@@ -409,24 +410,24 @@ def test_sandbox_files_e2e():
         fixture = _create_parent_symlink_escape_fixture(
             sandbox, base_dir, "parent-escape-mutate"
         )
-        info = sandbox.files.get_info(fixture["escaped_file"])
+        info = files.get_info(fixture["escaped_file"])
         assert info.type == "file"
         assert info.size == len("outside secret")
-        copied = sandbox.files.copy(
+        copied = files.copy(
             source=fixture["escaped_file"],
             destination=f"{base_dir}/parent-escape-mutate/copied.txt",
         )
         assert copied.path == f"{base_dir}/parent-escape-mutate/copied.txt"
-        assert sandbox.files.read_text(copied.path) == "outside secret"
-        renamed = sandbox.files.rename(
+        assert files.read_text(copied.path) == "outside secret"
+        renamed = files.rename(
             fixture["escaped_file"],
             f"{base_dir}/parent-escape-mutate/renamed.txt",
         )
         assert renamed.path == f"{base_dir}/parent-escape-mutate/renamed.txt"
-        assert sandbox.files.exists(fixture["outside_file"]) is False
-        assert sandbox.files.read_text(renamed.path) == "outside secret"
-        sandbox.files.write_text(fixture["escaped_file"], "remove me")
-        sandbox.files.remove(fixture["escaped_file"])
+        assert files.exists(fixture["outside_file"]) is False
+        assert files.read_text(renamed.path) == "outside secret"
+        files.write_text(fixture["escaped_file"], "remove me")
+        files.remove(fixture["escaped_file"])
         outside_read = sandbox.exec(
             _bash_exec(
                 f'if [ -e "{fixture["outside_file"]}" ]; then cat "{fixture["outside_file"]}"; else printf "__MISSING__"; fi'
@@ -444,48 +445,48 @@ def test_sandbox_files_e2e():
             )
         )
         assert result.exit_code == 0
-        assert [entry.path for entry in sandbox.files.list(link, depth=1)] == [
+        assert [entry.path for entry in files.list(link, depth=1)] == [
             target_file
         ]
         seen = Queue(maxsize=1)
-        handle = sandbox.files.watch_dir(
+        handle = files.watch_dir(
             link,
             lambda event: (
                 seen.put_nowait(event.name)
-                if event.type == "write" and event.name == "file.txt"
+                if event.type in {"create", "write"} and event.name == "file.txt"
                 else None
             ),
         )
         try:
-            sandbox.files.write_text(f"{target_dir}/file.txt", "watch through link")
+            files.write_text(f"{target_dir}/file.txt", "watch through link")
             assert _await_queue_value(seen) == "file.txt"
         finally:
             handle.stop()
 
         watch_dir = f"{base_dir}/watch"
-        sandbox.files.make_dir(f"{watch_dir}/nested", parents=True)
+        files.make_dir(f"{watch_dir}/nested", parents=True)
         direct_event = Queue(maxsize=1)
         recursive_event = Queue(maxsize=1)
-        direct_handle = sandbox.files.watch_dir(
+        direct_handle = files.watch_dir(
             watch_dir,
             lambda event: (
                 direct_event.put_nowait(event.name)
-                if event.type == "write" and event.name == "direct.txt"
+                if event.type in {"create", "write"} and event.name == "direct.txt"
                 else None
             ),
         )
-        recursive_handle = sandbox.files.watch_dir(
+        recursive_handle = files.watch_dir(
             watch_dir,
             lambda event: (
                 recursive_event.put_nowait(event.name)
-                if event.type == "write" and event.name == "nested/recursive.txt"
+                if event.type in {"create", "write"} and event.name == "nested/recursive.txt"
                 else None
             ),
             recursive=True,
         )
         try:
-            sandbox.files.write_text(f"{watch_dir}/direct.txt", "watch me")
-            sandbox.files.write_text(
+            files.write_text(f"{watch_dir}/direct.txt", "watch me")
+            files.write_text(
                 f"{watch_dir}/nested/recursive.txt", "watch me too"
             )
             assert _await_queue_value(direct_event) == "direct.txt"
@@ -496,7 +497,7 @@ def test_sandbox_files_e2e():
 
         expect_hyperbrowser_error(
             "watch missing directory",
-            lambda: sandbox.files.watch_dir(
+            lambda: files.watch_dir(
                 f"{base_dir}/watch-missing", lambda event: None
             ),
             status_code=404,
@@ -506,10 +507,10 @@ def test_sandbox_files_e2e():
         )
 
         invalid_file_path = f"{base_dir}/watch-invalid/file.txt"
-        sandbox.files.write_text(invalid_file_path, "not a directory")
+        files.write_text(invalid_file_path, "not a directory")
         expect_hyperbrowser_error(
             "watch file path",
-            lambda: sandbox.files.watch_dir(invalid_file_path, lambda event: None),
+            lambda: files.watch_dir(invalid_file_path, lambda event: None),
             status_code=400,
             service="runtime",
             retryable=False,
@@ -517,7 +518,7 @@ def test_sandbox_files_e2e():
         )
 
         path = f"{base_dir}/presign/file.txt"
-        upload = sandbox.files.upload_url(path, one_time=True)
+        upload = files.upload_url(path, one_time=True)
         assert upload.path == path
         assert upload.method == "PUT"
         upload_response = fetch_signed_url(
@@ -526,9 +527,9 @@ def test_sandbox_files_e2e():
             body="presigned upload body",
         )
         assert upload_response.status_code == 200
-        assert sandbox.files.read_text(path) == "presigned upload body"
+        assert files.read_text(path) == "presigned upload body"
 
-        download = sandbox.files.download_url(path, one_time=True)
+        download = files.download_url(path, one_time=True)
         assert download.path == path
         assert download.method == "GET"
         download_response = fetch_signed_url(download.url, method=download.method)
@@ -536,7 +537,7 @@ def test_sandbox_files_e2e():
         assert download_response.text == "presigned upload body"
 
         path = f"{base_dir}/presign-race/upload.txt"
-        upload = sandbox.files.upload_url(path, one_time=True)
+        upload = files.upload_url(path, one_time=True)
         with ThreadPoolExecutor(max_workers=2) as executor:
             first_future = executor.submit(
                 fetch_signed_url,
@@ -553,11 +554,11 @@ def test_sandbox_files_e2e():
             first = first_future.result()
             second = second_future.result()
         assert sorted([first.status_code, second.status_code]) == [200, 401]
-        assert sandbox.files.read_text(path) in {"first body", "second body"}
+        assert files.read_text(path) in {"first body", "second body"}
 
         path = f"{base_dir}/presign-race/download.txt"
-        sandbox.files.write_text(path, "download once")
-        download = sandbox.files.download_url(path, one_time=True)
+        files.write_text(path, "download once")
+        download = files.download_url(path, one_time=True)
         with ThreadPoolExecutor(max_workers=2) as executor:
             first_future = executor.submit(
                 fetch_signed_url, download.url, method=download.method
@@ -573,11 +574,11 @@ def test_sandbox_files_e2e():
         source = f"{base_dir}/rename-race/source.txt"
         left = f"{base_dir}/rename-race/left.txt"
         right = f"{base_dir}/rename-race/right.txt"
-        sandbox.files.write_text(source, "race")
+        files.write_text(source, "race")
         with ThreadPoolExecutor(max_workers=2) as executor:
             futures = [
-                executor.submit(sandbox.files.rename, source, left),
-                executor.submit(sandbox.files.rename, source, right),
+                executor.submit(files.rename, source, left),
+                executor.submit(files.rename, source, right),
             ]
         results = []
         for future in futures:
@@ -597,12 +598,12 @@ def test_sandbox_files_e2e():
             retryable=False,
             message_includes_any=["not found", "no such file"],
         )
-        winner_path = left if sandbox.files.exists(left) else right
-        assert sandbox.files.read_text(winner_path) == "race"
+        winner_path = left if files.exists(left) else right
+        assert files.read_text(winner_path) == "race"
 
         expect_hyperbrowser_error(
             "missing file read",
-            lambda: sandbox.files.read_text(f"{base_dir}/still-missing.txt"),
+            lambda: files.read_text(f"{base_dir}/still-missing.txt"),
             status_code=404,
             service="runtime",
             retryable=False,
@@ -610,7 +611,7 @@ def test_sandbox_files_e2e():
         )
 
         try:
-            sandbox.files.list(base_dir, depth=0)
+            files.list(base_dir, depth=0)
         except ValueError as error:
             assert "depth should be at least one" in str(error)
         else:

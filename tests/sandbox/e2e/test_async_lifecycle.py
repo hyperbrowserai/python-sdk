@@ -1,8 +1,10 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import CreateSandboxParams, SandboxRuntimeSession
 
 from tests.helpers.config import DEFAULT_IMAGE_NAME, create_async_client
@@ -16,6 +18,38 @@ from tests.helpers.sandbox import (
 )
 
 CUSTOM_IMAGE_NAME = "node"
+SNAPSHOT_SETTLE_DELAY_SECONDS = 30
+SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS = 120
+SNAPSHOT_CREATE_RETRY_DELAY_SECONDS = 5
+
+
+def _is_snapshot_not_ready_error(error: BaseException) -> bool:
+    return (
+        isinstance(error, HyperbrowserError)
+        and error.status_code == 404
+        and "snapshot not found" in str(error).lower()
+    )
+
+
+async def _create_from_snapshot_eventually(
+    client, snapshot_name: str, snapshot_id: str
+):
+    deadline = asyncio.get_running_loop().time() + SNAPSHOT_CREATE_RETRY_TIMEOUT_SECONDS
+    while True:
+        try:
+            return await client.sandboxes.create(
+                CreateSandboxParams(
+                    snapshot_name=snapshot_name,
+                    snapshot_id=snapshot_id,
+                )
+            )
+        except Exception as error:
+            if (
+                asyncio.get_running_loop().time() >= deadline
+                or not _is_snapshot_not_ready_error(error)
+            ):
+                raise
+            await asyncio.sleep(SNAPSHOT_CREATE_RETRY_DELAY_SECONDS)
 
 
 @pytest.mark.anyio
@@ -133,11 +167,11 @@ async def test_async_sandbox_lifecycle_e2e():
         await wait_for_created_snapshot_async(
             client, custom_image_memory_snapshot.snapshot_id
         )
-        custom_snapshot_sandbox = await client.sandboxes.create(
-            CreateSandboxParams(
-                snapshot_name=custom_image_memory_snapshot.snapshot_name,
-                snapshot_id=custom_image_memory_snapshot.snapshot_id,
-            ),
+        await asyncio.sleep(SNAPSHOT_SETTLE_DELAY_SECONDS)
+        custom_snapshot_sandbox = await _create_from_snapshot_eventually(
+            client,
+            custom_image_memory_snapshot.snapshot_name,
+            custom_image_memory_snapshot.snapshot_id,
         )
         assert custom_snapshot_sandbox.id
         assert custom_snapshot_sandbox.status == "active"
@@ -236,11 +270,11 @@ async def test_async_sandbox_lifecycle_e2e():
         )
 
         await wait_for_created_snapshot_async(client, memory_snapshot.snapshot_id)
-        secondary = await client.sandboxes.create(
-            CreateSandboxParams(
-                snapshot_name=memory_snapshot.snapshot_name,
-                snapshot_id=memory_snapshot.snapshot_id,
-            ),
+        await asyncio.sleep(SNAPSHOT_SETTLE_DELAY_SECONDS)
+        secondary = await _create_from_snapshot_eventually(
+            client,
+            memory_snapshot.snapshot_name,
+            memory_snapshot.snapshot_id,
         )
         response = await secondary.stop()
         assert response.success is True

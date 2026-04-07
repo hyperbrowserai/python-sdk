@@ -1,11 +1,13 @@
 import base64
 import posixpath
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Union
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
+    SandboxExecParams,
     SandboxFileInfo,
     SandboxFileWriteEntry,
     SandboxFileWriteInfo,
@@ -18,10 +20,68 @@ from ....sandbox_common import (
 )
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
+SHELL_SAFE_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_@%+=:,./-]+$")
 
 
 def _copy_model(model):
     return model.model_copy(deep=True)
+
+
+def _quote_shell_token(token: str) -> str:
+    if token == "":
+        return "''"
+    if SHELL_SAFE_TOKEN_PATTERN.fullmatch(token):
+        return token
+    return "'" + token.replace("'", "'\"'\"'") + "'"
+
+
+def _normalize_legacy_process_fields(params: SandboxExecParams) -> SandboxExecParams:
+    updates = {}
+
+    if params.args:
+        updates["command"] = " ".join(
+            _quote_shell_token(token) for token in [params.command, *params.args]
+        )
+
+    if params.args is not None:
+        updates["args"] = None
+
+    if params.use_shell is not None:
+        updates["use_shell"] = None
+
+    return params.model_copy(update=updates) if updates else params
+
+
+def _normalize_exec_params(
+    input: Union[str, SandboxExecParams],
+    *,
+    cwd: Optional[str] = None,
+    env: Optional[Dict[str, str]] = None,
+    timeout_ms: Optional[int] = None,
+    timeout_sec: Optional[int] = None,
+    run_as: Optional[str] = None,
+) -> SandboxExecParams:
+    if isinstance(input, str):
+        params = SandboxExecParams(command=input)
+    elif isinstance(input, SandboxExecParams):
+        params = input
+    else:
+        raise TypeError("input must be a command string or SandboxExecParams instance")
+
+    updates = {}
+    if cwd is not None:
+        updates["cwd"] = cwd
+    if env is not None:
+        updates["env"] = env
+    if timeout_ms is not None:
+        updates["timeout_ms"] = timeout_ms
+    if timeout_sec is not None:
+        updates["timeout_sec"] = timeout_sec
+    if run_as is not None:
+        updates["run_as"] = run_as
+
+    normalized = params.model_copy(update=updates) if updates else params
+    return _normalize_legacy_process_fields(normalized)
 
 
 def _build_sandbox_exposed_url(runtime, port: int) -> str:

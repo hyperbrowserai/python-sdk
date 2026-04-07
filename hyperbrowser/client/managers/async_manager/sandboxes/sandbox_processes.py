@@ -10,6 +10,7 @@ from .....models.sandbox import (
     SandboxProcessStdinParams,
     SandboxProcessSummary,
 )
+from ...sandboxes.shared import _normalize_exec_params
 from .sandbox_transport import RuntimeTransport
 
 DEFAULT_PROCESS_KILL_WAIT_SECONDS = 5.0
@@ -147,24 +148,54 @@ class SandboxProcessesApi:
     def __init__(self, transport: RuntimeTransport):
         self._transport = transport
 
-    async def exec(self, input: SandboxExecParams) -> SandboxProcessResult:
-        if not isinstance(input, SandboxExecParams):
-            raise TypeError("input must be a SandboxExecParams instance")
+    async def exec(
+        self,
+        input: Union[str, SandboxExecParams],
+        *,
+        cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+        timeout_ms: Optional[int] = None,
+        timeout_sec: Optional[int] = None,
+        run_as: Optional[str] = None,
+    ) -> SandboxProcessResult:
+        params = _normalize_exec_params(
+            input,
+            cwd=cwd,
+            env=env,
+            timeout_ms=timeout_ms,
+            timeout_sec=timeout_sec,
+            run_as=run_as,
+        )
         payload = await self._transport.request_json(
             "/sandbox/exec",
             method="POST",
-            json_body=input.model_dump(exclude_none=True, by_alias=True),
+            json_body=params.model_dump(exclude_none=True, by_alias=True),
             headers={"content-type": "application/json"},
         )
         return SandboxProcessResult(**payload["result"])
 
-    async def start(self, input: SandboxExecParams) -> SandboxProcessHandle:
-        if not isinstance(input, SandboxExecParams):
-            raise TypeError("input must be a SandboxExecParams instance")
+    async def start(
+        self,
+        input: Union[str, SandboxExecParams],
+        *,
+        cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+        timeout_ms: Optional[int] = None,
+        timeout_sec: Optional[int] = None,
+        run_as: Optional[str] = None,
+    ) -> SandboxProcessHandle:
+        params = _normalize_exec_params(
+            input,
+            cwd=cwd,
+            env=env,
+            timeout_ms=timeout_ms,
+            timeout_sec=timeout_sec,
+            run_as=run_as,
+        )
         payload = await self._transport.request_json(
             "/sandbox/processes",
             method="POST",
-            json_body=input.model_dump(exclude_none=True, by_alias=True),
+            json_body=params.model_dump(exclude_none=True, by_alias=True),
             headers={"content-type": "application/json"},
         )
         return SandboxProcessHandle(

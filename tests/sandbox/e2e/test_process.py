@@ -33,6 +33,15 @@ def test_sandbox_process_e2e():
 
         result = sandbox.exec(
             SandboxExecParams(
+                command="echo process-use-shell-ignored",
+                use_shell=False,
+            )
+        )
+        assert result.exit_code == 0
+        assert "process-use-shell-ignored" in result.stdout
+
+        result = sandbox.exec(
+            SandboxExecParams(
                 command="bash",
                 args=["-lc", "echo process-exec-fail 1>&2; exit 7"],
             )
