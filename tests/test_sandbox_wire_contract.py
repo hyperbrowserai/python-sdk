@@ -709,7 +709,8 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
 
     processes = SandboxProcessesApi(transport)
     process_input = SandboxExecParams(
-        command="echo hi",
+        command="echo",
+        args=["hi world"],
         timeout_ms=500,
         timeout_sec=7,
         run_as="root",
@@ -762,18 +763,16 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
     )
 
     assert transport.calls[0]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
         "runAs": "root",
-        "useShell": True,
     }
     assert transport.calls[1]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
         "runAs": "root",
-        "useShell": True,
     }
     assert transport.calls[2]["json_body"] == {
         "timeoutMs": 250,
@@ -987,7 +986,8 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
 
     processes = AsyncSandboxProcessesApi(transport)
     process_input = SandboxExecParams(
-        command="echo hi",
+        command="echo",
+        args=["hi world"],
         timeout_ms=500,
         timeout_sec=7,
         run_as="root",
@@ -1040,18 +1040,16 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
     )
 
     assert transport.calls[0]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
         "runAs": "root",
-        "useShell": True,
     }
     assert transport.calls[1]["json_body"] == {
-        "command": "echo hi",
+        "command": "echo 'hi world'",
         "timeoutMs": 500,
         "timeout_sec": 7,
         "runAs": "root",
-        "useShell": True,
     }
     assert transport.calls[2]["json_body"] == {
         "timeoutMs": 250,

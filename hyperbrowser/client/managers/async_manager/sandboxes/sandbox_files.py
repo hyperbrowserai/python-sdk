@@ -5,7 +5,7 @@ import io
 import json
 import socket
 from datetime import datetime
-from typing import AsyncIterator, Callable, List, Optional, Union
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 from websockets.asyncio.client import connect as async_ws_connect
@@ -249,10 +249,21 @@ class SandboxFilesApi:
         transport: RuntimeTransport,
         get_connection_info,
         runtime_proxy_override: Optional[str] = None,
+        default_run_as: Optional[str] = None,
     ):
         self._transport = transport
         self._get_connection_info = get_connection_info
         self._runtime_proxy_override = runtime_proxy_override
+        self._default_run_as = default_run_as.strip() if default_run_as else None
+
+    def with_run_as(self, run_as: Optional[str]):
+        normalized = run_as.strip() if run_as else None
+        return SandboxFilesApi(
+            self._transport,
+            self._get_connection_info,
+            self._runtime_proxy_override,
+            default_run_as=normalized,
+        )
 
     async def list(
         self,
@@ -266,17 +277,19 @@ class SandboxFilesApi:
 
         payload = await self._transport.request_json(
             "/sandbox/files",
-            params={
-                "path": path,
-                "depth": depth,
-            },
+            params=self._with_run_as_params(
+                {
+                    "path": path,
+                    "depth": depth,
+                }
+            ),
         )
         return [_normalize_file_info(entry) for entry in payload.get("entries", [])]
 
     async def get_info(self, path: str) -> SandboxFileInfo:
         payload = await self._transport.request_json(
             "/sandbox/files/stat",
-            params={"path": path},
+            params=self._with_run_as_params({"path": path}),
         )
         return _normalize_file_info(payload["file"])
 
@@ -357,10 +370,12 @@ class SandboxFilesApi:
             payload = await self._transport.request_json(
                 "/sandbox/files/write",
                 method="POST",
-                json_body={
-                    "path": path_or_files,
-                    **_encode_write_data(data),
-                },
+                json_body=self._with_run_as_body(
+                    {
+                        "path": path_or_files,
+                        **_encode_write_data(data),
+                    }
+                ),
                 headers={"content-type": "application/json"},
             )
             return _normalize_write_info(payload["files"][0])
@@ -377,7 +392,7 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/write",
             method="POST",
-            json_body={"files": encoded_files},
+            json_body=self._with_run_as_body({"files": encoded_files}),
             headers={"content-type": "application/json"},
         )
         return [_normalize_write_info(entry) for entry in payload.get("files", [])]
@@ -419,7 +434,7 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/upload",
             method="PUT",
-            params={"path": path},
+            params=self._with_run_as_params({"path": path}),
             content=body,
         )
         return SandboxFileTransferResult(**payload)
@@ -427,7 +442,7 @@ class SandboxFilesApi:
     async def download(self, path: str) -> bytes:
         return await self._transport.request_bytes(
             "/sandbox/files/download",
-            params={"path": path},
+            params=self._with_run_as_params({"path": path}),
         )
 
     async def make_dir(
@@ -440,11 +455,13 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/mkdir",
             method="POST",
-            json_body={
-                "path": path,
-                "parents": parents,
-                "mode": mode,
-            },
+            json_body=self._with_run_as_body(
+                {
+                    "path": path,
+                    "parents": parents,
+                    "mode": mode,
+                }
+            ),
             headers={"content-type": "application/json"},
         )
         return bool(payload.get("created"))
@@ -475,7 +492,7 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/move",
             method="POST",
-            json_body=payload,
+            json_body=self._with_run_as_body(payload),
             headers={"content-type": "application/json"},
         )
         return _normalize_file_info(payload["entry"])
@@ -493,10 +510,12 @@ class SandboxFilesApi:
         await self._transport.request_json(
             "/sandbox/files/delete",
             method="POST",
-            json_body=SandboxFileDeleteParams(
-                path=path,
-                recursive=recursive,
-            ).model_dump(exclude_none=True),
+            json_body=self._with_run_as_body(
+                SandboxFileDeleteParams(
+                    path=path,
+                    recursive=recursive,
+                ).model_dump(exclude_none=True)
+            ),
             headers={"content-type": "application/json"},
         )
 
@@ -527,12 +546,14 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/copy",
             method="POST",
-            json_body={
-                "from": normalized.source,
-                "to": normalized.destination,
-                "recursive": normalized.recursive,
-                "overwrite": normalized.overwrite,
-            },
+            json_body=self._with_run_as_body(
+                {
+                    "from": normalized.source,
+                    "to": normalized.destination,
+                    "recursive": normalized.recursive,
+                    "overwrite": normalized.overwrite,
+                }
+            ),
             headers={"content-type": "application/json"},
         )
         return _normalize_file_info(payload["entry"])
@@ -558,7 +579,7 @@ class SandboxFilesApi:
         await self._transport.request_json(
             "/sandbox/files/chmod",
             method="POST",
-            json_body=normalized.model_dump(exclude_none=True),
+            json_body=self._with_run_as_body(normalized.model_dump(exclude_none=True)),
             headers={"content-type": "application/json"},
         )
 
@@ -585,7 +606,7 @@ class SandboxFilesApi:
         await self._transport.request_json(
             "/sandbox/files/chown",
             method="POST",
-            json_body=normalized.model_dump(exclude_none=True),
+            json_body=self._with_run_as_body(normalized.model_dump(exclude_none=True)),
             headers={"content-type": "application/json"},
         )
 
@@ -593,10 +614,12 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/watch",
             method="POST",
-            json_body={
-                "path": path,
-                "recursive": recursive,
-            },
+            json_body=self._with_run_as_body(
+                {
+                    "path": path,
+                    "recursive": recursive,
+                }
+            ),
             headers={"content-type": "application/json"},
         )
         return SandboxFileWatchHandle(
@@ -646,11 +669,13 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/presign-upload",
             method="POST",
-            json_body=SandboxPresignFileParams(
-                path=path,
-                expires_in_seconds=expires_in_seconds,
-                one_time=one_time,
-            ).model_dump(exclude_none=True, by_alias=True),
+            json_body=self._with_run_as_body(
+                SandboxPresignFileParams(
+                    path=path,
+                    expires_in_seconds=expires_in_seconds,
+                    one_time=one_time,
+                ).model_dump(exclude_none=True, by_alias=True)
+            ),
             headers={"content-type": "application/json"},
         )
         return SandboxPresignedUrl(**payload)
@@ -665,11 +690,13 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/presign-download",
             method="POST",
-            json_body=SandboxPresignFileParams(
-                path=path,
-                expires_in_seconds=expires_in_seconds,
-                one_time=one_time,
-            ).model_dump(exclude_none=True, by_alias=True),
+            json_body=self._with_run_as_body(
+                SandboxPresignFileParams(
+                    path=path,
+                    expires_in_seconds=expires_in_seconds,
+                    one_time=one_time,
+                ).model_dump(exclude_none=True, by_alias=True)
+            ),
             headers={"content-type": "application/json"},
         )
         return SandboxPresignedUrl(**payload)
@@ -685,12 +712,14 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/read",
             method="POST",
-            json_body={
-                "path": path,
-                "offset": offset,
-                "length": length,
-                "encoding": encoding,
-            },
+            json_body=self._with_run_as_body(
+                {
+                    "path": path,
+                    "offset": offset,
+                    "length": length,
+                    "encoding": encoding,
+                }
+            ),
             headers={"content-type": "application/json"},
         )
         return SandboxFileReadResult(**payload)
@@ -707,13 +736,31 @@ class SandboxFilesApi:
         payload = await self._transport.request_json(
             "/sandbox/files/write",
             method="POST",
-            json_body={
-                "path": path,
-                "data": data,
-                "append": append,
-                "mode": mode,
-                "encoding": encoding,
-            },
+            json_body=self._with_run_as_body(
+                {
+                    "path": path,
+                    "data": data,
+                    "append": append,
+                    "mode": mode,
+                    "encoding": encoding,
+                }
+            ),
             headers={"content-type": "application/json"},
         )
         return _normalize_write_info(payload["files"][0])
+
+    def _with_run_as_params(
+        self, params: Dict[str, Union[str, int, bool, None]]
+    ) -> Dict[str, Union[str, int, bool, None]]:
+        if not self._default_run_as:
+            return params
+        enriched = dict(params)
+        enriched["runAs"] = self._default_run_as
+        return enriched
+
+    def _with_run_as_body(self, body: Dict[str, Any]) -> Dict[str, Any]:
+        if not self._default_run_as:
+            return body
+        enriched = dict(body)
+        enriched["runAs"] = self._default_run_as
+        return enriched
