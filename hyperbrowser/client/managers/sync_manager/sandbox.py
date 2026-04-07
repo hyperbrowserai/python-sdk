@@ -217,16 +217,24 @@ class SandboxHandle:
             )
         return _copy_model(self._runtime_session)
 
-    def exec(self, input: Union[str, SandboxExecParams]):
-        if isinstance(input, str):
-            params = SandboxExecParams(command=input)
-        else:
-            if not isinstance(input, SandboxExecParams):
-                raise TypeError(
-                    "input must be a command string or SandboxExecParams instance"
-                )
-            params = input
-        return self.processes.exec(params)
+    def exec(
+        self,
+        input: Union[str, SandboxExecParams],
+        *,
+        cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+        timeout_ms: Optional[int] = None,
+        timeout_sec: Optional[int] = None,
+        run_as: Optional[str] = None,
+    ):
+        return self.processes.exec(
+            input,
+            cwd=cwd,
+            env=env,
+            timeout_ms=timeout_ms,
+            timeout_sec=timeout_sec,
+            run_as=run_as,
+        )
 
     def get_process(self, process_id: str) -> SandboxProcessHandle:
         return self.processes.get(process_id)
