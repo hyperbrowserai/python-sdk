@@ -2,15 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
-def _parse_optional_int(value):
-    if value is None or isinstance(value, int):
-        return value
-    if isinstance(value, str) and value.strip() == "":
-        return None
-    if isinstance(value, str):
-        return int(value)
-    return value
+from ._parsers import _parse_optional_int
 
 
 class VolumeBaseModel(BaseModel):
