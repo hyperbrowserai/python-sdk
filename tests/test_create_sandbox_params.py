@@ -9,6 +9,7 @@ from hyperbrowser.models import (
     SandboxProcessListParams,
     SandboxProcessWaitParams,
     SandboxSnapshotListParams,
+    SandboxVolumeMount,
 )
 
 
@@ -33,6 +34,30 @@ def test_create_sandbox_params_serializes_exposed_ports():
         "memMiB": 4096,
         "diskSizeMiB": 8192,
         "exposedPorts": [{"port": 3000, "auth": True}],
+    }
+
+
+def test_create_sandbox_params_serializes_mounts():
+    params = CreateSandboxParams(
+        image_name="node",
+        mounts={
+            "/workspace/cache": SandboxVolumeMount(
+                id="2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                type="rw",
+                shared=True,
+            )
+        },
+    )
+
+    assert params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "node",
+        "mounts": {
+            "/workspace/cache": {
+                "id": "2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                "type": "rw",
+                "shared": True,
+            }
+        },
     }
 
 

@@ -29,6 +29,7 @@ SandboxFileEncoding = Literal["utf8", "base64"]
 SandboxFileReadFormat = Literal["text", "bytes", "blob", "stream"]
 SandboxFileWatchRoute = Literal["ws", "stream"]
 SandboxFileSystemEventType = Literal["chmod", "create", "remove", "rename", "write"]
+SandboxVolumeMountType = Literal["rw", "ro"]
 
 
 def _parse_optional_datetime(value):
@@ -93,6 +94,12 @@ class SandboxExposeResult(SandboxBaseModel):
 class SandboxUnexposeResult(SandboxBaseModel):
     port: int
     exposed: bool
+
+
+class SandboxVolumeMount(SandboxBaseModel):
+    id: str
+    type: Optional[SandboxVolumeMountType] = None
+    shared: Optional[bool] = None
 
 
 class Sandbox(SandboxBaseModel):
@@ -179,6 +186,10 @@ class CreateSandboxParams(SandboxBaseModel):
     exposed_ports: Optional[List[SandboxExposeParams]] = Field(
         default=None,
         serialization_alias="exposedPorts",
+    )
+    mounts: Optional[Dict[str, SandboxVolumeMount]] = Field(
+        default=None,
+        serialization_alias="mounts",
     )
     timeout_minutes: Optional[int] = Field(
         default=None, serialization_alias="timeoutMinutes"
