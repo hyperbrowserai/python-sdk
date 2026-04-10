@@ -1,6 +1,8 @@
 import pytest
 
-from hyperbrowser.client.managers.async_manager.volume import VolumeManager as AsyncVolumeManager
+from hyperbrowser.client.managers.async_manager.volume import (
+    VolumeManager as AsyncVolumeManager,
+)
 from hyperbrowser.client.managers.sync_manager.volume import VolumeManager
 from hyperbrowser.models import CreateVolumeParams, Volume
 

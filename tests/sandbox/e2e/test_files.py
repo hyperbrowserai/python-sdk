@@ -90,9 +90,7 @@ def test_sandbox_files_e2e():
         files.make_dir(f"{list_dir}/nested/inner", parents=True)
         files.write_text(f"{list_dir}/root.txt", "root")
         files.write_text(f"{list_dir}/nested/child.txt", "child")
-        files.write_text(
-            f"{list_dir}/nested/inner/grandchild.txt", "grandchild"
-        )
+        files.write_text(f"{list_dir}/nested/inner/grandchild.txt", "grandchild")
 
         depth_one = files.list(list_dir, depth=1)
         assert [entry.name for entry in depth_one] == ["nested", "root.txt"]
@@ -114,9 +112,7 @@ def test_sandbox_files_e2e():
         result = sandbox.exec(_bash_exec(f'ln -sfn "{target}" "{link}"'))
         assert result.exit_code == 0
         link_entry = next(
-            entry
-            for entry in files.list(symlink_dir, depth=1)
-            if entry.path == link
+            entry for entry in files.list(symlink_dir, depth=1) if entry.path == link
         )
         assert link_entry.symlink_target == target
 
@@ -145,9 +141,7 @@ def test_sandbox_files_e2e():
         read_path = f"{base_dir}/read/readme.txt"
         files.write_text(read_path, "hello from sdk files")
         assert files.read(read_path) == "hello from sdk files"
-        assert (
-            files.read(read_path, format="text", offset=6, length=4) == "from"
-        )
+        assert files.read(read_path, format="text", offset=6, length=4) == "from"
         assert files.read(read_path, format="bytes") == b"hello from sdk files"
         assert files.read(read_path, format="blob") == b"hello from sdk files"
         assert (
@@ -174,9 +168,7 @@ def test_sandbox_files_e2e():
         )
         assert [entry.name for entry in batch] == ["batch-a.txt", "batch-b.bin"]
         assert files.read_text(f"{base_dir}/write/batch-a.txt") == "batch-a"
-        assert files.read_bytes(f"{base_dir}/write/batch-b.bin") == bytes(
-            [1, 2, 3, 4]
-        )
+        assert files.read_bytes(f"{base_dir}/write/batch-b.bin") == bytes([1, 2, 3, 4])
 
         text_path = f"{base_dir}/write-options/text.txt"
         files.write_text(text_path, "hello", mode="0640")
@@ -192,9 +184,7 @@ def test_sandbox_files_e2e():
         transfer_path = f"{base_dir}/transfer/upload.txt"
         uploaded = files.upload(transfer_path, "uploaded from sdk")
         assert uploaded.bytes_written > 0
-        assert (
-            files.download(transfer_path).decode("utf-8") == "uploaded from sdk"
-        )
+        assert files.download(transfer_path).decode("utf-8") == "uploaded from sdk"
 
         file_path = f"{base_dir}/rename/hello.txt"
         renamed_path = f"{base_dir}/rename/hello-renamed.txt"
@@ -226,9 +216,9 @@ def test_sandbox_files_e2e():
         renamed = files.rename(link_dir, renamed_link_dir)
         assert renamed.path == renamed_link_dir
         assert files.get_info(renamed_link_dir).symlink_target == target_dir
-        assert [
-            entry.path for entry in files.list(renamed_link_dir, depth=1)
-        ] == [f"{target_dir}/child.txt"]
+        assert [entry.path for entry in files.list(renamed_link_dir, depth=1)] == [
+            f"{target_dir}/child.txt"
+        ]
 
         source_dir = f"{base_dir}/copy-tree/source"
         nested_dir = f"{source_dir}/nested"
@@ -240,9 +230,7 @@ def test_sandbox_files_e2e():
             _bash_exec(f'cd "{nested_dir}" && ln -sfn "target.txt" "link.txt"')
         )
         assert result.exit_code == 0
-        files.copy(
-            source=source_dir, destination=destination_dir, recursive=True
-        )
+        files.copy(source=source_dir, destination=destination_dir, recursive=True)
         copied_target = f"{destination_dir}/nested/target.txt"
         copied_link = f"{destination_dir}/nested/link.txt"
         assert files.read_text(copied_target) == "payload"
@@ -258,9 +246,7 @@ def test_sandbox_files_e2e():
         loop_paths = [entry.path for entry in loop_entries]
         assert f"{loop_nested_dir}/loop" in loop_paths
         assert not any("/loop/" in path for path in loop_paths)
-        assert (
-            files.get_info(f"{loop_nested_dir}/loop").symlink_target == loop_dir
-        )
+        assert files.get_info(f"{loop_nested_dir}/loop").symlink_target == loop_dir
 
         source_dir = f"{base_dir}/loop-copy/source"
         nested_dir = f"{source_dir}/nested"
@@ -269,14 +255,11 @@ def test_sandbox_files_e2e():
         result = sandbox.exec(_bash_exec(f'cd "{nested_dir}" && ln -sfn .. loop'))
         assert result.exit_code == 0
         destination_dir = f"{base_dir}/loop-copy/destination"
-        files.copy(
-            source=source_dir, destination=destination_dir, recursive=True
-        )
+        files.copy(source=source_dir, destination=destination_dir, recursive=True)
         copied_loop = f"{destination_dir}/nested/loop"
         assert files.get_info(copied_loop).symlink_target == destination_dir
         assert not any(
-            "/loop/" in entry.path
-            for entry in files.list(destination_dir, depth=4)
+            "/loop/" in entry.path for entry in files.list(destination_dir, depth=4)
         )
 
         source = f"{base_dir}/copy-overwrite/source.txt"
@@ -384,12 +367,11 @@ def test_sandbox_files_e2e():
         )
         assert files.read_text(fixture["escaped_file"]) == "outside secret"
         assert (
-            files.download(fixture["escaped_file"]).decode("utf-8")
-            == "outside secret"
+            files.download(fixture["escaped_file"]).decode("utf-8") == "outside secret"
         )
-        assert [
-            entry.path for entry in files.list(fixture["link_dir"], depth=1)
-        ] == [f"{fixture['outside_dir']}/secret.txt"]
+        assert [entry.path for entry in files.list(fixture["link_dir"], depth=1)] == [
+            f"{fixture['outside_dir']}/secret.txt"
+        ]
         seen = Queue(maxsize=1)
         handle = files.watch_dir(
             fixture["link_dir"],
@@ -400,9 +382,7 @@ def test_sandbox_files_e2e():
             ),
         )
         try:
-            files.write_text(
-                f"{fixture['outside_dir']}/fresh.txt", "watch parent link"
-            )
+            files.write_text(f"{fixture['outside_dir']}/fresh.txt", "watch parent link")
             assert _await_queue_value(seen) == "fresh.txt"
         finally:
             handle.stop()
@@ -445,9 +425,7 @@ def test_sandbox_files_e2e():
             )
         )
         assert result.exit_code == 0
-        assert [entry.path for entry in files.list(link, depth=1)] == [
-            target_file
-        ]
+        assert [entry.path for entry in files.list(link, depth=1)] == [target_file]
         seen = Queue(maxsize=1)
         handle = files.watch_dir(
             link,
@@ -479,16 +457,15 @@ def test_sandbox_files_e2e():
             watch_dir,
             lambda event: (
                 recursive_event.put_nowait(event.name)
-                if event.type in {"create", "write"} and event.name == "nested/recursive.txt"
+                if event.type in {"create", "write"}
+                and event.name == "nested/recursive.txt"
                 else None
             ),
             recursive=True,
         )
         try:
             files.write_text(f"{watch_dir}/direct.txt", "watch me")
-            files.write_text(
-                f"{watch_dir}/nested/recursive.txt", "watch me too"
-            )
+            files.write_text(f"{watch_dir}/nested/recursive.txt", "watch me too")
             assert _await_queue_value(direct_event) == "direct.txt"
             assert _await_queue_value(recursive_event) == "nested/recursive.txt"
         finally:
@@ -497,9 +474,7 @@ def test_sandbox_files_e2e():
 
         expect_hyperbrowser_error(
             "watch missing directory",
-            lambda: files.watch_dir(
-                f"{base_dir}/watch-missing", lambda event: None
-            ),
+            lambda: files.watch_dir(f"{base_dir}/watch-missing", lambda event: None),
             status_code=404,
             service="runtime",
             retryable=False,

@@ -292,8 +292,8 @@ class SandboxFilesApi:
             "/sandbox/files",
             params=self._with_run_as_params(
                 {
-                "path": path,
-                "depth": depth,
+                    "path": path,
+                    "depth": depth,
                 }
             ),
         )
