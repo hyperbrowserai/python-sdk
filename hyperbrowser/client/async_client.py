@@ -14,6 +14,7 @@ from .managers.async_manager.scrape import ScrapeManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.team import TeamManager
 from .managers.async_manager.computer_action import ComputerActionManager
+from .managers.async_manager.volume import VolumeManager
 
 
 class AsyncHyperbrowser(HyperbrowserBase):
@@ -47,6 +48,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.team = TeamManager(self)
         self.computer_action = ComputerActionManager(self)
         self.sandboxes = SandboxManager(self)
+        self.volumes = VolumeManager(self)
 
     async def close(self) -> None:
         await self.transport.close()

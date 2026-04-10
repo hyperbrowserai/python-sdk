@@ -90,9 +90,7 @@ async def test_async_sandbox_files_e2e():
         await files.make_dir(f"{list_dir}/nested/inner", parents=True)
         await files.write_text(f"{list_dir}/root.txt", "root")
         await files.write_text(f"{list_dir}/nested/child.txt", "child")
-        await files.write_text(
-            f"{list_dir}/nested/inner/grandchild.txt", "grandchild"
-        )
+        await files.write_text(f"{list_dir}/nested/inner/grandchild.txt", "grandchild")
 
         depth_one = await files.list(list_dir, depth=1)
         assert [entry.name for entry in depth_one] == ["nested", "root.txt"]
@@ -129,9 +127,7 @@ async def test_async_sandbox_files_e2e():
             )
         )
         assert result.exit_code == 0
-        assert (
-            await files.get_info(symlink_link)
-        ).symlink_target == symlink_target
+        assert (await files.get_info(symlink_link)).symlink_target == symlink_target
 
         broken_target = f"{base_dir}/symlink-broken/missing-target.txt"
         broken_link = f"{base_dir}/symlink-broken/link.txt"
@@ -142,33 +138,20 @@ async def test_async_sandbox_files_e2e():
         )
         assert result.exit_code == 0
         assert await files.exists(broken_link) is True
-        assert (
-            await files.get_info(broken_link)
-        ).symlink_target == broken_target
+        assert (await files.get_info(broken_link)).symlink_target == broken_target
 
         read_path = f"{base_dir}/read/readme.txt"
         await files.write_text(read_path, "hello from sdk files")
         assert await files.read(read_path) == "hello from sdk files"
-        assert (
-            await files.read(read_path, format="text", offset=6, length=4)
-            == "from"
-        )
-        assert (
-            await files.read(read_path, format="bytes")
-            == b"hello from sdk files"
-        )
-        assert (
-            await files.read(read_path, format="blob")
-            == b"hello from sdk files"
-        )
+        assert await files.read(read_path, format="text", offset=6, length=4) == "from"
+        assert await files.read(read_path, format="bytes") == b"hello from sdk files"
+        assert await files.read(read_path, format="blob") == b"hello from sdk files"
         assert (
             _read_stream_text(await files.read(read_path, format="stream"))
             == "hello from sdk files"
         )
 
-        single = await files.write(
-            f"{base_dir}/write/single.txt", "single file"
-        )
+        single = await files.write(f"{base_dir}/write/single.txt", "single file")
         assert single.name == "single.txt"
         assert single.path == f"{base_dir}/write/single.txt"
         assert await files.read_text(single.path) == "single file"
@@ -186,9 +169,7 @@ async def test_async_sandbox_files_e2e():
             ]
         )
         assert [entry.name for entry in batch] == ["batch-a.txt", "batch-b.bin"]
-        assert (
-            await files.read_text(f"{base_dir}/write/batch-a.txt") == "batch-a"
-        )
+        assert await files.read_text(f"{base_dir}/write/batch-a.txt") == "batch-a"
         assert await files.read_bytes(f"{base_dir}/write/batch-b.bin") == bytes(
             [1, 2, 3, 4]
         )
@@ -226,18 +207,12 @@ async def test_async_sandbox_files_e2e():
             _bash_exec(f'ln -sfn "{renamed_path}" "{link_path}"')
         )
         assert result.exit_code == 0
-        copied_link = await files.copy(
-            source=link_path, destination=copied_link_path
-        )
+        copied_link = await files.copy(source=link_path, destination=copied_link_path)
         assert copied_link.path == copied_link_path
-        assert (
-            await files.get_info(copied_link_path)
-        ).symlink_target == renamed_path
+        assert (await files.get_info(copied_link_path)).symlink_target == renamed_path
         renamed_link = await files.rename(copied_link_path, renamed_link_path)
         assert renamed_link.path == renamed_link_path
-        assert (
-            await files.get_info(renamed_link_path)
-        ).symlink_target == renamed_path
+        assert (await files.get_info(renamed_link_path)).symlink_target == renamed_path
 
         target_dir = f"{base_dir}/rename-dir/target-dir"
         link_dir = f"{base_dir}/rename-dir/link-dir"
@@ -248,9 +223,7 @@ async def test_async_sandbox_files_e2e():
         assert result.exit_code == 0
         renamed = await files.rename(link_dir, renamed_link_dir)
         assert renamed.path == renamed_link_dir
-        assert (
-            await files.get_info(renamed_link_dir)
-        ).symlink_target == target_dir
+        assert (await files.get_info(renamed_link_dir)).symlink_target == target_dir
         assert [
             entry.path for entry in await files.list(renamed_link_dir, depth=1)
         ] == [f"{target_dir}/child.txt"]
@@ -265,15 +238,11 @@ async def test_async_sandbox_files_e2e():
             _bash_exec(f'cd "{nested_dir}" && ln -sfn "target.txt" "link.txt"')
         )
         assert result.exit_code == 0
-        await files.copy(
-            source=source_dir, destination=destination_dir, recursive=True
-        )
+        await files.copy(source=source_dir, destination=destination_dir, recursive=True)
         copied_target = f"{destination_dir}/nested/target.txt"
         copied_link = f"{destination_dir}/nested/link.txt"
         assert await files.read_text(copied_target) == "payload"
-        assert (
-            await files.get_info(copied_link)
-        ).symlink_target == copied_target
+        assert (await files.get_info(copied_link)).symlink_target == copied_target
 
         loop_dir = f"{base_dir}/loop-list"
         loop_nested_dir = f"{loop_dir}/nested"
@@ -298,13 +267,9 @@ async def test_async_sandbox_files_e2e():
         result = await sandbox.exec(_bash_exec(f'cd "{nested_dir}" && ln -sfn .. loop'))
         assert result.exit_code == 0
         destination_dir = f"{base_dir}/loop-copy/destination"
-        await files.copy(
-            source=source_dir, destination=destination_dir, recursive=True
-        )
+        await files.copy(source=source_dir, destination=destination_dir, recursive=True)
         copied_loop = f"{destination_dir}/nested/loop"
-        assert (
-            await files.get_info(copied_loop)
-        ).symlink_target == destination_dir
+        assert (await files.get_info(copied_loop)).symlink_target == destination_dir
         assert not any(
             "/loop/" in entry.path
             for entry in await files.list(destination_dir, depth=4)
@@ -321,9 +286,7 @@ async def test_async_sandbox_files_e2e():
             )
         )
         assert result.exit_code == 0
-        await files.copy(
-            source=source, destination=destination_link, overwrite=True
-        )
+        await files.copy(source=source, destination=destination_link, overwrite=True)
         assert await files.read_text(destination_link) == "source payload"
         assert await files.read_text(existing_target) == "existing target"
         assert (await files.get_info(destination_link)).symlink_target is None
@@ -344,17 +307,9 @@ async def test_async_sandbox_files_e2e():
             destination=move_destination_link,
             overwrite=True,
         )
-        assert (
-            await files.read_text(move_destination_link)
-            == "move source payload"
-        )
-        assert (
-            await files.read_text(move_existing_target)
-            == "move existing target"
-        )
-        assert (
-            await files.get_info(move_destination_link)
-        ).symlink_target is None
+        assert await files.read_text(move_destination_link) == "move source payload"
+        assert await files.read_text(move_existing_target) == "move existing target"
+        assert (await files.get_info(move_destination_link)).symlink_target is None
         assert await files.exists(move_source) is False
 
         chmod_path = f"{base_dir}/chmod/file.txt"
@@ -423,20 +378,21 @@ async def test_async_sandbox_files_e2e():
         fixture = await _create_parent_symlink_escape_fixture(
             sandbox, base_dir, "parent-escape-read"
         )
-        assert (
-            await files.read_text(fixture["escaped_file"]) == "outside secret"
-        )
+        assert await files.read_text(fixture["escaped_file"]) == "outside secret"
         assert (await files.download(fixture["escaped_file"])).decode(
             "utf-8"
         ) == "outside secret"
         assert [
-            entry.path
-            for entry in await files.list(fixture["link_dir"], depth=1)
+            entry.path for entry in await files.list(fixture["link_dir"], depth=1)
         ] == [f"{fixture['outside_dir']}/secret.txt"]
         seen = asyncio.get_running_loop().create_future()
 
         async def on_parent_event(event):
-            if event.type in {"create", "write"} and event.name == "fresh.txt" and not seen.done():
+            if (
+                event.type in {"create", "write"}
+                and event.name == "fresh.txt"
+                and not seen.done()
+            ):
                 seen.set_result(event.name)
 
         handle = await files.watch_dir(fixture["link_dir"], on_parent_event)
@@ -492,14 +448,16 @@ async def test_async_sandbox_files_e2e():
         seen = asyncio.get_running_loop().create_future()
 
         async def on_link_event(event):
-            if event.type in {"create", "write"} and event.name == "file.txt" and not seen.done():
+            if (
+                event.type in {"create", "write"}
+                and event.name == "file.txt"
+                and not seen.done()
+            ):
                 seen.set_result(event.name)
 
         handle = await files.watch_dir(link, on_link_event)
         try:
-            await files.write_text(
-                f"{target_dir}/file.txt", "watch through link"
-            )
+            await files.write_text(f"{target_dir}/file.txt", "watch through link")
             assert await _await_future(seen) == "file.txt"
         finally:
             await handle.stop()
@@ -533,9 +491,7 @@ async def test_async_sandbox_files_e2e():
         )
         try:
             await files.write_text(f"{watch_dir}/direct.txt", "watch me")
-            await files.write_text(
-                f"{watch_dir}/nested/recursive.txt", "watch me too"
-            )
+            await files.write_text(f"{watch_dir}/nested/recursive.txt", "watch me too")
             assert await _await_future(direct_future) == "direct.txt"
             assert await _await_future(recursive_future) == "nested/recursive.txt"
         finally:
@@ -544,9 +500,7 @@ async def test_async_sandbox_files_e2e():
 
         await expect_hyperbrowser_error_async(
             "watch missing directory",
-            lambda: files.watch_dir(
-                f"{base_dir}/watch-missing", lambda event: None
-            ),
+            lambda: files.watch_dir(f"{base_dir}/watch-missing", lambda event: None),
             status_code=404,
             service="runtime",
             retryable=False,

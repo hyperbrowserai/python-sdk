@@ -14,6 +14,7 @@ from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.team import TeamManager
 from .managers.sync_manager.computer_action import ComputerActionManager
+from .managers.sync_manager.volume import VolumeManager
 
 
 class Hyperbrowser(HyperbrowserBase):
@@ -47,6 +48,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.team = TeamManager(self)
         self.computer_action = ComputerActionManager(self)
         self.sandboxes = SandboxManager(self)
+        self.volumes = VolumeManager(self)
 
     def close(self) -> None:
         self.transport.close()

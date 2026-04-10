@@ -42,6 +42,7 @@ from hyperbrowser.models import (
     SandboxTerminalKillParams,
     SandboxTerminalWaitParams,
     SandboxUnexposeResult,
+    SandboxVolumeMount,
 )
 
 
@@ -498,6 +499,13 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         disk_mib=8192,
         enable_recording=True,
         exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
+        mounts={
+            "/workspace/cache": SandboxVolumeMount(
+                id="2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                type="rw",
+                shared=True,
+            )
+        },
         timeout_minutes=15,
     ).model_dump(by_alias=True, exclude_none=True) == {
         "imageName": "node",
@@ -507,6 +515,13 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         "diskSizeMiB": 8192,
         "enableRecording": True,
         "exposedPorts": [{"port": 3000, "auth": True}],
+        "mounts": {
+            "/workspace/cache": {
+                "id": "2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                "type": "rw",
+                "shared": True,
+            }
+        },
         "timeoutMinutes": 15,
     }
 
@@ -631,6 +646,13 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
             disk_mib=8192,
             enable_recording=True,
             exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
+            mounts={
+                "/workspace/cache": SandboxVolumeMount(
+                    id="2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                    type="rw",
+                    shared=True,
+                )
+            },
             timeout_minutes=15,
         )
     )
@@ -681,6 +703,13 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
         "diskSizeMiB": 8192,
         "enableRecording": True,
         "exposedPorts": [{"port": 3000, "auth": True}],
+        "mounts": {
+            "/workspace/cache": {
+                "id": "2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                "type": "rw",
+                "shared": True,
+            }
+        },
         "timeoutMinutes": 15,
     }
     assert snapshot_call["json"] == {
@@ -915,6 +944,13 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
             disk_mib=8192,
             enable_recording=True,
             exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
+            mounts={
+                "/workspace/cache": SandboxVolumeMount(
+                    id="2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                    type="rw",
+                    shared=True,
+                )
+            },
             timeout_minutes=15,
         )
     )
@@ -965,6 +1001,13 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
         "diskSizeMiB": 8192,
         "enableRecording": True,
         "exposedPorts": [{"port": 3000, "auth": True}],
+        "mounts": {
+            "/workspace/cache": {
+                "id": "2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+                "type": "rw",
+                "shared": True,
+            }
+        },
         "timeoutMinutes": 15,
     }
     assert snapshot_call["json"] == {

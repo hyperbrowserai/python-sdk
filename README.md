@@ -130,6 +130,35 @@ client.close()
 
 `cpu`, `memory_mib`, and `disk_mib` are only supported for image launches.
 
+### Manage volumes and mount them in a sandbox
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import CreateSandboxParams, CreateVolumeParams, SandboxVolumeMount
+
+client = Hyperbrowser(api_key="test-key")
+
+volume = client.volumes.create(CreateVolumeParams(name="project-cache"))
+all_volumes = client.volumes.list()
+same_volume = client.volumes.get(volume.id)
+
+sandbox = client.sandboxes.create(
+    CreateSandboxParams(
+        image_name="node",
+        mounts={
+            "/workspace/cache": SandboxVolumeMount(
+                id=same_volume.id,
+                type="rw",
+                shared=True,
+            )
+        },
+    )
+)
+
+sandbox.stop()
+client.close()
+```
+
 ### List sandboxes with filters
 
 ```python

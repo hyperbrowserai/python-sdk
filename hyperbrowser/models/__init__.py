@@ -173,6 +173,7 @@ from .profile import (
     ProfileListResponse,
     ProfileResponse,
 )
+from .volume import CreateVolumeParams, Volume, VolumeListResponse
 from .scrape import (
     BatchScrapeJobResponse,
     BatchScrapeJobStatusResponse,
@@ -245,6 +246,8 @@ from .sandbox import (
     Sandbox,
     SandboxDetail,
     SandboxRuntimeSession,
+    SandboxVolumeMountType,
+    SandboxVolumeMount,
     CreateSandboxParams,
     StartSandboxFromSnapshotParams,
     SandboxListParams,
@@ -450,6 +453,10 @@ __all__ = [
     "ProfileListParams",
     "ProfileListResponse",
     "ProfileResponse",
+    # volume
+    "CreateVolumeParams",
+    "Volume",
+    "VolumeListResponse",
     # scrape
     "BatchScrapeJobResponse",
     "BatchScrapeJobStatusResponse",
@@ -499,6 +506,8 @@ __all__ = [
     "Sandbox",
     "SandboxDetail",
     "SandboxRuntimeSession",
+    "SandboxVolumeMountType",
+    "SandboxVolumeMount",
     "CreateSandboxParams",
     "StartSandboxFromSnapshotParams",
     "SandboxListParams",
