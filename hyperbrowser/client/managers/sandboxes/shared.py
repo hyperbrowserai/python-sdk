@@ -86,11 +86,11 @@ def _normalize_exec_params(
 
 def _build_sandbox_exposed_url(runtime, port: int) -> str:
     parsed = urlsplit(runtime.base_url)
-    hostname = parsed.hostname
-    if not hostname:
+    session_host = _resolve_runtime_session_host(runtime, parsed)
+    if not session_host:
         return runtime.base_url
 
-    exposed_host = f"{port}-{hostname}"
+    exposed_host = f"{port}-{session_host}"
     netloc = exposed_host
     if parsed.port:
         netloc = f"{netloc}:{parsed.port}"
@@ -100,9 +100,43 @@ def _build_sandbox_exposed_url(runtime, port: int) -> str:
             credentials = f"{credentials}:{parsed.password}"
         netloc = f"{credentials}@{netloc}"
 
-    path = parsed.path or "/"
+    return urlunsplit((parsed.scheme, netloc, "/", "", ""))
 
-    return urlunsplit((parsed.scheme, netloc, path, parsed.query, parsed.fragment))
+
+def _resolve_runtime_session_host(runtime, parsed_base) -> Optional[str]:
+    session_id = _runtime_session_id_from_path(parsed_base.path)
+    if session_id and parsed_base.hostname:
+        return f"{session_id}.{parsed_base.hostname}"
+
+    runtime_host = getattr(runtime, "host", None)
+    if isinstance(runtime_host, str):
+        runtime_host = runtime_host.strip()
+    else:
+        runtime_host = ""
+
+    if not runtime_host:
+        return parsed_base.hostname
+
+    parsed_runtime_host = urlsplit(runtime_host)
+    if parsed_runtime_host.hostname:
+        host_session_id = _runtime_session_id_from_path(parsed_runtime_host.path)
+        if host_session_id:
+            return f"{host_session_id}.{parsed_runtime_host.hostname}"
+        return parsed_runtime_host.hostname
+
+    return runtime_host
+
+
+def _runtime_session_id_from_path(path: str) -> Optional[str]:
+    segments = [segment for segment in path.strip("/").split("/") if segment]
+    if len(segments) < 2:
+        return None
+    if segments[0] != "sandbox":
+        return None
+    session_id = segments[1].strip()
+    if not session_id:
+        return None
+    return session_id
 
 
 def _expires_within_buffer(expires_at: Optional[datetime]) -> bool:

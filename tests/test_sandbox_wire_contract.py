@@ -70,15 +70,15 @@ SANDBOX_DETAIL_PAYLOAD = {
     "diskSizeMiB": 8192,
     "runtime": {
         "transport": "regional_proxy",
-        "host": "runtime.example.com",
-        "baseUrl": "https://runtime.example.com",
+        "host": "https://runtime.example.com/sandbox/sbx_123",
+        "baseUrl": "https://runtime.example.com/sandbox/sbx_123",
     },
     "exposedPorts": [
         {
             "port": 3000,
             "auth": True,
-            "url": "https://3000-runtime.example.com/",
-            "browserUrl": "https://3000-runtime.example.com/_hb/auth?grant=test&next=%2F",
+            "url": "https://3000-sbx_123.runtime.example.com/",
+            "browserUrl": "https://3000-sbx_123.runtime.example.com/_hb/auth?grant=test&next=%2F",
             "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
         }
     ],
@@ -122,15 +122,15 @@ SANDBOX_LIST_PAYLOAD = {
             "diskSizeMiB": 8192,
             "runtime": {
                 "transport": "regional_proxy",
-                "host": "runtime.example.com",
-                "baseUrl": "https://runtime.example.com",
+                "host": "https://runtime.example.com/sandbox/sbx_123",
+                "baseUrl": "https://runtime.example.com/sandbox/sbx_123",
             },
             "exposedPorts": [
                 {
                     "port": 3000,
                     "auth": False,
-                    "url": "https://3000-runtime.example.com/",
-                    "browserUrl": "https://3000-runtime.example.com/",
+                    "url": "https://3000-sbx_123.runtime.example.com/",
+                    "browserUrl": "https://3000-sbx_123.runtime.example.com/",
                 }
             ],
         }
@@ -296,8 +296,8 @@ WRITE_FILE_PAYLOAD = {
 EXPOSE_PAYLOAD = {
     "port": 3000,
     "auth": True,
-    "url": "https://3000-runtime.example.com/",
-    "browserUrl": "https://3000-runtime.example.com/_hb/auth?grant=test&next=%2F",
+    "url": "https://3000-sbx_123.runtime.example.com/",
+    "browserUrl": "https://3000-sbx_123.runtime.example.com/_hb/auth?grant=test&next=%2F",
     "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
 }
 
@@ -621,7 +621,9 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
 def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeSyncClient()
     manager = SandboxManager(client)
-    runtime = type("Runtime", (), {"base_url": "https://runtime.example.com"})()
+    runtime = type(
+        "Runtime", (), {"base_url": "https://runtime.example.com/sandbox/sbx_123"}
+    )()
 
     listed = manager.list(
         SandboxListParams(
@@ -919,7 +921,9 @@ def test_sync_sandbox_handle_exec_string_call_supports_run_as(monkeypatch):
 async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeAsyncClient()
     manager = AsyncSandboxManager(client)
-    runtime = type("Runtime", (), {"base_url": "https://runtime.example.com"})()
+    runtime = type(
+        "Runtime", (), {"base_url": "https://runtime.example.com/sandbox/sbx_123"}
+    )()
 
     listed = await manager.list(
         SandboxListParams(
@@ -1211,7 +1215,7 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
             (),
             {
                 "sandbox_id": "sbx_123",
-                "base_url": "https://runtime.example.com",
+                "base_url": "https://runtime.example.com/sandbox/sbx_123",
                 "token": "tok",
             },
         )(),
@@ -1255,7 +1259,7 @@ async def test_async_terminal_attach_includes_cursor(monkeypatch):
             (),
             {
                 "sandbox_id": "sbx_123",
-                "base_url": "https://runtime.example.com",
+                "base_url": "https://runtime.example.com/sandbox/sbx_123",
                 "token": "tok",
             },
         )()

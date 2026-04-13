@@ -42,3 +42,31 @@ def test_runtime_websocket_target_applies_explicit_proxy_override():
     )
     assert target.connect_host == "127.0.0.1"
     assert target.connect_port == 8090
+
+
+def test_runtime_transport_target_preserves_runtime_base_path():
+    target = resolve_runtime_transport_target(
+        "https://region.example.dev/sandbox/sbx_123",
+        "/sandbox/exec?foo=bar",
+    )
+
+    assert (
+        target.url
+        == "https://region.example.dev/sandbox/sbx_123/sandbox/exec?foo=bar"
+    )
+    assert target.host_header is None
+
+
+def test_runtime_websocket_target_preserves_runtime_base_path_with_override():
+    target = to_websocket_transport_target(
+        "https://region.example.dev/sandbox/sbx_123",
+        "/sandbox/pty/pty_123/ws?sessionId=sandbox_123",
+        "http://127.0.0.1:8090",
+    )
+
+    assert (
+        target.url
+        == "wss://region.example.dev/sandbox/sbx_123/sandbox/pty/pty_123/ws?sessionId=sandbox_123"
+    )
+    assert target.connect_host == "127.0.0.1"
+    assert target.connect_port == 8090
