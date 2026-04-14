@@ -52,7 +52,7 @@ def test_runtime_transport_target_preserves_runtime_base_path():
 
     assert (
         target.url
-        == "https://region.example.dev/sandbox/sbx_123/sandbox/exec?foo=bar"
+        == "https://region.example.dev/sandbox/sbx_123/exec?foo=bar"
     )
     assert target.host_header is None
 
@@ -66,7 +66,7 @@ def test_runtime_websocket_target_preserves_runtime_base_path_with_override():
 
     assert (
         target.url
-        == "wss://region.example.dev/sandbox/sbx_123/sandbox/pty/pty_123/ws?sessionId=sandbox_123"
+        == "wss://region.example.dev/sandbox/sbx_123/pty/pty_123/ws?sessionId=sandbox_123"
     )
     assert target.connect_host == "127.0.0.1"
     assert target.connect_port == 8090
