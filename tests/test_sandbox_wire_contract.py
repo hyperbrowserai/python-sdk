@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from types import SimpleNamespace
 import hyperbrowser.client.managers.async_manager.sandboxes.sandbox_terminal as async_terminal_module
 import hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal as sync_terminal_module
 
@@ -25,6 +26,7 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_processes impor
 from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import (
     SandboxTerminalApi,
 )
+from hyperbrowser.client.managers.sandboxes.shared import _build_sandbox_exposed_url
 from hyperbrowser.models import (
     CreateSandboxParams,
     SandboxDetail,
@@ -70,15 +72,15 @@ SANDBOX_DETAIL_PAYLOAD = {
     "diskSizeMiB": 8192,
     "runtime": {
         "transport": "regional_proxy",
-        "host": "runtime.example.com",
-        "baseUrl": "https://runtime.example.com",
+        "host": "https://runtime.example.com",
+        "baseUrl": "https://runtime.example.com/sandbox/sbx_123",
     },
     "exposedPorts": [
         {
             "port": 3000,
             "auth": True,
-            "url": "https://3000-runtime.example.com/",
-            "browserUrl": "https://3000-runtime.example.com/_hb/auth?grant=test&next=%2F",
+            "url": "https://3000-sbx_123.runtime.example.com/",
+            "browserUrl": "https://3000-sbx_123.runtime.example.com/_hb/auth?grant=test&next=%2F",
             "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
         }
     ],
@@ -122,15 +124,15 @@ SANDBOX_LIST_PAYLOAD = {
             "diskSizeMiB": 8192,
             "runtime": {
                 "transport": "regional_proxy",
-                "host": "runtime.example.com",
-                "baseUrl": "https://runtime.example.com",
+                "host": "https://runtime.example.com",
+                "baseUrl": "https://runtime.example.com/sandbox/sbx_123",
             },
             "exposedPorts": [
                 {
                     "port": 3000,
                     "auth": False,
-                    "url": "https://3000-runtime.example.com/",
-                    "browserUrl": "https://3000-runtime.example.com/",
+                    "url": "https://3000-sbx_123.runtime.example.com/",
+                    "browserUrl": "https://3000-sbx_123.runtime.example.com/",
                 }
             ],
         }
@@ -296,8 +298,8 @@ WRITE_FILE_PAYLOAD = {
 EXPOSE_PAYLOAD = {
     "port": 3000,
     "auth": True,
-    "url": "https://3000-runtime.example.com/",
-    "browserUrl": "https://3000-runtime.example.com/_hb/auth?grant=test&next=%2F",
+    "url": "https://3000-sbx_123.runtime.example.com/",
+    "browserUrl": "https://3000-sbx_123.runtime.example.com/_hb/auth?grant=test&next=%2F",
     "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
 }
 
@@ -719,6 +721,7 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert sandbox.memory_mib == 2048
     assert sandbox.disk_mib == 8192
     assert sandbox.exposed_ports[0].browser_url is not None
+    assert sandbox.get_exposed_url(3000) == "https://3000-sbx_123.runtime.example.com/"
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
     assert expose_call["url"].endswith("/sandbox/sbx_123/expose")
@@ -731,6 +734,30 @@ def test_snapshot_summary_allows_missing_compatibility_tag():
     snapshot = SandboxSnapshotSummary(**SNAPSHOT_PAYLOAD_WITHOUT_COMPATIBILITY_TAG)
 
     assert snapshot.compatibility_tag is None
+
+
+def test_build_sandbox_exposed_url_uses_runtime_base_path_session_id():
+    runtime = SimpleNamespace(
+        host="https://runtime.example.com",
+        base_url="https://runtime.example.com/sandbox/sbx_123",
+    )
+
+    assert (
+        _build_sandbox_exposed_url(runtime, 3000)
+        == "https://3000-sbx_123.runtime.example.com/"
+    )
+
+
+def test_build_sandbox_exposed_url_uses_session_id_from_runtime_host_path():
+    runtime = SimpleNamespace(
+        host="https://runtime.example.com/sandbox/sbx_123",
+        base_url="https://runtime.example.com",
+    )
+
+    assert (
+        _build_sandbox_exposed_url(runtime, 3000)
+        == "https://3000-sbx_123.runtime.example.com/"
+    )
 
 
 def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
@@ -1017,6 +1044,7 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert sandbox.memory_mib == 2048
     assert sandbox.disk_mib == 8192
     assert sandbox.exposed_ports[0].browser_url is not None
+    assert sandbox.get_exposed_url(3000) == "https://3000-sbx_123.runtime.example.com/"
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
     assert isinstance(unexposed, SandboxUnexposeResult)

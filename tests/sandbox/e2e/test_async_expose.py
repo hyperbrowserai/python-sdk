@@ -1,4 +1,5 @@
 import asyncio
+from urllib.parse import urlparse
 
 import pytest
 
@@ -99,6 +100,8 @@ async def test_async_sandbox_expose_e2e():
         assert exposure.port == HTTP_PORT
         assert exposure.auth is False
         assert exposure.url == sandbox.get_exposed_url(HTTP_PORT)
+        if "/sandbox/" in sandbox.runtime.base_url:
+            assert urlparse(exposure.url).hostname.startswith(f"{HTTP_PORT}-{sandbox.id}.")
 
         status, body = await _wait_for_http_response(
             exposure.url,
