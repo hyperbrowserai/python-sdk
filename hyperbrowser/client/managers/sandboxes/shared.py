@@ -17,6 +17,7 @@ from ....sandbox_common import (
     RUNTIME_SESSION_REFRESH_BUFFER_MS,
     normalize_network_error,
     parse_error_payload,
+    runtime_base_url_session_id,
 )
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
@@ -84,17 +85,8 @@ def _normalize_exec_params(
     return _normalize_legacy_process_fields(normalized)
 
 
-def _runtime_session_id_from_path(raw_path: str) -> Optional[str]:
-    segments = [
-        segment for segment in raw_path.strip().strip("/").split("/") if segment
-    ]
-    if len(segments) < 2 or segments[0] != "sandbox" or not segments[1]:
-        return None
-    return segments[1]
-
-
 def _resolve_sandbox_runtime_session_host(runtime, base_url) -> str:
-    session_id_from_base_path = _runtime_session_id_from_path(base_url.path)
+    session_id_from_base_path = runtime_base_url_session_id(base_url.path)
     if session_id_from_base_path and base_url.hostname:
         return f"{session_id_from_base_path}.{base_url.hostname}"
 
@@ -102,7 +94,7 @@ def _resolve_sandbox_runtime_session_host(runtime, base_url) -> str:
     if runtime_host:
         parsed_host = urlsplit(runtime_host)
         if parsed_host.hostname:
-            session_id_from_host_path = _runtime_session_id_from_path(parsed_host.path)
+            session_id_from_host_path = runtime_base_url_session_id(parsed_host.path)
             if session_id_from_host_path:
                 return f"{session_id_from_host_path}.{parsed_host.hostname}"
             return parsed_host.hostname
