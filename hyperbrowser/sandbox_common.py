@@ -114,13 +114,61 @@ def has_scheme(value: str) -> bool:
     return "://" in value
 
 
+def runtime_base_url_session_id(runtime_base_url: str) -> Optional[str]:
+    parsed_base_url = urlsplit(runtime_base_url.strip())
+    segments = [
+        segment
+        for segment in parsed_base_url.path.strip().strip("/").split("/")
+        if segment
+    ]
+    if len(segments) < 2 or segments[0] != "sandbox" or not segments[1].strip():
+        return None
+    return segments[1].strip()
+
+
+def should_prepend_sandbox_to_runtime_api(runtime_base_url: str) -> bool:
+    return runtime_base_url_session_id(runtime_base_url) is None
+
+
+def normalize_runtime_api_path(pathname: str, prepend_sandbox: bool) -> str:
+    trimmed = pathname.strip()
+    if trimmed == "":
+        return "/sandbox" if prepend_sandbox else "/"
+
+    absolute = trimmed if trimmed.startswith("/") else f"/{trimmed}"
+    if prepend_sandbox:
+        if absolute == "/sandbox" or absolute.startswith("/sandbox/"):
+            return absolute
+        return f"/sandbox{absolute}"
+
+    if absolute == "/sandbox":
+        return "/"
+    if absolute.startswith("/sandbox/"):
+        return f"/{absolute[len('/sandbox/'):]}"
+    return absolute
+
+
+def normalize_runtime_relative_path(base_url: str, path: str) -> str:
+    trimmed = path.strip()
+    if trimmed == "":
+        return ""
+
+    parsed_path = urlsplit(trimmed)
+    prepend_sandbox = should_prepend_sandbox_to_runtime_api(base_url)
+    normalized_path = normalize_runtime_api_path(parsed_path.path, prepend_sandbox)
+    relative_path = normalized_path.lstrip("/")
+    return urlunsplit(
+        ("", "", relative_path, parsed_path.query, parsed_path.fragment)
+    )
+
+
 def resolve_runtime_transport_target(
     base_url: str,
     path: str,
     runtime_proxy_override: Optional[str] = None,
 ) -> RuntimeTransportTarget:
     normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
-    url = urljoin(normalized_base, path.lstrip("/"))
+    url = urljoin(normalized_base, normalize_runtime_relative_path(base_url, path))
 
     if not runtime_proxy_override:
         return RuntimeTransportTarget(url=url)
@@ -151,7 +199,7 @@ def to_websocket_transport_target(
     runtime_proxy_override: Optional[str] = None,
 ) -> RuntimeTransportTarget:
     normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
-    url = urljoin(normalized_base, path.lstrip("/"))
+    url = urljoin(normalized_base, normalize_runtime_relative_path(base_url, path))
     parts = urlsplit(url)
     scheme = parts.scheme
     if scheme == "https":

@@ -84,13 +84,40 @@ def _normalize_exec_params(
     return _normalize_legacy_process_fields(normalized)
 
 
+def _runtime_session_id_from_path(raw_path: str) -> Optional[str]:
+    segments = [
+        segment for segment in raw_path.strip().strip("/").split("/") if segment
+    ]
+    if len(segments) < 2 or segments[0] != "sandbox" or not segments[1]:
+        return None
+    return segments[1]
+
+
+def _resolve_sandbox_runtime_session_host(runtime, base_url) -> str:
+    session_id_from_base_path = _runtime_session_id_from_path(base_url.path)
+    if session_id_from_base_path and base_url.hostname:
+        return f"{session_id_from_base_path}.{base_url.hostname}"
+
+    runtime_host = str(getattr(runtime, "host", "") or "").strip()
+    if runtime_host:
+        parsed_host = urlsplit(runtime_host)
+        if parsed_host.hostname:
+            session_id_from_host_path = _runtime_session_id_from_path(parsed_host.path)
+            if session_id_from_host_path:
+                return f"{session_id_from_host_path}.{parsed_host.hostname}"
+            return parsed_host.hostname
+        return runtime_host
+
+    return base_url.hostname or ""
+
+
 def _build_sandbox_exposed_url(runtime, port: int) -> str:
     parsed = urlsplit(runtime.base_url)
-    hostname = parsed.hostname
-    if not hostname:
+    session_host = _resolve_sandbox_runtime_session_host(runtime, parsed)
+    if not session_host:
         return runtime.base_url
 
-    exposed_host = f"{port}-{hostname}"
+    exposed_host = f"{port}-{session_host}"
     netloc = exposed_host
     if parsed.port:
         netloc = f"{netloc}:{parsed.port}"
@@ -100,9 +127,7 @@ def _build_sandbox_exposed_url(runtime, port: int) -> str:
             credentials = f"{credentials}:{parsed.password}"
         netloc = f"{credentials}@{netloc}"
 
-    path = parsed.path or "/"
-
-    return urlunsplit((parsed.scheme, netloc, path, parsed.query, parsed.fragment))
+    return urlunsplit((parsed.scheme, netloc, "/", "", ""))
 
 
 def _expires_within_buffer(expires_at: Optional[datetime]) -> bool:
