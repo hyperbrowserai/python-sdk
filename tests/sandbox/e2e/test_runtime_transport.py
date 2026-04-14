@@ -18,6 +18,16 @@ def test_runtime_transport_target_ignores_ambient_proxy_without_explicit_overrid
     assert target.host_header is None
 
 
+def test_runtime_transport_target_prepends_sandbox_for_session_host_runtime_relative_path():
+    target = resolve_runtime_transport_target(
+        "https://session.example.dev:8443",
+        "/exec?foo=bar",
+    )
+
+    assert target.url == "https://session.example.dev:8443/sandbox/exec?foo=bar"
+    assert target.host_header is None
+
+
 def test_runtime_transport_target_applies_explicit_proxy_override():
     target = resolve_runtime_transport_target(
         "https://session.example.dev:8443",
@@ -48,6 +58,19 @@ def test_runtime_transport_target_preserves_runtime_base_path():
     target = resolve_runtime_transport_target(
         "https://region.example.dev/sandbox/sbx_123",
         "/sandbox/exec?foo=bar",
+    )
+
+    assert (
+        target.url
+        == "https://region.example.dev/sandbox/sbx_123/exec?foo=bar"
+    )
+    assert target.host_header is None
+
+
+def test_runtime_transport_target_does_not_double_prefix_for_region_path_runtime_relative_path():
+    target = resolve_runtime_transport_target(
+        "https://region.example.dev/sandbox/sbx_123",
+        "/exec?foo=bar",
     )
 
     assert (

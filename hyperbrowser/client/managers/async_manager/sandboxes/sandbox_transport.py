@@ -194,6 +194,7 @@ class RuntimeTransport:
             connection.base_url,
             request_path,
             self._runtime_proxy_override,
+            connection.sandbox_id,
         )
         merged_headers = build_headers(connection.token, headers, target.host_header)
         client = httpx.AsyncClient(timeout=self._timeout)
@@ -230,6 +231,7 @@ class RuntimeTransport:
             connection.base_url,
             request_path,
             self._runtime_proxy_override,
+            connection.sandbox_id,
         )
         headers = build_headers(
             connection.token,

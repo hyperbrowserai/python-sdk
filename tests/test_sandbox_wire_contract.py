@@ -70,7 +70,7 @@ SANDBOX_DETAIL_PAYLOAD = {
     "diskSizeMiB": 8192,
     "runtime": {
         "transport": "regional_proxy",
-        "host": "https://runtime.example.com/sandbox/sbx_123",
+        "host": "https://runtime.example.com",
         "baseUrl": "https://runtime.example.com/sandbox/sbx_123",
     },
     "exposedPorts": [
@@ -122,7 +122,7 @@ SANDBOX_LIST_PAYLOAD = {
             "diskSizeMiB": 8192,
             "runtime": {
                 "transport": "regional_proxy",
-                "host": "https://runtime.example.com/sandbox/sbx_123",
+                "host": "https://runtime.example.com",
                 "baseUrl": "https://runtime.example.com/sandbox/sbx_123",
             },
             "exposedPorts": [
@@ -1195,8 +1195,9 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
         connect_host = None
         connect_port = None
 
-    def fake_target(base_url, path, runtime_proxy_override):
+    def fake_target(base_url, path, runtime_proxy_override, sandbox_id=None):
         captured["path"] = path
+        captured["sandbox_id"] = sandbox_id
         return DummyTarget()
 
     def fake_connect(url, additional_headers=None, open_timeout=None, **kwargs):
@@ -1226,6 +1227,7 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
 
     assert "cursor=7" in captured["path"]
     assert "cursor=7" in captured["url"]
+    assert captured["sandbox_id"] == "sbx_123"
 
 
 @pytest.mark.anyio
@@ -1240,8 +1242,9 @@ async def test_async_terminal_attach_includes_cursor(monkeypatch):
         connect_host = None
         connect_port = None
 
-    def fake_target(base_url, path, runtime_proxy_override):
+    def fake_target(base_url, path, runtime_proxy_override, sandbox_id=None):
         captured["path"] = path
+        captured["sandbox_id"] = sandbox_id
         return DummyTarget()
 
     async def fake_connect(url, additional_headers=None, open_timeout=None, **kwargs):
@@ -1274,3 +1277,4 @@ async def test_async_terminal_attach_includes_cursor(monkeypatch):
 
     assert "cursor=7" in captured["path"]
     assert "cursor=7" in captured["url"]
+    assert captured["sandbox_id"] == "sbx_123"

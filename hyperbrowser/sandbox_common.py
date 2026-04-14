@@ -114,33 +114,63 @@ def has_scheme(value: str) -> bool:
     return "://" in value
 
 
-def _session_scoped_runtime_base_path(path: str) -> bool:
-    segments = [segment for segment in path.strip("/").split("/") if segment]
-    return len(segments) >= 2 and segments[0] == "sandbox" and bool(segments[1].strip())
+def _runtime_base_url_session_id(base_url: str) -> Optional[str]:
+    parsed_base = urlsplit(base_url)
+    segments = [segment for segment in parsed_base.path.strip("/").split("/") if segment]
+    if len(segments) < 2:
+        return None
+    if segments[0] != "sandbox":
+        return None
+    session_id = segments[1].strip()
+    if not session_id:
+        return None
+    return session_id
 
 
-def _strip_runtime_sandbox_prefix(path: str) -> str:
-    if path.startswith("/sandbox/"):
-        return "/" + path[len("/sandbox/") :]
-    if path == "/sandbox":
+def should_prepend_sandbox_to_runtime_api(
+    runtime_base_url: str, sandbox_id: Optional[str] = None
+) -> bool:
+    path_session_id = _runtime_base_url_session_id(runtime_base_url)
+    if path_session_id is None:
+        return True
+
+    trimmed_sandbox_id = (sandbox_id or "").strip()
+    if trimmed_sandbox_id and trimmed_sandbox_id != path_session_id:
+        # Keep path-routed behavior when local metadata is stale.
+        return False
+    return False
+
+
+def _normalize_runtime_api_path(path: str, prepend_sandbox: bool) -> str:
+    trimmed = path.strip()
+    if not trimmed:
+        return "/sandbox" if prepend_sandbox else "/"
+
+    absolute = trimmed if trimmed.startswith("/") else f"/{trimmed}"
+    if prepend_sandbox:
+        if absolute == "/sandbox" or absolute.startswith("/sandbox/"):
+            return absolute
+        return f"/sandbox{absolute}"
+
+    if absolute == "/sandbox":
         return "/"
-    if path.startswith("sandbox/"):
-        return path[len("sandbox/") :]
-    if path == "sandbox":
-        return ""
-    return path
+    if absolute.startswith("/sandbox/"):
+        return "/" + absolute[len("/sandbox/") :]
+    return absolute
 
 
-def _normalize_runtime_relative_path(base_url: str, path: str) -> str:
+def _normalize_runtime_relative_path(
+    base_url: str, path: str, sandbox_id: Optional[str] = None
+) -> str:
     trimmed = path.strip()
     if not trimmed:
         return ""
 
-    parsed_base = urlsplit(base_url)
     parsed_path = urlsplit(trimmed)
-    normalized_path = parsed_path.path
-    if _session_scoped_runtime_base_path(parsed_base.path):
-        normalized_path = _strip_runtime_sandbox_prefix(normalized_path)
+    normalized_path = _normalize_runtime_api_path(
+        parsed_path.path,
+        should_prepend_sandbox_to_runtime_api(base_url, sandbox_id),
+    )
 
     relative_path = normalized_path.lstrip("/")
     query = f"?{parsed_path.query}" if parsed_path.query else ""
@@ -152,9 +182,13 @@ def resolve_runtime_transport_target(
     base_url: str,
     path: str,
     runtime_proxy_override: Optional[str] = None,
+    sandbox_id: Optional[str] = None,
 ) -> RuntimeTransportTarget:
     normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
-    url = urljoin(normalized_base, _normalize_runtime_relative_path(base_url, path))
+    url = urljoin(
+        normalized_base,
+        _normalize_runtime_relative_path(base_url, path, sandbox_id),
+    )
 
     if not runtime_proxy_override:
         return RuntimeTransportTarget(url=url)
@@ -183,9 +217,13 @@ def to_websocket_transport_target(
     base_url: str,
     path: str,
     runtime_proxy_override: Optional[str] = None,
+    sandbox_id: Optional[str] = None,
 ) -> RuntimeTransportTarget:
     normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
-    url = urljoin(normalized_base, _normalize_runtime_relative_path(base_url, path))
+    url = urljoin(
+        normalized_base,
+        _normalize_runtime_relative_path(base_url, path, sandbox_id),
+    )
     parts = urlsplit(url)
     scheme = parts.scheme
     if scheme == "https":

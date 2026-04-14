@@ -110,6 +110,7 @@ class SandboxFileWatchHandle:
             connection.base_url,
             f"/sandbox/files/watch/{self.id}/{route}?{query}",
             self._runtime_proxy_override,
+            connection.sandbox_id,
         )
         headers = build_headers(connection.token, host_header=target.host_header)
         connect_kwargs = {}
