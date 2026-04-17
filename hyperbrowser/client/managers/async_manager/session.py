@@ -1,5 +1,7 @@
-from typing import List, Optional, Union, IO, overload
 import warnings
+from typing import IO, List, Optional, Union, overload
+
+from .._uploads import build_session_upload_request
 from ....models.session import (
     BasicResponse,
     CreateSessionParams,
@@ -105,23 +107,12 @@ class SessionManager:
         return GetSessionDownloadsUrlResponse(**response.data)
 
     async def upload_file(
-        self, id: str, file_input: Union[str, IO]
+        self, id: str, file_input: Union[str, IO[bytes], bytes, bytearray]
     ) -> UploadFileResponse:
-        response = None
-        if isinstance(file_input, str):
-            with open(file_input, "rb") as file_obj:
-                files = {"file": file_obj}
-                response = await self._client.transport.post(
-                    self._client._build_url(f"/session/{id}/uploads"),
-                    files=files,
-                )
-        else:
-            files = {"file": file_input}
-            response = await self._client.transport.post(
-                self._client._build_url(f"/session/{id}/uploads"),
-                files=files,
-            )
-
+        response = await self._client.transport.post(
+            self._client._build_url(f"/session/{id}/uploads"),
+            request_builder=build_session_upload_request(file_input),
+        )
         return UploadFileResponse(**response.data)
 
     async def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:

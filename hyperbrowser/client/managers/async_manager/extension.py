@@ -1,8 +1,8 @@
-import os
 from typing import List
 
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
+from .._uploads import build_extension_upload_request
 
 
 class ExtensionManager:
@@ -11,20 +11,12 @@ class ExtensionManager:
 
     async def create(self, params: CreateExtensionParams) -> ExtensionResponse:
         file_path = params.file_path
-        params.file_path = None
-
-        # Check if file exists before trying to open it
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Extension file not found at path: {file_path}")
+        payload = params.model_dump(exclude_none=True, by_alias=True)
+        payload.pop("filePath", None)
 
         response = await self._client.transport.post(
             self._client._build_url("/extensions/add"),
-            data=(
-                {}
-                if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
-            ),
-            files={"file": open(file_path, "rb")},
+            request_builder=build_extension_upload_request(payload, file_path),
         )
         return ExtensionResponse(**response.data)
 

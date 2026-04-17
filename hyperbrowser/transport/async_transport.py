@@ -1,16 +1,25 @@
 import asyncio
-import httpx
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
-from .base import TransportStrategy, APIResponse
+import httpx
+
+from .base import (
+    APIResponse,
+    RequestBuilder,
+    TransportStrategy,
+    build_error_from_response,
+    build_network_error,
+    normalize_headers,
+    prepare_request,
+)
 
 
 class AsyncTransport(TransportStrategy):
     """Asynchronous transport implementation using httpx"""
 
-    def __init__(self, api_key: str):
-        self.client = httpx.AsyncClient(headers={"x-api-key": api_key})
+    def __init__(self, auth):
+        self.auth = auth
+        self.client = httpx.AsyncClient()
         self._closed = False
 
     async def close(self) -> None:
@@ -35,80 +44,181 @@ class AsyncTransport(TransportStrategy):
             except Exception:
                 pass
 
-    async def _handle_response(self, response: httpx.Response) -> APIResponse:
-        try:
-            response.raise_for_status()
-            try:
-                if not response.content:
-                    return APIResponse.from_status(response.status_code)
-                return APIResponse(response.json())
-            except httpx.DecodingError as e:
-                if response.status_code >= 400:
-                    raise HyperbrowserError(
-                        response.text or "Unknown error occurred",
-                        status_code=response.status_code,
-                        response=response,
-                        original_error=e,
-                    )
-                return APIResponse.from_status(response.status_code)
-        except httpx.HTTPStatusError as e:
-            try:
-                error_data = response.json()
-                message = error_data.get("message") or error_data.get("error") or str(e)
-            except:
-                message = str(e)
-            raise HyperbrowserError(
-                message,
-                status_code=response.status_code,
-                response=response,
-                original_error=e,
-            )
-        except httpx.RequestError as e:
-            raise HyperbrowserError("Request failed", original_error=e)
-
     async def post(
-        self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        files: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
+        request_builder: Optional[RequestBuilder] = None,
     ) -> APIResponse:
-        try:
-            if files:
-                response = await self.client.post(url, data=data, files=files)
-            else:
-                response = await self.client.post(url, json=data)
-            return await self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Post request failed", original_error=e)
+        return await self._request(
+            "POST",
+            url,
+            json_data=data if files is None and request_builder is None else None,
+            data=data if files is not None and request_builder is None else None,
+            files=files,
+            headers=headers,
+            request_builder=request_builder,
+        )
 
     async def get(
-        self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
+        self,
+        url: str,
+        params: Optional[dict] = None,
+        follow_redirects: bool = False,
+        headers: Optional[Dict[str, str]] = None,
     ) -> APIResponse:
-        if params:
-            params = {k: v for k, v in params.items() if v is not None}
+        return await self._request(
+            "GET",
+            url,
+            params=params,
+            follow_redirects=follow_redirects,
+            headers=headers,
+        )
+
+    async def put(
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        headers: Optional[Dict[str, str]] = None,
+        request_builder: Optional[RequestBuilder] = None,
+    ) -> APIResponse:
+        return await self._request(
+            "PUT",
+            url,
+            json_data=data if request_builder is None else None,
+            headers=headers,
+            request_builder=request_builder,
+        )
+
+    async def delete(
+        self, url: str, headers: Optional[Dict[str, str]] = None
+    ) -> APIResponse:
+        return await self._request("DELETE", url, headers=headers)
+
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict] = None,
+        json_data: Optional[Any] = None,
+        data: Optional[Any] = None,
+        content: Optional[Any] = None,
+        files: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
+        request_builder: Optional[RequestBuilder] = None,
+        follow_redirects: bool = False,
+    ) -> APIResponse:
+        response = None
+        request = self._build_request(
+            params=params,
+            json_data=json_data,
+            data=data,
+            content=content,
+            files=files,
+            headers=headers,
+            request_builder=request_builder,
+        )
         try:
-            response = await self.client.get(
-                url, params=params, follow_redirects=follow_redirects
+            auth_headers, access_token = await self.auth.aauthorize_headers()
+            response = await self._send(
+                method,
+                url,
+                request,
+                auth_headers=auth_headers,
+                follow_redirects=follow_redirects,
             )
-            return await self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Get request failed", original_error=e)
 
-    async def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
-        try:
-            response = await self.client.put(url, json=data)
-            return await self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Put request failed", original_error=e)
+            if response.status_code == 401 and self.auth.is_oauth and request.replayable:
+                await response.aclose()
+                retry_request = self._build_request(
+                    params=params,
+                    json_data=json_data,
+                    data=data,
+                    content=content,
+                    files=files,
+                    headers=headers,
+                    request_builder=request_builder,
+                )
+                try:
+                    retry_headers, _ = await self.auth.aauthorize_headers(
+                        force_refresh=True,
+                        rejected_access_token=access_token,
+                    )
+                    retry_response = await self._send(
+                        method,
+                        url,
+                        retry_request,
+                        auth_headers=retry_headers,
+                        follow_redirects=follow_redirects,
+                    )
+                finally:
+                    retry_request.close()
+                return await self._handle_response(retry_response)
 
-    async def delete(self, url: str) -> APIResponse:
-        try:
-            response = await self.client.delete(url)
             return await self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Delete request failed", original_error=e)
+        finally:
+            request.close()
+
+    def _build_request(
+        self,
+        *,
+        params: Optional[dict],
+        json_data: Optional[Any],
+        data: Optional[Any],
+        content: Optional[Any],
+        files: Optional[Any],
+        headers: Optional[Dict[str, str]],
+        request_builder: Optional[RequestBuilder],
+    ):
+        if request_builder is not None:
+            return request_builder()
+        return prepare_request(
+            params=params,
+            headers=headers,
+            json_data=json_data,
+            data=data,
+            content=content,
+            files=files,
+        )
+
+    async def _send(
+        self,
+        method: str,
+        url: str,
+        request,
+        *,
+        auth_headers: Dict[str, str],
+        follow_redirects: bool,
+    ) -> httpx.Response:
+        headers = normalize_headers(request.headers)
+        headers.update(normalize_headers(auth_headers))
+
+        try:
+            return await self.client.request(
+                method,
+                url,
+                params=request.params,
+                headers=headers,
+                json=request.json_data,
+                data=request.data,
+                content=request.content,
+                files=request.files,
+                follow_redirects=follow_redirects,
+            )
+        except httpx.RequestError as error:
+            raise build_network_error("Request failed", error)
+
+    async def _handle_response(self, response: httpx.Response) -> APIResponse:
+        if response.status_code >= 400:
+            raise build_error_from_response(response)
+
+        if not response.content:
+            return APIResponse.from_status(response.status_code)
+
+        try:
+            return APIResponse(response.json(), status_code=response.status_code)
+        except ValueError:
+            return APIResponse.from_status(response.status_code)
