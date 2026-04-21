@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -23,15 +23,26 @@ BrandingPersonalityTone = Literal[
 
 BrandingPersonalityEnergy = Literal["low", "medium", "high"]
 
-BrandingFontRole = Literal["heading", "body", "monospace", "display", "unknown"]
+# Known values listed for IDE hints; any string is accepted so the SDK
+# doesn't need a version bump when the server's LLM starts emitting a new
+# role / framework label. Pydantic's Union matches the Literal arm first
+# for known values (preserving the tighter type), then falls through to
+# `str` for anything else.
+BrandingFontRole = Union[
+    Literal["heading", "body", "monospace", "display", "unknown"],
+    str,
+]
 
-BrandingDesignFramework = Literal[
-    "tailwind",
-    "bootstrap",
-    "material",
-    "chakra",
-    "custom",
-    "unknown",
+BrandingDesignFramework = Union[
+    Literal[
+        "tailwind",
+        "bootstrap",
+        "material",
+        "chakra",
+        "custom",
+        "unknown",
+    ],
+    str,
 ]
 
 
