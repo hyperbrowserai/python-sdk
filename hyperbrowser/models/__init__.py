@@ -33,6 +33,7 @@ from .web.common import (
     FetchOutputHtml,
     FetchOutputLinks,
     FetchOutputScreenshot,
+    FetchOutputBranding,
     FetchOutputFormat,
 )
 from .web.search import (
@@ -624,6 +625,7 @@ __all__ = [
     "FetchOutputHtml",
     "FetchOutputLinks",
     "FetchOutputScreenshot",
+    "FetchOutputBranding",
     "FetchOutputFormat",
     "FetchStorageStateOptions",
     "FetchOutputJsonOptions",

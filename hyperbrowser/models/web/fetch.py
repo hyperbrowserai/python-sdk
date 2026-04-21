@@ -46,6 +46,7 @@ class FetchResponseData(BaseModel):
     json_: Optional[dict] = Field(
         default=None, alias="json", serialization_alias="json"
     )
+    branding: Optional[dict[str, Any]] = None
 
 
 class FetchResponse(BaseModel):
