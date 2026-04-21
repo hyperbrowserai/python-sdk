@@ -10,6 +10,7 @@ from hyperbrowser.models.consts import (
     FetchSanitizeMode,
 )
 from hyperbrowser.models.session import ScreenConfig
+from hyperbrowser.models.web.branding import BrandingProfile
 
 
 class FetchOutputScreenshotOptions(BaseModel):
@@ -79,6 +80,7 @@ class PageData(BaseModel):
     json_: Optional[dict[str, Any]] = Field(
         default=None, alias="json", serialization_alias="json"
     )
+    branding: Optional[BrandingProfile] = None
 
 
 class FetchOutputMarkdown(BaseModel):
@@ -112,13 +114,18 @@ class FetchOutputJson(FetchOutputJsonOptions):
     type: Literal["json"]
 
 
+class FetchOutputBranding(BaseModel):
+    type: Literal["branding"]
+
+
 FetchOutputFormat = Union[
     FetchOutputMarkdown,
     FetchOutputHtml,
     FetchOutputLinks,
     FetchOutputScreenshot,
     FetchOutputJson,
-    Literal["markdown", "html", "links", "screenshot"],
+    FetchOutputBranding,
+    Literal["markdown", "html", "links", "screenshot", "branding"],
 ]
 
 
