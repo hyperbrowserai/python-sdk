@@ -195,8 +195,11 @@ class BrandingSpacing(BaseModel):
     border_radius: Optional[str] = Field(
         default=None, alias="borderRadius", serialization_alias="borderRadius"
     )
-    padding: Optional[dict[str, float]] = None
-    margins: Optional[dict[str, float]] = None
+    # LLM-extracted dicts — individual entries may be null when the model
+    # couldn't measure a specific size bucket. Parallel to the typing used
+    # on line_heights / font_weights above.
+    padding: Optional[dict[str, Optional[float]]] = None
+    margins: Optional[dict[str, Optional[float]]] = None
     grid_gutter: Optional[float] = Field(
         default=None, alias="gridGutter", serialization_alias="gridGutter"
     )
@@ -219,7 +222,7 @@ class BrandingImages(BaseModel):
 
 
 class BrandingPersonality(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(populate_by_alias=True, extra="allow")
 
     tone: Optional[BrandingPersonalityTone] = None
     energy: Optional[BrandingPersonalityEnergy] = None
