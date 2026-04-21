@@ -10,6 +10,7 @@ from hyperbrowser.models.consts import (
     FetchSanitizeMode,
 )
 from hyperbrowser.models.session import ScreenConfig
+from hyperbrowser.models.web.branding import BrandingProfile
 
 
 class FetchOutputScreenshotOptions(BaseModel):
@@ -79,7 +80,7 @@ class PageData(BaseModel):
     json_: Optional[dict[str, Any]] = Field(
         default=None, alias="json", serialization_alias="json"
     )
-    branding: Optional[dict[str, Any]] = None
+    branding: Optional[BrandingProfile] = None
 
 
 class FetchOutputMarkdown(BaseModel):

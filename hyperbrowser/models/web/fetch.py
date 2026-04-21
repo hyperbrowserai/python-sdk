@@ -7,6 +7,7 @@ from .common import (
     FetchNavigationOptions,
     FetchCacheOptions,
 )
+from .branding import BrandingProfile
 from hyperbrowser.models.consts import FetchStatus, FetchStealthMode
 
 
@@ -46,7 +47,7 @@ class FetchResponseData(BaseModel):
     json_: Optional[dict] = Field(
         default=None, alias="json", serialization_alias="json"
     )
-    branding: Optional[dict[str, Any]] = None
+    branding: Optional[BrandingProfile] = None
 
 
 class FetchResponse(BaseModel):
