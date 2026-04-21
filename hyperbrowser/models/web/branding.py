@@ -3,18 +3,21 @@ from typing import Literal, Optional, List, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
-BrandingColorScheme = Literal["light", "dark"]
+BrandingColorScheme = Union[Literal["light", "dark"], str]
 
-BrandingPersonalityTone = Literal[
-    "professional",
-    "playful",
-    "modern",
-    "traditional",
-    "minimalist",
-    "bold",
+BrandingPersonalityTone = Union[
+    Literal[
+        "professional",
+        "playful",
+        "modern",
+        "traditional",
+        "minimalist",
+        "bold",
+    ],
+    str,
 ]
 
-BrandingPersonalityEnergy = Literal["low", "medium", "high"]
+BrandingPersonalityEnergy = Union[Literal["low", "medium", "high"], str]
 
 BrandingFontRole = Union[
     Literal["heading", "body", "monospace", "display", "unknown"],
@@ -56,7 +59,7 @@ class BrandingColors(BaseModel):
 class BrandingFont(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    family: str
+    family: Optional[str] = None
     role: Optional[BrandingFontRole] = None
 
 
@@ -149,10 +152,10 @@ class BrandingFontFamilies(BaseModel):
 class BrandingFontStacks(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    primary: Optional[List[str]] = None
-    heading: Optional[List[str]] = None
-    body: Optional[List[str]] = None
-    paragraph: Optional[List[str]] = None
+    primary: Optional[List[Optional[str]]] = None
+    heading: Optional[List[Optional[str]]] = None
+    body: Optional[List[Optional[str]]] = None
+    paragraph: Optional[List[Optional[str]]] = None
 
 
 class BrandingFontSizes(BaseModel):
