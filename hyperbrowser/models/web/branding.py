@@ -3,13 +3,6 @@ from typing import Literal, Optional, List, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
-# Typed response shape for the branding extraction output. Every field is
-# Optional because the server may return a partial profile (e.g. when the
-# LLM refuses or fails). `extra="allow"` on each model keeps the SDK forward-
-# compatible if the server adds new keys — unknown fields become available
-# via `model.model_extra`.
-
-
 BrandingColorScheme = Literal["light", "dark"]
 
 BrandingPersonalityTone = Literal[
@@ -23,11 +16,6 @@ BrandingPersonalityTone = Literal[
 
 BrandingPersonalityEnergy = Literal["low", "medium", "high"]
 
-# Known values listed for IDE hints; any string is accepted so the SDK
-# doesn't need a version bump when the server's LLM starts emitting a new
-# role / framework label. Pydantic's Union matches the Literal arm first
-# for known values (preserving the tighter type), then falls through to
-# `str` for anything else.
 BrandingFontRole = Union[
     Literal["heading", "body", "monospace", "display", "unknown"],
     str,
@@ -206,9 +194,6 @@ class BrandingSpacing(BaseModel):
     border_radius: Optional[str] = Field(
         default=None, alias="borderRadius", serialization_alias="borderRadius"
     )
-    # LLM-extracted dicts — individual entries may be null when the model
-    # couldn't measure a specific size bucket. Parallel to the typing used
-    # on line_heights / font_weights above.
     padding: Optional[dict[str, Optional[float]]] = None
     margins: Optional[dict[str, Optional[float]]] = None
     grid_gutter: Optional[float] = Field(
@@ -264,12 +249,6 @@ class BrandingConfidence(BaseModel):
 
 
 class BrandingProfile(BaseModel):
-    """
-    Typed response shape for the ``branding`` output format.
-    All fields are optional; use ``model.model_extra`` to read server-added
-    keys not represented here (``__llm_metadata``, etc.).
-    """
-
     model_config = ConfigDict(populate_by_alias=True, extra="allow")
 
     color_scheme: Optional[BrandingColorScheme] = Field(
