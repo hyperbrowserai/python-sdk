@@ -46,6 +46,7 @@ BrowserUseLlm = Literal[
     "gemini-2.5-flash",
 ]
 HyperAgentLlm = Literal[
+    "gpt-5.5",
     "gpt-5.2",
     "gpt-5.1",
     "gpt-5",
@@ -70,7 +71,7 @@ ClaudeComputerUseLlm = Literal[
     "claude-sonnet-4-20250514",
     "claude-3-7-sonnet-20250219",
 ]
-CuaLlm = Literal["computer-use-preview", "gpt-5.4", "gpt-5.4-mini"]
+CuaLlm = Literal["computer-use-preview", "gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]
 GeminiComputerUseLlm = Literal[
     "gemini-3-flash-preview",
     "gemini-2.5-computer-use-preview-10-2025",
