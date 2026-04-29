@@ -146,6 +146,7 @@ class SessionLaunchState(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, alias="disablePostQuantumKeyAgreement"
     )
+    enable_web_bot_auth: Optional[bool] = Field(default=None, alias="enableWebBotAuth")
 
 
 class SessionCreditBreakdown(BaseModel):
@@ -397,6 +398,12 @@ class CreateSessionParams(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, serialization_alias="disablePostQuantumKeyAgreement"
     )
+    enable_web_bot_auth: bool = Field(
+        default=False, serialization_alias="enableWebBotAuth"
+    )
+    """When true, sign all outbound HTTP requests from the session with
+    Hyperbrowser's Cloudflare-verified bot identity (Web Bot Auth).
+    Mutually exclusive with use_stealth and use_ultra_stealth."""
 
 
 class SessionRecording(BaseModel):
