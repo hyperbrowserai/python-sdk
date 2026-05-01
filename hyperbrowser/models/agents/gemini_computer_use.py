@@ -20,6 +20,9 @@ class GeminiComputerUseApiKeys(BaseModel):
     )
 
     google: Optional[str] = Field(default=None, serialization_alias="google")
+    google_base_url: Optional[str] = Field(
+        default=None, serialization_alias="googleBaseUrl"
+    )
 
 
 class StartGeminiComputerUseTaskParams(BaseModel):

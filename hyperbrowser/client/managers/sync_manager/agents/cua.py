@@ -2,6 +2,7 @@ import time
 
 from hyperbrowser.exceptions import HyperbrowserError
 
+from ...agents_validation import validate_custom_api_keys
 from .....models import (
     POLLING_ATTEMPTS,
     BasicResponse,
@@ -17,6 +18,11 @@ class CuaManager:
         self._client = client
 
     def start(self, params: StartCuaTaskParams) -> StartCuaTaskResponse:
+        validate_custom_api_keys(
+            params.use_custom_api_keys,
+            params.api_keys,
+            {"openai_base_url": params.api_keys.openai_base_url if params.api_keys else None},
+        )
         response = self._client.transport.post(
             self._client._build_url("/task/cua"),
             data=params.model_dump(exclude_none=True, by_alias=True),

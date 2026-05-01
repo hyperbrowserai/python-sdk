@@ -20,6 +20,9 @@ class ClaudeComputerUseApiKeys(BaseModel):
     )
 
     anthropic: Optional[str] = Field(default=None, serialization_alias="anthropic")
+    anthropic_base_url: Optional[str] = Field(
+        default=None, serialization_alias="anthropicBaseUrl"
+    )
 
 
 class StartClaudeComputerUseTaskParams(BaseModel):

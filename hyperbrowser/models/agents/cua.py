@@ -18,6 +18,9 @@ class CuaApiKeys(BaseModel):
     )
 
     openai: Optional[str] = Field(default=None, serialization_alias="openai")
+    openai_base_url: Optional[str] = Field(
+        default=None, serialization_alias="openaiBaseUrl"
+    )
 
 
 class StartCuaTaskParams(BaseModel):

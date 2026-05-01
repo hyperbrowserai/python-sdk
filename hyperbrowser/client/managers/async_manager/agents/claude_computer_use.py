@@ -2,6 +2,7 @@ import asyncio
 
 from hyperbrowser.exceptions import HyperbrowserError
 
+from ...agents_validation import validate_custom_api_keys
 from .....models import (
     POLLING_ATTEMPTS,
     BasicResponse,
@@ -19,6 +20,15 @@ class ClaudeComputerUseManager:
     async def start(
         self, params: StartClaudeComputerUseTaskParams
     ) -> StartClaudeComputerUseTaskResponse:
+        validate_custom_api_keys(
+            params.use_custom_api_keys,
+            params.api_keys,
+            {
+                "anthropic_base_url": params.api_keys.anthropic_base_url
+                if params.api_keys
+                else None
+            },
+        )
         response = await self._client.transport.post(
             self._client._build_url("/task/claude-computer-use"),
             data=params.model_dump(exclude_none=True, by_alias=True),
