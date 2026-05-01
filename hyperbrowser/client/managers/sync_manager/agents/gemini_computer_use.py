@@ -2,6 +2,7 @@ import time
 
 from hyperbrowser.exceptions import HyperbrowserError
 
+from ...agents_validation import validate_custom_api_keys
 from .....models import (
     POLLING_ATTEMPTS,
     BasicResponse,
@@ -19,6 +20,11 @@ class GeminiComputerUseManager:
     def start(
         self, params: StartGeminiComputerUseTaskParams
     ) -> StartGeminiComputerUseTaskResponse:
+        validate_custom_api_keys(
+            params.use_custom_api_keys,
+            params.api_keys,
+            {"google_base_url": params.api_keys.google_base_url if params.api_keys else None},
+        )
         response = self._client.transport.post(
             self._client._build_url("/task/gemini-computer-use"),
             data=params.model_dump(exclude_none=True, by_alias=True),
