@@ -15,6 +15,7 @@ from ....models.session import (
     SessionEventLogListResponse,
     UpdateSessionProfileParams,
     UpdateSessionProxyParams,
+    UpdateSessionScreenParams,
     SessionGetParams,
 )
 
@@ -188,6 +189,20 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/update"),
             data={
                 "type": "proxy",
+                "params": params.model_dump(exclude_none=True, by_alias=True),
+            },
+        )
+        return BasicResponse(**response.data)
+
+    def update_screen_size(
+        self,
+        id: str,
+        params: UpdateSessionScreenParams,
+    ) -> BasicResponse:
+        response = self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={
+                "type": "screen",
                 "params": params.model_dump(exclude_none=True, by_alias=True),
             },
         )

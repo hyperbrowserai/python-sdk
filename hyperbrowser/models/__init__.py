@@ -262,6 +262,7 @@ from .session import (
     UpdateSessionProfileParams,
     UpdateSessionProxyLocationParams,
     UpdateSessionProxyParams,
+    UpdateSessionScreenParams,
 )
 from .sandbox import (
     SandboxStatus,
@@ -523,6 +524,7 @@ __all__ = [
     "UpdateSessionProfileParams",
     "UpdateSessionProxyLocationParams",
     "UpdateSessionProxyParams",
+    "UpdateSessionScreenParams",
     # sandbox
     "SandboxStatus",
     "SandboxRegion",

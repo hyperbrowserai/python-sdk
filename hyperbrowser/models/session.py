@@ -100,6 +100,19 @@ class UpdateSessionProxyParams(BaseModel):
     )
 
 
+class UpdateSessionScreenParams(BaseModel):
+    """
+    Parameters for updating the screen size of a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    width: int = Field(serialization_alias="width")
+    height: int = Field(serialization_alias="height")
+
+
 class SessionLaunchState(BaseModel):
     model_config = ConfigDict(
         populate_by_alias=True,
