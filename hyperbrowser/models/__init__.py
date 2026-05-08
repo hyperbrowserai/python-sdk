@@ -233,7 +233,10 @@ from .computer_action import (
     ComputerActionMouseButton,
     GetClipboardTextActionParams,
     PutSelectionTextActionParams,
+    ListWindowsActionParams,
+    ComputerActionWindow,
     ComputerActionResponseDataClipboardText,
+    ComputerActionResponseDataListWindows,
     ComputerActionResponseData,
 )
 from .session import (
@@ -628,7 +631,10 @@ __all__ = [
     "ComputerActionMouseButton",
     "GetClipboardTextActionParams",
     "PutSelectionTextActionParams",
+    "ListWindowsActionParams",
+    "ComputerActionWindow",
     "ComputerActionResponseDataClipboardText",
+    "ComputerActionResponseDataListWindows",
     "ComputerActionResponseData",
     # web
     "StartBatchFetchJobParams",

@@ -18,6 +18,7 @@ class ComputerAction(str, Enum):
     TYPE_TEXT = "type_text"
     GET_CLIPBOARD_TEXT = "get_clipboard_text"
     PUT_SELECTION_TEXT = "put_selection_text"
+    LIST_WINDOWS = "list_windows"
 
 
 ComputerActionMouseButton = Literal[
@@ -183,6 +184,17 @@ class PutSelectionTextActionParams(BaseModel):
     )
 
 
+class ListWindowsActionParams(BaseModel):
+    """Parameters for list windows action."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.LIST_WINDOWS] = ComputerAction.LIST_WINDOWS
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
 ComputerActionParams = Union[
     ClickActionParams,
     DragActionParams,
@@ -196,6 +208,7 @@ ComputerActionParams = Union[
     MouseUpActionParams,
     GetClipboardTextActionParams,
     PutSelectionTextActionParams,
+    ListWindowsActionParams,
 ]
 
 
@@ -207,7 +220,27 @@ class ComputerActionResponseDataClipboardText(BaseModel):
     clipboard_text: Optional[str] = Field(default=None, alias="clipboardText")
 
 
-ComputerActionResponseData = Union[ComputerActionResponseDataClipboardText]
+class ComputerActionWindow(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    id: str
+    name: str
+    active: bool
+
+
+class ComputerActionResponseDataListWindows(BaseModel):
+    """Data for list windows action."""
+
+    model_config = ConfigDict(populate_by_alias=True)
+
+    active_window_id: str = Field(default="", alias="activeWindowId")
+    windows: List[ComputerActionWindow] = Field(default_factory=list)
+
+
+ComputerActionResponseData = Union[
+    ComputerActionResponseDataListWindows,
+    ComputerActionResponseDataClipboardText,
+]
 
 
 class ComputerActionResponse(BaseModel):

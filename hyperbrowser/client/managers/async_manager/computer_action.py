@@ -18,6 +18,7 @@ from hyperbrowser.models import (
     ComputerActionMouseButton,
     GetClipboardTextActionParams,
     PutSelectionTextActionParams,
+    ListWindowsActionParams,
 )
 
 
@@ -174,4 +175,12 @@ class ComputerActionManager:
         params = PutSelectionTextActionParams(
             text=text, return_screenshot=return_screenshot
         )
+        return await self._execute_request(session, params)
+
+    async def list_windows(
+        self,
+        session: Union[SessionDetail, str],
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = ListWindowsActionParams(return_screenshot=return_screenshot)
         return await self._execute_request(session, params)
