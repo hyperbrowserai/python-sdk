@@ -31,3 +31,20 @@
 ## Configuration & Secrets
 - Set `HYPERBROWSER_API_KEY` via environment variables or pass `api_key=` in client constructors.
 - Never commit API keys or session data; use `.env` or local shell exports for development.
+
+## Cursor Cloud specific instructions
+
+### Dev commands
+
+- `poetry install` — install all dependencies
+- `poetry run ruff check .` — lint (pre-existing warnings are expected in the
+  current codebase)
+- `poetry run ruff format .` — auto-format
+- `poetry run pytest` — run tests (pytest is a dev dependency)
+
+### Gotchas
+
+- Poetry must be on `PATH`. The Cloud Agent VM installs it via
+  `pip3 install poetry`; the binary lands in `~/.local/bin`.
+- The baseline codebase has ~10 pre-existing ruff lint warnings (unused imports,
+  bare `except`). These are not regressions.
