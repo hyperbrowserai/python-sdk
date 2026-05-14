@@ -523,3 +523,116 @@ class SessionEventLogListResponse(BaseModel):
     total_count: int = Field(alias="totalCount")
     page: int = Field(alias="page")
     per_page: int = Field(alias="perPage")
+
+
+class SessionLogsTokenResponse(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    token: str
+    token_expires_at: datetime = Field(alias="tokenExpiresAt")
+
+
+class SessionInfoProfile(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    id: str
+    name: Optional[str] = None
+
+
+class SessionInfoResponse(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    id: str
+    status: SessionStatus
+    start_time: Optional[int] = Field(default=None, alias="startTime")
+    launch_state: Optional[SessionLaunchState] = Field(
+        default=None, alias="launchState"
+    )
+    duration: int
+    proxy_bytes_used: int = Field(alias="proxyBytesUsed")
+    region: str
+    settings: List[Any]
+    recording_url: Optional[str] = Field(default=None, alias="recordingUrl")
+    video_recording_url: Optional[str] = Field(default=None, alias="videoRecordingUrl")
+    video_recording_playlist_url: Optional[str] = Field(
+        default=None, alias="videoRecordingPlaylistUrl"
+    )
+    is_recording_encrypted: Optional[bool] = Field(
+        default=None, alias="isRecordingEncrypted"
+    )
+    live_url: Optional[str] = Field(default=None, alias="liveUrl")
+    live_domain: Optional[str] = Field(default=None, alias="liveDomain")
+    profile: Optional[SessionInfoProfile] = None
+    credits_used: Optional[float] = Field(default=None, alias="creditsUsed")
+    credit_breakdown: Optional[SessionCreditBreakdown] = Field(
+        default=None, alias="creditBreakdown"
+    )
+
+
+class SessionCreditUsageResponse(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    credit_usage: Optional[float] = Field(default=None, alias="creditUsage")
+
+
+class SessionMetricsResponse(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    metrics: List[Dict[str, Any]]
+    displayed_metrics: List[str] = Field(alias="displayedMetrics")
+
+
+SessionLogLevel = Literal["log", "debug", "info", "error", "warning"]
+SessionLogOrder = Literal["asc", "desc"]
+SessionNetworkMethod = Literal[
+    "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"
+]
+
+
+class SessionConsoleParams(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    log_levels: Optional[List[SessionLogLevel]] = Field(
+        default=None, serialization_alias="logLevels"
+    )
+    search: Optional[str] = None
+    after_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="afterTimestamp"
+    )
+    before_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="beforeTimestamp"
+    )
+    order: Optional[SessionLogOrder] = None
+    limit: Optional[int] = None
+
+
+class SessionNetworkParams(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    methods: Optional[List[SessionNetworkMethod]] = None
+    status_codes: Optional[List[str]] = Field(
+        default=None, serialization_alias="statusCodes"
+    )
+    search: Optional[str] = None
+    after_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="afterTimestamp"
+    )
+    before_timestamp: Optional[int] = Field(
+        default=None, serialization_alias="beforeTimestamp"
+    )
+    order: Optional[SessionLogOrder] = None
+    limit: Optional[int] = None
+
+
+class SessionConsoleResponse(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    console_logs: List[Dict[str, Any]] = Field(alias="consoleLogs")
+    pages: List[Dict[str, Any]]
+
+
+class SessionNetworkResponse(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    network_calls: List[Dict[str, Any]] = Field(alias="networkCalls")
+    pages: List[Dict[str, Any]]

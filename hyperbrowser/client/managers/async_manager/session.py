@@ -18,6 +18,14 @@ from ....models.session import (
     UpdateSessionProxyParams,
     UpdateSessionScreenParams,
     SessionGetParams,
+    SessionLogsTokenResponse,
+    SessionInfoResponse,
+    SessionCreditUsageResponse,
+    SessionMetricsResponse,
+    SessionConsoleParams,
+    SessionConsoleResponse,
+    SessionNetworkParams,
+    SessionNetworkResponse,
 )
 
 
@@ -124,6 +132,54 @@ class SessionManager:
             )
 
         return UploadFileResponse(**response.data)
+
+    async def stop_all(self) -> BasicResponse:
+        response = await self._client.transport.put(
+            self._client._build_url("/sessions/stop")
+        )
+        return BasicResponse(**response.data)
+
+    async def get_logs_token(self, id: str) -> SessionLogsTokenResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/logs-token")
+        )
+        return SessionLogsTokenResponse(**response.data)
+
+    async def get_info(self, id: str) -> SessionInfoResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/info")
+        )
+        return SessionInfoResponse(**response.data)
+
+    async def get_credit_usage(self, id: str) -> SessionCreditUsageResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/credit-usage")
+        )
+        return SessionCreditUsageResponse(**response.data)
+
+    async def get_metrics(self, id: str) -> SessionMetricsResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/metrics")
+        )
+        return SessionMetricsResponse(**response.data)
+
+    async def get_console_logs(
+        self, id: str, params: SessionConsoleParams = SessionConsoleParams()
+    ) -> SessionConsoleResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/console"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SessionConsoleResponse(**response.data)
+
+    async def get_network_logs(
+        self, id: str, params: SessionNetworkParams = SessionNetworkParams()
+    ) -> SessionNetworkResponse:
+        response = await self._client.transport.get(
+            self._client._build_url(f"/session/{id}/network"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SessionNetworkResponse(**response.data)
 
     async def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:
         response = await self._client.transport.put(

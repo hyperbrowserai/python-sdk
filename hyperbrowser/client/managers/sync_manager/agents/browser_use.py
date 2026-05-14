@@ -6,6 +6,8 @@ from hyperbrowser.exceptions import HyperbrowserError
 from .....models import (
     POLLING_ATTEMPTS,
     BasicResponse,
+    AgentTaskListParams,
+    AgentTaskListResponse,
     BrowserUseTaskResponse,
     BrowserUseTaskStatusResponse,
     StartBrowserUseTaskParams,
@@ -48,6 +50,15 @@ class BrowserUseManager:
             self._client._build_url(f"/task/browser-use/{job_id}/stop")
         )
         return BasicResponse(**response.data)
+
+    def list(
+        self, params: AgentTaskListParams = AgentTaskListParams()
+    ) -> AgentTaskListResponse:
+        response = self._client.transport.get(
+            self._client._build_url("/task/browser-use"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return AgentTaskListResponse(**response.data)
 
     def start_and_wait(
         self, params: StartBrowserUseTaskParams

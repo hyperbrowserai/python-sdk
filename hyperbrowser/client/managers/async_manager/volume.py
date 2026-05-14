@@ -1,4 +1,9 @@
-from hyperbrowser.models.volume import CreateVolumeParams, Volume, VolumeListResponse
+from hyperbrowser.models.volume import (
+    CreateVolumeParams,
+    Volume,
+    VolumeListParams,
+    VolumeListResponse,
+)
 
 
 class VolumeManager:
@@ -15,8 +20,14 @@ class VolumeManager:
         )
         return Volume(**response.data)
 
-    async def list(self) -> VolumeListResponse:
-        response = await self._client.transport.get(self._client._build_url("/volume"))
+    async def list(
+        self, params: VolumeListParams = VolumeListParams()
+    ) -> VolumeListResponse:
+        query = params.model_dump(exclude_none=True, by_alias=True)
+        response = await self._client.transport.get(
+            self._client._build_url("/volume"),
+            params=query or None,
+        )
         return VolumeListResponse(**response.data)
 
     async def get(self, volume_id: str) -> Volume:
