@@ -31,9 +31,9 @@ class AgentTaskListResponse(BaseModel):
     model_config = ConfigDict(populate_by_alias=True)
 
     tasks: List[AgentTaskSummary]
-    total_count: int = Field(alias="totalCount")
-    page: int
-    per_page: int = Field(alias="perPage")
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
 
 
 class StartTaskParams(BaseModel):
