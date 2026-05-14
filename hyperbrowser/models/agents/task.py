@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,7 +22,7 @@ class AgentTaskSummary(BaseModel):
     model_config = ConfigDict(populate_by_alias=True)
 
     id: str
-    created_at: str = Field(alias="createdAt")
+    created_at: datetime = Field(alias="createdAt")
     status: TaskStatus
     task: str
 

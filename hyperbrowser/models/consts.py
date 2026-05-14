@@ -29,17 +29,6 @@ POLLING_ATTEMPTS = 5
 BrowserUseVersion = Literal["0.1.40", "0.7.10", "latest"]
 HyperAgentVersion = Literal["0.8.0", "1.1.0"]
 
-TaskLlm = Literal[
-    "gpt-4o",
-    "gpt-4o-mini",
-    "claude-sonnet-4-5",
-    "claude-3-7-sonnet-20250219",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-]
-
 BrowserUseLlm = Literal[
     "gpt-4o",
     "gpt-4o-mini",
@@ -56,6 +45,7 @@ BrowserUseLlm = Literal[
     "gemini-2.0-flash",
     "gemini-2.5-flash",
 ]
+TaskLlm = BrowserUseLlm
 HyperAgentLlm = Literal[
     "gpt-5.5",
     "gpt-5.2",
