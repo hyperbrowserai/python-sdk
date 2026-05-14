@@ -610,7 +610,7 @@ class SessionNetworkParams(BaseModel):
     model_config = ConfigDict(populate_by_alias=True)
 
     methods: Optional[List[SessionNetworkMethod]] = None
-    status_codes: Optional[List[str]] = Field(
+    status_codes: Optional[List[Union[str, int]]] = Field(
         default=None, serialization_alias="statusCodes"
     )
     search: Optional[str] = None
