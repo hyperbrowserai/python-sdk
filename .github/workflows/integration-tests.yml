@@ -1,6 +1,8 @@
 name: Integration Tests
 
 on:
+  pull_request:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -24,7 +26,7 @@ jobs:
 
       - name: Check out repository
         if: github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Python
         if: github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
