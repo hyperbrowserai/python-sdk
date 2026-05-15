@@ -10,6 +10,14 @@ from ....models.sandbox import (
     SandboxImageListResponse,
     SandboxListParams,
     SandboxListResponse,
+    SandboxImageListParams,
+    SandboxRuntimeBrowserAuthResponse,
+    CreateFirecrackerImageBuildParams,
+    CompleteFirecrackerImageBuildParams,
+    CreateFirecrackerImageBuildResponse,
+    FirecrackerImageBuildResponse,
+    FirecrackerImageBuildListParams,
+    FirecrackerImageBuildListResponse,
     SandboxMemorySnapshotParams,
     SandboxMemorySnapshotResult,
     SandboxRuntimeSession,
@@ -350,8 +358,15 @@ class SandboxManager:
         )
         return SandboxListResponse(**payload)
 
-    async def list_images(self) -> SandboxImageListResponse:
-        payload = await self._request("GET", "/images")
+    async def list_images(
+        self, params: SandboxImageListParams = SandboxImageListParams()
+    ) -> SandboxImageListResponse:
+        query = params.model_dump(exclude_none=True, by_alias=True)
+        payload = await self._request(
+            "GET",
+            "/images",
+            params=query or None,
+        )
         return SandboxImageListResponse(**payload)
 
     async def list_snapshots(
@@ -365,6 +380,56 @@ class SandboxManager:
             params=params.model_dump(exclude_none=True, by_alias=True),
         )
         return SandboxSnapshotListResponse(**payload)
+
+    async def get_runtime_browser_auth(
+        self, sandbox_id: str, allowed_origin: str
+    ) -> SandboxRuntimeBrowserAuthResponse:
+        response = await self._client.transport.client.request(
+            "POST",
+            self._client._build_url(f"/sandbox/{sandbox_id}/runtime/browser-auth"),
+            headers={"Origin": allowed_origin},
+        )
+        payload = await self._client.transport._handle_response(response)
+        return SandboxRuntimeBrowserAuthResponse(**payload.data)
+
+    async def create_image_build(
+        self, params: CreateFirecrackerImageBuildParams
+    ) -> CreateFirecrackerImageBuildResponse:
+        payload = await self._request(
+            "POST",
+            "/images/builds",
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return CreateFirecrackerImageBuildResponse(**payload)
+
+    async def list_image_builds(
+        self,
+        params: FirecrackerImageBuildListParams = FirecrackerImageBuildListParams(),
+    ) -> FirecrackerImageBuildListResponse:
+        payload = await self._request(
+            "GET",
+            "/images/builds",
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return FirecrackerImageBuildListResponse(**payload)
+
+    async def get_image_build(self, build_id: str) -> FirecrackerImageBuildResponse:
+        payload = await self._request("GET", f"/images/builds/{build_id}")
+        return FirecrackerImageBuildResponse(**payload)
+
+    async def complete_image_build(
+        self, build_id: str, params: CompleteFirecrackerImageBuildParams
+    ) -> FirecrackerImageBuildResponse:
+        payload = await self._request(
+            "POST",
+            f"/images/builds/{build_id}/complete",
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return FirecrackerImageBuildResponse(**payload)
+
+    async def cancel_image_build(self, build_id: str) -> FirecrackerImageBuildResponse:
+        payload = await self._request("POST", f"/images/builds/{build_id}/cancel")
+        return FirecrackerImageBuildResponse(**payload)
 
     async def stop(self, sandbox_id: str) -> BasicResponse:
         payload = await self._request("PUT", f"/sandbox/{sandbox_id}/stop")

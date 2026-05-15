@@ -16,6 +16,18 @@ class CreateProfileParams(BaseModel):
     name: Optional[str] = Field(default=None, serialization_alias="name")
 
 
+class UpdateProfileParams(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    name: Optional[str] = Field(default=None, serialization_alias="name")
+
+
+class BatchDeleteProfilesParams(BaseModel):
+    model_config = ConfigDict(populate_by_alias=True)
+
+    ids: List[str] = Field(serialization_alias="ids")
+
+
 class CreateProfileResponse(BaseModel):
     """
     Response containing the created profile.
