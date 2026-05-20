@@ -31,7 +31,7 @@ class SyncTransport(TransportStrategy):
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
-            except:
+            except Exception:
                 message = str(e)
             raise HyperbrowserError(
                 message,
@@ -46,13 +46,20 @@ class SyncTransport(TransportStrategy):
         self.client.close()
 
     def post(
-        self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        files: Optional[dict] = None,
+        timeout: Optional[float] = None,
     ) -> APIResponse:
         try:
+            kwargs = {}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
             if files:
-                response = self.client.post(url, data=data, files=files)
+                response = self.client.post(url, data=data, files=files, **kwargs)
             else:
-                response = self.client.post(url, json=data)
+                response = self.client.post(url, json=data, **kwargs)
             return self._handle_response(response)
         except HyperbrowserError:
             raise

@@ -6,7 +6,11 @@ import pytest
 
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.models.scrape import ScrapeOptions, StartScrapeJobParams
-from hyperbrowser.models.session import UpdateSessionSolveCaptchasParams
+from hyperbrowser.models.session import (
+    CaptchaEvaluationParams,
+    ImageCaptchaParam,
+    UpdateSessionSolveCaptchasParams,
+)
 
 
 def _read_json_body(handler: BaseHTTPRequestHandler):
@@ -16,7 +20,9 @@ def _read_json_body(handler: BaseHTTPRequestHandler):
     return json.loads(handler.rfile.read(content_length).decode("utf-8"))
 
 
-def _send_json(handler: BaseHTTPRequestHandler, status_code: int, payload: dict) -> None:
+def _send_json(
+    handler: BaseHTTPRequestHandler, status_code: int, payload: dict
+) -> None:
     encoded = json.dumps(payload).encode("utf-8")
     handler.send_response(status_code)
     handler.send_header("Content-Type", "application/json")
@@ -30,18 +36,49 @@ def _start_server():
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
+            body = _read_json_body(self)
             requests.append(
                 {
                     "method": self.command,
                     "path": self.path,
                     "api_key": self.headers.get("x-api-key"),
                     "content_type": self.headers.get("content-type"),
-                    "body": _read_json_body(self),
+                    "body": body,
                 }
             )
 
             if self.path == "/api/scrape":
                 _send_json(self, 200, {"jobId": "job_123"})
+                return
+
+            if (
+                self.path
+                == "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/captcha/evaluate"
+            ):
+                _send_json(
+                    self,
+                    200,
+                    {
+                        "success": True,
+                        "captcha": "recaptcha-visual",
+                        "iterationsRequested": body.get("iterations", 1),
+                        "iterationsRun": 1,
+                        "solved": True,
+                        "solvedCaptchas": ["recaptcha-visual"],
+                        "pages": [
+                            {
+                                "url": "https://example.com",
+                                "targetId": "target-123",
+                                "iterationsRun": 1,
+                                "solved": True,
+                                "solvedCaptchas": ["recaptcha-visual"],
+                                "checkedCaptchas": ["recaptcha"],
+                                "captchaSolvedCounts": {"recaptcha-visual": 1},
+                                "lastSolveTime": {"recaptcha-visual": 123.4},
+                            }
+                        ],
+                    },
+                )
                 return
 
             _send_json(self, 404, {"message": f"unexpected route {self.path}"})
@@ -76,8 +113,7 @@ def _start_server():
             )
 
             if (
-                self.path
-                == "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update"
+                self.path == "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update"
                 and body.get("type") == "solveCaptchas"
             ):
                 _send_json(
@@ -177,6 +213,94 @@ async def test_async_client_uses_configured_api_endpoint_and_parses_responses():
             "api_key": "test-api-key",
             "content_type": None,
             "body": None,
+        },
+    ]
+
+
+def test_sync_session_evaluate_captcha_triggers_manual_evaluation():
+    server, base_url, requests = _start_server()
+    client = Hyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        result = client.sessions.evaluate_captcha(
+            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            CaptchaEvaluationParams(
+                captcha_type="recaptcha-visual",
+                iterations=2,
+                solver_type="visual",
+                image_captcha_params=[
+                    ImageCaptchaParam(
+                        image_selector="#captcha-img",
+                        input_selector="#captcha-input",
+                    )
+                ],
+                use_ultra_stealth=True,
+            ),
+        )
+    finally:
+        client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert result.success is True
+    assert result.captcha == "recaptcha-visual"
+    assert result.iterations_requested == 2
+    assert result.pages[0].target_id == "target-123"
+    assert result.pages[0].captcha_solved_counts == {"recaptcha-visual": 1}
+    assert requests == [
+        {
+            "method": "POST",
+            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/captcha/evaluate",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "captchaType": "recaptcha-visual",
+                "iterations": 2,
+                "solverType": "visual",
+                "imageCaptchaParams": [
+                    {
+                        "imageSelector": "#captcha-img",
+                        "inputSelector": "#captcha-input",
+                    }
+                ],
+                "useUltraStealth": True,
+            },
+        },
+    ]
+
+
+@pytest.mark.anyio
+async def test_async_session_evaluate_captcha_triggers_manual_evaluation():
+    server, base_url, requests = _start_server()
+    client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        result = await client.sessions.evaluate_captcha(
+            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            CaptchaEvaluationParams(
+                captcha="recaptcha",
+                max_iterations=3,
+                solver_type="visual",
+            ),
+        )
+    finally:
+        await client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert result.success is True
+    assert result.solved is True
+    assert result.solved_captchas == ["recaptcha-visual"]
+    assert result.pages[0].last_solve_time == {"recaptcha-visual": 123.4}
+    assert requests == [
+        {
+            "method": "POST",
+            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/captcha/evaluate",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "captcha": "recaptcha",
+                "maxIterations": 3,
+                "solverType": "visual",
+            },
         },
     ]
 

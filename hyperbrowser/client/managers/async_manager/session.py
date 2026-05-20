@@ -2,6 +2,8 @@ from typing import List, Optional, Union, IO, overload
 import warnings
 from ....models.session import (
     BasicResponse,
+    CaptchaEvaluationParams,
+    CaptchaEvaluationResponse,
     CreateSessionParams,
     GetSessionDownloadsUrlResponse,
     GetSessionRecordingUrlResponse,
@@ -21,6 +23,8 @@ from ....models.session import (
     UpdateSessionSolveCaptchasResponse,
     SessionGetParams,
 )
+
+CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS = 185
 
 
 class SessionEventLogsManager:
@@ -71,6 +75,21 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/stop")
         )
         return BasicResponse(**response.data)
+
+    async def evaluate_captcha(
+        self,
+        id: str,
+        params: Optional[CaptchaEvaluationParams] = None,
+    ) -> CaptchaEvaluationResponse:
+        params_obj = params or CaptchaEvaluationParams()
+        response = await self._client.transport.post(
+            self._client._build_url(f"/session/{id}/captcha/evaluate"),
+            data=params_obj.model_dump(exclude_none=True, by_alias=True),
+            timeout=max(
+                self._client.timeout, CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS
+            ),
+        )
+        return CaptchaEvaluationResponse(**response.data)
 
     async def list(
         self, params: SessionListParams = SessionListParams()
