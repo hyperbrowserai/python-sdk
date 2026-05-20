@@ -6,6 +6,7 @@ import pytest
 
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.models.scrape import ScrapeOptions, StartScrapeJobParams
+from hyperbrowser.models.session import UpdateSessionSolveCaptchasParams
 
 
 def _read_json_body(handler: BaseHTTPRequestHandler):
@@ -58,6 +59,35 @@ def _start_server():
 
             if self.path == "/api/scrape/job_123/status":
                 _send_json(self, 200, {"status": "completed"})
+                return
+
+            _send_json(self, 404, {"message": f"unexpected route {self.path}"})
+
+        def do_PUT(self):
+            body = _read_json_body(self)
+            requests.append(
+                {
+                    "method": self.command,
+                    "path": self.path,
+                    "api_key": self.headers.get("x-api-key"),
+                    "content_type": self.headers.get("content-type"),
+                    "body": body,
+                }
+            )
+
+            if (
+                self.path
+                == "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update"
+                and body.get("type") == "solveCaptchas"
+            ):
+                _send_json(
+                    self,
+                    200,
+                    {
+                        "success": True,
+                        "solveCaptchas": bool(body.get("params", {}).get("enabled")),
+                    },
+                )
                 return
 
             _send_json(self, 404, {"message": f"unexpected route {self.path}"})
@@ -147,5 +177,104 @@ async def test_async_client_uses_configured_api_endpoint_and_parses_responses():
             "api_key": "test-api-key",
             "content_type": None,
             "body": None,
+        },
+    ]
+
+
+def test_sync_session_captcha_solving_update_starts_and_stops_automatic_solving():
+    server, base_url, requests = _start_server()
+    client = Hyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        started = client.sessions.start_captcha_solving(
+            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            UpdateSessionSolveCaptchasParams(solver_type="visual"),
+        )
+        stopped = client.sessions.stop_captcha_solving(
+            "52dd29fb-75a2-43f9-9831-8ff377fedb0a"
+        )
+    finally:
+        client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert started.success is True
+    assert started.solve_captchas is True
+    assert stopped.success is True
+    assert stopped.solve_captchas is False
+    assert requests == [
+        {
+            "method": "PUT",
+            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": True,
+                    "solverType": "visual",
+                },
+            },
+        },
+        {
+            "method": "PUT",
+            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": False,
+                },
+            },
+        },
+    ]
+
+
+@pytest.mark.anyio
+async def test_async_session_captcha_solving_update_starts_and_stops_automatic_solving():
+    server, base_url, requests = _start_server()
+    client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        started = await client.sessions.start_captcha_solving(
+            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            UpdateSessionSolveCaptchasParams(solver_type="visual"),
+        )
+        stopped = await client.sessions.stop_captcha_solving(
+            "52dd29fb-75a2-43f9-9831-8ff377fedb0a"
+        )
+    finally:
+        await client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert started.success is True
+    assert started.solve_captchas is True
+    assert stopped.success is True
+    assert stopped.solve_captchas is False
+    assert requests == [
+        {
+            "method": "PUT",
+            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": True,
+                    "solverType": "visual",
+                },
+            },
+        },
+        {
+            "method": "PUT",
+            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": False,
+                },
+            },
         },
     ]

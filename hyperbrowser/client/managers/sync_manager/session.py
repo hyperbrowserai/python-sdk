@@ -16,6 +16,8 @@ from ....models.session import (
     UpdateSessionProfileParams,
     UpdateSessionProxyParams,
     UpdateSessionScreenParams,
+    UpdateSessionSolveCaptchasParams,
+    UpdateSessionSolveCaptchasResponse,
     SessionGetParams,
 )
 
@@ -207,6 +209,36 @@ class SessionManager:
             },
         )
         return BasicResponse(**response.data)
+
+    def start_captcha_solving(
+        self,
+        id: str,
+        params: Optional[UpdateSessionSolveCaptchasParams] = None,
+    ) -> UpdateSessionSolveCaptchasResponse:
+        params_obj = params or UpdateSessionSolveCaptchasParams()
+        response = self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": True,
+                    **params_obj.model_dump(exclude_none=True, by_alias=True),
+                },
+            },
+        )
+        return UpdateSessionSolveCaptchasResponse(**response.data)
+
+    def stop_captcha_solving(self, id: str) -> UpdateSessionSolveCaptchasResponse:
+        response = self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": False,
+                },
+            },
+        )
+        return UpdateSessionSolveCaptchasResponse(**response.data)
 
     def _warn_update_profile_params_boolean_deprecated(self) -> None:
         if SessionManager._has_warned_update_profile_params_boolean_deprecated:

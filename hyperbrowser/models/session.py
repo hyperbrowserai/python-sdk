@@ -16,6 +16,7 @@ from hyperbrowser.models.consts import (
 )
 
 SessionStatus = Literal["active", "closed", "error"]
+CaptchaSolverType = Literal["visual"]
 
 
 class BasicResponse(BaseModel):
@@ -134,6 +135,9 @@ class SessionLaunchState(BaseModel):
     )
     enable_log_capture: Optional[bool] = Field(default=None, alias="enableLogCapture")
     accept_cookies: Optional[bool] = Field(default=None, alias="acceptCookies")
+    solver_type: Optional[CaptchaSolverType] = Field(
+        default=None, alias="solverType"
+    )
     profile: Optional[SessionProfile] = Field(default=None, alias="profile")
     static_ip_id: Optional[str] = Field(default=None, alias="staticIpId")
     save_downloads: Optional[bool] = Field(default=None, alias="saveDownloads")
@@ -337,6 +341,9 @@ class CreateSessionParams(BaseModel):
     locales: List[ISO639_1] = Field(default=["en"])
     screen: Optional[ScreenConfig] = Field(default=None)
     solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
+    solver_type: Optional[CaptchaSolverType] = Field(
+        default=None, serialization_alias="solverType"
+    )
     adblock: bool = Field(default=False, serialization_alias="adblock")
     trackers: bool = Field(default=False, serialization_alias="trackers")
     annoyances: bool = Field(default=False, serialization_alias="annoyances")
@@ -478,6 +485,35 @@ class UploadFileResponse(BaseModel):
     file_path: Optional[str] = Field(default=None, alias="filePath")
     file_name: Optional[str] = Field(default=None, alias="fileName")
     original_name: Optional[str] = Field(default=None, alias="originalName")
+
+
+class UpdateSessionSolveCaptchasParams(BaseModel):
+    """
+    Parameters for starting automatic captcha solving in a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    solver_type: Optional[CaptchaSolverType] = Field(
+        default=None,
+        serialization_alias="solverType",
+    )
+
+
+class UpdateSessionSolveCaptchasResponse(BasicResponse):
+    """
+    Response from updating automatic captcha solving in a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    solve_captchas: Optional[bool] = Field(default=None, alias="solveCaptchas")
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    telemetry_ready: Optional[bool] = Field(default=None, alias="telemetryReady")
 
 
 class SessionEventLog(BaseModel):

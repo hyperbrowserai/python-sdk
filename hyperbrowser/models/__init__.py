@@ -262,10 +262,13 @@ from .session import (
     SessionLaunchState,
     UploadFileResponse,
     ImageCaptchaParam,
+    CaptchaSolverType,
     UpdateSessionProfileParams,
     UpdateSessionProxyLocationParams,
     UpdateSessionProxyParams,
     UpdateSessionScreenParams,
+    UpdateSessionSolveCaptchasParams,
+    UpdateSessionSolveCaptchasResponse,
 )
 from .sandbox import (
     SandboxStatus,
@@ -524,10 +527,13 @@ __all__ = [
     "SessionLaunchState",
     "UploadFileResponse",
     "ImageCaptchaParam",
+    "CaptchaSolverType",
     "UpdateSessionProfileParams",
     "UpdateSessionProxyLocationParams",
     "UpdateSessionProxyParams",
     "UpdateSessionScreenParams",
+    "UpdateSessionSolveCaptchasParams",
+    "UpdateSessionSolveCaptchasResponse",
     # sandbox
     "SandboxStatus",
     "SandboxRegion",
