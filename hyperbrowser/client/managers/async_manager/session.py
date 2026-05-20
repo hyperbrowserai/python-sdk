@@ -2,6 +2,8 @@ from typing import List, Optional, Union, IO, overload
 import warnings
 from ....models.session import (
     BasicResponse,
+    CaptchaEvaluationParams,
+    CaptchaEvaluationResponse,
     CreateSessionParams,
     GetSessionDownloadsUrlResponse,
     GetSessionRecordingUrlResponse,
@@ -17,8 +19,12 @@ from ....models.session import (
     UpdateSessionProfileParams,
     UpdateSessionProxyParams,
     UpdateSessionScreenParams,
+    UpdateSessionSolveCaptchasParams,
+    UpdateSessionSolveCaptchasResponse,
     SessionGetParams,
 )
+
+CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS = 185
 
 
 class SessionEventLogsManager:
@@ -69,6 +75,21 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/stop")
         )
         return BasicResponse(**response.data)
+
+    async def evaluate_captcha(
+        self,
+        id: str,
+        params: Optional[CaptchaEvaluationParams] = None,
+    ) -> CaptchaEvaluationResponse:
+        params_obj = params or CaptchaEvaluationParams()
+        response = await self._client.transport.post(
+            self._client._build_url(f"/session/{id}/captcha/evaluate"),
+            data=params_obj.model_dump(exclude_none=True, by_alias=True),
+            timeout=max(
+                self._client.timeout, CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS
+            ),
+        )
+        return CaptchaEvaluationResponse(**response.data)
 
     async def list(
         self, params: SessionListParams = SessionListParams()
@@ -212,6 +233,36 @@ class SessionManager:
             },
         )
         return BasicResponse(**response.data)
+
+    async def start_captcha_solving(
+        self,
+        id: str,
+        params: Optional[UpdateSessionSolveCaptchasParams] = None,
+    ) -> UpdateSessionSolveCaptchasResponse:
+        params_obj = params or UpdateSessionSolveCaptchasParams()
+        response = await self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": True,
+                    **params_obj.model_dump(exclude_none=True, by_alias=True),
+                },
+            },
+        )
+        return UpdateSessionSolveCaptchasResponse(**response.data)
+
+    async def stop_captcha_solving(self, id: str) -> UpdateSessionSolveCaptchasResponse:
+        response = await self._client.transport.put(
+            self._client._build_url(f"/session/{id}/update"),
+            data={
+                "type": "solveCaptchas",
+                "params": {
+                    "enabled": False,
+                },
+            },
+        )
+        return UpdateSessionSolveCaptchasResponse(**response.data)
 
     def _warn_update_profile_params_boolean_deprecated(self) -> None:
         if SessionManager._has_warned_update_profile_params_boolean_deprecated:

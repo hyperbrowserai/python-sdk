@@ -55,7 +55,7 @@ class AsyncTransport(TransportStrategy):
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
-            except:
+            except Exception:
                 message = str(e)
             raise HyperbrowserError(
                 message,
@@ -67,13 +67,20 @@ class AsyncTransport(TransportStrategy):
             raise HyperbrowserError("Request failed", original_error=e)
 
     async def post(
-        self, url: str, data: Optional[dict] = None, files: Optional[dict] = None
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        files: Optional[dict] = None,
+        timeout: Optional[float] = None,
     ) -> APIResponse:
         try:
+            kwargs = {}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
             if files:
-                response = await self.client.post(url, data=data, files=files)
+                response = await self.client.post(url, data=data, files=files, **kwargs)
             else:
-                response = await self.client.post(url, json=data)
+                response = await self.client.post(url, json=data, **kwargs)
             return await self._handle_response(response)
         except HyperbrowserError:
             raise

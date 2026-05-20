@@ -45,7 +45,13 @@ class TransportStrategy(ABC):
         pass
 
     @abstractmethod
-    def post(self, url: str) -> APIResponse:
+    def post(
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        files: Optional[dict] = None,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         pass
 
     @abstractmethod

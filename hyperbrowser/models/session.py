@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Literal, Optional, Union, Dict
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -16,6 +16,16 @@ from hyperbrowser.models.consts import (
 )
 
 SessionStatus = Literal["active", "closed", "error"]
+CaptchaSolverType = Literal["visual"]
+CaptchaEvaluationType = Literal[
+    "turnstile",
+    "cloudflare-challenge",
+    "aliexpress",
+    "recaptcha",
+    "recaptcha-visual",
+    "amazon",
+]
+CaptchaEvaluationTarget = CaptchaEvaluationType
 
 
 class BasicResponse(BaseModel):
@@ -134,6 +144,7 @@ class SessionLaunchState(BaseModel):
     )
     enable_log_capture: Optional[bool] = Field(default=None, alias="enableLogCapture")
     accept_cookies: Optional[bool] = Field(default=None, alias="acceptCookies")
+    solver_type: Optional[CaptchaSolverType] = Field(default=None, alias="solverType")
     profile: Optional[SessionProfile] = Field(default=None, alias="profile")
     static_ip_id: Optional[str] = Field(default=None, alias="staticIpId")
     save_downloads: Optional[bool] = Field(default=None, alias="saveDownloads")
@@ -303,6 +314,75 @@ class ImageCaptchaParam(BaseModel):
     input_selector: str = Field(serialization_alias="inputSelector")
 
 
+class CaptchaEvaluationParams(BaseModel):
+    """
+    Parameters for manually evaluating captchas in a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    captcha: Optional[CaptchaEvaluationTarget] = Field(default=None)
+    captcha_type: Optional[CaptchaEvaluationTarget] = Field(
+        default=None, serialization_alias="captchaType"
+    )
+    text: Optional[CaptchaEvaluationTarget] = Field(default=None)
+    iterations: Optional[int] = Field(default=None)
+    max_iterations: Optional[int] = Field(
+        default=None, serialization_alias="maxIterations"
+    )
+    solver_type: Optional[CaptchaSolverType] = Field(
+        default=None, serialization_alias="solverType"
+    )
+    image_captcha_params: Optional[List[ImageCaptchaParam]] = Field(
+        default=None, serialization_alias="imageCaptchaParams"
+    )
+    use_gemini_captcha_solver: Optional[bool] = Field(
+        default=None, serialization_alias="useGeminiCaptchaSolver"
+    )
+    use_ultra_stealth: Optional[bool] = Field(
+        default=None, serialization_alias="useUltraStealth"
+    )
+
+
+class CaptchaEvaluationPageResult(BaseModel):
+    """
+    Result of manually evaluating captchas on a single page target.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    url: str = Field(alias="url")
+    target_id: Optional[str] = Field(default=None, alias="targetId")
+    iterations_run: int = Field(alias="iterationsRun")
+    solved: bool = Field(alias="solved")
+    solved_captchas: List[CaptchaEvaluationType] = Field(alias="solvedCaptchas")
+    checked_captchas: List[CaptchaEvaluationType] = Field(alias="checkedCaptchas")
+    captcha_solved_counts: Dict[str, int] = Field(alias="captchaSolvedCounts")
+    last_solve_time: Dict[str, float] = Field(alias="lastSolveTime")
+
+
+class CaptchaEvaluationResponse(BaseModel):
+    """
+    Response from manually evaluating captchas in a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    success: bool = Field(alias="success")
+    captcha: Optional[CaptchaEvaluationType] = Field(default=None, alias="captcha")
+    iterations_requested: int = Field(alias="iterationsRequested")
+    iterations_run: int = Field(alias="iterationsRun")
+    solved: bool = Field(alias="solved")
+    solved_captchas: List[CaptchaEvaluationType] = Field(alias="solvedCaptchas")
+    pages: List[CaptchaEvaluationPageResult] = Field(alias="pages")
+
+
 class CreateSessionParams(BaseModel):
     """
     Parameters for creating a new browser session.
@@ -337,6 +417,9 @@ class CreateSessionParams(BaseModel):
     locales: List[ISO639_1] = Field(default=["en"])
     screen: Optional[ScreenConfig] = Field(default=None)
     solve_captchas: bool = Field(default=False, serialization_alias="solveCaptchas")
+    solver_type: Optional[CaptchaSolverType] = Field(
+        default=None, serialization_alias="solverType"
+    )
     adblock: bool = Field(default=False, serialization_alias="adblock")
     trackers: bool = Field(default=False, serialization_alias="trackers")
     annoyances: bool = Field(default=False, serialization_alias="annoyances")
@@ -478,6 +561,35 @@ class UploadFileResponse(BaseModel):
     file_path: Optional[str] = Field(default=None, alias="filePath")
     file_name: Optional[str] = Field(default=None, alias="fileName")
     original_name: Optional[str] = Field(default=None, alias="originalName")
+
+
+class UpdateSessionSolveCaptchasParams(BaseModel):
+    """
+    Parameters for starting automatic captcha solving in a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    solver_type: Optional[CaptchaSolverType] = Field(
+        default=None,
+        serialization_alias="solverType",
+    )
+
+
+class UpdateSessionSolveCaptchasResponse(BasicResponse):
+    """
+    Response from updating automatic captcha solving in a running session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    solve_captchas: Optional[bool] = Field(default=None, alias="solveCaptchas")
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    telemetry_ready: Optional[bool] = Field(default=None, alias="telemetryReady")
 
 
 class SessionEventLog(BaseModel):
