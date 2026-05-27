@@ -397,12 +397,20 @@ class CreateSessionParams(BaseModel):
     )
     use_stealth: bool = Field(default=False, serialization_alias="useStealth")
     use_proxy: bool = Field(default=False, serialization_alias="useProxy")
-    proxy_server: Optional[str] = Field(default=None, serialization_alias="proxyServer")
+    proxy_server: Optional[str] = Field(
+        default=None,
+        serialization_alias="proxyServer",
+        description="Custom proxy server host. Enterprise plan only.",
+    )
     proxy_server_password: Optional[str] = Field(
-        default=None, serialization_alias="proxyServerPassword"
+        default=None,
+        serialization_alias="proxyServerPassword",
+        description="Password for authenticating with the custom proxy server. Enterprise plan only.",
     )
     proxy_server_username: Optional[str] = Field(
-        default=None, serialization_alias="proxyServerUsername"
+        default=None,
+        serialization_alias="proxyServerUsername",
+        description="Username for authenticating with the custom proxy server. Enterprise plan only.",
     )
     proxy_country: Optional[Country] = Field(
         default=None, serialization_alias="proxyCountry"
