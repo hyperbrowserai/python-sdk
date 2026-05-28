@@ -21,6 +21,14 @@ from ....models.session import (
     UpdateSessionSolveCaptchasParams,
     UpdateSessionSolveCaptchasResponse,
     SessionGetParams,
+    SessionLogsTokenResponse,
+    SessionInfoResponse,
+    SessionCreditUsageResponse,
+    SessionMetricsResponse,
+    SessionConsoleParams,
+    SessionConsoleResponse,
+    SessionNetworkParams,
+    SessionNetworkResponse,
 )
 
 CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS = 185
@@ -140,6 +148,52 @@ class SessionManager:
             )
 
         return UploadFileResponse(**response.data)
+
+    def stop_all(self) -> BasicResponse:
+        response = self._client.transport.put(self._client._build_url("/sessions/stop"))
+        return BasicResponse(**response.data)
+
+    def get_logs_token(self, id: str) -> SessionLogsTokenResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}/logs-token")
+        )
+        return SessionLogsTokenResponse(**response.data)
+
+    def get_info(self, id: str) -> SessionInfoResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}/info")
+        )
+        return SessionInfoResponse(**response.data)
+
+    def get_credit_usage(self, id: str) -> SessionCreditUsageResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}/credit-usage")
+        )
+        return SessionCreditUsageResponse(**response.data)
+
+    def get_metrics(self, id: str) -> SessionMetricsResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}/metrics")
+        )
+        return SessionMetricsResponse(**response.data)
+
+    def get_console_logs(
+        self, id: str, params: SessionConsoleParams = SessionConsoleParams()
+    ) -> SessionConsoleResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}/console"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SessionConsoleResponse(**response.data)
+
+    def get_network_logs(
+        self, id: str, params: SessionNetworkParams = SessionNetworkParams()
+    ) -> SessionNetworkResponse:
+        response = self._client.transport.get(
+            self._client._build_url(f"/session/{id}/network"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SessionNetworkResponse(**response.data)
 
     def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:
         response = self._client.transport.put(

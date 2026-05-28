@@ -45,6 +45,7 @@ BrowserUseLlm = Literal[
     "gemini-2.0-flash",
     "gemini-2.5-flash",
 ]
+TaskLlm = BrowserUseLlm
 HyperAgentLlm = Literal[
     "gpt-5.5",
     "gpt-5.2",

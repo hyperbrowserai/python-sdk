@@ -4,6 +4,8 @@ from hyperbrowser.models.profile import (
     ProfileListParams,
     ProfileListResponse,
     ProfileResponse,
+    UpdateProfileParams,
+    BatchDeleteProfilesParams,
 )
 from hyperbrowser.models.session import BasicResponse
 
@@ -34,6 +36,22 @@ class ProfileManager:
             self._client._build_url(f"/profile/{id}"),
         )
         return BasicResponse(**response.data)
+
+    def update(self, id: str, params: UpdateProfileParams) -> ProfileResponse:
+        response = self._client.transport.put(
+            self._client._build_url(f"/profile/{id}"),
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return ProfileResponse(**response.data)
+
+    def delete_many(self, params: BatchDeleteProfilesParams) -> BasicResponse:
+        response = self._client.transport.client.request(
+            "DELETE",
+            self._client._build_url("/profiles"),
+            json=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        handled = self._client.transport._handle_response(response)
+        return BasicResponse(**handled.data)
 
     def list(
         self, params: ProfileListParams = ProfileListParams()

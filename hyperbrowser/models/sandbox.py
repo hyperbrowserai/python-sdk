@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -31,6 +31,17 @@ SandboxFileReadFormat = Literal["text", "bytes", "blob", "stream"]
 SandboxFileWatchRoute = Literal["ws", "stream"]
 SandboxFileSystemEventType = Literal["chmod", "create", "remove", "rename", "write"]
 SandboxVolumeMountType = Literal["rw", "ro"]
+SandboxImageSource = Literal["public", "team"]
+FirecrackerImageBuildStatus = Literal[
+    "awaiting_upload",
+    "upload_verified",
+    "dispatching",
+    "building",
+    "verifying",
+    "completed",
+    "failed",
+    "canceled",
+]
 
 
 def _parse_optional_datetime(value):
@@ -228,9 +239,9 @@ class SandboxListParams(SandboxBaseModel):
 
 class SandboxListResponse(SandboxBaseModel):
     sandboxes: List[Sandbox]
-    total_count: int = Field(alias="totalCount")
-    page: int
-    per_page: int = Field(alias="perPage")
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
 
 
 class SandboxImageSummary(SandboxBaseModel):
@@ -242,12 +253,18 @@ class SandboxImageSummary(SandboxBaseModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class SandboxImageListParams(SandboxBaseModel):
+    page: Optional[int] = None
+    limit: Optional[int] = None
+    source: Optional[Union[SandboxImageSource, List[SandboxImageSource]]] = None
+    search: Optional[str] = None
+
+
 class SandboxImageListResponse(SandboxBaseModel):
     images: List[SandboxImageSummary]
-    # TODO: add pagination metadata when /api/images supports it.
-    # total_count: Optional[int] = Field(default=None, alias="totalCount")
-    # page: Optional[int] = None
-    # per_page: Optional[int] = Field(default=None, alias="perPage")
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
 
 
 class SandboxSnapshotSummary(SandboxBaseModel):
@@ -266,17 +283,104 @@ class SandboxSnapshotSummary(SandboxBaseModel):
 
 
 class SandboxSnapshotListParams(SandboxBaseModel):
-    status: Optional[SandboxSnapshotStatus] = Field(default=None, exclude=None)
+    status: Optional[Union[SandboxSnapshotStatus, List[SandboxSnapshotStatus]]] = Field(
+        default=None, exclude=None
+    )
+    page: Optional[int] = Field(default=None, ge=1)
     limit: Optional[int] = Field(default=None, ge=1)
     image_name: Optional[str] = Field(default=None, serialization_alias="imageName")
+    search: Optional[str] = None
 
 
 class SandboxSnapshotListResponse(SandboxBaseModel):
     snapshots: List[SandboxSnapshotSummary]
-    # TODO: add pagination metadata when /api/snapshots supports it.
-    # total_count: Optional[int] = Field(default=None, alias="totalCount")
-    # page: Optional[int] = None
-    # per_page: Optional[int] = Field(default=None, alias="perPage")
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
+
+
+class SandboxRuntimeBrowserAuthResponse(SandboxBaseModel):
+    runtime: SandboxRuntimeTarget
+    allowed_origin: str = Field(alias="allowedOrigin")
+    capabilities: List[str]
+    bootstrap_url: str = Field(alias="bootstrapUrl")
+    bootstrap_url_expires_at: Optional[datetime] = Field(
+        default=None, alias="bootstrapUrlExpiresAt"
+    )
+
+
+class FirecrackerImageInit(SandboxBaseModel):
+    commands: Optional[List[str]] = None
+
+
+class CreateFirecrackerImageBuildParams(SandboxBaseModel):
+    image_name: str = Field(serialization_alias="imageName")
+    input_sha256: str = Field(serialization_alias="inputSha256")
+    input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
+    input_format: str = Field(serialization_alias="inputFormat")
+    source_platform: str = Field(serialization_alias="sourcePlatform")
+    image_config_user: Optional[str] = Field(
+        default=None, serialization_alias="imageConfigUser"
+    )
+    image_init: Optional[FirecrackerImageInit] = Field(
+        default=None, serialization_alias="imageInit"
+    )
+
+
+class CompleteFirecrackerImageBuildParams(SandboxBaseModel):
+    input_sha256: str = Field(serialization_alias="inputSha256")
+    input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
+    input_format: str = Field(serialization_alias="inputFormat")
+
+
+class FirecrackerImageBuild(SandboxBaseModel):
+    id: str
+    team_id: str = Field(alias="teamId")
+    user_id: Optional[str] = Field(default=None, alias="userId")
+    namespace: str
+    image_name: str = Field(alias="imageName")
+    image_id: str = Field(alias="imageId")
+    status: FirecrackerImageBuildStatus
+    input_bucket: Optional[str] = Field(default=None, alias="inputBucket")
+    input_key: Optional[str] = Field(default=None, alias="inputKey")
+    input_sha256: Optional[str] = Field(default=None, alias="inputSha256")
+    input_size_bytes: Optional[int] = Field(default=None, alias="inputSizeBytes")
+    output_bucket: Optional[str] = Field(default=None, alias="outputBucket")
+    output_key: Optional[str] = Field(default=None, alias="outputKey")
+    vm_id: Optional[str] = Field(default=None, alias="vmId")
+    error_code: Optional[str] = Field(default=None, alias="errorCode")
+    error_message: Optional[str] = Field(default=None, alias="errorMessage")
+    metadata: Optional[Dict[str, Any]] = None
+    completed_at: Optional[datetime] = Field(default=None, alias="completedAt")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class FirecrackerImageBuildUpload(SandboxBaseModel):
+    url: str
+    method: str
+    headers: Dict[str, str]
+    object_key: str = Field(alias="objectKey")
+    expires_in_seconds: int = Field(alias="expiresInSeconds")
+    max_upload_bytes: int = Field(alias="maxUploadBytes")
+
+
+class CreateFirecrackerImageBuildResponse(SandboxBaseModel):
+    build: FirecrackerImageBuild
+    upload: FirecrackerImageBuildUpload
+
+
+class FirecrackerImageBuildResponse(SandboxBaseModel):
+    build: FirecrackerImageBuild
+
+
+class FirecrackerImageBuildListParams(SandboxBaseModel):
+    status: Optional[FirecrackerImageBuildStatus] = None
+    limit: Optional[int] = None
+
+
+class FirecrackerImageBuildListResponse(SandboxBaseModel):
+    builds: List[FirecrackerImageBuild]
 
 
 class SandboxMemorySnapshotParams(SandboxBaseModel):

@@ -5,6 +5,8 @@ from hyperbrowser.exceptions import HyperbrowserError
 from .....models import (
     POLLING_ATTEMPTS,
     BasicResponse,
+    AgentTaskListParams,
+    AgentTaskListResponse,
     GeminiComputerUseTaskResponse,
     GeminiComputerUseTaskStatusResponse,
     StartGeminiComputerUseTaskParams,
@@ -42,6 +44,15 @@ class GeminiComputerUseManager:
             self._client._build_url(f"/task/gemini-computer-use/{job_id}/stop")
         )
         return BasicResponse(**response.data)
+
+    async def list(
+        self, params: AgentTaskListParams = AgentTaskListParams()
+    ) -> AgentTaskListResponse:
+        response = await self._client.transport.get(
+            self._client._build_url("/task/gemini-computer-use"),
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return AgentTaskListResponse(**response.data)
 
     async def start_and_wait(
         self, params: StartGeminiComputerUseTaskParams
