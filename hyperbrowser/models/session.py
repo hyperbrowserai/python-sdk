@@ -244,6 +244,9 @@ class SessionDetail(Session):
     webdriver_endpoint: Optional[str] = Field(alias="webdriverEndpoint", default=None)
     live_url: str = Field(alias="liveUrl")
     token: str = Field(alias="token")
+    forked_profile_id: Optional[str] = Field(
+        default=None, alias="forkedProfileId"
+    )
 
 
 class SessionGetParams(BaseModel):
@@ -306,6 +309,10 @@ class CreateSessionProfile(BaseModel):
     )
     persist_network_cache: Optional[bool] = Field(
         default=None, serialization_alias="persistNetworkCache"
+    )
+    fork: Optional[bool] = Field(default=None, serialization_alias="fork")
+    fork_profile_name: Optional[str] = Field(
+        default=None, serialization_alias="forkProfileName"
     )
 
 

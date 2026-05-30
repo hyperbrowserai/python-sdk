@@ -193,6 +193,7 @@ from .extract import (
 from .profile import (
     CreateProfileParams,
     CreateProfileResponse,
+    ForkProfileParams,
     ProfileListParams,
     ProfileListResponse,
     ProfileResponse,
@@ -486,6 +487,7 @@ __all__ = [
     # profile
     "CreateProfileParams",
     "CreateProfileResponse",
+    "ForkProfileParams",
     "ProfileListParams",
     "ProfileListResponse",
     "ProfileResponse",
