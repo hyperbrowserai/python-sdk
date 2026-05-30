@@ -79,6 +79,29 @@ class UpdateSessionProfileParams(BaseModel):
     )
 
 
+class UpdateSessionForkProfileParams(BaseModel):
+    """
+    Parameters for forking a session's profile on the fly.
+    Creates a new independent profile; the original source profile is never mutated.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    name: Optional[str] = Field(default=None, serialization_alias="name")
+
+
+class UpdateSessionForkProfileResponse(BasicResponse):
+    """
+    Response from a session profile fork operation.
+    """
+
+    forked_profile_id: Optional[str] = Field(
+        default=None, alias="forkedProfileId"
+    )
+
+
 class UpdateSessionProxyLocationParams(BaseModel):
     """
     Managed proxy geolocation overrides for a running session.
