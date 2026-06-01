@@ -16,6 +16,18 @@ class CreateProfileParams(BaseModel):
     name: Optional[str] = Field(default=None, serialization_alias="name")
 
 
+class ForkProfileParams(BaseModel):
+    """
+    Parameters for forking an existing profile.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    name: Optional[str] = Field(default=None, serialization_alias="name")
+
+
 class CreateProfileResponse(BaseModel):
     """
     Response containing the created profile.

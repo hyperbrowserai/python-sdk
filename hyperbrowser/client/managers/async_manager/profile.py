@@ -1,6 +1,7 @@
 from hyperbrowser.models.profile import (
     CreateProfileParams,
     CreateProfileResponse,
+    ForkProfileParams,
     ProfileListParams,
     ProfileListResponse,
     ProfileResponse,
@@ -15,6 +16,19 @@ class ProfileManager:
     async def create(self, params: CreateProfileParams = None) -> CreateProfileResponse:
         response = await self._client.transport.post(
             self._client._build_url("/profile"),
+            data=(
+                {}
+                if params is None
+                else params.model_dump(exclude_none=True, by_alias=True)
+            ),
+        )
+        return CreateProfileResponse(**response.data)
+
+    async def fork(
+        self, id: str, params: ForkProfileParams = None
+    ) -> CreateProfileResponse:
+        response = await self._client.transport.post(
+            self._client._build_url(f"/profile/{id}/fork"),
             data=(
                 {}
                 if params is None
