@@ -79,29 +79,6 @@ class UpdateSessionProfileParams(BaseModel):
     )
 
 
-class UpdateSessionForkProfileParams(BaseModel):
-    """
-    Parameters for forking a session's profile on the fly.
-    Creates a new independent profile; the original source profile is never mutated.
-    """
-
-    model_config = ConfigDict(
-        populate_by_alias=True,
-    )
-
-    name: Optional[str] = Field(default=None, serialization_alias="name")
-
-
-class UpdateSessionForkProfileResponse(BasicResponse):
-    """
-    Response from a session profile fork operation.
-    """
-
-    forked_profile_id: Optional[str] = Field(
-        default=None, alias="forkedProfileId"
-    )
-
-
 class UpdateSessionProxyLocationParams(BaseModel):
     """
     Managed proxy geolocation overrides for a running session.
@@ -267,9 +244,6 @@ class SessionDetail(Session):
     webdriver_endpoint: Optional[str] = Field(alias="webdriverEndpoint", default=None)
     live_url: str = Field(alias="liveUrl")
     token: str = Field(alias="token")
-    forked_profile_id: Optional[str] = Field(
-        default=None, alias="forkedProfileId"
-    )
 
 
 class SessionGetParams(BaseModel):
@@ -332,10 +306,6 @@ class CreateSessionProfile(BaseModel):
     )
     persist_network_cache: Optional[bool] = Field(
         default=None, serialization_alias="persistNetworkCache"
-    )
-    fork: Optional[bool] = Field(default=None, serialization_alias="fork")
-    fork_profile_name: Optional[str] = Field(
-        default=None, serialization_alias="forkProfileName"
     )
 
 

@@ -21,8 +21,6 @@ from ....models.session import (
     UpdateSessionScreenParams,
     UpdateSessionSolveCaptchasParams,
     UpdateSessionSolveCaptchasResponse,
-    UpdateSessionForkProfileParams,
-    UpdateSessionForkProfileResponse,
     SessionGetParams,
 )
 
@@ -266,23 +264,6 @@ class SessionManager:
         )
         return UpdateSessionSolveCaptchasResponse(**response.data)
 
-    async def fork_profile(
-        self,
-        id: str,
-        params: UpdateSessionForkProfileParams = UpdateSessionForkProfileParams(),
-    ) -> UpdateSessionForkProfileResponse:
-        """Fork the session's profile on the fly. Creates a new independent profile;
-        the original source profile is never mutated."""
-        response = await self._client.transport.put(
-            self._client._build_url(f"/session/{id}/update"),
-            data={
-                "type": "fork",
-                "params": params.model_dump(
-                    exclude_none=True, by_alias=True
-                ),
-            },
-        )
-        return UpdateSessionForkProfileResponse(**response.data)
 
     def _warn_update_profile_params_boolean_deprecated(self) -> None:
         if SessionManager._has_warned_update_profile_params_boolean_deprecated:
