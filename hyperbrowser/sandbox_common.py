@@ -157,9 +157,7 @@ def normalize_runtime_relative_path(base_url: str, path: str) -> str:
     prepend_sandbox = should_prepend_sandbox_to_runtime_api(base_url)
     normalized_path = normalize_runtime_api_path(parsed_path.path, prepend_sandbox)
     relative_path = normalized_path.lstrip("/")
-    return urlunsplit(
-        ("", "", relative_path, parsed_path.query, parsed_path.fragment)
-    )
+    return urlunsplit(("", "", relative_path, parsed_path.query, parsed_path.fragment))
 
 
 def resolve_runtime_transport_target(

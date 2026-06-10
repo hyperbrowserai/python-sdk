@@ -446,6 +446,9 @@ class CreateSessionParams(BaseModel):
     browser_args: Optional[List[str]] = Field(
         default=None, serialization_alias="browserArgs"
     )
+    disabled_external_protocols: Optional[List[str]] = Field(
+        default=None, serialization_alias="disabledExternalProtocols"
+    )
     save_downloads: Optional[bool] = Field(
         default=None, serialization_alias="saveDownloads"
     )

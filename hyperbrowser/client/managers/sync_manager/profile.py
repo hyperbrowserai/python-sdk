@@ -24,9 +24,7 @@ class ProfileManager:
         )
         return CreateProfileResponse(**response.data)
 
-    def fork(
-        self, id: str, params: ForkProfileParams = None
-    ) -> CreateProfileResponse:
+    def fork(self, id: str, params: ForkProfileParams = None) -> CreateProfileResponse:
         response = self._client.transport.post(
             self._client._build_url(f"/profile/{id}/fork"),
             data=(

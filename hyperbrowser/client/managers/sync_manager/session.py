@@ -259,7 +259,6 @@ class SessionManager:
         )
         return UpdateSessionSolveCaptchasResponse(**response.data)
 
-
     def _warn_update_profile_params_boolean_deprecated(self) -> None:
         if SessionManager._has_warned_update_profile_params_boolean_deprecated:
             return
