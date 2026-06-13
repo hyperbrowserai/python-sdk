@@ -243,6 +243,7 @@ class SessionDetail(Session):
     )
     webdriver_endpoint: Optional[str] = Field(alias="webdriverEndpoint", default=None)
     live_url: str = Field(alias="liveUrl")
+    live_domain: Optional[str] = Field(alias="liveDomain", default=None)
     token: str = Field(alias="token")
 
 
@@ -486,6 +487,7 @@ class CreateSessionParams(BaseModel):
     live_view_ttl_seconds: Optional[int] = Field(
         default=None, serialization_alias="liveViewTtlSeconds"
     )
+    live_domain: Optional[str] = Field(default=None, serialization_alias="liveDomain")
     replace_native_elements: Optional[bool] = Field(
         default=None,
         serialization_alias="replaceNativeElements",
