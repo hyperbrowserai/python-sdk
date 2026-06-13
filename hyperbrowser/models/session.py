@@ -487,7 +487,6 @@ class CreateSessionParams(BaseModel):
     live_view_ttl_seconds: Optional[int] = Field(
         default=None, serialization_alias="liveViewTtlSeconds"
     )
-    live_domain: Optional[str] = Field(default=None, serialization_alias="liveDomain")
     replace_native_elements: Optional[bool] = Field(
         default=None,
         serialization_alias="replaceNativeElements",
