@@ -243,6 +243,7 @@ class SessionDetail(Session):
     )
     webdriver_endpoint: Optional[str] = Field(alias="webdriverEndpoint", default=None)
     live_url: str = Field(alias="liveUrl")
+    live_domain: Optional[str] = Field(alias="liveDomain", default=None)
     token: str = Field(alias="token")
 
 
