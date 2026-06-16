@@ -8,9 +8,14 @@ from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.models.scrape import ScrapeOptions, StartScrapeJobParams
 from hyperbrowser.models.session import (
     CaptchaEvaluationParams,
+    CreateSessionParams,
     ImageCaptchaParam,
+    StartSessionFromSnapshotParams,
     UpdateSessionSolveCaptchasParams,
 )
+
+SESSION_ID = "52dd29fb-75a2-43f9-9831-8ff377fedb0a"
+SNAPSHOT_ID = "11111111-1111-4111-8111-111111111111"
 
 
 def _read_json_body(handler: BaseHTTPRequestHandler):
@@ -29,6 +34,28 @@ def _send_json(
     handler.send_header("Content-Length", str(len(encoded)))
     handler.end_headers()
     handler.wfile.write(encoded)
+
+
+def _session_detail_payload() -> dict:
+    return {
+        "id": SESSION_ID,
+        "teamId": "team_123",
+        "status": "active",
+        "createdAt": "2026-06-16T00:00:00.000Z",
+        "updatedAt": "2026-06-16T00:00:00.000Z",
+        "sessionUrl": "https://session.example.com",
+        "proxyDataConsumed": "0",
+        "launchState": None,
+        "creditsUsed": None,
+        "creditBreakdown": {
+            "creditsUsed": None,
+            "browserTimeCreditsUsed": None,
+            "proxyDataCreditsUsed": None,
+        },
+        "wsEndpoint": "wss://session.example.com/devtools/browser",
+        "liveUrl": "https://live.example.com",
+        "token": "session-token",
+    }
 
 
 def _start_server():
@@ -51,9 +78,31 @@ def _start_server():
                 _send_json(self, 200, {"jobId": "job_123"})
                 return
 
+            if self.path == "/api/session":
+                _send_json(self, 200, _session_detail_payload())
+                return
+
+            if self.path == f"/api/session/{SESSION_ID}/snapshot":
+                _send_json(
+                    self,
+                    200,
+                    {
+                        "snapshotName": f"browser-session-{SNAPSHOT_ID}",
+                        "snapshotId": SNAPSHOT_ID,
+                        "namespace": "team_team_123",
+                        "status": "created",
+                        "uploaded": False,
+                        "ready": False,
+                        "imageName": "browser-base",
+                        "imageId": "22222222-2222-4222-8222-222222222222",
+                        "imageNamespace": "default",
+                    },
+                )
+                return
+
             if (
                 self.path
-                == "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/captcha/evaluate"
+                == f"/api/session/{SESSION_ID}/captcha/evaluate"
             ):
                 _send_json(
                     self,
@@ -113,7 +162,7 @@ def _start_server():
             )
 
             if (
-                self.path == "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update"
+                self.path == f"/api/session/{SESSION_ID}/update"
                 and body.get("type") == "solveCaptchas"
             ):
                 _send_json(
@@ -141,6 +190,12 @@ def _scrape_params() -> StartScrapeJobParams:
     return StartScrapeJobParams(
         url="https://example.com",
         scrape_options=ScrapeOptions(formats=["markdown"]),
+    )
+
+
+def _snapshot_create_params() -> CreateSessionParams:
+    return CreateSessionParams(
+        start_from_snapshot=StartSessionFromSnapshotParams(snapshot_id=SNAPSHOT_ID),
     )
 
 
@@ -217,12 +272,138 @@ async def test_async_client_uses_configured_api_endpoint_and_parses_responses():
     ]
 
 
+def test_sync_session_create_can_start_from_snapshot():
+    server, base_url, requests = _start_server()
+    client = Hyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        session = client.sessions.create(_snapshot_create_params())
+    finally:
+        client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert session.id == SESSION_ID
+    assert requests == [
+        {
+            "method": "POST",
+            "path": "/api/session",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "useUltraStealth": False,
+                "useStealth": False,
+                "useProxy": False,
+                "locales": ["en"],
+                "solveCaptchas": False,
+                "adblock": False,
+                "trackers": False,
+                "annoyances": False,
+                "startFromSnapshot": {
+                    "snapshotId": SNAPSHOT_ID,
+                },
+            },
+        },
+    ]
+
+
+@pytest.mark.anyio
+async def test_async_session_create_can_start_from_snapshot():
+    server, base_url, requests = _start_server()
+    client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        session = await client.sessions.create(_snapshot_create_params())
+    finally:
+        await client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert session.id == SESSION_ID
+    assert requests == [
+        {
+            "method": "POST",
+            "path": "/api/session",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {
+                "useUltraStealth": False,
+                "useStealth": False,
+                "useProxy": False,
+                "locales": ["en"],
+                "solveCaptchas": False,
+                "adblock": False,
+                "trackers": False,
+                "annoyances": False,
+                "startFromSnapshot": {
+                    "snapshotId": SNAPSHOT_ID,
+                },
+            },
+        },
+    ]
+
+
+def test_sync_session_create_snapshot_posts_empty_body_and_parses_result():
+    server, base_url, requests = _start_server()
+    client = Hyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        snapshot = client.sessions.create_snapshot(SESSION_ID)
+    finally:
+        client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert snapshot.snapshot_id == SNAPSHOT_ID
+    assert snapshot.snapshot_name == f"browser-session-{SNAPSHOT_ID}"
+    assert snapshot.namespace == "team_team_123"
+    assert snapshot.status == "created"
+    assert snapshot.uploaded is False
+    assert snapshot.ready is False
+    assert snapshot.image_name == "browser-base"
+    assert requests == [
+        {
+            "method": "POST",
+            "path": f"/api/session/{SESSION_ID}/snapshot",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {},
+        },
+    ]
+
+
+@pytest.mark.anyio
+async def test_async_session_create_snapshot_posts_empty_body_and_parses_result():
+    server, base_url, requests = _start_server()
+    client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
+    try:
+        snapshot = await client.sessions.create_snapshot(SESSION_ID)
+    finally:
+        await client.close()
+        server.shutdown()
+        server.server_close()
+
+    assert snapshot.snapshot_id == SNAPSHOT_ID
+    assert snapshot.snapshot_name == f"browser-session-{SNAPSHOT_ID}"
+    assert snapshot.namespace == "team_team_123"
+    assert snapshot.status == "created"
+    assert snapshot.uploaded is False
+    assert snapshot.ready is False
+    assert snapshot.image_name == "browser-base"
+    assert requests == [
+        {
+            "method": "POST",
+            "path": f"/api/session/{SESSION_ID}/snapshot",
+            "api_key": "test-api-key",
+            "content_type": "application/json",
+            "body": {},
+        },
+    ]
+
+
 def test_sync_session_evaluate_captcha_triggers_manual_evaluation():
     server, base_url, requests = _start_server()
     client = Hyperbrowser(api_key="test-api-key", base_url=base_url)
     try:
         result = client.sessions.evaluate_captcha(
-            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            SESSION_ID,
             CaptchaEvaluationParams(
                 captcha_type="recaptcha-visual",
                 iterations=2,
@@ -249,7 +430,7 @@ def test_sync_session_evaluate_captcha_triggers_manual_evaluation():
     assert requests == [
         {
             "method": "POST",
-            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/captcha/evaluate",
+            "path": f"/api/session/{SESSION_ID}/captcha/evaluate",
             "api_key": "test-api-key",
             "content_type": "application/json",
             "body": {
@@ -274,7 +455,7 @@ async def test_async_session_evaluate_captcha_triggers_manual_evaluation():
     client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
     try:
         result = await client.sessions.evaluate_captcha(
-            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            SESSION_ID,
             CaptchaEvaluationParams(
                 captcha="recaptcha",
                 max_iterations=3,
@@ -293,7 +474,7 @@ async def test_async_session_evaluate_captcha_triggers_manual_evaluation():
     assert requests == [
         {
             "method": "POST",
-            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/captcha/evaluate",
+            "path": f"/api/session/{SESSION_ID}/captcha/evaluate",
             "api_key": "test-api-key",
             "content_type": "application/json",
             "body": {
@@ -310,11 +491,11 @@ def test_sync_session_captcha_solving_update_starts_and_stops_automatic_solving(
     client = Hyperbrowser(api_key="test-api-key", base_url=base_url)
     try:
         started = client.sessions.start_captcha_solving(
-            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            SESSION_ID,
             UpdateSessionSolveCaptchasParams(solver_type="visual"),
         )
         stopped = client.sessions.stop_captcha_solving(
-            "52dd29fb-75a2-43f9-9831-8ff377fedb0a"
+            SESSION_ID
         )
     finally:
         client.close()
@@ -328,7 +509,7 @@ def test_sync_session_captcha_solving_update_starts_and_stops_automatic_solving(
     assert requests == [
         {
             "method": "PUT",
-            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "path": f"/api/session/{SESSION_ID}/update",
             "api_key": "test-api-key",
             "content_type": "application/json",
             "body": {
@@ -341,7 +522,7 @@ def test_sync_session_captcha_solving_update_starts_and_stops_automatic_solving(
         },
         {
             "method": "PUT",
-            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "path": f"/api/session/{SESSION_ID}/update",
             "api_key": "test-api-key",
             "content_type": "application/json",
             "body": {
@@ -360,11 +541,11 @@ async def test_async_session_captcha_solving_update_starts_and_stops_automatic_s
     client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
     try:
         started = await client.sessions.start_captcha_solving(
-            "52dd29fb-75a2-43f9-9831-8ff377fedb0a",
+            SESSION_ID,
             UpdateSessionSolveCaptchasParams(solver_type="visual"),
         )
         stopped = await client.sessions.stop_captcha_solving(
-            "52dd29fb-75a2-43f9-9831-8ff377fedb0a"
+            SESSION_ID
         )
     finally:
         await client.close()
@@ -378,7 +559,7 @@ async def test_async_session_captcha_solving_update_starts_and_stops_automatic_s
     assert requests == [
         {
             "method": "PUT",
-            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "path": f"/api/session/{SESSION_ID}/update",
             "api_key": "test-api-key",
             "content_type": "application/json",
             "body": {
@@ -391,7 +572,7 @@ async def test_async_session_captcha_solving_update_starts_and_stops_automatic_s
         },
         {
             "method": "PUT",
-            "path": "/api/session/52dd29fb-75a2-43f9-9831-8ff377fedb0a/update",
+            "path": f"/api/session/{SESSION_ID}/update",
             "api_key": "test-api-key",
             "content_type": "application/json",
             "body": {

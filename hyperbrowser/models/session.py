@@ -384,6 +384,18 @@ class CaptchaEvaluationResponse(BaseModel):
     pages: List[CaptchaEvaluationPageResult] = Field(alias="pages")
 
 
+class StartSessionFromSnapshotParams(BaseModel):
+    """
+    Snapshot selector for restoring a browser session at creation time.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    snapshot_id: str = Field(serialization_alias="snapshotId")
+
+
 class CreateSessionParams(BaseModel):
     """
     Parameters for creating a new browser session.
@@ -497,6 +509,30 @@ class CreateSessionParams(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, serialization_alias="disablePostQuantumKeyAgreement"
     )
+    start_from_snapshot: Optional[StartSessionFromSnapshotParams] = Field(
+        default=None,
+        serialization_alias="startFromSnapshot",
+    )
+
+
+class CreateSessionSnapshotResponse(BaseModel):
+    """
+    Response from creating a restorable snapshot of a browser session.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    snapshot_name: str = Field(alias="snapshotName")
+    snapshot_id: str = Field(alias="snapshotId")
+    namespace: str
+    status: str
+    uploaded: bool
+    ready: bool
+    image_name: str = Field(alias="imageName")
+    image_id: str = Field(alias="imageId")
+    image_namespace: str = Field(alias="imageNamespace")
 
 
 class SessionRecording(BaseModel):

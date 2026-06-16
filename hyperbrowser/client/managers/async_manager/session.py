@@ -5,6 +5,7 @@ from ....models.session import (
     CaptchaEvaluationParams,
     CaptchaEvaluationResponse,
     CreateSessionParams,
+    CreateSessionSnapshotResponse,
     GetSessionDownloadsUrlResponse,
     GetSessionRecordingUrlResponse,
     GetSessionVideoRecordingUrlResponse,
@@ -75,6 +76,13 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/stop")
         )
         return BasicResponse(**response.data)
+
+    async def create_snapshot(self, id: str) -> CreateSessionSnapshotResponse:
+        response = await self._client.transport.post(
+            self._client._build_url(f"/session/{id}/snapshot"),
+            data={},
+        )
+        return CreateSessionSnapshotResponse(**response.data)
 
     async def evaluate_captcha(
         self,
