@@ -77,6 +77,10 @@ class UpdateSessionProfileParams(BaseModel):
         default=None,
         serialization_alias="persistNetworkCache",
     )
+    fork_to_profile_id: Optional[str] = Field(
+        default=None,
+        serialization_alias="forkToProfileId",
+    )
 
 
 class UpdateSessionProxyLocationParams(BaseModel):
