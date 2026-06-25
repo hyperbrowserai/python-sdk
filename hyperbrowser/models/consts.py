@@ -74,6 +74,7 @@ ClaudeComputerUseLlm = Literal[
 ]
 CuaLlm = Literal["computer-use-preview", "gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]
 GeminiComputerUseLlm = Literal[
+    "gemini-3.5-flash",
     "gemini-3-flash-preview",
     "gemini-2.5-computer-use-preview-10-2025",
 ]
