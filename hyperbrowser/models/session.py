@@ -16,6 +16,7 @@ from hyperbrowser.models.consts import (
 )
 
 SessionStatus = Literal["active", "closed", "error"]
+BrowserMemorySize = Literal["small", "medium", "large"]
 CaptchaSolverType = Literal["visual"]
 CaptchaEvaluationType = Literal[
     "turnstile",
@@ -508,6 +509,9 @@ class CreateSessionParams(BaseModel):
     """
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, serialization_alias="disablePostQuantumKeyAgreement"
+    )
+    browser_memory_size: Optional[BrowserMemorySize] = Field(
+        default=None, serialization_alias="browserMemorySize"
     )
     start_from_snapshot: Optional[StartSessionFromSnapshotParams] = Field(
         default=None,

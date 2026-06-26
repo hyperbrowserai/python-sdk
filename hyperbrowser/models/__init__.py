@@ -242,6 +242,7 @@ from .computer_action import (
 )
 from .session import (
     BasicResponse,
+    BrowserMemorySize,
     CreateSessionParams,
     CreateSessionProfile,
     CreateSessionSnapshotResponse,
@@ -515,6 +516,7 @@ __all__ = [
     "StorageStateOptions",
     # session
     "BasicResponse",
+    "BrowserMemorySize",
     "CreateSessionParams",
     "CreateSessionProfile",
     "CreateSessionSnapshotResponse",
