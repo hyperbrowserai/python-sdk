@@ -1,4 +1,5 @@
 import base64
+import collections.abc
 import posixpath
 import re
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,24 @@ SHELL_SAFE_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_@%+=:,./-]+$")
 
 def _copy_model(model):
     return model.model_copy(deep=True)
+
+
+def _is_replayable_http_content(content) -> bool:
+    if content is None:
+        return True
+    if isinstance(content, (bytes, bytearray, memoryview, str)):
+        return True
+    if hasattr(content, "read"):
+        return False
+    if hasattr(content, "__aiter__"):
+        return False
+    if isinstance(content, collections.abc.Iterator):
+        return False
+    try:
+        iter(content)
+    except TypeError:
+        return True
+    return True
 
 
 def _quote_shell_token(token: str) -> str:

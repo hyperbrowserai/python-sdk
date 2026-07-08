@@ -8,14 +8,22 @@ import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, FrozenSet, List, Optional, Sequence
 
 import httpx
 
-from ....models.sandbox import SandboxImageBuildUpload, SandboxImageInit
+from ....models.sandbox import (
+    SandboxImageBuildInputFormat,
+    SandboxImageBuildStatus,
+    SandboxImageBuildUpload,
+    SandboxImageInit,
+)
 
-IMAGE_BUILD_INPUT_FORMAT = "rootfs_export_tar_gz"
+IMAGE_BUILD_INPUT_FORMAT: SandboxImageBuildInputFormat = "rootfs_export_tar_gz"
 IMAGE_BUILD_SOURCE_PLATFORM = "linux/amd64"
+TERMINAL_IMAGE_BUILD_STATUSES: FrozenSet[SandboxImageBuildStatus] = frozenset(
+    {"completed", "failed", "canceled", "cancelled"}
+)
 _IMAGE_INIT_ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _RESERVED_IMAGE_INIT_ENV_KEYS = {
     "SANDBOX_ENABLED",
@@ -35,7 +43,7 @@ class DockerImageBuildArtifact:
     path: str
     sha256_hex: str
     size_bytes: int
-    input_format: str
+    input_format: SandboxImageBuildInputFormat
     source_platform: str
     image_config_user: str
     image_init: Optional[SandboxImageInit]
@@ -161,8 +169,8 @@ def make_temp_docker_tag(prefix: str = "hyperbrowser-sdk-build") -> str:
     return f"{prefix}:{uuid.uuid4().hex}"
 
 
-def is_terminal_image_build_status(status: str) -> bool:
-    return status.strip().lower() in {"completed", "failed", "canceled", "cancelled"}
+def is_terminal_image_build_status(status: SandboxImageBuildStatus) -> bool:
+    return status in TERMINAL_IMAGE_BUILD_STATUSES
 
 
 def _ensure_docker_image_source_platform(docker_image: str, platform: str) -> None:
@@ -232,6 +240,7 @@ def _package_docker_container(
     hasher = hashlib.sha256()
     writer = _HashingCountingWriter(tmp, hasher)
     stderr_file = tempfile.TemporaryFile()
+    process = None
     try:
         process = subprocess.Popen(
             ["docker", "export", container_id],
@@ -272,9 +281,25 @@ def _package_docker_container(
             pass
         raise
     finally:
+        if process is not None:
+            _cleanup_docker_export_process(process)
         tmp.close()
         stderr_file.close()
         _remove_docker_container(container_id)
+
+
+def _cleanup_docker_export_process(process) -> None:
+    if process.stdout is not None:
+        process.stdout.close()
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+        return
+    process.wait()
 
 
 def _derive_auto_image_init(config: Dict[str, object]) -> Optional[SandboxImageInit]:

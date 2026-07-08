@@ -397,7 +397,7 @@ class SandboxImageBuild(SandboxBaseModel):
     namespace: Optional[str] = None
     image_name: str = Field(alias="imageName")
     image_id: Optional[str] = Field(default=None, alias="imageId")
-    status: str
+    status: SandboxImageBuildStatus
     input_bucket: Optional[str] = Field(default=None, alias="inputBucket")
     input_key: Optional[str] = Field(default=None, alias="inputKey")
     input_sha256: Optional[str] = Field(default=None, alias="inputSha256")

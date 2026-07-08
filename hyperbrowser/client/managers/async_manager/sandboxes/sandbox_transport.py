@@ -11,7 +11,7 @@ from .....sandbox_common import (
     parse_json_response,
     resolve_runtime_transport_target,
 )
-from ...sandboxes.shared import _build_query_path
+from ...sandboxes.shared import _build_query_path, _is_replayable_http_content
 
 
 class RuntimeTransport:
@@ -167,6 +167,12 @@ class RuntimeTransport:
 
         if response.status_code == 401 and allow_refresh:
             await response.aclose()
+            if not _is_replayable_http_content(content):
+                return ensure_response_ok(
+                    response,
+                    "runtime",
+                    "Runtime token expired during a streaming request; retry with a fresh stream.",
+                )
             refreshed = await self._resolve_connection(True)
             retry = await self._send(
                 refreshed,
