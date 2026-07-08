@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import functools
 import inspect
 import io
 import json
@@ -42,6 +43,42 @@ from ...sandboxes.shared import (
     _relative_watch_name,
 )
 from .sandbox_transport import RuntimeTransport
+
+DEFAULT_TRANSFER_CHUNK_SIZE = 64 * 1024
+
+
+async def _run_blocking(func, *args, **kwargs):
+    loop = asyncio.get_running_loop()
+    call = functools.partial(func, *args, **kwargs)
+    return await loop.run_in_executor(None, call)
+
+
+async def _aiter_stream_content(stream, chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE):
+    if isinstance(stream, str):
+        yield stream.encode("utf-8")
+        return
+    if isinstance(stream, (bytes, bytearray)):
+        yield bytes(stream)
+        return
+    if hasattr(stream, "__aiter__"):
+        async for chunk in stream:
+            if isinstance(chunk, str):
+                chunk = chunk.encode("utf-8")
+            yield bytes(chunk)
+        return
+    if hasattr(stream, "read"):
+        while True:
+            chunk = await _run_blocking(stream.read, chunk_size)
+            if not chunk:
+                break
+            if isinstance(chunk, str):
+                chunk = chunk.encode("utf-8")
+            yield bytes(chunk)
+        return
+    for chunk in stream:
+        if isinstance(chunk, str):
+            chunk = chunk.encode("utf-8")
+        yield bytes(chunk)
 
 
 class SandboxFileWatchHandle:
@@ -439,11 +476,44 @@ class SandboxFilesApi:
         )
         return SandboxFileTransferResult(**payload)
 
+    async def upload_stream(
+        self,
+        path: str,
+        stream,
+        *,
+        content_length: Optional[int] = None,
+        chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE,
+    ):
+        headers = {}
+        if content_length is not None:
+            headers["content-length"] = str(content_length)
+        payload = await self._transport.request_json(
+            "/sandbox/files/upload",
+            method="PUT",
+            params=self._with_run_as_params({"path": path}),
+            content=_aiter_stream_content(stream, chunk_size=chunk_size),
+            headers=headers or None,
+        )
+        return SandboxFileTransferResult(**payload)
+
     async def download(self, path: str) -> bytes:
         return await self._transport.request_bytes(
             "/sandbox/files/download",
             params=self._with_run_as_params({"path": path}),
         )
+
+    async def download_stream(
+        self,
+        path: str,
+        *,
+        chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE,
+    ) -> AsyncIterator[bytes]:
+        async for chunk in self._transport.stream_bytes(
+            "/sandbox/files/download",
+            params=self._with_run_as_params({"path": path}),
+            chunk_size=chunk_size,
+        ):
+            yield chunk
 
     async def make_dir(
         self,

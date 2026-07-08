@@ -2,10 +2,14 @@ import pytest
 from pydantic import ValidationError
 
 from hyperbrowser.models import (
+    CompleteSandboxImageBuildParams,
     CreateSandboxParams,
+    CreateSandboxImageBuildParams,
     SandboxExposeParams,
     SandboxFileWriteEntry,
     SandboxExecParams,
+    SandboxImageInit,
+    SandboxNetworkPolicy,
     SandboxProcessListParams,
     SandboxProcessWaitParams,
     SandboxSnapshotListParams,
@@ -58,6 +62,74 @@ def test_create_sandbox_params_serializes_mounts():
                 "shared": True,
             }
         },
+    }
+
+
+def test_create_sandbox_params_serializes_network_policy():
+    params = CreateSandboxParams(
+        image_name="node",
+        allow_internet_access=False,
+        allow_out=["1.1.1.1", "example.com"],
+        deny_out=["0.0.0.0/0"],
+    )
+
+    assert params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "node",
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1", "example.com"],
+        "denyOut": ["0.0.0.0/0"],
+    }
+
+
+def test_sandbox_network_policy_serializes_update_payload():
+    policy = SandboxNetworkPolicy(
+        allow_internet_access=True,
+        allow_out=[],
+        deny_out=[],
+    )
+
+    assert policy.model_dump(by_alias=True, exclude_none=True) == {
+        "allowInternetAccess": True,
+        "allowOut": [],
+        "denyOut": [],
+    }
+
+
+def test_sandbox_image_build_params_serialize_expected_wire_keys():
+    create_params = CreateSandboxImageBuildParams(
+        image_name="custom_node",
+        input_sha256="abc123",
+        input_size_bytes=123,
+        source_platform="linux/amd64",
+        image_config_user="node",
+        image_init=SandboxImageInit(
+            env={"NODE_ENV": "production"},
+            args=["node", "server.js"],
+        ),
+    )
+
+    assert create_params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
+        "sourcePlatform": "linux/amd64",
+        "imageConfigUser": "node",
+        "imageInit": {
+            "env": {"NODE_ENV": "production"},
+            "args": ["node", "server.js"],
+        },
+    }
+
+    complete_params = CompleteSandboxImageBuildParams(
+        input_sha256="abc123",
+        input_size_bytes=123,
+    )
+
+    assert complete_params.model_dump(by_alias=True, exclude_none=True) == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
     }
 
 
@@ -156,16 +228,25 @@ def test_sandbox_process_list_params_serialize_created_filters_as_snake_case():
 
 def test_sandbox_snapshot_list_params_serialize_image_name_as_camel_case():
     params = SandboxSnapshotListParams(
-        status="created",
+        status=["created", "failed"],
         limit=10,
         image_name="node",
+        search="snap",
+        page=2,
     )
 
     assert params.model_dump(by_alias=True, exclude_none=True) == {
-        "status": "created",
+        "status": ["created", "failed"],
         "limit": 10,
         "imageName": "node",
+        "search": "snap",
+        "page": 2,
     }
+
+
+def test_sandbox_snapshot_list_params_rejects_limit_above_api_max():
+    with pytest.raises(ValidationError):
+        SandboxSnapshotListParams(limit=101)
 
 
 def test_sandbox_file_write_entry_supports_batch_write_options():

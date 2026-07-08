@@ -1,7 +1,14 @@
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from ._parsers import _parse_optional_int
 from .session import SessionLaunchState, SessionStatus
@@ -31,6 +38,16 @@ SandboxFileReadFormat = Literal["text", "bytes", "blob", "stream"]
 SandboxFileWatchRoute = Literal["ws", "stream"]
 SandboxFileSystemEventType = Literal["chmod", "create", "remove", "rename", "write"]
 SandboxVolumeMountType = Literal["rw", "ro"]
+SandboxImageBuildInputFormat = Literal["rootfs_export_tar_gz"]
+SandboxImageBuildStatus = Literal[
+    "awaiting_upload",
+    "upload_verified",
+    "building",
+    "completed",
+    "failed",
+    "canceled",
+    "cancelled",
+]
 
 
 def _parse_optional_datetime(value):
@@ -93,6 +110,19 @@ class SandboxVolumeMount(SandboxBaseModel):
     shared: Optional[bool] = None
 
 
+class SandboxNetworkPolicy(SandboxBaseModel):
+    allow_internet_access: Optional[bool] = Field(
+        default=None,
+        alias="allowInternetAccess",
+    )
+    allow_out: List[str] = Field(default_factory=list, alias="allowOut")
+    deny_out: List[str] = Field(default_factory=list, alias="denyOut")
+
+
+class SandboxNetworkUpdateResult(SandboxBaseModel):
+    network: SandboxNetworkPolicy
+
+
 class Sandbox(SandboxBaseModel):
     id: str
     team_id: str = Field(alias="teamId")
@@ -122,6 +152,7 @@ class Sandbox(SandboxBaseModel):
         default_factory=list,
         alias="exposedPorts",
     )
+    network: Optional[SandboxNetworkPolicy] = None
 
     @field_validator(
         "end_time",
@@ -190,6 +221,12 @@ class CreateSandboxParams(SandboxBaseModel):
     disk_mib: Optional[int] = Field(
         default=None, ge=1, serialization_alias="diskSizeMiB"
     )
+    allow_internet_access: Optional[bool] = Field(
+        default=None,
+        serialization_alias="allowInternetAccess",
+    )
+    allow_out: Optional[List[str]] = Field(default=None, serialization_alias="allowOut")
+    deny_out: Optional[List[str]] = Field(default=None, serialization_alias="denyOut")
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -233,10 +270,25 @@ class SandboxListResponse(SandboxBaseModel):
     per_page: int = Field(alias="perPage")
 
 
+class SandboxImageInit(SandboxBaseModel):
+    env: Optional[Dict[str, str]] = None
+    command: Optional[str] = None
+    args: Optional[List[str]] = None
+
+
+class SandboxImageListParams(SandboxBaseModel):
+    page: Optional[int] = Field(default=None, ge=1)
+    limit: Optional[int] = Field(default=None, ge=1, le=100)
+    search: Optional[str] = None
+    sources: Optional[List[str]] = Field(default=None, serialization_alias="source")
+
+
 class SandboxImageSummary(SandboxBaseModel):
     id: str
     image_name: str = Field(alias="imageName")
     namespace: str
+    source: Optional[str] = None
+    image_init: Optional[SandboxImageInit] = Field(default=None, alias="imageInit")
     uploaded: bool
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
@@ -244,10 +296,9 @@ class SandboxImageSummary(SandboxBaseModel):
 
 class SandboxImageListResponse(SandboxBaseModel):
     images: List[SandboxImageSummary]
-    # TODO: add pagination metadata when /api/images supports it.
-    # total_count: Optional[int] = Field(default=None, alias="totalCount")
-    # page: Optional[int] = None
-    # per_page: Optional[int] = Field(default=None, alias="perPage")
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
 
 
 class SandboxSnapshotSummary(SandboxBaseModel):
@@ -266,17 +317,21 @@ class SandboxSnapshotSummary(SandboxBaseModel):
 
 
 class SandboxSnapshotListParams(SandboxBaseModel):
-    status: Optional[SandboxSnapshotStatus] = Field(default=None, exclude=None)
-    limit: Optional[int] = Field(default=None, ge=1)
+    status: Optional[Union[SandboxSnapshotStatus, List[SandboxSnapshotStatus]]] = Field(
+        default=None,
+        exclude=None,
+    )
+    limit: Optional[int] = Field(default=None, ge=1, le=100)
     image_name: Optional[str] = Field(default=None, serialization_alias="imageName")
+    search: Optional[str] = None
+    page: Optional[int] = Field(default=None, ge=1)
 
 
 class SandboxSnapshotListResponse(SandboxBaseModel):
     snapshots: List[SandboxSnapshotSummary]
-    # TODO: add pagination metadata when /api/snapshots supports it.
-    # total_count: Optional[int] = Field(default=None, alias="totalCount")
-    # page: Optional[int] = None
-    # per_page: Optional[int] = Field(default=None, alias="perPage")
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
 
 
 class SandboxMemorySnapshotParams(SandboxBaseModel):
@@ -293,6 +348,79 @@ class SandboxMemorySnapshotResult(SandboxBaseModel):
     image_name: str = Field(alias="imageName")
     image_id: str = Field(alias="imageId")
     image_namespace: str = Field(alias="imageNamespace")
+
+
+class CreateSandboxImageBuildParams(SandboxBaseModel):
+    image_name: str = Field(serialization_alias="imageName")
+    input_sha256: str = Field(serialization_alias="inputSha256")
+    input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
+    input_format: SandboxImageBuildInputFormat = Field(
+        default="rootfs_export_tar_gz",
+        serialization_alias="inputFormat",
+    )
+    source_platform: str = Field(
+        default="linux/amd64",
+        serialization_alias="sourcePlatform",
+    )
+    image_config_user: Optional[str] = Field(
+        default=None,
+        serialization_alias="imageConfigUser",
+    )
+    image_init: Optional[SandboxImageInit] = Field(
+        default=None,
+        serialization_alias="imageInit",
+    )
+
+
+class CompleteSandboxImageBuildParams(SandboxBaseModel):
+    input_sha256: str = Field(serialization_alias="inputSha256")
+    input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
+    input_format: SandboxImageBuildInputFormat = Field(
+        default="rootfs_export_tar_gz",
+        serialization_alias="inputFormat",
+    )
+
+
+class SandboxImageBuildUpload(SandboxBaseModel):
+    url: str
+    method: str
+    headers: Dict[str, str]
+    object_key: str = Field(alias="objectKey")
+    expires_in_seconds: int = Field(alias="expiresInSeconds")
+    max_upload_bytes: int = Field(alias="maxUploadBytes")
+
+
+class SandboxImageBuild(SandboxBaseModel):
+    id: str
+    team_id: Optional[str] = Field(default=None, alias="teamId")
+    user_id: Optional[str] = Field(default=None, alias="userId")
+    namespace: Optional[str] = None
+    image_name: str = Field(alias="imageName")
+    image_id: Optional[str] = Field(default=None, alias="imageId")
+    status: str
+    input_bucket: Optional[str] = Field(default=None, alias="inputBucket")
+    input_key: Optional[str] = Field(default=None, alias="inputKey")
+    input_sha256: Optional[str] = Field(default=None, alias="inputSha256")
+    input_size_bytes: Optional[int] = Field(default=None, alias="inputSizeBytes")
+    output_bucket: Optional[str] = Field(default=None, alias="outputBucket")
+    output_key: Optional[str] = Field(default=None, alias="outputKey")
+    vm_id: Optional[str] = Field(default=None, alias="vmId")
+    error_code: Optional[str] = Field(default=None, alias="errorCode")
+    error_message: Optional[str] = Field(default=None, alias="errorMessage")
+    metadata: Optional[Dict[str, object]] = None
+    completed_at: Optional[datetime] = Field(default=None, alias="completedAt")
+    created_at: Optional[datetime] = Field(default=None, alias="createdAt")
+    updated_at: Optional[datetime] = Field(default=None, alias="updatedAt")
+
+    @field_validator("completed_at", "created_at", "updated_at", mode="before")
+    @classmethod
+    def parse_image_build_datetimes(cls, value):
+        return _parse_optional_datetime(value)
+
+
+class SandboxImageBuildCreateResult(SandboxBaseModel):
+    build: SandboxImageBuild
+    upload: SandboxImageBuildUpload
 
 
 class SandboxExecParams(SandboxBaseModel):
@@ -313,19 +441,41 @@ class SandboxProcessSummary(SandboxBaseModel):
     args: Optional[List[str]] = None
     cwd: str
     pid: Optional[int] = None
-    exit_code: Optional[int] = Field(default=None, alias="exit_code")
-    started_at: int = Field(alias="started_at")
-    completed_at: Optional[int] = Field(default=None, alias="completed_at")
+    exit_code: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("exit_code", "exitCode"),
+        serialization_alias="exit_code",
+    )
+    started_at: int = Field(
+        validation_alias=AliasChoices("started_at", "startedAt"),
+        serialization_alias="started_at",
+    )
+    completed_at: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("completed_at", "completedAt"),
+        serialization_alias="completed_at",
+    )
 
 
 class SandboxProcessResult(SandboxBaseModel):
     id: str
     status: SandboxProcessStatus
-    exit_code: Optional[int] = Field(default=None, alias="exit_code")
+    exit_code: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("exit_code", "exitCode"),
+        serialization_alias="exit_code",
+    )
     stdout: str
     stderr: str
-    started_at: int = Field(alias="started_at")
-    completed_at: Optional[int] = Field(default=None, alias="completed_at")
+    started_at: int = Field(
+        validation_alias=AliasChoices("started_at", "startedAt"),
+        serialization_alias="started_at",
+    )
+    completed_at: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("completed_at", "completedAt"),
+        serialization_alias="completed_at",
+    )
     error: Optional[str] = None
 
 

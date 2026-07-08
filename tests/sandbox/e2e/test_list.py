@@ -95,7 +95,7 @@ def test_sandbox_list_e2e():
         created_snapshots = client.sandboxes.list_snapshots(
             SandboxSnapshotListParams(
                 status="created",
-                limit=200,
+                limit=100,
             )
         )
         assert any(
