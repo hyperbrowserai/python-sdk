@@ -1,17 +1,26 @@
+import time
 from typing import Dict, Optional, Union
 
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
+    CompleteSandboxImageBuildParams,
     CreateSandboxParams,
+    CreateSandboxImageBuildParams,
     SandboxDetail,
     SandboxExecParams,
     SandboxExposeParams,
     SandboxExposeResult,
+    SandboxImageBuild,
+    SandboxImageBuildCreateResult,
+    SandboxImageListParams,
     SandboxImageListResponse,
+    SandboxImageInit,
     SandboxListParams,
     SandboxListResponse,
     SandboxMemorySnapshotParams,
     SandboxMemorySnapshotResult,
+    SandboxNetworkPolicy,
+    SandboxNetworkUpdateResult,
     SandboxRuntimeSession,
     SandboxSnapshotListParams,
     SandboxSnapshotListResponse,
@@ -29,6 +38,15 @@ from ..sandboxes.shared import (
     _build_sandbox_exposed_url,
     _copy_model,
     _expires_within_buffer,
+)
+from ..sandboxes.image_build import (
+    IMAGE_BUILD_SOURCE_PLATFORM,
+    build_docker_image_from_dockerfile,
+    is_terminal_image_build_status,
+    make_temp_docker_tag,
+    package_docker_image,
+    remove_docker_image,
+    upload_image_build_artifact,
 )
 from .sandboxes.sandbox_files import (
     DEFAULT_WATCH_TIMEOUT_MS,
@@ -130,6 +148,10 @@ class SandboxHandle:
     def exposed_ports(self):
         return self._detail.exposed_ports
 
+    @property
+    def network(self):
+        return self._detail.network
+
     def to_dict(self):
         return self._detail.model_dump()
 
@@ -165,6 +187,25 @@ class SandboxHandle:
         else:
             raise TypeError("params must be a SandboxMemorySnapshotParams instance")
         return self._service.create_memory_snapshot(self.id, normalized)
+
+    def update_network(
+        self,
+        policy: SandboxNetworkPolicy,
+    ) -> SandboxNetworkUpdateResult:
+        if not isinstance(policy, SandboxNetworkPolicy):
+            raise TypeError("policy must be a SandboxNetworkPolicy instance")
+        result = self._service.update_network(self.id, policy)
+        self._detail = self._detail.model_copy(update={"network": result.network})
+        return result
+
+    def clear_network(self) -> SandboxNetworkUpdateResult:
+        return self.update_network(
+            SandboxNetworkPolicy(
+                allow_internet_access=True,
+                allow_out=[],
+                deny_out=[],
+            )
+        )
 
     def expose(self, params: SandboxExposeParams) -> SandboxExposeResult:
         if not isinstance(params, SandboxExposeParams):
@@ -350,8 +391,16 @@ class SandboxManager:
         )
         return SandboxListResponse(**payload)
 
-    def list_images(self) -> SandboxImageListResponse:
-        payload = self._request("GET", "/images")
+    def list_images(
+        self, params: SandboxImageListParams = SandboxImageListParams()
+    ) -> SandboxImageListResponse:
+        if not isinstance(params, SandboxImageListParams):
+            raise TypeError("params must be a SandboxImageListParams instance")
+        payload = self._request(
+            "GET",
+            "/images",
+            params=params.model_dump(exclude_none=True, by_alias=True),
+        )
         return SandboxImageListResponse(**payload)
 
     def list_snapshots(
@@ -369,6 +418,167 @@ class SandboxManager:
     def stop(self, sandbox_id: str) -> BasicResponse:
         payload = self._request("PUT", f"/sandbox/{sandbox_id}/stop")
         return BasicResponse(**payload)
+
+    def create_image_build(
+        self,
+        params: CreateSandboxImageBuildParams,
+    ) -> SandboxImageBuildCreateResult:
+        if not isinstance(params, CreateSandboxImageBuildParams):
+            raise TypeError("params must be a CreateSandboxImageBuildParams instance")
+        payload = self._request(
+            "POST",
+            "/images/builds",
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SandboxImageBuildCreateResult(**payload)
+
+    def get_image_build(self, build_id: str) -> SandboxImageBuild:
+        payload = self._request("GET", f"/images/builds/{build_id}")
+        return SandboxImageBuild(**payload["build"])
+
+    def complete_image_build(
+        self,
+        build_id: str,
+        params: CompleteSandboxImageBuildParams,
+    ) -> SandboxImageBuild:
+        if not isinstance(params, CompleteSandboxImageBuildParams):
+            raise TypeError("params must be a CompleteSandboxImageBuildParams instance")
+        payload = self._request(
+            "POST",
+            f"/images/builds/{build_id}/complete",
+            data=params.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SandboxImageBuild(**payload["build"])
+
+    def cancel_image_build(self, build_id: str) -> SandboxImageBuild:
+        payload = self._request("POST", f"/images/builds/{build_id}/cancel")
+        return SandboxImageBuild(**payload["build"])
+
+    def wait_for_image_build(
+        self,
+        build_id: str,
+        *,
+        poll_interval: float = 3.0,
+        timeout: Optional[float] = 35 * 60,
+    ) -> SandboxImageBuild:
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            build = self.get_image_build(build_id)
+            if build.status == "completed":
+                return build
+            if build.status == "failed":
+                message = build.error_message or "image build failed"
+                if build.error_code:
+                    message = f"image build failed [{build.error_code}]: {message}"
+                raise RuntimeError(message)
+            if is_terminal_image_build_status(build.status):
+                raise RuntimeError(f"image build {build.status}")
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError(f"timed out waiting for image build {build_id}")
+            time.sleep(poll_interval)
+
+    def build_image_from_docker_image(
+        self,
+        *,
+        docker_image: str,
+        image_name: str,
+        platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
+        image_init: Optional[SandboxImageInit] = None,
+        image_config_user: Optional[str] = None,
+        wait: bool = True,
+        poll_interval: float = 3.0,
+        wait_timeout: Optional[float] = 35 * 60,
+        temp_dir: Optional[str] = None,
+        upload_timeout: Optional[float] = None,
+    ) -> SandboxImageBuild:
+        artifact = package_docker_image(
+            docker_image,
+            platform=platform,
+            temp_dir=temp_dir,
+        )
+        try:
+            create_result = self.create_image_build(
+                CreateSandboxImageBuildParams(
+                    image_name=image_name,
+                    input_sha256=artifact.sha256_hex,
+                    input_size_bytes=artifact.size_bytes,
+                    input_format=artifact.input_format,
+                    source_platform=artifact.source_platform,
+                    image_config_user=(
+                        image_config_user
+                        if image_config_user is not None
+                        else artifact.image_config_user
+                    ),
+                    image_init=image_init
+                    if image_init is not None
+                    else artifact.image_init,
+                )
+            )
+            upload_image_build_artifact(
+                create_result.upload,
+                artifact.path,
+                timeout=upload_timeout,
+            )
+            build = self.complete_image_build(
+                create_result.build.id,
+                CompleteSandboxImageBuildParams(
+                    input_sha256=artifact.sha256_hex,
+                    input_size_bytes=artifact.size_bytes,
+                    input_format=artifact.input_format,
+                ),
+            )
+            if wait:
+                return self.wait_for_image_build(
+                    build.id,
+                    poll_interval=poll_interval,
+                    timeout=wait_timeout,
+                )
+            return build
+        finally:
+            artifact.cleanup()
+
+    def build_image_from_dockerfile(
+        self,
+        *,
+        context_path,
+        image_name: str,
+        dockerfile="Dockerfile",
+        docker_tag: Optional[str] = None,
+        platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
+        build_args: Optional[Dict[str, str]] = None,
+        image_init: Optional[SandboxImageInit] = None,
+        image_config_user: Optional[str] = None,
+        wait: bool = True,
+        poll_interval: float = 3.0,
+        wait_timeout: Optional[float] = 35 * 60,
+        temp_dir: Optional[str] = None,
+        upload_timeout: Optional[float] = None,
+    ) -> SandboxImageBuild:
+        tag = docker_tag or make_temp_docker_tag()
+        remove_tag = docker_tag is None
+        try:
+            build_docker_image_from_dockerfile(
+                context_path=context_path,
+                dockerfile=dockerfile,
+                tag=tag,
+                platform=platform,
+                build_args=build_args,
+            )
+            return self.build_image_from_docker_image(
+                docker_image=tag,
+                image_name=image_name,
+                platform=platform,
+                image_init=image_init,
+                image_config_user=image_config_user,
+                wait=wait,
+                poll_interval=poll_interval,
+                wait_timeout=wait_timeout,
+                temp_dir=temp_dir,
+                upload_timeout=upload_timeout,
+            )
+        finally:
+            if remove_tag:
+                remove_docker_image(tag)
 
     def get_runtime_session(self, sandbox_id: str) -> SandboxRuntimeSession:
         detail = self.get_detail(sandbox_id)
@@ -403,6 +613,20 @@ class SandboxManager:
             ),
         )
         return SandboxMemorySnapshotResult(**payload)
+
+    def update_network(
+        self,
+        sandbox_id: str,
+        policy: SandboxNetworkPolicy,
+    ) -> SandboxNetworkUpdateResult:
+        if not isinstance(policy, SandboxNetworkPolicy):
+            raise TypeError("policy must be a SandboxNetworkPolicy instance")
+        payload = self._request(
+            "PUT",
+            f"/sandbox/{sandbox_id}/network",
+            data=policy.model_dump(exclude_none=True, by_alias=True),
+        )
+        return SandboxNetworkUpdateResult(**payload)
 
     def expose(
         self,

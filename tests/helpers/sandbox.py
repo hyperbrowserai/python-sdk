@@ -5,7 +5,7 @@ from hyperbrowser.models import CreateSandboxParams, SandboxSnapshotListParams
 
 from tests.helpers.config import DEFAULT_IMAGE_NAME
 
-SNAPSHOT_LIST_LIMIT = 200
+SNAPSHOT_LIST_LIMIT = 100
 LIST_POLL_DELAY_SECONDS = 0.5
 LIST_POLL_TIMEOUT_SECONDS = 90
 

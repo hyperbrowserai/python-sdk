@@ -4,7 +4,7 @@ import json
 import socket
 import threading
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Union
 from urllib.parse import urlencode
 
 from websockets.exceptions import ConnectionClosed
@@ -41,6 +41,30 @@ from ...sandboxes.shared import (
     _relative_watch_name,
 )
 from .sandbox_transport import RuntimeTransport
+
+DEFAULT_TRANSFER_CHUNK_SIZE = 64 * 1024
+
+
+def _iter_stream_content(stream, chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE):
+    if isinstance(stream, str):
+        yield stream.encode("utf-8")
+        return
+    if isinstance(stream, (bytes, bytearray)):
+        yield bytes(stream)
+        return
+    if hasattr(stream, "read"):
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            if isinstance(chunk, str):
+                chunk = chunk.encode("utf-8")
+            yield bytes(chunk)
+        return
+    for chunk in stream:
+        if isinstance(chunk, str):
+            chunk = chunk.encode("utf-8")
+        yield bytes(chunk)
 
 
 class SandboxFileWatchHandle:
@@ -420,10 +444,42 @@ class SandboxFilesApi:
         )
         return SandboxFileTransferResult(**payload)
 
+    def upload_stream(
+        self,
+        path: str,
+        stream,
+        *,
+        content_length: Optional[int] = None,
+        chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE,
+    ):
+        headers = {}
+        if content_length is not None:
+            headers["content-length"] = str(content_length)
+        payload = self._transport.request_json(
+            "/sandbox/files/upload",
+            method="PUT",
+            params=self._with_run_as_params({"path": path}),
+            content=_iter_stream_content(stream, chunk_size=chunk_size),
+            headers=headers or None,
+        )
+        return SandboxFileTransferResult(**payload)
+
     def download(self, path: str) -> bytes:
         return self._transport.request_bytes(
             "/sandbox/files/download",
             params=self._with_run_as_params({"path": path}),
+        )
+
+    def download_stream(
+        self,
+        path: str,
+        *,
+        chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE,
+    ) -> Iterator[bytes]:
+        return self._transport.stream_bytes(
+            "/sandbox/files/download",
+            params=self._with_run_as_params({"path": path}),
+            chunk_size=chunk_size,
         )
 
     def make_dir(

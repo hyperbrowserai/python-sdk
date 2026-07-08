@@ -99,7 +99,7 @@ async def test_async_sandbox_list_e2e():
         created_snapshots = await client.sandboxes.list_snapshots(
             SandboxSnapshotListParams(
                 status="created",
-                limit=200,
+                limit=100,
             )
         )
         assert any(

@@ -1,3 +1,4 @@
+import io
 import httpx
 import pytest
 from types import SimpleNamespace
@@ -28,15 +29,22 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import
 )
 from hyperbrowser.client.managers.sandboxes.shared import _build_sandbox_exposed_url
 from hyperbrowser.models import (
+    CompleteSandboxImageBuildParams,
     CreateSandboxParams,
+    CreateSandboxImageBuildParams,
     SandboxDetail,
     SandboxExposeParams,
     SandboxExecParams,
     SandboxFileWriteEntry,
+    SandboxImageInit,
+    SandboxImageListParams,
     SandboxListParams,
     SandboxMemorySnapshotParams,
+    SandboxNetworkPolicy,
     SandboxPresignFileParams,
     SandboxProcessListParams,
+    SandboxProcessResult,
+    SandboxProcessSummary,
     SandboxProcessWaitParams,
     SandboxSnapshotListParams,
     SandboxSnapshotSummary,
@@ -84,6 +92,11 @@ SANDBOX_DETAIL_PAYLOAD = {
             "browserUrlExpiresAt": "2026-03-12T02:00:00Z",
         }
     ],
+    "network": {
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1"],
+        "denyOut": ["0.0.0.0/0"],
+    },
     "token": "tok",
     "tokenExpiresAt": "2026-03-12T01:00:00Z",
 }
@@ -135,6 +148,11 @@ SANDBOX_LIST_PAYLOAD = {
                     "browserUrl": "https://3000-sbx_123.runtime.example.com/",
                 }
             ],
+            "network": {
+                "allowInternetAccess": True,
+                "allowOut": [],
+                "denyOut": [],
+            },
         }
     ],
     "totalCount": 1,
@@ -148,11 +166,16 @@ IMAGE_LIST_PAYLOAD = {
             "id": "img_123",
             "imageName": "node",
             "namespace": "team_1",
+            "source": "registry",
+            "imageInit": {"args": ["node", "server.js"]},
             "uploaded": True,
             "createdAt": "2026-03-12T00:00:00Z",
             "updatedAt": "2026-03-12T00:00:01Z",
         }
-    ]
+    ],
+    "totalCount": 1,
+    "page": 2,
+    "perPage": 5,
 }
 
 SNAPSHOT_LIST_PAYLOAD = {
@@ -171,7 +194,10 @@ SNAPSHOT_LIST_PAYLOAD = {
             "createdAt": "2026-03-12T00:00:00Z",
             "updatedAt": "2026-03-12T00:00:01Z",
         }
-    ]
+    ],
+    "totalCount": 1,
+    "page": 2,
+    "perPage": 5,
 }
 
 SNAPSHOT_PAYLOAD_WITHOUT_COMPATIBILITY_TAG = {
@@ -192,11 +218,11 @@ PROCESS_RESULT_PAYLOAD = {
     "result": {
         "id": "proc_1",
         "status": "exited",
-        "exit_code": 0,
+        "exitCode": 0,
         "stdout": "",
         "stderr": "",
-        "started_at": 1,
-        "completed_at": 2,
+        "startedAt": 1,
+        "completedAt": 2,
         "error": None,
     }
 }
@@ -209,9 +235,9 @@ PROCESS_SUMMARY_PAYLOAD = {
         "args": ["-lc", "echo hi"],
         "cwd": "/tmp",
         "pid": 123,
-        "exit_code": None,
-        "started_at": 1,
-        "completed_at": None,
+        "exitCode": None,
+        "startedAt": 1,
+        "completedAt": None,
     }
 }
 
@@ -308,6 +334,57 @@ UNEXPOSE_PAYLOAD = {
     "exposed": False,
 }
 
+NETWORK_UPDATE_PAYLOAD = {
+    "network": {
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1"],
+        "denyOut": ["0.0.0.0/0"],
+    }
+}
+
+IMAGE_BUILD_RECORD = {
+    "id": "build-123",
+    "teamId": "team_1",
+    "userId": "user_1",
+    "namespace": "team_1",
+    "imageName": "custom_node",
+    "imageId": "img_123",
+    "status": "upload_verified",
+    "inputBucket": "bucket",
+    "inputKey": "input/key",
+    "inputSha256": "abc123",
+    "inputSizeBytes": 123,
+    "outputBucket": "out",
+    "outputKey": "output/key",
+    "vmId": "vm_123",
+    "errorCode": "",
+    "errorMessage": "",
+    "metadata": {},
+    "completedAt": None,
+    "createdAt": "2026-03-12T00:00:00Z",
+    "updatedAt": "2026-03-12T00:00:01Z",
+}
+
+IMAGE_BUILD_CREATE_PAYLOAD = {
+    "build": {
+        **IMAGE_BUILD_RECORD,
+        "status": "awaiting_upload",
+        "imageId": "",
+    },
+    "upload": {
+        "url": "https://upload.example.com/rootfs",
+        "method": "PUT",
+        "headers": {"x-upload": "yes"},
+        "objectKey": "input/key",
+        "expiresInSeconds": 900,
+        "maxUploadBytes": 1000,
+    },
+}
+
+IMAGE_BUILD_PAYLOAD = {
+    "build": IMAGE_BUILD_RECORD,
+}
+
 
 class RecordingHTTPClient:
     def __init__(self):
@@ -325,12 +402,18 @@ class RecordingHTTPClient:
 
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/images/builds"):
+            payload = IMAGE_BUILD_CREATE_PAYLOAD
+        elif "/images/builds/" in url:
+            payload = IMAGE_BUILD_PAYLOAD
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
             payload = SNAPSHOT_LIST_PAYLOAD
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
+        elif url.endswith("/network"):
+            payload = NETWORK_UPDATE_PAYLOAD
         elif url.endswith("/expose"):
             payload = EXPOSE_PAYLOAD
         elif url.endswith("/unexpose"):
@@ -390,8 +473,50 @@ class RecordingTransport:
             return DOWNLOAD_PRESIGN_PAYLOAD
         if path == "/sandbox/files/write":
             return WRITE_FILE_PAYLOAD
+        if path == "/sandbox/files/upload":
+            return {
+                "path": params["path"],
+                "bytesWritten": -1,
+            }
         if path == "/sandbox/files/move":
             return MOVE_FILE_PAYLOAD
+        raise AssertionError(f"Unexpected request path: {path}")
+
+    def request_bytes(self, path, *, method="GET", params=None, headers=None):
+        self.calls.append(
+            {
+                "path": path,
+                "method": method,
+                "params": params,
+                "headers": headers,
+                "bytes": True,
+            }
+        )
+        if path == "/sandbox/files/download":
+            return b"downloaded"
+        raise AssertionError(f"Unexpected request path: {path}")
+
+    def stream_bytes(
+        self,
+        path,
+        *,
+        method="GET",
+        params=None,
+        headers=None,
+        chunk_size=65536,
+    ):
+        self.calls.append(
+            {
+                "path": path,
+                "method": method,
+                "params": params,
+                "headers": headers,
+                "chunk_size": chunk_size,
+                "stream": True,
+            }
+        )
+        if path == "/sandbox/files/download":
+            return iter([b"down", b"loaded"])
         raise AssertionError(f"Unexpected request path: {path}")
 
 
@@ -414,6 +539,32 @@ class AsyncRecordingTransport(RecordingTransport):
             content=content,
             headers=headers,
         )
+
+    async def request_bytes(self, path, *, method="GET", params=None, headers=None):
+        return super().request_bytes(
+            path,
+            method=method,
+            params=params,
+            headers=headers,
+        )
+
+    async def stream_bytes(
+        self,
+        path,
+        *,
+        method="GET",
+        params=None,
+        headers=None,
+        chunk_size=65536,
+    ):
+        for chunk in super().stream_bytes(
+            path,
+            method=method,
+            params=params,
+            headers=headers,
+            chunk_size=chunk_size,
+        ):
+            yield chunk
 
 
 class FakeSyncClient:
@@ -443,12 +594,18 @@ class RecordingAsyncHTTPClient:
 
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/images/builds"):
+            payload = IMAGE_BUILD_CREATE_PAYLOAD
+        elif "/images/builds/" in url:
+            payload = IMAGE_BUILD_PAYLOAD
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
             payload = SNAPSHOT_LIST_PAYLOAD
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
+        elif url.endswith("/network"):
+            payload = NETWORK_UPDATE_PAYLOAD
         elif url.endswith("/expose"):
             payload = EXPOSE_PAYLOAD
         elif url.endswith("/unexpose"):
@@ -509,6 +666,9 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
             )
         },
         timeout_minutes=15,
+        allow_internet_access=False,
+        allow_out=["1.1.1.1", "example.com"],
+        deny_out=["0.0.0.0/0"],
     ).model_dump(by_alias=True, exclude_none=True) == {
         "imageName": "node",
         "imageId": "img-id",
@@ -525,6 +685,63 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
             }
         },
         "timeoutMinutes": 15,
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1", "example.com"],
+        "denyOut": ["0.0.0.0/0"],
+    }
+
+    assert SandboxNetworkPolicy(
+        allow_internet_access=True,
+        allow_out=[],
+        deny_out=[],
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "allowInternetAccess": True,
+        "allowOut": [],
+        "denyOut": [],
+    }
+
+    assert SandboxImageListParams(
+        page=2,
+        limit=5,
+        search="node",
+        sources=["registry", "uploaded"],
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "page": 2,
+        "limit": 5,
+        "search": "node",
+        "source": ["registry", "uploaded"],
+    }
+
+    assert CreateSandboxImageBuildParams(
+        image_name="custom_node",
+        input_sha256="abc123",
+        input_size_bytes=123,
+        source_platform="linux/amd64",
+        image_config_user="node",
+        image_init=SandboxImageInit(
+            env={"NODE_ENV": "production"},
+            args=["node", "server.js"],
+        ),
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
+        "sourcePlatform": "linux/amd64",
+        "imageConfigUser": "node",
+        "imageInit": {
+            "env": {"NODE_ENV": "production"},
+            "args": ["node", "server.js"],
+        },
+    }
+
+    assert CompleteSandboxImageBuildParams(
+        input_sha256="abc123",
+        input_size_bytes=123,
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
     }
 
     assert SandboxMemorySnapshotParams(snapshot_name="snap").model_dump(
@@ -570,13 +787,17 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
     }
 
     assert SandboxSnapshotListParams(
-        status="created",
+        status=["created", "failed"],
         limit=10,
         image_name="node",
+        search="snap",
+        page=2,
     ).model_dump(by_alias=True, exclude_none=True) == {
-        "status": "created",
+        "status": ["created", "failed"],
         "limit": 10,
         "imageName": "node",
+        "search": "snap",
+        "page": 2,
     }
 
     assert SandboxPresignFileParams(
@@ -620,6 +841,75 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
     }
 
 
+def test_sandbox_process_models_accept_current_camel_case_wire_keys():
+    summary = SandboxProcessSummary(**PROCESS_SUMMARY_PAYLOAD["process"])
+    result = SandboxProcessResult(**PROCESS_RESULT_PAYLOAD["result"])
+
+    assert summary.exit_code is None
+    assert summary.started_at == 1
+    assert summary.completed_at is None
+    assert result.exit_code == 0
+    assert result.started_at == 1
+    assert result.completed_at == 2
+
+
+def test_sync_sandbox_image_build_manager_uses_expected_wire_keys():
+    client = FakeSyncClient()
+    manager = SandboxManager(client)
+
+    created = manager.create_image_build(
+        CreateSandboxImageBuildParams(
+            image_name="custom_node",
+            input_sha256="abc123",
+            input_size_bytes=123,
+            image_config_user="node",
+            image_init=SandboxImageInit(args=["node", "server.js"]),
+        )
+    )
+    build = manager.get_image_build("build-123")
+    completed = manager.complete_image_build(
+        "build-123",
+        CompleteSandboxImageBuildParams(
+            input_sha256="abc123",
+            input_size_bytes=123,
+        ),
+    )
+    canceled = manager.cancel_image_build("build-123")
+
+    create_call = client.transport.client.calls[0]
+    get_call = client.transport.client.calls[1]
+    complete_call = client.transport.client.calls[2]
+    cancel_call = client.transport.client.calls[3]
+
+    assert create_call["method"] == "POST"
+    assert create_call["url"].endswith("/images/builds")
+    assert create_call["json"] == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
+        "sourcePlatform": "linux/amd64",
+        "imageConfigUser": "node",
+        "imageInit": {"args": ["node", "server.js"]},
+    }
+    assert created.build.status == "awaiting_upload"
+    assert created.upload.url == "https://upload.example.com/rootfs"
+    assert get_call["method"] == "GET"
+    assert get_call["url"].endswith("/images/builds/build-123")
+    assert complete_call["method"] == "POST"
+    assert complete_call["url"].endswith("/images/builds/build-123/complete")
+    assert complete_call["json"] == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
+    }
+    assert cancel_call["method"] == "POST"
+    assert cancel_call["url"].endswith("/images/builds/build-123/cancel")
+    assert build.image_name == "custom_node"
+    assert completed.status == "upload_verified"
+    assert canceled.status == "upload_verified"
+
+
 def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeSyncClient()
     manager = SandboxManager(client)
@@ -635,9 +925,22 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
             search="sandbox",
         )
     )
-    images = manager.list_images()
+    images = manager.list_images(
+        SandboxImageListParams(
+            page=2,
+            limit=5,
+            search="node",
+            sources=["registry", "uploaded"],
+        )
+    )
     snapshots = manager.list_snapshots(
-        SandboxSnapshotListParams(status="created", limit=10, image_name="node")
+        SandboxSnapshotListParams(
+            status=["created", "failed"],
+            limit=10,
+            image_name="node",
+            search="snap",
+            page=2,
+        )
     )
     sandbox = manager.create(
         CreateSandboxParams(
@@ -656,11 +959,21 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
                 )
             },
             timeout_minutes=15,
+            allow_internet_access=False,
+            allow_out=["1.1.1.1", "example.com"],
+            deny_out=["0.0.0.0/0"],
         )
     )
     manager.create_memory_snapshot(
         "sbx_123",
         SandboxMemorySnapshotParams(snapshot_name="snap"),
+    )
+    network = sandbox.update_network(
+        SandboxNetworkPolicy(
+            allow_internet_access=False,
+            allow_out=["1.1.1.1"],
+            deny_out=["0.0.0.0/0"],
+        )
     )
     exposed = manager.expose(
         "sbx_123",
@@ -674,8 +987,9 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     snapshots_call = client.transport.client.calls[2]
     create_call = client.transport.client.calls[3]
     snapshot_call = client.transport.client.calls[4]
-    expose_call = client.transport.client.calls[5]
-    unexpose_call = client.transport.client.calls[6]
+    network_call = client.transport.client.calls[5]
+    expose_call = client.transport.client.calls[6]
+    unexpose_call = client.transport.client.calls[7]
 
     assert list_call["params"] == {
         "status": "active",
@@ -689,14 +1003,31 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert listed.page == 2
     assert listed.per_page == 5
     assert images_call["url"].endswith("/images")
+    assert images_call["params"] == {
+        "page": 2,
+        "limit": 5,
+        "search": "node",
+        "source": ["registry", "uploaded"],
+    }
     assert images.images[0].image_name == "node"
+    assert images.images[0].source == "registry"
+    assert images.images[0].image_init is not None
+    assert images.images[0].image_init.args == ["node", "server.js"]
+    assert images.total_count == 1
+    assert images.page == 2
+    assert images.per_page == 5
     assert snapshots_call["url"].endswith("/snapshots")
     assert snapshots_call["params"] == {
-        "status": "created",
+        "status": ["created", "failed"],
         "limit": 10,
         "imageName": "node",
+        "search": "snap",
+        "page": 2,
     }
     assert snapshots.snapshots[0].compatibility_tag is None
+    assert snapshots.total_count == 1
+    assert snapshots.page == 2
+    assert snapshots.per_page == 5
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
@@ -713,14 +1044,27 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
             }
         },
         "timeoutMinutes": 15,
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1", "example.com"],
+        "denyOut": ["0.0.0.0/0"],
     }
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+    assert network_call["method"] == "PUT"
+    assert network_call["url"].endswith("/sandbox/sbx_123/network")
+    assert network_call["json"] == {
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1"],
+        "denyOut": ["0.0.0.0/0"],
+    }
     assert sandbox.cpu == 2
     assert sandbox.memory_mib == 2048
     assert sandbox.disk_mib == 8192
+    assert sandbox.network is not None
+    assert sandbox.network.allow_out == ["1.1.1.1"]
     assert sandbox.exposed_ports[0].browser_url is not None
+    assert network.network.allow_internet_access is False
     assert sandbox.get_exposed_url(3000) == "https://3000-sbx_123.runtime.example.com/"
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
@@ -817,6 +1161,13 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
         destination="/tmp/destination.txt",
         overwrite=True,
     )
+    upload_result = files.upload_stream(
+        "/tmp/upload.bin",
+        io.BytesIO(b"abcdef"),
+        content_length=6,
+        chunk_size=2,
+    )
+    downloaded = b"".join(files.download_stream("/tmp/file.txt", chunk_size=4))
 
     assert transport.calls[0]["json_body"] == {
         "command": "echo 'hi world'",
@@ -880,6 +1231,20 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
         "to": "/tmp/destination.txt",
         "overwrite": True,
     }
+    assert transport.calls[12]["path"] == "/sandbox/files/upload"
+    assert transport.calls[12]["params"] == {"path": "/tmp/upload.bin"}
+    assert transport.calls[12]["headers"] == {"content-length": "6"}
+    assert b"".join(transport.calls[12]["content"]) == b"abcdef"
+    assert upload_result.path == "/tmp/upload.bin"
+    assert transport.calls[13] == {
+        "path": "/sandbox/files/download",
+        "method": "GET",
+        "params": {"path": "/tmp/file.txt"},
+        "headers": None,
+        "chunk_size": 4,
+        "stream": True,
+    }
+    assert downloaded == b"downloaded"
 
 
 def test_sync_sandbox_process_string_calls_support_run_as():
@@ -943,6 +1308,64 @@ def test_sync_sandbox_handle_exec_string_call_supports_run_as(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_async_sandbox_image_build_manager_uses_expected_wire_keys():
+    client = FakeAsyncClient()
+    manager = AsyncSandboxManager(client)
+
+    created = await manager.create_image_build(
+        CreateSandboxImageBuildParams(
+            image_name="custom_node",
+            input_sha256="abc123",
+            input_size_bytes=123,
+            image_config_user="node",
+            image_init=SandboxImageInit(args=["node", "server.js"]),
+        )
+    )
+    build = await manager.get_image_build("build-123")
+    completed = await manager.complete_image_build(
+        "build-123",
+        CompleteSandboxImageBuildParams(
+            input_sha256="abc123",
+            input_size_bytes=123,
+        ),
+    )
+    canceled = await manager.cancel_image_build("build-123")
+
+    create_call = client.transport.client.calls[0]
+    get_call = client.transport.client.calls[1]
+    complete_call = client.transport.client.calls[2]
+    cancel_call = client.transport.client.calls[3]
+
+    assert create_call["method"] == "POST"
+    assert create_call["url"].endswith("/images/builds")
+    assert create_call["json"] == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
+        "sourcePlatform": "linux/amd64",
+        "imageConfigUser": "node",
+        "imageInit": {"args": ["node", "server.js"]},
+    }
+    assert created.build.status == "awaiting_upload"
+    assert created.upload.url == "https://upload.example.com/rootfs"
+    assert get_call["method"] == "GET"
+    assert get_call["url"].endswith("/images/builds/build-123")
+    assert complete_call["method"] == "POST"
+    assert complete_call["url"].endswith("/images/builds/build-123/complete")
+    assert complete_call["json"] == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        "inputFormat": "rootfs_export_tar_gz",
+    }
+    assert cancel_call["method"] == "POST"
+    assert cancel_call["url"].endswith("/images/builds/build-123/cancel")
+    assert build.image_name == "custom_node"
+    assert completed.status == "upload_verified"
+    assert canceled.status == "upload_verified"
+
+
+@pytest.mark.anyio
 async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeAsyncClient()
     manager = AsyncSandboxManager(client)
@@ -958,9 +1381,22 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
             search="sandbox",
         )
     )
-    images = await manager.list_images()
+    images = await manager.list_images(
+        SandboxImageListParams(
+            page=2,
+            limit=5,
+            search="node",
+            sources=["registry", "uploaded"],
+        )
+    )
     snapshots = await manager.list_snapshots(
-        SandboxSnapshotListParams(status="created", limit=10, image_name="node")
+        SandboxSnapshotListParams(
+            status=["created", "failed"],
+            limit=10,
+            image_name="node",
+            search="snap",
+            page=2,
+        )
     )
     sandbox = await manager.create(
         CreateSandboxParams(
@@ -979,11 +1415,21 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
                 )
             },
             timeout_minutes=15,
+            allow_internet_access=False,
+            allow_out=["1.1.1.1", "example.com"],
+            deny_out=["0.0.0.0/0"],
         )
     )
     await manager.create_memory_snapshot(
         "sbx_123",
         SandboxMemorySnapshotParams(snapshot_name="snap"),
+    )
+    network = await sandbox.update_network(
+        SandboxNetworkPolicy(
+            allow_internet_access=False,
+            allow_out=["1.1.1.1"],
+            deny_out=["0.0.0.0/0"],
+        )
     )
     exposed = await manager.expose(
         "sbx_123",
@@ -997,8 +1443,9 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     snapshots_call = client.transport.client.calls[2]
     create_call = client.transport.client.calls[3]
     snapshot_call = client.transport.client.calls[4]
-    expose_call = client.transport.client.calls[5]
-    unexpose_call = client.transport.client.calls[6]
+    network_call = client.transport.client.calls[5]
+    expose_call = client.transport.client.calls[6]
+    unexpose_call = client.transport.client.calls[7]
 
     assert list_call["params"] == {
         "status": "active",
@@ -1012,14 +1459,31 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert listed.page == 2
     assert listed.per_page == 5
     assert images_call["url"].endswith("/images")
+    assert images_call["params"] == {
+        "page": 2,
+        "limit": 5,
+        "search": "node",
+        "source": ["registry", "uploaded"],
+    }
     assert images.images[0].image_name == "node"
+    assert images.images[0].source == "registry"
+    assert images.images[0].image_init is not None
+    assert images.images[0].image_init.args == ["node", "server.js"]
+    assert images.total_count == 1
+    assert images.page == 2
+    assert images.per_page == 5
     assert snapshots_call["url"].endswith("/snapshots")
     assert snapshots_call["params"] == {
-        "status": "created",
+        "status": ["created", "failed"],
         "limit": 10,
         "imageName": "node",
+        "search": "snap",
+        "page": 2,
     }
     assert snapshots.snapshots[0].compatibility_tag is None
+    assert snapshots.total_count == 1
+    assert snapshots.page == 2
+    assert snapshots.per_page == 5
     assert create_call["json"] == {
         "imageName": "node",
         "imageId": "img-id",
@@ -1036,14 +1500,27 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
             }
         },
         "timeoutMinutes": 15,
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1", "example.com"],
+        "denyOut": ["0.0.0.0/0"],
     }
     assert snapshot_call["json"] == {
         "snapshotName": "snap",
     }
+    assert network_call["method"] == "PUT"
+    assert network_call["url"].endswith("/sandbox/sbx_123/network")
+    assert network_call["json"] == {
+        "allowInternetAccess": False,
+        "allowOut": ["1.1.1.1"],
+        "denyOut": ["0.0.0.0/0"],
+    }
     assert sandbox.cpu == 2
     assert sandbox.memory_mib == 2048
     assert sandbox.disk_mib == 8192
+    assert sandbox.network is not None
+    assert sandbox.network.allow_out == ["1.1.1.1"]
     assert sandbox.exposed_ports[0].browser_url is not None
+    assert network.network.allow_internet_access is False
     assert sandbox.get_exposed_url(3000) == "https://3000-sbx_123.runtime.example.com/"
     assert expose_call["json"] == {"port": 3000, "auth": True}
     assert exposed.browser_url is not None
@@ -1109,6 +1586,16 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
         destination="/tmp/destination.txt",
         overwrite=True,
     )
+    upload_result = await files.upload_stream(
+        "/tmp/upload.bin",
+        io.BytesIO(b"abcdef"),
+        content_length=6,
+        chunk_size=2,
+    )
+    chunks = []
+    async for chunk in files.download_stream("/tmp/file.txt", chunk_size=4):
+        chunks.append(chunk)
+    downloaded = b"".join(chunks)
 
     assert transport.calls[0]["json_body"] == {
         "command": "echo 'hi world'",
@@ -1172,6 +1659,23 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
         "to": "/tmp/destination.txt",
         "overwrite": True,
     }
+    assert transport.calls[12]["path"] == "/sandbox/files/upload"
+    assert transport.calls[12]["params"] == {"path": "/tmp/upload.bin"}
+    assert transport.calls[12]["headers"] == {"content-length": "6"}
+    async_upload_chunks = []
+    async for chunk in transport.calls[12]["content"]:
+        async_upload_chunks.append(chunk)
+    assert b"".join(async_upload_chunks) == b"abcdef"
+    assert upload_result.path == "/tmp/upload.bin"
+    assert transport.calls[13] == {
+        "path": "/sandbox/files/download",
+        "method": "GET",
+        "params": {"path": "/tmp/file.txt"},
+        "headers": None,
+        "chunk_size": 4,
+        "stream": True,
+    }
+    assert downloaded == b"downloaded"
 
 
 @pytest.mark.anyio

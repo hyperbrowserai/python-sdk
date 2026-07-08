@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Iterator, Optional, Union
+from typing import Any, Dict, Iterator, Optional
 
 import httpx
 
@@ -11,7 +11,7 @@ from .....sandbox_common import (
     parse_json_response,
     resolve_runtime_transport_target,
 )
-from ...sandboxes.shared import _build_query_path
+from ...sandboxes.shared import _build_query_path, _is_replayable_http_content
 
 
 class RuntimeTransport:
@@ -32,7 +32,7 @@ class RuntimeTransport:
         method: str = "GET",
         params: Optional[Dict[str, object]] = None,
         json_body: Optional[Dict[str, object]] = None,
-        content: Optional[Union[str, bytes]] = None,
+        content: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
     ):
         response = self._request(
@@ -55,6 +55,29 @@ class RuntimeTransport:
     ) -> bytes:
         response = self._request(path, method=method, params=params, headers=headers)
         return response.content
+
+    def stream_bytes(
+        self,
+        path: str,
+        *,
+        method: str = "GET",
+        params: Optional[Dict[str, object]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        chunk_size: int = 65536,
+    ) -> Iterator[bytes]:
+        client, response = self._open_binary_stream(
+            path,
+            method=method,
+            params=params,
+            headers=headers,
+        )
+        try:
+            for chunk in response.iter_bytes(chunk_size=chunk_size):
+                if chunk:
+                    yield chunk
+        finally:
+            response.close()
+            client.close()
 
     def stream_sse(
         self, path: str, params: Optional[Dict[str, object]] = None
@@ -125,7 +148,7 @@ class RuntimeTransport:
         method: str = "GET",
         params: Optional[Dict[str, object]] = None,
         json_body: Optional[Dict[str, object]] = None,
-        content: Optional[Union[str, bytes]] = None,
+        content: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
         allow_refresh: bool = True,
     ) -> httpx.Response:
@@ -142,6 +165,12 @@ class RuntimeTransport:
 
         if response.status_code == 401 and allow_refresh:
             response.close()
+            if not _is_replayable_http_content(content):
+                return ensure_response_ok(
+                    response,
+                    "runtime",
+                    "Runtime token expired during a streaming request; retry with a fresh stream.",
+                )
             refreshed = self._resolve_connection(True)
             retry = self._send(
                 refreshed,
@@ -176,6 +205,40 @@ class RuntimeTransport:
         ensure_response_ok(response, "runtime")
         return client, response
 
+    def _open_binary_stream(
+        self,
+        path: str,
+        *,
+        method: str = "GET",
+        params: Optional[Dict[str, object]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        allow_refresh: bool = True,
+    ):
+        connection = self._resolve_connection(False)
+        client, response = self._send_binary_stream(
+            connection,
+            path,
+            method=method,
+            params=params,
+            headers=headers,
+        )
+        if response.status_code == 401 and allow_refresh:
+            response.close()
+            client.close()
+            refreshed = self._resolve_connection(True)
+            client, response = self._send_binary_stream(
+                refreshed,
+                path,
+                method=method,
+                params=params,
+                headers=headers,
+            )
+
+        if not response.is_success:
+            response.read()
+        ensure_response_ok(response, "runtime")
+        return client, response
+
     def _send(
         self,
         connection: RuntimeConnection,
@@ -184,7 +247,7 @@ class RuntimeTransport:
         method: str,
         params: Optional[Dict[str, object]],
         json_body: Optional[Dict[str, object]],
-        content: Optional[Union[str, bytes]],
+        content: Optional[Any],
         headers: Optional[Dict[str, str]],
     ) -> httpx.Response:
         request_path = _build_query_path(path, params)
@@ -215,6 +278,36 @@ class RuntimeTransport:
         response.read()
         client.close()
         return response
+
+    def _send_binary_stream(
+        self,
+        connection: RuntimeConnection,
+        path: str,
+        *,
+        method: str,
+        params: Optional[Dict[str, object]],
+        headers: Optional[Dict[str, str]],
+    ):
+        request_path = _build_query_path(path, params)
+        target = resolve_runtime_transport_target(
+            connection.base_url,
+            request_path,
+            self._runtime_proxy_override,
+        )
+        merged_headers = build_headers(connection.token, headers, target.host_header)
+        client = httpx.Client(timeout=self._timeout)
+
+        try:
+            request = client.build_request(method, target.url, headers=merged_headers)
+            response = client.send(request, stream=True)
+            return client, response
+        except BaseException as error:
+            client.close()
+            raise normalize_network_error(
+                error,
+                "runtime",
+                "Unknown runtime request error",
+            )
 
     def _send_stream(
         self,
