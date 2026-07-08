@@ -624,7 +624,11 @@ class SandboxManager:
         payload = self._request(
             "PUT",
             f"/sandbox/{sandbox_id}/network",
-            data=policy.model_dump(exclude_none=True, by_alias=True),
+            data=policy.model_dump(
+                exclude_none=True,
+                exclude_unset=True,
+                by_alias=True,
+            ),
         )
         return SandboxNetworkUpdateResult(**payload)
 

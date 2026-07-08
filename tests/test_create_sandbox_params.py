@@ -95,6 +95,28 @@ def test_sandbox_network_policy_serializes_update_payload():
     }
 
 
+def test_sandbox_network_policy_defaults_unset_lists_for_response_models():
+    policy = SandboxNetworkPolicy(allow_internet_access=True)
+
+    assert policy.model_dump(by_alias=True, exclude_none=True) == {
+        "allowInternetAccess": True,
+        "allowOut": [],
+        "denyOut": [],
+    }
+
+
+def test_sandbox_network_policy_can_omit_unset_lists_for_patch_payload():
+    policy = SandboxNetworkPolicy(allow_internet_access=True)
+
+    assert policy.model_dump(
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    ) == {
+        "allowInternetAccess": True,
+    }
+
+
 def test_sandbox_image_build_params_serialize_expected_wire_keys():
     create_params = CreateSandboxImageBuildParams(
         image_name="custom_node",

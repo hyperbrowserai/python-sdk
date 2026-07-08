@@ -699,6 +699,12 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         "allowOut": [],
         "denyOut": [],
     }
+    assert SandboxNetworkPolicy(allow_internet_access=True).model_dump(
+        by_alias=True, exclude_none=True
+    ) == {"allowInternetAccess": True, "allowOut": [], "denyOut": []}
+    assert SandboxNetworkPolicy(allow_internet_access=True).model_dump(
+        by_alias=True, exclude_none=True, exclude_unset=True
+    ) == {"allowInternetAccess": True}
 
     assert SandboxImageListParams(
         page=2,
@@ -1072,6 +1078,30 @@ def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     assert isinstance(unexposed, SandboxUnexposeResult)
     assert unexpose_call["json"] == {"port": 3000}
     assert unexpose_call["url"].endswith("/sandbox/sbx_123/unexpose")
+
+
+def test_sync_sandbox_update_network_omits_only_unset_lists():
+    client = FakeSyncClient()
+    manager = SandboxManager(client)
+    sandbox = manager.attach(SandboxDetail(**SANDBOX_DETAIL_PAYLOAD))
+
+    sandbox.update_network(SandboxNetworkPolicy(allow_internet_access=True))
+    sandbox.update_network(
+        SandboxNetworkPolicy(
+            allow_internet_access=True,
+            allow_out=[],
+            deny_out=[],
+        )
+    )
+
+    preserve_call = client.transport.client.calls[0]
+    clear_call = client.transport.client.calls[1]
+    assert preserve_call["json"] == {"allowInternetAccess": True}
+    assert clear_call["json"] == {
+        "allowInternetAccess": True,
+        "allowOut": [],
+        "denyOut": [],
+    }
 
 
 def test_snapshot_summary_allows_missing_compatibility_tag():
@@ -1526,6 +1556,31 @@ async def test_async_sandbox_control_manager_uses_expected_wire_keys():
     assert exposed.browser_url is not None
     assert isinstance(unexposed, SandboxUnexposeResult)
     assert unexpose_call["json"] == {"port": 3000}
+
+
+@pytest.mark.anyio
+async def test_async_sandbox_update_network_omits_only_unset_lists():
+    client = FakeAsyncClient()
+    manager = AsyncSandboxManager(client)
+    sandbox = manager.attach(SandboxDetail(**SANDBOX_DETAIL_PAYLOAD))
+
+    await sandbox.update_network(SandboxNetworkPolicy(allow_internet_access=True))
+    await sandbox.update_network(
+        SandboxNetworkPolicy(
+            allow_internet_access=True,
+            allow_out=[],
+            deny_out=[],
+        )
+    )
+
+    preserve_call = client.transport.client.calls[0]
+    clear_call = client.transport.client.calls[1]
+    assert preserve_call["json"] == {"allowInternetAccess": True}
+    assert clear_call["json"] == {
+        "allowInternetAccess": True,
+        "allowOut": [],
+        "denyOut": [],
+    }
 
 
 @pytest.mark.anyio
