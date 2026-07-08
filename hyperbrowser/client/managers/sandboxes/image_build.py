@@ -189,7 +189,8 @@ def _ensure_docker_image_source_platform(docker_image: str, platform: str) -> No
         return
 
     local_platform = output.strip().lower()
-    if not local_platform or local_platform == platform:
+    expected_platform = platform.strip().lower()
+    if not local_platform or local_platform == expected_platform:
         return
 
     raise RuntimeError(

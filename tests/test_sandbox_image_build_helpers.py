@@ -82,6 +82,18 @@ def test_package_docker_image_rejects_non_amd64_local_image(monkeypatch):
         image_build.package_docker_image("local/app:latest")
 
 
+def test_ensure_docker_image_source_platform_compares_case_insensitively(
+    monkeypatch,
+):
+    def fake_run(args, check, stdout, stderr, text):
+        assert args[:4] == ["docker", "image", "inspect", "--format"]
+        return subprocess.CompletedProcess(args, 0, stdout="linux/amd64\n", stderr="")
+
+    monkeypatch.setattr(image_build.subprocess, "run", fake_run)
+
+    image_build._ensure_docker_image_source_platform("local/app:latest", "Linux/AMD64")
+
+
 def test_package_docker_container_reaps_export_process_on_read_failure(
     monkeypatch,
     tmp_path,
