@@ -91,7 +91,9 @@ class GrokComputerUseStepResponse(BaseModel):
     )
 
     created_at: Optional[str] = Field(default=None, serialization_alias="created_at")
-    completed_at: Optional[str] = Field(default=None, serialization_alias="completed_at")
+    completed_at: Optional[str] = Field(
+        default=None, serialization_alias="completed_at"
+    )
     output_text: Optional[str] = Field(default=None, serialization_alias="output_text")
     error: Optional[str] = Field(default=None, serialization_alias="error")
     incomplete_details: Optional[Any] = Field(
