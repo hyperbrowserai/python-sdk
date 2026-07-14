@@ -2,6 +2,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .cua import CuaStepIncompleteDetails, CuaStepReasoning, CuaStepResponseError
 from ..session import CreateSessionParams
 from ..consts import GrokComputerUseLlm, GrokReasoningEffort
 
@@ -90,18 +91,22 @@ class GrokComputerUseStepResponse(BaseModel):
         populate_by_alias=True,
     )
 
-    created_at: Optional[str] = Field(default=None, serialization_alias="created_at")
-    completed_at: Optional[str] = Field(
+    created_at: Optional[int] = Field(default=None, serialization_alias="created_at")
+    completed_at: Optional[int] = Field(
         default=None, serialization_alias="completed_at"
     )
     output_text: Optional[str] = Field(default=None, serialization_alias="output_text")
-    error: Optional[str] = Field(default=None, serialization_alias="error")
-    incomplete_details: Optional[Any] = Field(
+    error: Optional[CuaStepResponseError] = Field(
+        default=None, serialization_alias="error"
+    )
+    incomplete_details: Optional[CuaStepIncompleteDetails] = Field(
         default=None, serialization_alias="incomplete_details"
     )
     model: Optional[str] = Field(default=None, serialization_alias="model")
     output: Optional[list[Any]] = Field(default=None, serialization_alias="output")
-    reasoning: Optional[Any] = Field(default=None, serialization_alias="reasoning")
+    reasoning: Optional[CuaStepReasoning] = Field(
+        default=None, serialization_alias="reasoning"
+    )
     status: Optional[str] = Field(default=None, serialization_alias="status")
 
 
