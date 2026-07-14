@@ -3,6 +3,7 @@ from .cua import CuaManager
 from .claude_computer_use import ClaudeComputerUseManager
 from .hyper_agent import HyperAgentManager
 from .gemini_computer_use import GeminiComputerUseManager
+from .grok_computer_use import GrokComputerUseManager
 
 
 class Agents:
@@ -12,3 +13,4 @@ class Agents:
         self.claude_computer_use = ClaudeComputerUseManager(client)
         self.hyper_agent = HyperAgentManager(client)
         self.gemini_computer_use = GeminiComputerUseManager(client)
+        self.grok_computer_use = GrokComputerUseManager(client)
