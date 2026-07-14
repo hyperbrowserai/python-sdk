@@ -5,7 +5,10 @@ description = "Python SDK for hyperbrowser"
 authors = ["Nikhil Shahi <nshahi1998@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-include = ["LICENSE"]
+include = [
+    "LICENSE",
+    { path = "hyperbrowser/py.typed", format = ["sdist", "wheel"] },
+]
 homepage = "https://github.com/hyperbrowserai/python-sdk"
 repository = "https://github.com/hyperbrowserai/python-sdk"
 
