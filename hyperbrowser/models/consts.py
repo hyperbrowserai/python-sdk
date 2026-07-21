@@ -86,6 +86,8 @@ CuaLlm = Literal[
     "gpt-5.4-mini",
 ]
 GeminiComputerUseLlm = Literal[
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
     "gemini-3-flash-preview",
     "gemini-2.5-computer-use-preview-10-2025",
