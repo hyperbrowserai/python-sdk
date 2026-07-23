@@ -1,3 +1,5 @@
+from typing import Union
+
 from .batch_fetch import BatchFetchManager
 from .crawl import WebCrawlManager
 from hyperbrowser.models import (
@@ -6,6 +8,11 @@ from hyperbrowser.models import (
     FetchOutputJson,
     WebSearchParams,
     WebSearchResponse,
+)
+from hyperbrowser.models.params import (
+    coerce_to_model,
+    FetchParamsDict,
+    WebSearchParamsDict,
 )
 import jsonref
 
@@ -16,7 +23,8 @@ class WebManager:
         self.batch_fetch = BatchFetchManager(client)
         self.crawl = WebCrawlManager(client)
 
-    async def fetch(self, params: FetchParams) -> FetchResponse:
+    async def fetch(self, params: Union[FetchParams, FetchParamsDict]) -> FetchResponse:
+        params = coerce_to_model(FetchParams, params)
         if params.outputs and params.outputs.formats:
             for output in params.outputs.formats:
                 if isinstance(output, FetchOutputJson) and output.schema_:
@@ -33,7 +41,10 @@ class WebManager:
         )
         return FetchResponse(**response.data)
 
-    async def search(self, params: WebSearchParams) -> WebSearchResponse:
+    async def search(
+        self, params: Union[WebSearchParams, WebSearchParamsDict]
+    ) -> WebSearchResponse:
+        params = coerce_to_model(WebSearchParams, params)
         response = await self._client.transport.post(
             self._client._build_url("/web/search"),
             data=params.model_dump(exclude_none=True, by_alias=True),

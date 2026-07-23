@@ -1,4 +1,7 @@
 import time
+from typing import Union
+
+from .....models.params import coerce_to_model, StartHyperAgentTaskParamsDict
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -16,10 +19,14 @@ class HyperAgentManager:
     def __init__(self, client):
         self._client = client
 
-    def start(self, params: StartHyperAgentTaskParams) -> StartHyperAgentTaskResponse:
+    def start(
+        self, params: Union[StartHyperAgentTaskParams, StartHyperAgentTaskParamsDict]
+    ) -> StartHyperAgentTaskResponse:
         response = self._client.transport.post(
             self._client._build_url("/task/hyper-agent"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=coerce_to_model(StartHyperAgentTaskParams, params).model_dump(
+                exclude_none=True, by_alias=True
+            ),
         )
         return StartHyperAgentTaskResponse(**response.data)
 
@@ -42,7 +49,7 @@ class HyperAgentManager:
         return BasicResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartHyperAgentTaskParams
+        self, params: Union[StartHyperAgentTaskParams, StartHyperAgentTaskParamsDict]
     ) -> HyperAgentTaskResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id

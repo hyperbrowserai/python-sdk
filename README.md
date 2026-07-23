@@ -107,6 +107,39 @@ def main():
 main()
 ```
 
+### Passing parameters
+
+Every manager method that takes a params object accepts **either** a plain
+dictionary (recommended — you get editor autocomplete via the `*Dict`
+`TypedDict` types) **or** the existing Pydantic params class. Both produce
+identical requests, so existing code keeps working after upgrading.
+
+```python
+from hyperbrowser import Hyperbrowser
+from hyperbrowser.models import StartScrapeJobParams  # still supported
+
+client = Hyperbrowser(api_key="test-key")
+
+# New: plain dict with snake_case keys (autocompletes against StartScrapeJobParamsDict)
+client.scrape.start_and_wait(
+    {
+        "url": "https://example.com",
+        "scrape_options": {"formats": ["markdown"], "only_main_content": True},
+    }
+)
+
+# Existing: Pydantic params object — unchanged
+client.scrape.start_and_wait(
+    StartScrapeJobParams(
+        url="https://example.com",
+        scrape_options={"formats": ["markdown"], "only_main_content": True},
+    )
+)
+```
+
+For extraction and structured web-fetch outputs, the `schema` field still
+accepts a Pydantic model class or a raw JSON schema dict, exactly as before.
+
 ## Sandboxes
 
 The sync and async clients expose the same sandbox APIs through `client.sandboxes`.

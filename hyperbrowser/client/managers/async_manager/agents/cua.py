@@ -1,4 +1,7 @@
 import asyncio
+from typing import Union
+
+from .....models.params import coerce_to_model, StartCuaTaskParamsDict
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -16,10 +19,14 @@ class CuaManager:
     def __init__(self, client):
         self._client = client
 
-    async def start(self, params: StartCuaTaskParams) -> StartCuaTaskResponse:
+    async def start(
+        self, params: Union[StartCuaTaskParams, StartCuaTaskParamsDict]
+    ) -> StartCuaTaskResponse:
         response = await self._client.transport.post(
             self._client._build_url("/task/cua"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=coerce_to_model(StartCuaTaskParams, params).model_dump(
+                exclude_none=True, by_alias=True
+            ),
         )
         return StartCuaTaskResponse(**response.data)
 
@@ -41,7 +48,9 @@ class CuaManager:
         )
         return BasicResponse(**response.data)
 
-    async def start_and_wait(self, params: StartCuaTaskParams) -> CuaTaskResponse:
+    async def start_and_wait(
+        self, params: Union[StartCuaTaskParams, StartCuaTaskParamsDict]
+    ) -> CuaTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:

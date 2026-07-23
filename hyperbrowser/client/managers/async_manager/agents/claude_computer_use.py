@@ -1,4 +1,7 @@
 import asyncio
+from typing import Union
+
+from .....models.params import coerce_to_model, StartClaudeComputerUseTaskParamsDict
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -17,11 +20,16 @@ class ClaudeComputerUseManager:
         self._client = client
 
     async def start(
-        self, params: StartClaudeComputerUseTaskParams
+        self,
+        params: Union[
+            StartClaudeComputerUseTaskParams, StartClaudeComputerUseTaskParamsDict
+        ],
     ) -> StartClaudeComputerUseTaskResponse:
         response = await self._client.transport.post(
             self._client._build_url("/task/claude-computer-use"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=coerce_to_model(StartClaudeComputerUseTaskParams, params).model_dump(
+                exclude_none=True, by_alias=True
+            ),
         )
         return StartClaudeComputerUseTaskResponse(**response.data)
 
@@ -44,7 +52,10 @@ class ClaudeComputerUseManager:
         return BasicResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartClaudeComputerUseTaskParams
+        self,
+        params: Union[
+            StartClaudeComputerUseTaskParams, StartClaudeComputerUseTaskParamsDict
+        ],
     ) -> ClaudeComputerUseTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
