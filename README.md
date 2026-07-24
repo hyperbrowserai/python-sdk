@@ -52,12 +52,12 @@ Existing Pydantic request classes remain accepted, so upgrading does not require
 an immediate rewrite:
 
 ```python
-from hyperbrowser.models import CreateSessionParams
+from hyperbrowser.models import CreateSessionParams, ScreenConfig
 
 session = client.sessions.create(
     CreateSessionParams(
         use_stealth=True,
-        screen={"width": 1920, "height": 1080},
+        screen=ScreenConfig(width=1920, height=1080),
     )
 )
 ```

@@ -34,12 +34,12 @@ session = client.sessions.create(
 The equivalent pre-1.0 Pydantic request remains valid:
 
 ```python
-from hyperbrowser.models import CreateSessionParams
+from hyperbrowser.models import CreateSessionParams, ScreenConfig
 
 session = client.sessions.create(
     CreateSessionParams(
         use_stealth=True,
-        screen={"width": 1920, "height": 1080},
+        screen=ScreenConfig(width=1920, height=1080),
     )
 )
 ```
