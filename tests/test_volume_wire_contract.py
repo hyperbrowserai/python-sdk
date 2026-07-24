@@ -142,7 +142,7 @@ async def test_async_volume_manager_uses_expected_wire_keys():
     client = FakeAsyncClient()
     manager = AsyncVolumeManager(client)
 
-    created = await manager.create(CreateVolumeParams(name="project-cache"))
+    created = await manager.create({"name": "project-cache"})
     listed = await manager.list()
     fetched = await manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 

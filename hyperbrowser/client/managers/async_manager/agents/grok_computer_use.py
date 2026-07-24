@@ -1,6 +1,11 @@
 import asyncio
+from typing import Union
 
+from hyperbrowser.client._request import dump_request
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.types import (
+    StartGrokComputerUseTaskParams as StartGrokComputerUseTaskParamsDict,
+)
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -17,11 +22,15 @@ class GrokComputerUseManager:
         self._client = client
 
     async def start(
-        self, params: StartGrokComputerUseTaskParams
+        self,
+        params: Union[
+            StartGrokComputerUseTaskParamsDict,
+            StartGrokComputerUseTaskParams,
+        ],
     ) -> StartGrokComputerUseTaskResponse:
         response = await self._client.transport.post(
             self._client._build_url("/task/grok-computer-use"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, StartGrokComputerUseTaskParams),
         )
         return StartGrokComputerUseTaskResponse(**response.data)
 
@@ -44,7 +53,11 @@ class GrokComputerUseManager:
         return BasicResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartGrokComputerUseTaskParams
+        self,
+        params: Union[
+            StartGrokComputerUseTaskParamsDict,
+            StartGrokComputerUseTaskParams,
+        ],
     ) -> GrokComputerUseTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id

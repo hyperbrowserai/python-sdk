@@ -30,6 +30,53 @@ Profile names must match `^[A-Za-z0-9._-]+$`.
 
 ## Usage
 
+Hyperbrowser 1.0 accepts plain dictionaries for request parameters. Method
+signatures use `TypedDict` definitions, so editors can autocomplete keys at
+every nested level:
+
+```python
+from hyperbrowser import Hyperbrowser
+
+client = Hyperbrowser(api_key="test-key")
+
+# Preferred in 1.0: autocomplete works directly in the dictionary.
+session = client.sessions.create(
+    {
+        "use_stealth": True,
+        "screen": {"width": 1920, "height": 1080},
+    }
+)
+```
+
+Existing Pydantic request classes remain accepted, so upgrading does not require
+an immediate rewrite:
+
+```python
+from hyperbrowser.models import CreateSessionParams
+
+session = client.sessions.create(
+    CreateSessionParams(
+        use_stealth=True,
+        screen={"width": 1920, "height": 1080},
+    )
+)
+```
+
+Import request annotations from `hyperbrowser.types` when a named variable is
+useful. The same names under `hyperbrowser.models` refer to the legacy Pydantic
+request classes. Responses remain Pydantic models.
+
+JSON Schema fields accept raw schema values, including object schemas with
+`$defs`, `$ref`, or custom keywords, and boolean schemas where the API supports
+them. Those schemas and other user-owned mappings are preserved as data; only
+SDK-owned request keys are translated to their API aliases. Schema fields
+documented as accepting a model class can also generate a schema from a Pydantic
+model.
+
+See the
+[Hyperbrowser Python SDK 1.0 migration guide](https://hyperbrowser.ai/docs/sdks/python-1-0-migration)
+for the complete compatibility details and migration checklist.
+
 ### Async
 
 ```python
@@ -115,17 +162,16 @@ The sync and async clients expose the same sandbox APIs through `client.sandboxe
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import CreateSandboxParams, SandboxExposeParams
 
 client = Hyperbrowser(api_key="test-key")
 sandbox = client.sandboxes.create(
-    CreateSandboxParams(
-        image_name="node",
-        cpu=4,
-        memory_mib=4096,
-        disk_mib=8192,
-        exposed_ports=[SandboxExposeParams(port=3000, auth=True)],
-    )
+    {
+        "image_name": "node",
+        "cpu": 4,
+        "memory_mib": 4096,
+        "disk_mib": 8192,
+        "exposed_ports": [{"port": 3000, "auth": True}],
+    }
 )
 
 print(sandbox.exposed_ports[0].browser_url)
@@ -140,25 +186,24 @@ client.close()
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import CreateSandboxParams, CreateVolumeParams, SandboxVolumeMount
 
 client = Hyperbrowser(api_key="test-key")
 
-volume = client.volumes.create(CreateVolumeParams(name="project-cache"))
+volume = client.volumes.create({"name": "project-cache"})
 all_volumes = client.volumes.list()
 same_volume = client.volumes.get(volume.id)
 
 sandbox = client.sandboxes.create(
-    CreateSandboxParams(
-        image_name="node",
-        mounts={
-            "/workspace/cache": SandboxVolumeMount(
-                id=same_volume.id,
-                type="rw",
-                shared=True,
-            )
+    {
+        "image_name": "node",
+        "mounts": {
+            "/workspace/cache": {
+                "id": same_volume.id,
+                "type": "rw",
+                "shared": True,
+            }
         },
-    )
+    }
 )
 
 sandbox.stop()
@@ -169,17 +214,16 @@ client.close()
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import SandboxListParams
 
 client = Hyperbrowser(api_key="test-key")
 result = client.sandboxes.list(
-    SandboxListParams(
-        status="active",
-        search="sandbox",
-        start=1711929600000,
-        end=1712016000000,
-        limit=20,
-    )
+    {
+        "status": "active",
+        "search": "sandbox",
+        "start": 1711929600000,
+        "end": 1712016000000,
+        "limit": 20,
+    }
 )
 
 for sandbox in result.sandboxes:
@@ -190,11 +234,10 @@ for sandbox in result.sandboxes:
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import SandboxSnapshotListParams
 
 client = Hyperbrowser(api_key="test-key")
 snapshots = client.sandboxes.list_snapshots(
-    SandboxSnapshotListParams(image_name="node", status="created", limit=10)
+    {"image_name": "node", "status": "created", "limit": 10}
 )
 ```
 
@@ -202,16 +245,13 @@ snapshots = client.sandboxes.list_snapshots(
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import CreateSandboxParams, SandboxExposeParams
 
 client = Hyperbrowser(api_key="test-key")
 sandbox = client.sandboxes.create(
-    CreateSandboxParams(
-        image_name="node", cpu=2, memory_mib=2048, disk_mib=8192
-    )
+    {"image_name": "node", "cpu": 2, "memory_mib": 2048, "disk_mib": 8192}
 )
 
-result = sandbox.expose(SandboxExposeParams(port=8080, auth=True))
+result = sandbox.expose({"port": 8080, "auth": True})
 print(result.url, result.browser_url)
 
 sandbox.unexpose(8080)
@@ -221,23 +261,19 @@ sandbox.unexpose(8080)
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import CreateSandboxParams, SandboxFileWriteEntry
 
 client = Hyperbrowser(api_key="test-key")
-sandbox = client.sandboxes.create(CreateSandboxParams(image_name="node"))
+sandbox = client.sandboxes.create({"image_name": "node"})
 
 sandbox.files.write(
     [
-        SandboxFileWriteEntry(
-            path="/tmp/config.json",
-            data='{"debug":true}\n',
-            append=True,
-            mode="600",
-        ),
-        SandboxFileWriteEntry(
-            path="/tmp/blob.bin",
-            data=b"\x00\x01\x02",
-        ),
+        {
+            "path": "/tmp/config.json",
+            "data": '{"debug":true}\n',
+            "append": True,
+            "mode": "600",
+        },
+        {"path": "/tmp/blob.bin", "data": b"\x00\x01\x02"},
     ]
 )
 ```
@@ -246,11 +282,10 @@ sandbox.files.write(
 
 ```python
 from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import CreateSandboxParams, SandboxTerminalCreateParams
 
 client = Hyperbrowser(api_key="test-key")
-sandbox = client.sandboxes.create(CreateSandboxParams(image_name="node"))
-terminal = sandbox.terminal.create(SandboxTerminalCreateParams(command="bash"))
+sandbox = client.sandboxes.create({"image_name": "node"})
+terminal = sandbox.terminal.create({"command": "bash"})
 
 connection = terminal.attach(cursor=10)
 for event in connection.events():

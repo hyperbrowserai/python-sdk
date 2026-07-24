@@ -100,10 +100,7 @@ def _start_server():
                 )
                 return
 
-            if (
-                self.path
-                == f"/api/session/{SESSION_ID}/captcha/evaluate"
-            ):
+            if self.path == f"/api/session/{SESSION_ID}/captcha/evaluate":
                 _send_json(
                     self,
                     200,
@@ -240,7 +237,12 @@ async def test_async_client_uses_configured_api_endpoint_and_parses_responses():
     server, base_url, requests = _start_server()
     client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
     try:
-        started = await client.scrape.start(_scrape_params())
+        started = await client.scrape.start(
+            {
+                "url": "https://example.com",
+                "scrape_options": {"formats": ["markdown"]},
+            }
+        )
         status = await client.scrape.get_status(started.job_id)
     finally:
         await client.close()
@@ -311,7 +313,13 @@ async def test_async_session_create_can_start_from_snapshot():
     server, base_url, requests = _start_server()
     client = AsyncHyperbrowser(api_key="test-api-key", base_url=base_url)
     try:
-        session = await client.sessions.create(_snapshot_create_params())
+        session = await client.sessions.create(
+            {
+                "start_from_snapshot": {
+                    "snapshot_id": SNAPSHOT_ID,
+                }
+            }
+        )
     finally:
         await client.close()
         server.shutdown()
@@ -456,11 +464,11 @@ async def test_async_session_evaluate_captcha_triggers_manual_evaluation():
     try:
         result = await client.sessions.evaluate_captcha(
             SESSION_ID,
-            CaptchaEvaluationParams(
-                captcha="recaptcha",
-                max_iterations=3,
-                solver_type="visual",
-            ),
+            {
+                "captcha": "recaptcha",
+                "max_iterations": 3,
+                "solver_type": "visual",
+            },
         )
     finally:
         await client.close()
@@ -494,9 +502,7 @@ def test_sync_session_captcha_solving_update_starts_and_stops_automatic_solving(
             SESSION_ID,
             UpdateSessionSolveCaptchasParams(solver_type="visual"),
         )
-        stopped = client.sessions.stop_captcha_solving(
-            SESSION_ID
-        )
+        stopped = client.sessions.stop_captcha_solving(SESSION_ID)
     finally:
         client.close()
         server.shutdown()
@@ -542,11 +548,9 @@ async def test_async_session_captcha_solving_update_starts_and_stops_automatic_s
     try:
         started = await client.sessions.start_captcha_solving(
             SESSION_ID,
-            UpdateSessionSolveCaptchasParams(solver_type="visual"),
+            {"solver_type": "visual"},
         )
-        stopped = await client.sessions.stop_captcha_solving(
-            SESSION_ID
-        )
+        stopped = await client.sessions.stop_captcha_solving(SESSION_ID)
     finally:
         await client.close()
         server.shutdown()

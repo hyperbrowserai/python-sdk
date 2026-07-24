@@ -1,4 +1,9 @@
 import asyncio
+from typing import Union
+
+from hyperbrowser.client._request import (
+    dump_request_with_schema,
+)
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
 from hyperbrowser.models.extract import (
@@ -7,25 +12,29 @@ from hyperbrowser.models.extract import (
     StartExtractJobParams,
     StartExtractJobResponse,
 )
-import jsonref
+from hyperbrowser.types import StartExtractJobParams as StartExtractJobParamsDict
 
 
 class ExtractManager:
     def __init__(self, client):
         self._client = client
 
-    async def start(self, params: StartExtractJobParams) -> StartExtractJobResponse:
-        if not params.schema_ and not params.prompt:
+    async def start(
+        self,
+        params: Union[StartExtractJobParamsDict, StartExtractJobParams],
+    ) -> StartExtractJobResponse:
+        payload = dump_request_with_schema(
+            params,
+            StartExtractJobParams,
+            input_name="schema",
+            model_name="schema_",
+        )
+        if "schema" not in payload and not payload.get("prompt"):
             raise HyperbrowserError("Either schema or prompt must be provided")
-        if params.schema_:
-            if hasattr(params.schema_, "model_json_schema"):
-                params.schema_ = jsonref.replace_refs(
-                    params.schema_.model_json_schema(), proxies=False, lazy_load=False
-                )
 
         response = await self._client.transport.post(
             self._client._build_url("/extract"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return StartExtractJobResponse(**response.data)
 
@@ -41,7 +50,10 @@ class ExtractManager:
         )
         return ExtractJobResponse(**response.data)
 
-    async def start_and_wait(self, params: StartExtractJobParams) -> ExtractJobResponse:
+    async def start_and_wait(
+        self,
+        params: Union[StartExtractJobParamsDict, StartExtractJobParams],
+    ) -> ExtractJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:

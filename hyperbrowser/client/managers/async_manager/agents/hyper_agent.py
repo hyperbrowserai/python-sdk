@@ -1,6 +1,11 @@
 import asyncio
+from typing import Union
 
+from hyperbrowser.client._request import dump_request
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.types import (
+    StartHyperAgentTaskParams as StartHyperAgentTaskParamsDict,
+)
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -17,11 +22,12 @@ class HyperAgentManager:
         self._client = client
 
     async def start(
-        self, params: StartHyperAgentTaskParams
+        self,
+        params: Union[StartHyperAgentTaskParamsDict, StartHyperAgentTaskParams],
     ) -> StartHyperAgentTaskResponse:
         response = await self._client.transport.post(
             self._client._build_url("/task/hyper-agent"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, StartHyperAgentTaskParams),
         )
         return StartHyperAgentTaskResponse(**response.data)
 
@@ -44,7 +50,8 @@ class HyperAgentManager:
         return BasicResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartHyperAgentTaskParams
+        self,
+        params: Union[StartHyperAgentTaskParamsDict, StartHyperAgentTaskParams],
     ) -> HyperAgentTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id

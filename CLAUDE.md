@@ -8,6 +8,9 @@ This is the Hyperbrowser Python SDK - a client library for interacting with the 
 
 ## Development Commands
 
+Use Python 3.12 for the Poetry development environment. CI exercises runtime
+compatibility from Python 3.8 through 3.14.
+
 ```bash
 # Install dependencies (uses Poetry)
 poetry install
@@ -17,6 +20,9 @@ poetry run ruff check .
 
 # Format code with ruff
 poetry run ruff format .
+
+# Run the non-E2E test suite
+poetry run pytest tests --ignore=tests/sandbox/e2e
 ```
 
 ## Architecture
@@ -50,14 +56,16 @@ client.computer_action  # Low-level computer actions
 
 Each manager lives in `client/managers/sync_manager/` or `client/managers/async_manager/` with identical method signatures.
 
-### Models
+### Request Types and Models
 
-All Pydantic models are in `hyperbrowser/models/`:
-- Request params: `Start*Params`, `Create*Params`
-- Response types: `*Response`, `*StatusResponse`
-- Data models: `*Data`, `*TaskData`
+TypedDict request types are in `hyperbrowser/types/`. Pydantic response models
+and backwards-compatible request classes remain in `hyperbrowser/models/`.
+Managers accept either request dictionaries or the legacy request model and
+normalize both through the shared request serializer.
 
-Models are re-exported from `hyperbrowser/models/__init__.py` for easy importing.
+Response and legacy models are re-exported from
+`hyperbrowser/models/__init__.py`; request TypedDicts are re-exported from
+`hyperbrowser/types/__init__.py`.
 
 ### Pre-built Tools
 

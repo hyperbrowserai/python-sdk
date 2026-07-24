@@ -1,9 +1,14 @@
 import json
-from hyperbrowser.models.agents.browser_use import StartBrowserUseTaskParams
-from hyperbrowser.models.crawl import StartCrawlJobParams
-from hyperbrowser.models.extract import StartExtractJobParams
-from hyperbrowser.models.scrape import StartScrapeJobParams
+from typing import cast
+
 from hyperbrowser import Hyperbrowser, AsyncHyperbrowser
+from hyperbrowser.types import (
+    StartBrowserUseTaskParams,
+    StartCrawlJobParams,
+    StartExtractJobParams,
+    StartScrapeJobParams,
+    WebsiteExtractToolParams,
+)
 
 from .openai import (
     BROWSER_USE_TOOL_OPENAI,
@@ -26,13 +31,15 @@ class WebsiteScrapeTool:
     anthropic_tool_definition = SCRAPE_TOOL_ANTHROPIC
 
     @staticmethod
-    def runnable(hb: Hyperbrowser, params: dict) -> str:
-        resp = hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
+    def runnable(hb: Hyperbrowser, params: StartScrapeJobParams) -> str:
+        resp = hb.scrape.start_and_wait(params=params)
         return resp.data.markdown if resp.data and resp.data.markdown else ""
 
     @staticmethod
-    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        resp = await hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
+    async def async_runnable(
+        hb: AsyncHyperbrowser, params: StartScrapeJobParams
+    ) -> str:
+        resp = await hb.scrape.start_and_wait(params=params)
         return resp.data.markdown if resp.data and resp.data.markdown else ""
 
 
@@ -41,13 +48,15 @@ class WebsiteScreenshotTool:
     anthropic_tool_definition = SCREENSHOT_TOOL_ANTHROPIC
 
     @staticmethod
-    def runnable(hb: Hyperbrowser, params: dict) -> str:
-        resp = hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
+    def runnable(hb: Hyperbrowser, params: StartScrapeJobParams) -> str:
+        resp = hb.scrape.start_and_wait(params=params)
         return resp.data.screenshot if resp.data and resp.data.screenshot else ""
 
     @staticmethod
-    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        resp = await hb.scrape.start_and_wait(params=StartScrapeJobParams(**params))
+    async def async_runnable(
+        hb: AsyncHyperbrowser, params: StartScrapeJobParams
+    ) -> str:
+        resp = await hb.scrape.start_and_wait(params=params)
         return resp.data.screenshot if resp.data and resp.data.screenshot else ""
 
 
@@ -56,28 +65,38 @@ class WebsiteCrawlTool:
     anthropic_tool_definition = CRAWL_TOOL_ANTHROPIC
 
     @staticmethod
-    def runnable(hb: Hyperbrowser, params: dict) -> str:
-        resp = hb.crawl.start_and_wait(params=StartCrawlJobParams(**params))
+    def runnable(hb: Hyperbrowser, params: StartCrawlJobParams) -> str:
+        resp = hb.crawl.start_and_wait(params=params)
         markdown = ""
         if resp.data:
             for page in resp.data:
                 if page.markdown:
                     markdown += (
-                        f"\n{'-'*50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
+                        f"\n{'-' * 50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
                     )
         return markdown
 
     @staticmethod
-    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        resp = await hb.crawl.start_and_wait(params=StartCrawlJobParams(**params))
+    async def async_runnable(hb: AsyncHyperbrowser, params: StartCrawlJobParams) -> str:
+        resp = await hb.crawl.start_and_wait(params=params)
         markdown = ""
         if resp.data:
             for page in resp.data:
                 if page.markdown:
                     markdown += (
-                        f"\n{'-'*50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
+                        f"\n{'-' * 50}\nUrl: {page.url}\nMarkdown:\n{page.markdown}\n"
                     )
         return markdown
+
+
+def _normalize_extract_tool_params(
+    params: WebsiteExtractToolParams,
+) -> StartExtractJobParams:
+    normalized_params = dict(params)
+    schema = normalized_params.get("schema")
+    if schema and isinstance(schema, str):
+        normalized_params["schema"] = json.loads(schema)
+    return cast(StartExtractJobParams, normalized_params)
 
 
 class WebsiteExtractTool:
@@ -85,17 +104,17 @@ class WebsiteExtractTool:
     anthropic_tool_definition = EXTRACT_TOOL_ANTHROPIC
 
     @staticmethod
-    def runnable(hb: Hyperbrowser, params: dict) -> str:
-        if params.get("schema") and isinstance(params.get("schema"), str):
-            params["schema"] = json.loads(params["schema"])
-        resp = hb.extract.start_and_wait(params=StartExtractJobParams(**params))
+    def runnable(hb: Hyperbrowser, params: WebsiteExtractToolParams) -> str:
+        normalized_params = _normalize_extract_tool_params(params)
+        resp = hb.extract.start_and_wait(params=normalized_params)
         return json.dumps(resp.data) if resp.data else ""
 
     @staticmethod
-    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        if params.get("schema") and isinstance(params.get("schema"), str):
-            params["schema"] = json.loads(params["schema"])
-        resp = await hb.extract.start_and_wait(params=StartExtractJobParams(**params))
+    async def async_runnable(
+        hb: AsyncHyperbrowser, params: WebsiteExtractToolParams
+    ) -> str:
+        normalized_params = _normalize_extract_tool_params(params)
+        resp = await hb.extract.start_and_wait(params=normalized_params)
         return json.dumps(resp.data) if resp.data else ""
 
 
@@ -104,17 +123,15 @@ class BrowserUseTool:
     anthropic_tool_definition = BROWSER_USE_TOOL_ANTHROPIC
 
     @staticmethod
-    def runnable(hb: Hyperbrowser, params: dict) -> str:
-        resp = hb.agents.browser_use.start_and_wait(
-            params=StartBrowserUseTaskParams(**params)
-        )
+    def runnable(hb: Hyperbrowser, params: StartBrowserUseTaskParams) -> str:
+        resp = hb.agents.browser_use.start_and_wait(params=params)
         return resp.data.final_result if resp.data and resp.data.final_result else ""
 
     @staticmethod
-    async def async_runnable(hb: AsyncHyperbrowser, params: dict) -> str:
-        resp = await hb.agents.browser_use.start_and_wait(
-            params=StartBrowserUseTaskParams(**params)
-        )
+    async def async_runnable(
+        hb: AsyncHyperbrowser, params: StartBrowserUseTaskParams
+    ) -> str:
+        resp = await hb.agents.browser_use.start_and_wait(params=params)
         return resp.data.final_result if resp.data and resp.data.final_result else ""
 
 
@@ -123,5 +140,6 @@ __all__ = [
     "WebsiteScreenshotTool",
     "WebsiteCrawlTool",
     "WebsiteExtractTool",
+    "WebsiteExtractToolParams",
     "BrowserUseTool",
 ]

@@ -1,6 +1,9 @@
 import asyncio
+from typing import Union
 
+from hyperbrowser.client._request import dump_request
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.types import StartCuaTaskParams as StartCuaTaskParamsDict
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -16,10 +19,13 @@ class CuaManager:
     def __init__(self, client):
         self._client = client
 
-    async def start(self, params: StartCuaTaskParams) -> StartCuaTaskResponse:
+    async def start(
+        self,
+        params: Union[StartCuaTaskParamsDict, StartCuaTaskParams],
+    ) -> StartCuaTaskResponse:
         response = await self._client.transport.post(
             self._client._build_url("/task/cua"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, StartCuaTaskParams),
         )
         return StartCuaTaskResponse(**response.data)
 
@@ -41,7 +47,10 @@ class CuaManager:
         )
         return BasicResponse(**response.data)
 
-    async def start_and_wait(self, params: StartCuaTaskParams) -> CuaTaskResponse:
+    async def start_and_wait(
+        self,
+        params: Union[StartCuaTaskParamsDict, StartCuaTaskParams],
+    ) -> CuaTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:

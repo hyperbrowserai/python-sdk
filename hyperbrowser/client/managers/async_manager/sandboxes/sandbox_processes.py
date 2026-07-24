@@ -1,6 +1,7 @@
 import base64
 from typing import AsyncIterator, Dict, Optional, Union
 
+from ...._request import coerce_request, dump_request
 from .....models.sandbox import (
     SandboxExecParams,
     SandboxProcessExitEvent,
@@ -9,6 +10,10 @@ from .....models.sandbox import (
     SandboxProcessResult,
     SandboxProcessStdinParams,
     SandboxProcessSummary,
+)
+from .....types import (
+    SandboxExecParams as SandboxExecParamsDict,
+    SandboxProcessStdinParams as SandboxProcessStdinParamsDict,
 )
 from ...sandboxes.shared import _normalize_exec_params
 from .sandbox_transport import RuntimeTransport
@@ -93,15 +98,23 @@ class SandboxProcessHandle:
 
     async def write_stdin(
         self,
-        data: Optional[Union[str, bytes, bytearray, SandboxProcessStdinParams]] = None,
+        data: Optional[
+            Union[
+                SandboxProcessStdinParamsDict,
+                SandboxProcessStdinParams,
+                str,
+                bytes,
+                bytearray,
+            ]
+        ] = None,
         *,
         encoding: Optional[str] = None,
         eof: Optional[bool] = None,
     ) -> None:
-        if isinstance(data, SandboxProcessStdinParams):
-            params = data
-        else:
+        if data is None or isinstance(data, (str, bytes, bytearray)):
             params = SandboxProcessStdinParams(data=data, encoding=encoding, eof=eof)
+        else:
+            params = coerce_request(data, SandboxProcessStdinParams, name="data")
 
         payload: Dict[str, object] = {"eof": params.eof}
         if params.data is not None:
@@ -150,7 +163,7 @@ class SandboxProcessesApi:
 
     async def exec(
         self,
-        input: Union[str, SandboxExecParams],
+        input: Union[SandboxExecParamsDict, SandboxExecParams, str],
         *,
         cwd: Optional[str] = None,
         env: Optional[Dict[str, str]] = None,
@@ -169,14 +182,14 @@ class SandboxProcessesApi:
         payload = await self._transport.request_json(
             "/sandbox/exec",
             method="POST",
-            json_body=params.model_dump(exclude_none=True, by_alias=True),
+            json_body=dump_request(params, SandboxExecParams),
             headers={"content-type": "application/json"},
         )
         return SandboxProcessResult(**payload["result"])
 
     async def start(
         self,
-        input: Union[str, SandboxExecParams],
+        input: Union[SandboxExecParamsDict, SandboxExecParams, str],
         *,
         cwd: Optional[str] = None,
         env: Optional[Dict[str, str]] = None,
@@ -195,7 +208,7 @@ class SandboxProcessesApi:
         payload = await self._transport.request_json(
             "/sandbox/processes",
             method="POST",
-            json_body=params.model_dump(exclude_none=True, by_alias=True),
+            json_body=dump_request(params, SandboxExecParams),
             headers={"content-type": "application/json"},
         )
         return SandboxProcessHandle(

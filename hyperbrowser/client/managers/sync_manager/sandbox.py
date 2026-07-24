@@ -1,6 +1,7 @@
 import time
 from typing import Dict, Optional, Union
 
+from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
     CompleteSandboxImageBuildParams,
@@ -28,6 +29,20 @@ from ....models.sandbox import (
     StartSandboxFromSnapshotParams,
 )
 from ....models.session import BasicResponse
+from ....types import (
+    CompleteSandboxImageBuildParams as CompleteSandboxImageBuildParamsDict,
+    CreateSandboxImageBuildParams as CreateSandboxImageBuildParamsDict,
+    CreateSandboxParams as CreateSandboxParamsDict,
+    SandboxExecParams as SandboxExecParamsDict,
+    SandboxExposeParams as SandboxExposeParamsDict,
+    SandboxImageInit as SandboxImageInitDict,
+    SandboxImageListParams as SandboxImageListParamsDict,
+    SandboxListParams as SandboxListParamsDict,
+    SandboxMemorySnapshotParams as SandboxMemorySnapshotParamsDict,
+    SandboxNetworkPolicy as SandboxNetworkPolicyDict,
+    SandboxSnapshotListParams as SandboxSnapshotListParamsDict,
+    StartSandboxFromSnapshotParams as StartSandboxFromSnapshotParamsDict,
+)
 from ....sandbox_common import (
     RuntimeConnection,
     ensure_response_ok,
@@ -178,22 +193,19 @@ class SandboxHandle:
 
     def create_memory_snapshot(
         self,
-        params: Optional[SandboxMemorySnapshotParams] = None,
+        params: Optional[
+            Union[SandboxMemorySnapshotParamsDict, SandboxMemorySnapshotParams]
+        ] = None,
     ) -> SandboxMemorySnapshotResult:
-        if params is None:
-            normalized = SandboxMemorySnapshotParams()
-        elif isinstance(params, SandboxMemorySnapshotParams):
-            normalized = params
-        else:
-            raise TypeError("params must be a SandboxMemorySnapshotParams instance")
-        return self._service.create_memory_snapshot(self.id, normalized)
+        return self._service.create_memory_snapshot(
+            self.id,
+            params if params is not None else {},
+        )
 
     def update_network(
         self,
-        policy: SandboxNetworkPolicy,
+        policy: Union[SandboxNetworkPolicyDict, SandboxNetworkPolicy],
     ) -> SandboxNetworkUpdateResult:
-        if not isinstance(policy, SandboxNetworkPolicy):
-            raise TypeError("policy must be a SandboxNetworkPolicy instance")
         result = self._service.update_network(self.id, policy)
         self._detail = self._detail.model_copy(update={"network": result.network})
         return result
@@ -207,9 +219,10 @@ class SandboxHandle:
             )
         )
 
-    def expose(self, params: SandboxExposeParams) -> SandboxExposeResult:
-        if not isinstance(params, SandboxExposeParams):
-            raise TypeError("params must be a SandboxExposeParams instance")
+    def expose(
+        self,
+        params: Union[SandboxExposeParamsDict, SandboxExposeParams],
+    ) -> SandboxExposeResult:
         result = self._service.expose(self.id, params, runtime=self.runtime)
         exposed_ports = [
             port for port in self._detail.exposed_ports if port.port != result.port
@@ -260,7 +273,7 @@ class SandboxHandle:
 
     def exec(
         self,
-        input: Union[str, SandboxExecParams],
+        input: Union[SandboxExecParamsDict, SandboxExecParams, str],
         *,
         cwd: Optional[str] = None,
         env: Optional[Dict[str, str]] = None,
@@ -358,18 +371,22 @@ class SandboxManager:
             None,
         )
 
-    def create(self, params: CreateSandboxParams) -> SandboxHandle:
-        if not isinstance(params, CreateSandboxParams):
-            raise TypeError("params must be a CreateSandboxParams instance")
+    def create(
+        self,
+        params: Union[CreateSandboxParamsDict, CreateSandboxParams],
+    ) -> SandboxHandle:
         detail = self._create_detail(params)
         return self.attach(detail)
 
     def start_from_snapshot(
-        self, params: StartSandboxFromSnapshotParams
+        self,
+        params: Union[
+            StartSandboxFromSnapshotParamsDict,
+            StartSandboxFromSnapshotParams,
+        ],
     ) -> SandboxHandle:
-        if not isinstance(params, StartSandboxFromSnapshotParams):
-            raise TypeError("params must be a StartSandboxFromSnapshotParams instance")
-        return self.create(params)
+        normalized = coerce_request(params, StartSandboxFromSnapshotParams)
+        return self.create(normalized)
 
     def get(self, sandbox_id: str) -> SandboxHandle:
         return self.attach(self.get_detail(sandbox_id))
@@ -380,38 +397,48 @@ class SandboxManager:
         return sandbox
 
     def list(
-        self, params: SandboxListParams = SandboxListParams()
+        self,
+        params: Optional[Union[SandboxListParamsDict, SandboxListParams]] = None,
     ) -> SandboxListResponse:
-        if not isinstance(params, SandboxListParams):
-            raise TypeError("params must be a SandboxListParams instance")
         payload = self._request(
             "GET",
             "/sandboxes",
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(
+                params if params is not None else {},
+                SandboxListParams,
+            ),
         )
         return SandboxListResponse(**payload)
 
     def list_images(
-        self, params: SandboxImageListParams = SandboxImageListParams()
+        self,
+        params: Optional[
+            Union[SandboxImageListParamsDict, SandboxImageListParams]
+        ] = None,
     ) -> SandboxImageListResponse:
-        if not isinstance(params, SandboxImageListParams):
-            raise TypeError("params must be a SandboxImageListParams instance")
         payload = self._request(
             "GET",
             "/images",
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(
+                params if params is not None else {},
+                SandboxImageListParams,
+            ),
         )
         return SandboxImageListResponse(**payload)
 
     def list_snapshots(
-        self, params: SandboxSnapshotListParams = SandboxSnapshotListParams()
+        self,
+        params: Optional[
+            Union[SandboxSnapshotListParamsDict, SandboxSnapshotListParams]
+        ] = None,
     ) -> SandboxSnapshotListResponse:
-        if not isinstance(params, SandboxSnapshotListParams):
-            raise TypeError("params must be a SandboxSnapshotListParams instance")
         payload = self._request(
             "GET",
             "/snapshots",
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(
+                params if params is not None else {},
+                SandboxSnapshotListParams,
+            ),
         )
         return SandboxSnapshotListResponse(**payload)
 
@@ -421,14 +448,15 @@ class SandboxManager:
 
     def create_image_build(
         self,
-        params: CreateSandboxImageBuildParams,
+        params: Union[
+            CreateSandboxImageBuildParamsDict,
+            CreateSandboxImageBuildParams,
+        ],
     ) -> SandboxImageBuildCreateResult:
-        if not isinstance(params, CreateSandboxImageBuildParams):
-            raise TypeError("params must be a CreateSandboxImageBuildParams instance")
         payload = self._request(
             "POST",
             "/images/builds",
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, CreateSandboxImageBuildParams),
         )
         return SandboxImageBuildCreateResult(**payload)
 
@@ -439,14 +467,15 @@ class SandboxManager:
     def complete_image_build(
         self,
         build_id: str,
-        params: CompleteSandboxImageBuildParams,
+        params: Union[
+            CompleteSandboxImageBuildParamsDict,
+            CompleteSandboxImageBuildParams,
+        ],
     ) -> SandboxImageBuild:
-        if not isinstance(params, CompleteSandboxImageBuildParams):
-            raise TypeError("params must be a CompleteSandboxImageBuildParams instance")
         payload = self._request(
             "POST",
             f"/images/builds/{build_id}/complete",
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, CompleteSandboxImageBuildParams),
         )
         return SandboxImageBuild(**payload["build"])
 
@@ -483,7 +512,7 @@ class SandboxManager:
         docker_image: str,
         image_name: str,
         platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
-        image_init: Optional[SandboxImageInit] = None,
+        image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
         image_config_user: Optional[str] = None,
         wait: bool = True,
         poll_interval: float = 3.0,
@@ -497,6 +526,11 @@ class SandboxManager:
             temp_dir=temp_dir,
         )
         try:
+            normalized_image_init = (
+                coerce_request(image_init, SandboxImageInit, name="image_init")
+                if image_init is not None
+                else artifact.image_init
+            )
             create_result = self.create_image_build(
                 CreateSandboxImageBuildParams(
                     image_name=image_name,
@@ -509,9 +543,7 @@ class SandboxManager:
                         if image_config_user is not None
                         else artifact.image_config_user
                     ),
-                    image_init=image_init
-                    if image_init is not None
-                    else artifact.image_init,
+                    image_init=normalized_image_init,
                 )
             )
             upload_image_build_artifact(
@@ -546,7 +578,7 @@ class SandboxManager:
         docker_tag: Optional[str] = None,
         platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
         build_args: Optional[Dict[str, str]] = None,
-        image_init: Optional[SandboxImageInit] = None,
+        image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
         image_config_user: Optional[str] = None,
         wait: bool = True,
         poll_interval: float = 3.0,
@@ -603,13 +635,16 @@ class SandboxManager:
     def create_memory_snapshot(
         self,
         sandbox_id: str,
-        params: Optional[SandboxMemorySnapshotParams] = None,
+        params: Optional[
+            Union[SandboxMemorySnapshotParamsDict, SandboxMemorySnapshotParams]
+        ] = None,
     ) -> SandboxMemorySnapshotResult:
         payload = self._request(
             "POST",
             f"/sandbox/{sandbox_id}/snapshot",
-            data=(params or SandboxMemorySnapshotParams()).model_dump(
-                exclude_none=True, by_alias=True
+            data=dump_request(
+                params if params is not None else {},
+                SandboxMemorySnapshotParams,
             ),
         )
         return SandboxMemorySnapshotResult(**payload)
@@ -617,17 +652,16 @@ class SandboxManager:
     def update_network(
         self,
         sandbox_id: str,
-        policy: SandboxNetworkPolicy,
+        policy: Union[SandboxNetworkPolicyDict, SandboxNetworkPolicy],
     ) -> SandboxNetworkUpdateResult:
-        if not isinstance(policy, SandboxNetworkPolicy):
-            raise TypeError("policy must be a SandboxNetworkPolicy instance")
         payload = self._request(
             "PUT",
             f"/sandbox/{sandbox_id}/network",
-            data=policy.model_dump(
-                exclude_none=True,
+            data=dump_request(
+                policy,
+                SandboxNetworkPolicy,
                 exclude_unset=True,
-                by_alias=True,
+                name="policy",
             ),
         )
         return SandboxNetworkUpdateResult(**payload)
@@ -635,14 +669,14 @@ class SandboxManager:
     def expose(
         self,
         sandbox_id: str,
-        params: SandboxExposeParams,
+        params: Union[SandboxExposeParamsDict, SandboxExposeParams],
         *,
         runtime=None,
     ) -> SandboxExposeResult:
         payload = self._request(
             "POST",
             f"/sandbox/{sandbox_id}/expose",
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, SandboxExposeParams),
         )
         target_runtime = runtime or self.get_detail(sandbox_id).runtime
         if "url" not in payload:
@@ -657,11 +691,14 @@ class SandboxManager:
         )
         return SandboxUnexposeResult(**payload)
 
-    def _create_detail(self, params: CreateSandboxParams) -> SandboxDetail:
+    def _create_detail(
+        self,
+        params: Union[CreateSandboxParamsDict, CreateSandboxParams],
+    ) -> SandboxDetail:
         payload = self._request(
             "POST",
             "/sandbox",
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, CreateSandboxParams),
         )
         return SandboxDetail(**payload)
 

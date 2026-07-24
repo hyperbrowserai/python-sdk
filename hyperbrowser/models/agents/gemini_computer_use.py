@@ -1,4 +1,6 @@
-from typing import Any, Literal, Optional
+from __future__ import annotations
+
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -87,7 +89,7 @@ class GeminiComputerUseStepResponse(BaseModel):
         populate_by_alias=True,
     )
 
-    candidates: Optional[list[Any]] = Field(
+    candidates: Optional[List[Any]] = Field(
         default=None, serialization_alias="candidates"
     )
     model_version: Optional[str] = Field(
@@ -100,7 +102,7 @@ class GeminiComputerUseTaskData(BaseModel):
         populate_by_alias=True,
     )
 
-    steps: list[GeminiComputerUseStepResponse]
+    steps: List[GeminiComputerUseStepResponse]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 

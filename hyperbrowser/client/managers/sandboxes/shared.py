@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Union
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
+from ..._request import coerce_request
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
     SandboxExecParams,
@@ -19,6 +20,10 @@ from ....sandbox_common import (
     normalize_network_error,
     parse_error_payload,
     runtime_base_url_session_id,
+)
+from ....types import (
+    SandboxExecParams as SandboxExecParamsDict,
+    SandboxFileWriteEntry as SandboxFileWriteEntryDict,
 )
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
@@ -73,7 +78,7 @@ def _normalize_legacy_process_fields(params: SandboxExecParams) -> SandboxExecPa
 
 
 def _normalize_exec_params(
-    input: Union[str, SandboxExecParams],
+    input: Union[SandboxExecParamsDict, SandboxExecParams, str],
     *,
     cwd: Optional[str] = None,
     env: Optional[Dict[str, str]] = None,
@@ -83,10 +88,8 @@ def _normalize_exec_params(
 ) -> SandboxExecParams:
     if isinstance(input, str):
         params = SandboxExecParams(command=input)
-    elif isinstance(input, SandboxExecParams):
-        params = input
     else:
-        raise TypeError("input must be a command string or SandboxExecParams instance")
+        params = coerce_request(input, SandboxExecParams, name="input")
 
     updates = {}
     if cwd is not None:
@@ -285,29 +288,32 @@ def _encode_write_data(data: Union[str, bytes, bytearray]) -> Dict[str, str]:
     }
 
 
-def _encode_batch_write_entry(entry: SandboxFileWriteEntry) -> Dict[str, object]:
-    if isinstance(entry.data, str):
-        encoding = entry.encoding or "utf8"
+def _encode_batch_write_entry(
+    entry: Union[SandboxFileWriteEntryDict, SandboxFileWriteEntry],
+) -> Dict[str, object]:
+    normalized = coerce_request(entry, SandboxFileWriteEntry, name="entry")
+    if isinstance(normalized.data, str):
+        encoding = normalized.encoding or "utf8"
         if encoding not in {"utf8", "base64"}:
             raise ValueError("encoding should be one of: utf8, base64")
         payload: Dict[str, object] = {
-            "path": entry.path,
-            "data": entry.data,
+            "path": normalized.path,
+            "data": normalized.data,
             "encoding": encoding,
         }
     else:
-        if entry.encoding not in {None, "base64"}:
+        if normalized.encoding not in {None, "base64"}:
             raise ValueError("encoding must be base64 when data is bytes")
         payload = {
-            "path": entry.path,
-            "data": base64.b64encode(bytes(entry.data)).decode("ascii"),
+            "path": normalized.path,
+            "data": base64.b64encode(bytes(normalized.data)).decode("ascii"),
             "encoding": "base64",
         }
 
-    if entry.append is not None:
-        payload["append"] = entry.append
-    if entry.mode is not None:
-        payload["mode"] = entry.mode
+    if normalized.append is not None:
+        payload["append"] = normalized.append
+    if normalized.mode is not None:
+        payload["mode"] = normalized.mode
     return payload
 
 

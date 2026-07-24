@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Literal, Optional, Type, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -120,7 +122,7 @@ class BrowserUseAgentBrain(BaseModel):
 
 class BrowserUseAgentOutput(BaseModel):
     current_state: BrowserUseAgentBrain
-    action: list[dict]
+    action: List[Dict]
 
 
 class BrowserUseActionResult(BaseModel):
@@ -170,8 +172,8 @@ class BrowserUseDOMHistoryElement(BaseModel):
     tag_name: str
     xpath: str
     highlight_index: Optional[int]
-    entire_parent_branch_path: list[str]
-    attributes: dict[str, str]
+    entire_parent_branch_path: List[str]
+    attributes: Dict[str, str]
     shadow_root: bool = False
     css_selector: Optional[str] = None
     page_coordinates: Optional[BrowserUseCoordinateSet] = None
@@ -182,16 +184,16 @@ class BrowserUseDOMHistoryElement(BaseModel):
 class BrowserUseBrowserStateHistory(BaseModel):
     url: str
     title: str
-    tabs: list[BrowserUseTabInfo]
+    tabs: List[BrowserUseTabInfo]
     interacted_element: Union[
-        list[Union[BrowserUseDOMHistoryElement, None]], list[None]
+        List[Union[BrowserUseDOMHistoryElement, None]], List[None]
     ]
     screenshot: Optional[str] = None
 
 
 class BrowserUseAgentHistory(BaseModel):
     model_output: Union[BrowserUseAgentOutput, None]
-    result: list[BrowserUseActionResult]
+    result: List[BrowserUseActionResult]
     state: BrowserUseBrowserStateHistory
     metadata: Optional[BrowserUseStepMetadata] = None
 
@@ -204,7 +206,7 @@ class BrowserUseAgentOutputV0710(BaseModel):
     evaluation_previous_goal: Optional[str] = None
     memory: Optional[str] = None
     next_goal: Optional[str] = None
-    action: list[dict]
+    action: List[Dict]
 
 
 class BrowserUseActionResultV0710(BaseModel):
@@ -212,7 +214,7 @@ class BrowserUseActionResultV0710(BaseModel):
     success: Optional[bool] = None
     error: Optional[str] = None
     metadata: Optional[dict] = None
-    attachments: Optional[list[str]] = None
+    attachments: Optional[List[str]] = None
     long_term_memory: Optional[str] = None
     extracted_content: Optional[str] = None
     include_extracted_content_only_once: Optional[bool] = False
@@ -222,8 +224,8 @@ class BrowserUseActionResultV0710(BaseModel):
 class BrowserUseBrowserStateHistoryV0710(BaseModel):
     url: str
     title: str
-    tabs: list[dict]
-    interacted_element: Union[list[Union[dict, None]], list[None]]
+    tabs: List[Dict]
+    interacted_element: Union[List[Union[Dict, None]], List[None]]
 
 
 class BrowserUseStepMetadataV0710(BaseModel):
@@ -234,7 +236,7 @@ class BrowserUseStepMetadataV0710(BaseModel):
 
 class BrowserUseAgentHistoryV0710(BaseModel):
     model_output: Union[BrowserUseAgentOutputV0710, None]
-    result: list[BrowserUseActionResultV0710]
+    result: List[BrowserUseActionResultV0710]
     state: BrowserUseBrowserStateHistoryV0710
     metadata: Optional[BrowserUseStepMetadataV0710] = None
 
@@ -253,7 +255,7 @@ class BrowserUseTaskData(BaseModel):
         populate_by_alias=True,
     )
 
-    steps: list[BrowserUseStep]
+    steps: List[BrowserUseStep]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 

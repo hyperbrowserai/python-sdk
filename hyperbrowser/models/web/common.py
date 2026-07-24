@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Literal, Optional, Union, List
+from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field, ConfigDict
 from hyperbrowser.models.consts import (
     FetchScreenshotFormat,
@@ -42,10 +42,10 @@ class FetchStorageStateOptions(BaseModel):
     Storage state to apply before fetching.
     """
 
-    local_storage: Optional[dict[str, str]] = Field(
+    local_storage: Optional[Dict[str, str]] = Field(
         default=None, serialization_alias="localStorage"
     )
-    session_storage: Optional[dict[str, str]] = Field(
+    session_storage: Optional[Dict[str, str]] = Field(
         default=None, serialization_alias="sessionStorage"
     )
 
@@ -72,12 +72,12 @@ class PageData(BaseModel):
     url: str
     status: PageStatus
     error: Optional[str] = None
-    metadata: Optional[dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
     markdown: Optional[str] = None
     html: Optional[str] = None
-    links: Optional[list[str]] = None
+    links: Optional[List[str]] = None
     screenshot: Optional[str] = None
-    json_: Optional[dict[str, Any]] = Field(
+    json_: Optional[Dict[str, Any]] = Field(
         default=None, alias="json", serialization_alias="json"
     )
     branding: Optional[BrandingProfile] = None

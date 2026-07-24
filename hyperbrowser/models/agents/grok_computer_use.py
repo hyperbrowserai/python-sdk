@@ -1,4 +1,6 @@
-from typing import Any, Literal, Optional
+from __future__ import annotations
+
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -103,7 +105,7 @@ class GrokComputerUseStepResponse(BaseModel):
         default=None, serialization_alias="incomplete_details"
     )
     model: Optional[str] = Field(default=None, serialization_alias="model")
-    output: Optional[list[Any]] = Field(default=None, serialization_alias="output")
+    output: Optional[List[Any]] = Field(default=None, serialization_alias="output")
     reasoning: Optional[CuaStepReasoning] = Field(
         default=None, serialization_alias="reasoning"
     )
@@ -115,7 +117,7 @@ class GrokComputerUseTaskData(BaseModel):
         populate_by_alias=True,
     )
 
-    steps: list[GrokComputerUseStepResponse]
+    steps: List[GrokComputerUseStepResponse]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 

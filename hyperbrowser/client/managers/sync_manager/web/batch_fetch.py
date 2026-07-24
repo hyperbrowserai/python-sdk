@@ -1,3 +1,11 @@
+import time
+from typing import Optional, Union
+
+from hyperbrowser.client._request import (
+    dump_request,
+    dump_request_with_fetch_schemas,
+)
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     StartBatchFetchJobParams,
     StartBatchFetchJobResponse,
@@ -6,31 +14,24 @@ from hyperbrowser.models import (
     BatchFetchJobResponse,
     BatchFetchJobStatus,
     POLLING_ATTEMPTS,
-    FetchOutputJson,
 )
-from hyperbrowser.exceptions import HyperbrowserError
-import time
-import jsonref
+from hyperbrowser.types import (
+    GetBatchFetchJobParams as GetBatchFetchJobParamsDict,
+    StartBatchFetchJobParams as StartBatchFetchJobParamsDict,
+)
 
 
 class BatchFetchManager:
     def __init__(self, client):
         self._client = client
 
-    def start(self, params: StartBatchFetchJobParams) -> StartBatchFetchJobResponse:
-        if params.outputs and params.outputs.formats:
-            for output in params.outputs.formats:
-                if isinstance(output, FetchOutputJson) and output.schema_:
-                    if hasattr(output.schema_, "model_json_schema"):
-                        output.schema_ = jsonref.replace_refs(
-                            output.schema_.model_json_schema(),
-                            proxies=False,
-                            lazy_load=False,
-                        )
-
+    def start(
+        self,
+        params: Union[StartBatchFetchJobParamsDict, StartBatchFetchJobParams],
+    ) -> StartBatchFetchJobResponse:
         response = self._client.transport.post(
             self._client._build_url("/web/batch-fetch"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request_with_fetch_schemas(params, StartBatchFetchJobParams),
         )
         return StartBatchFetchJobResponse(**response.data)
 
@@ -41,16 +42,24 @@ class BatchFetchManager:
         return BatchFetchJobStatusResponse(**response.data)
 
     def get(
-        self, job_id: str, params: GetBatchFetchJobParams = GetBatchFetchJobParams()
+        self,
+        job_id: str,
+        params: Optional[
+            Union[GetBatchFetchJobParamsDict, GetBatchFetchJobParams]
+        ] = None,
     ) -> BatchFetchJobResponse:
+        if params is None:
+            params = GetBatchFetchJobParams()
         response = self._client.transport.get(
             self._client._build_url(f"/web/batch-fetch/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(params, GetBatchFetchJobParams),
         )
         return BatchFetchJobResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartBatchFetchJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartBatchFetchJobParamsDict, StartBatchFetchJobParams],
+        return_all_pages: bool = True,
     ) -> BatchFetchJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
