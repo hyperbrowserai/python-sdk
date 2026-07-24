@@ -167,8 +167,8 @@ client = Hyperbrowser(api_key="test-key")
 sandbox = client.sandboxes.create(
     {
         "image_name": "node",
-        "cpu": 4,
-        "memory_mib": 4096,
+        "cpu": 2,
+        "memory_mib": 2048,
         "disk_mib": 8192,
         "exposed_ports": [{"port": 3000, "auth": True}],
     }
