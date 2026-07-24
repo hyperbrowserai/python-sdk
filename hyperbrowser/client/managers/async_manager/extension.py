@@ -1,7 +1,8 @@
 import os
-from typing import List
+from typing import List, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.models.params import coerce_to_model, CreateExtensionParamsDict
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
 
 
@@ -9,7 +10,10 @@ class ExtensionManager:
     def __init__(self, client):
         self._client = client
 
-    async def create(self, params: CreateExtensionParams) -> ExtensionResponse:
+    async def create(
+        self, params: Union[CreateExtensionParams, CreateExtensionParamsDict]
+    ) -> ExtensionResponse:
+        params = coerce_to_model(CreateExtensionParams, params)
         file_path = params.file_path
         params.file_path = None
 

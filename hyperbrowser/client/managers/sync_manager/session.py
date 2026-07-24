@@ -1,5 +1,17 @@
 from typing import List, Optional, Union, IO, overload
 import warnings
+from ....models.params import (
+    coerce_to_model,
+    CaptchaEvaluationParamsDict,
+    CreateSessionParamsDict,
+    SessionEventLogListParamsDict,
+    SessionGetParamsDict,
+    SessionListParamsDict,
+    UpdateSessionProfileParamsDict,
+    UpdateSessionProxyParamsDict,
+    UpdateSessionScreenParamsDict,
+    UpdateSessionSolveCaptchasParamsDict,
+)
 from ....models.session import (
     BasicResponse,
     CaptchaEvaluationParams,
@@ -34,8 +46,11 @@ class SessionEventLogsManager:
     def list(
         self,
         session_id: str,
-        params: SessionEventLogListParams = SessionEventLogListParams(),
+        params: Union[
+            SessionEventLogListParams, SessionEventLogListParamsDict
+        ] = SessionEventLogListParams(),
     ) -> SessionEventLogListResponse:
+        params = coerce_to_model(SessionEventLogListParams, params)
         response = self._client.transport.get(
             self._client._build_url(f"/session/{session_id}/event-logs"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -50,20 +65,28 @@ class SessionManager:
         self._client = client
         self.event_logs = SessionEventLogsManager(client)
 
-    def create(self, params: CreateSessionParams = None) -> SessionDetail:
+    def create(
+        self,
+        params: Optional[Union[CreateSessionParams, CreateSessionParamsDict]] = None,
+    ) -> SessionDetail:
         response = self._client.transport.post(
             self._client._build_url("/session"),
             data=(
                 {}
                 if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
+                else coerce_to_model(CreateSessionParams, params).model_dump(
+                    exclude_none=True, by_alias=True
+                )
             ),
         )
         return SessionDetail(**response.data)
 
     def get(
-        self, id: str, params: SessionGetParams = SessionGetParams()
+        self,
+        id: str,
+        params: Union[SessionGetParams, SessionGetParamsDict] = SessionGetParams(),
     ) -> SessionDetail:
+        params = coerce_to_model(SessionGetParams, params)
         response = self._client.transport.get(
             self._client._build_url(f"/session/{id}"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -86,9 +109,11 @@ class SessionManager:
     def evaluate_captcha(
         self,
         id: str,
-        params: Optional[CaptchaEvaluationParams] = None,
+        params: Optional[
+            Union[CaptchaEvaluationParams, CaptchaEvaluationParamsDict]
+        ] = None,
     ) -> CaptchaEvaluationResponse:
-        params_obj = params or CaptchaEvaluationParams()
+        params_obj = coerce_to_model(CaptchaEvaluationParams, params)
         response = self._client.transport.post(
             self._client._build_url(f"/session/{id}/captcha/evaluate"),
             data=params_obj.model_dump(exclude_none=True, by_alias=True),
@@ -99,8 +124,10 @@ class SessionManager:
         return CaptchaEvaluationResponse(**response.data)
 
     def list(
-        self, params: SessionListParams = SessionListParams()
+        self,
+        params: Union[SessionListParams, SessionListParamsDict] = SessionListParams(),
     ) -> SessionListResponse:
+        params = coerce_to_model(SessionListParams, params)
         response = self._client.transport.get(
             self._client._build_url("/sessions"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -158,7 +185,9 @@ class SessionManager:
 
     @overload
     def update_profile_params(
-        self, id: str, params: UpdateSessionProfileParams
+        self,
+        id: str,
+        params: Union[UpdateSessionProfileParams, UpdateSessionProfileParamsDict],
     ) -> BasicResponse: ...
 
     @overload
@@ -169,7 +198,9 @@ class SessionManager:
     def update_profile_params(
         self,
         id: str,
-        params: Union[UpdateSessionProfileParams, bool, None] = None,
+        params: Union[
+            UpdateSessionProfileParams, UpdateSessionProfileParamsDict, bool, None
+        ] = None,
         *,
         persist_changes: Optional[bool] = None,
     ) -> BasicResponse:
@@ -181,6 +212,12 @@ class SessionManager:
                     "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
                 )
             params_obj = params
+        elif isinstance(params, dict):
+            if persist_changes is not None:
+                raise TypeError(
+                    "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
+                )
+            params_obj = coerce_to_model(UpdateSessionProfileParams, params)
         elif isinstance(params, bool):
             if persist_changes is not None:
                 raise TypeError(
@@ -212,8 +249,9 @@ class SessionManager:
     def update_proxy_params(
         self,
         id: str,
-        params: UpdateSessionProxyParams,
+        params: Union[UpdateSessionProxyParams, UpdateSessionProxyParamsDict],
     ) -> BasicResponse:
+        params = coerce_to_model(UpdateSessionProxyParams, params)
         response = self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={
@@ -226,8 +264,9 @@ class SessionManager:
     def update_screen_size(
         self,
         id: str,
-        params: UpdateSessionScreenParams,
+        params: Union[UpdateSessionScreenParams, UpdateSessionScreenParamsDict],
     ) -> BasicResponse:
+        params = coerce_to_model(UpdateSessionScreenParams, params)
         response = self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={
@@ -240,9 +279,13 @@ class SessionManager:
     def start_captcha_solving(
         self,
         id: str,
-        params: Optional[UpdateSessionSolveCaptchasParams] = None,
+        params: Optional[
+            Union[
+                UpdateSessionSolveCaptchasParams, UpdateSessionSolveCaptchasParamsDict
+            ]
+        ] = None,
     ) -> UpdateSessionSolveCaptchasResponse:
-        params_obj = params or UpdateSessionSolveCaptchasParams()
+        params_obj = coerce_to_model(UpdateSessionSolveCaptchasParams, params)
         response = self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={

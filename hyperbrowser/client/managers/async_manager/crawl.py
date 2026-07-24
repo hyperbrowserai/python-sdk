@@ -1,6 +1,12 @@
 import asyncio
+from typing import Union
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
+from ....models.params import (
+    coerce_to_model,
+    GetCrawlJobParamsDict,
+    StartCrawlJobParamsDict,
+)
 from ....models.crawl import (
     CrawlJobResponse,
     CrawlJobStatus,
@@ -16,7 +22,10 @@ class CrawlManager:
     def __init__(self, client):
         self._client = client
 
-    async def start(self, params: StartCrawlJobParams) -> StartCrawlJobResponse:
+    async def start(
+        self, params: Union[StartCrawlJobParams, StartCrawlJobParamsDict]
+    ) -> StartCrawlJobResponse:
+        params = coerce_to_model(StartCrawlJobParams, params)
         response = await self._client.transport.post(
             self._client._build_url("/crawl"),
             data=params.model_dump(exclude_none=True, by_alias=True),
@@ -30,8 +39,11 @@ class CrawlManager:
         return CrawlJobStatusResponse(**response.data)
 
     async def get(
-        self, job_id: str, params: GetCrawlJobParams = GetCrawlJobParams()
+        self,
+        job_id: str,
+        params: Union[GetCrawlJobParams, GetCrawlJobParamsDict] = GetCrawlJobParams(),
     ) -> CrawlJobResponse:
+        params = coerce_to_model(GetCrawlJobParams, params)
         response = await self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -39,7 +51,9 @@ class CrawlManager:
         return CrawlJobResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartCrawlJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartCrawlJobParams, StartCrawlJobParamsDict],
+        return_all_pages: bool = True,
     ) -> CrawlJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id

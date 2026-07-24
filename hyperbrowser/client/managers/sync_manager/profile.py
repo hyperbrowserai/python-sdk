@@ -1,3 +1,11 @@
+from typing import Optional, Union
+
+from hyperbrowser.models.params import (
+    coerce_to_model,
+    CreateProfileParamsDict,
+    ForkProfileParamsDict,
+    ProfileListParamsDict,
+)
 from hyperbrowser.models.profile import (
     CreateProfileParams,
     CreateProfileResponse,
@@ -13,24 +21,35 @@ class ProfileManager:
     def __init__(self, client):
         self._client = client
 
-    def create(self, params: CreateProfileParams = None) -> CreateProfileResponse:
+    def create(
+        self,
+        params: Optional[Union[CreateProfileParams, CreateProfileParamsDict]] = None,
+    ) -> CreateProfileResponse:
         response = self._client.transport.post(
             self._client._build_url("/profile"),
             data=(
                 {}
                 if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
+                else coerce_to_model(CreateProfileParams, params).model_dump(
+                    exclude_none=True, by_alias=True
+                )
             ),
         )
         return CreateProfileResponse(**response.data)
 
-    def fork(self, id: str, params: ForkProfileParams = None) -> CreateProfileResponse:
+    def fork(
+        self,
+        id: str,
+        params: Optional[Union[ForkProfileParams, ForkProfileParamsDict]] = None,
+    ) -> CreateProfileResponse:
         response = self._client.transport.post(
             self._client._build_url(f"/profile/{id}/fork"),
             data=(
                 {}
                 if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
+                else coerce_to_model(ForkProfileParams, params).model_dump(
+                    exclude_none=True, by_alias=True
+                )
             ),
         )
         return CreateProfileResponse(**response.data)
@@ -48,8 +67,10 @@ class ProfileManager:
         return BasicResponse(**response.data)
 
     def list(
-        self, params: ProfileListParams = ProfileListParams()
+        self,
+        params: Union[ProfileListParams, ProfileListParamsDict] = ProfileListParams(),
     ) -> ProfileListResponse:
+        params = coerce_to_model(ProfileListParams, params)
         response = self._client.transport.get(
             self._client._build_url("/profiles"),
             params=params.model_dump(exclude_none=True, by_alias=True),

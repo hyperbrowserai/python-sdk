@@ -8,7 +8,13 @@ from hyperbrowser.models import (
     POLLING_ATTEMPTS,
     FetchOutputJson,
 )
+from hyperbrowser.models.params import (
+    coerce_to_model,
+    GetBatchFetchJobParamsDict,
+    StartBatchFetchJobParamsDict,
+)
 from hyperbrowser.exceptions import HyperbrowserError
+from typing import Union
 import asyncio
 import jsonref
 
@@ -18,8 +24,9 @@ class BatchFetchManager:
         self._client = client
 
     async def start(
-        self, params: StartBatchFetchJobParams
+        self, params: Union[StartBatchFetchJobParams, StartBatchFetchJobParamsDict]
     ) -> StartBatchFetchJobResponse:
+        params = coerce_to_model(StartBatchFetchJobParams, params)
         if params.outputs and params.outputs.formats:
             for output in params.outputs.formats:
                 if isinstance(output, FetchOutputJson) and output.schema_:
@@ -43,8 +50,13 @@ class BatchFetchManager:
         return BatchFetchJobStatusResponse(**response.data)
 
     async def get(
-        self, job_id: str, params: GetBatchFetchJobParams = GetBatchFetchJobParams()
+        self,
+        job_id: str,
+        params: Union[
+            GetBatchFetchJobParams, GetBatchFetchJobParamsDict
+        ] = GetBatchFetchJobParams(),
     ) -> BatchFetchJobResponse:
+        params = coerce_to_model(GetBatchFetchJobParams, params)
         response = await self._client.transport.get(
             self._client._build_url(f"/web/batch-fetch/{job_id}"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -52,7 +64,9 @@ class BatchFetchManager:
         return BatchFetchJobResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartBatchFetchJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartBatchFetchJobParams, StartBatchFetchJobParamsDict],
+        return_all_pages: bool = True,
     ) -> BatchFetchJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id

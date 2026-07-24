@@ -388,6 +388,8 @@ from .sandbox import (
     SandboxTerminalEvent,
 )
 from .team import TeamCreditInfo
+from . import params as _params
+from .params import *  # noqa: F401,F403
 
 __all__ = [
     # consts
@@ -760,3 +762,6 @@ __all__ = [
     "WebCrawlJobStatusResponse",
     "WebCrawlJobResponse",
 ]
+
+# TypedDict param types and the coercion helper (see params.py)
+__all__ += _params.__all__

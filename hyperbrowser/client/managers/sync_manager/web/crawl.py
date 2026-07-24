@@ -8,7 +8,13 @@ from hyperbrowser.models import (
     POLLING_ATTEMPTS,
     FetchOutputJson,
 )
+from hyperbrowser.models.params import (
+    coerce_to_model,
+    GetWebCrawlJobParamsDict,
+    StartWebCrawlJobParamsDict,
+)
 from hyperbrowser.exceptions import HyperbrowserError
+from typing import Union
 import time
 import jsonref
 
@@ -17,7 +23,10 @@ class WebCrawlManager:
     def __init__(self, client):
         self._client = client
 
-    def start(self, params: StartWebCrawlJobParams) -> StartWebCrawlJobResponse:
+    def start(
+        self, params: Union[StartWebCrawlJobParams, StartWebCrawlJobParamsDict]
+    ) -> StartWebCrawlJobResponse:
+        params = coerce_to_model(StartWebCrawlJobParams, params)
         if params.outputs and params.outputs.formats:
             for output in params.outputs.formats:
                 if isinstance(output, FetchOutputJson) and output.schema_:
@@ -41,8 +50,13 @@ class WebCrawlManager:
         return WebCrawlJobStatusResponse(**response.data)
 
     def get(
-        self, job_id: str, params: GetWebCrawlJobParams = GetWebCrawlJobParams()
+        self,
+        job_id: str,
+        params: Union[
+            GetWebCrawlJobParams, GetWebCrawlJobParamsDict
+        ] = GetWebCrawlJobParams(),
     ) -> WebCrawlJobResponse:
+        params = coerce_to_model(GetWebCrawlJobParams, params)
         response = self._client.transport.get(
             self._client._build_url(f"/web/crawl/{job_id}"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -50,7 +64,9 @@ class WebCrawlManager:
         return WebCrawlJobResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartWebCrawlJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartWebCrawlJobParams, StartWebCrawlJobParamsDict],
+        return_all_pages: bool = True,
     ) -> WebCrawlJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id

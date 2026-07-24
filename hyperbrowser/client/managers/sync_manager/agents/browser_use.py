@@ -1,7 +1,10 @@
 import time
+from typing import Union
+
 import jsonref
 
 from hyperbrowser.exceptions import HyperbrowserError
+from .....models.params import coerce_to_model, StartBrowserUseTaskParamsDict
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -17,7 +20,10 @@ class BrowserUseManager:
     def __init__(self, client):
         self._client = client
 
-    def start(self, params: StartBrowserUseTaskParams) -> StartBrowserUseTaskResponse:
+    def start(
+        self, params: Union[StartBrowserUseTaskParams, StartBrowserUseTaskParamsDict]
+    ) -> StartBrowserUseTaskResponse:
+        params = coerce_to_model(StartBrowserUseTaskParams, params)
         if params.output_model_schema:
             if hasattr(params.output_model_schema, "model_json_schema"):
                 params.output_model_schema = jsonref.replace_refs(
@@ -50,7 +56,7 @@ class BrowserUseManager:
         return BasicResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartBrowserUseTaskParams
+        self, params: Union[StartBrowserUseTaskParams, StartBrowserUseTaskParamsDict]
     ) -> BrowserUseTaskResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id

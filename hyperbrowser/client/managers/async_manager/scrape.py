@@ -1,7 +1,13 @@
 import asyncio
-from typing import Optional
+from typing import Union
 
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
+from ....models.params import (
+    coerce_to_model,
+    GetBatchScrapeJobParamsDict,
+    StartBatchScrapeJobParamsDict,
+    StartScrapeJobParamsDict,
+)
 from ....models.scrape import (
     BatchScrapeJobResponse,
     BatchScrapeJobStatusResponse,
@@ -22,8 +28,10 @@ class BatchScrapeManager:
         self._client = client
 
     async def start(
-        self, params: StartBatchScrapeJobParams
+        self,
+        params: Union[StartBatchScrapeJobParams, StartBatchScrapeJobParamsDict],
     ) -> StartBatchScrapeJobResponse:
+        params = coerce_to_model(StartBatchScrapeJobParams, params)
         response = await self._client.transport.post(
             self._client._build_url("/scrape/batch"),
             data=params.model_dump(exclude_none=True, by_alias=True),
@@ -37,8 +45,13 @@ class BatchScrapeManager:
         return BatchScrapeJobStatusResponse(**response.data)
 
     async def get(
-        self, job_id: str, params: GetBatchScrapeJobParams = GetBatchScrapeJobParams()
+        self,
+        job_id: str,
+        params: Union[
+            GetBatchScrapeJobParams, GetBatchScrapeJobParamsDict
+        ] = GetBatchScrapeJobParams(),
     ) -> BatchScrapeJobResponse:
+        params = coerce_to_model(GetBatchScrapeJobParams, params)
         response = await self._client.transport.get(
             self._client._build_url(f"/scrape/batch/{job_id}"),
             params=params.model_dump(exclude_none=True, by_alias=True),
@@ -46,7 +59,9 @@ class BatchScrapeManager:
         return BatchScrapeJobResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartBatchScrapeJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartBatchScrapeJobParams, StartBatchScrapeJobParamsDict],
+        return_all_pages: bool = True,
     ) -> BatchScrapeJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
@@ -130,7 +145,10 @@ class ScrapeManager:
         self._client = client
         self.batch = BatchScrapeManager(client)
 
-    async def start(self, params: StartScrapeJobParams) -> StartScrapeJobResponse:
+    async def start(
+        self, params: Union[StartScrapeJobParams, StartScrapeJobParamsDict]
+    ) -> StartScrapeJobResponse:
+        params = coerce_to_model(StartScrapeJobParams, params)
         response = await self._client.transport.post(
             self._client._build_url("/scrape"),
             data=params.model_dump(exclude_none=True, by_alias=True),
@@ -149,7 +167,9 @@ class ScrapeManager:
         )
         return ScrapeJobResponse(**response.data)
 
-    async def start_and_wait(self, params: StartScrapeJobParams) -> ScrapeJobResponse:
+    async def start_and_wait(
+        self, params: Union[StartScrapeJobParams, StartScrapeJobParamsDict]
+    ) -> ScrapeJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:

@@ -1,6 +1,9 @@
 import time
+from typing import Union
+
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
+from hyperbrowser.models.params import coerce_to_model, StartExtractJobParamsDict
 from hyperbrowser.models.extract import (
     ExtractJobResponse,
     ExtractJobStatusResponse,
@@ -14,7 +17,10 @@ class ExtractManager:
     def __init__(self, client):
         self._client = client
 
-    def start(self, params: StartExtractJobParams) -> StartExtractJobResponse:
+    def start(
+        self, params: Union[StartExtractJobParams, StartExtractJobParamsDict]
+    ) -> StartExtractJobResponse:
+        params = coerce_to_model(StartExtractJobParams, params)
         if not params.schema_ and not params.prompt:
             raise HyperbrowserError("Either schema or prompt must be provided")
         if params.schema_:
@@ -41,7 +47,9 @@ class ExtractManager:
         )
         return ExtractJobResponse(**response.data)
 
-    def start_and_wait(self, params: StartExtractJobParams) -> ExtractJobResponse:
+    def start_and_wait(
+        self, params: Union[StartExtractJobParams, StartExtractJobParamsDict]
+    ) -> ExtractJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id
         if not job_id:
