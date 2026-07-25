@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import re
 import subprocess
@@ -5,12 +6,16 @@ import sys
 from pathlib import Path
 from typing import Set
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 TYPECHECK_DIR = ROOT / "tests" / "typecheck"
 
 
 def _run_mypy(fixture: str) -> subprocess.CompletedProcess:
+    if importlib.util.find_spec("mypy") is None:
+        pytest.skip("mypy is installed by the dedicated typing CI job")
     return subprocess.run(
         [
             sys.executable,
@@ -36,6 +41,8 @@ def _run_mypy(fixture: str) -> subprocess.CompletedProcess:
 
 
 def _run_pyright(fixture: str) -> subprocess.CompletedProcess:
+    if importlib.util.find_spec("pyright") is None:
+        pytest.skip("pyright is installed by the dedicated typing CI job")
     return subprocess.run(
         [
             sys.executable,

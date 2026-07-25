@@ -7,7 +7,6 @@ license = "MIT"
 readme = "README.md"
 include = [
     "LICENSE",
-    { path = "MIGRATING_TO_1.0.md", format = ["sdist"] },
     { path = "hyperbrowser/py.typed", format = ["sdist", "wheel"] },
 ]
 homepage = "https://github.com/hyperbrowserai/python-sdk"
