@@ -23,8 +23,6 @@ typing-extensions = ">=4.0,<5"
 
 
 [tool.poetry.group.dev.dependencies]
-mypy = "1.14.1"
-pyright = "1.1.411"
 ruff = "^0.3.0"
 pytest = "^8.3.0"
 
