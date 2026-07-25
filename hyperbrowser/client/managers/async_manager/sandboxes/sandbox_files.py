@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from websockets.asyncio.client import connect as async_ws_connect
 from websockets.exceptions import ConnectionClosed
 
+from ...._request import coerce_request, dump_request
 from .....exceptions import HyperbrowserError
 from .....models.sandbox import (
     SandboxFileChmodParams,
@@ -31,6 +32,12 @@ from .....models.sandbox import (
     SandboxPresignedUrl,
 )
 from .....sandbox_common import build_headers, to_websocket_transport_target
+from .....types import (
+    SandboxFileChmodParams as SandboxFileChmodParamsDict,
+    SandboxFileChownParams as SandboxFileChownParamsDict,
+    SandboxFileCopyParams as SandboxFileCopyParamsDict,
+    SandboxFileWriteEntry as SandboxFileWriteEntryDict,
+)
 from ...sandboxes.shared import (
     DEFAULT_WATCH_TIMEOUT_MS,
     _encode_batch_write_entry,
@@ -398,7 +405,10 @@ class SandboxFilesApi:
 
     async def write(
         self,
-        path_or_files: Union[str, List[SandboxFileWriteEntry]],
+        path_or_files: Union[
+            str,
+            List[Union[SandboxFileWriteEntryDict, SandboxFileWriteEntry]],
+        ],
         data: Optional[Union[str, bytes, bytearray]] = None,
     ):
         if isinstance(path_or_files, str):
@@ -422,8 +432,6 @@ class SandboxFilesApi:
 
         encoded_files = []
         for entry in path_or_files:
-            if not isinstance(entry, SandboxFileWriteEntry):
-                raise TypeError("files must contain SandboxFileWriteEntry instances")
             encoded_files.append(_encode_batch_write_entry(entry))
 
         payload = await self._transport.request_json(
@@ -552,11 +560,14 @@ class SandboxFilesApi:
         *,
         overwrite: Optional[bool] = None,
     ) -> SandboxFileInfo:
-        payload = SandboxFileMoveParams(
-            source=old_path,
-            destination=new_path,
-            overwrite=overwrite,
-        ).model_dump(exclude_none=True)
+        payload = dump_request(
+            {
+                "source": old_path,
+                "destination": new_path,
+                "overwrite": overwrite,
+            },
+            SandboxFileMoveParams,
+        )
         payload["from"] = payload.pop("source")
         payload["to"] = payload.pop("destination")
         payload = await self._transport.request_json(
@@ -581,10 +592,13 @@ class SandboxFilesApi:
             "/sandbox/files/delete",
             method="POST",
             json_body=self._with_run_as_body(
-                SandboxFileDeleteParams(
-                    path=path,
-                    recursive=recursive,
-                ).model_dump(exclude_none=True)
+                dump_request(
+                    {
+                        "path": path,
+                        "recursive": recursive,
+                    },
+                    SandboxFileDeleteParams,
+                )
             ),
             headers={"content-type": "application/json"},
         )
@@ -594,24 +608,26 @@ class SandboxFilesApi:
 
     async def copy(
         self,
-        params: Optional[SandboxFileCopyParams] = None,
+        params: Optional[
+            Union[SandboxFileCopyParamsDict, SandboxFileCopyParams]
+        ] = None,
         *,
         source: Optional[str] = None,
         destination: Optional[str] = None,
         recursive: Optional[bool] = None,
         overwrite: Optional[bool] = None,
     ) -> SandboxFileInfo:
-        if params is None:
-            normalized = SandboxFileCopyParams(
-                source=source,
-                destination=destination,
-                recursive=recursive,
-                overwrite=overwrite,
-            )
-        elif isinstance(params, SandboxFileCopyParams):
-            normalized = params
-        else:
-            raise TypeError("params must be a SandboxFileCopyParams instance")
+        normalized = coerce_request(
+            params
+            if params is not None
+            else {
+                "source": source,
+                "destination": destination,
+                "recursive": recursive,
+                "overwrite": overwrite,
+            },
+            SandboxFileCopyParams,
+        )
 
         payload = await self._transport.request_json(
             "/sandbox/files/copy",
@@ -630,53 +646,61 @@ class SandboxFilesApi:
 
     async def chmod(
         self,
-        params: Optional[SandboxFileChmodParams] = None,
+        params: Optional[
+            Union[SandboxFileChmodParamsDict, SandboxFileChmodParams]
+        ] = None,
         *,
         path: Optional[str] = None,
         mode: Optional[str] = None,
         recursive: Optional[bool] = None,
     ) -> None:
-        if params is None:
-            normalized = SandboxFileChmodParams(
-                path=path,
-                mode=mode,
-                recursive=recursive,
-            )
-        elif isinstance(params, SandboxFileChmodParams):
-            normalized = params
-        else:
-            raise TypeError("params must be a SandboxFileChmodParams instance")
+        normalized = coerce_request(
+            params
+            if params is not None
+            else {
+                "path": path,
+                "mode": mode,
+                "recursive": recursive,
+            },
+            SandboxFileChmodParams,
+        )
         await self._transport.request_json(
             "/sandbox/files/chmod",
             method="POST",
-            json_body=self._with_run_as_body(normalized.model_dump(exclude_none=True)),
+            json_body=self._with_run_as_body(
+                dump_request(normalized, SandboxFileChmodParams)
+            ),
             headers={"content-type": "application/json"},
         )
 
     async def chown(
         self,
-        params: Optional[SandboxFileChownParams] = None,
+        params: Optional[
+            Union[SandboxFileChownParamsDict, SandboxFileChownParams]
+        ] = None,
         *,
         path: Optional[str] = None,
         uid: Optional[int] = None,
         gid: Optional[int] = None,
         recursive: Optional[bool] = None,
     ) -> None:
-        if params is None:
-            normalized = SandboxFileChownParams(
-                path=path,
-                uid=uid,
-                gid=gid,
-                recursive=recursive,
-            )
-        elif isinstance(params, SandboxFileChownParams):
-            normalized = params
-        else:
-            raise TypeError("params must be a SandboxFileChownParams instance")
+        normalized = coerce_request(
+            params
+            if params is not None
+            else {
+                "path": path,
+                "uid": uid,
+                "gid": gid,
+                "recursive": recursive,
+            },
+            SandboxFileChownParams,
+        )
         await self._transport.request_json(
             "/sandbox/files/chown",
             method="POST",
-            json_body=self._with_run_as_body(normalized.model_dump(exclude_none=True)),
+            json_body=self._with_run_as_body(
+                dump_request(normalized, SandboxFileChownParams)
+            ),
             headers={"content-type": "application/json"},
         )
 
@@ -740,11 +764,14 @@ class SandboxFilesApi:
             "/sandbox/files/presign-upload",
             method="POST",
             json_body=self._with_run_as_body(
-                SandboxPresignFileParams(
-                    path=path,
-                    expires_in_seconds=expires_in_seconds,
-                    one_time=one_time,
-                ).model_dump(exclude_none=True, by_alias=True)
+                dump_request(
+                    {
+                        "path": path,
+                        "expires_in_seconds": expires_in_seconds,
+                        "one_time": one_time,
+                    },
+                    SandboxPresignFileParams,
+                )
             ),
             headers={"content-type": "application/json"},
         )
@@ -761,11 +788,14 @@ class SandboxFilesApi:
             "/sandbox/files/presign-download",
             method="POST",
             json_body=self._with_run_as_body(
-                SandboxPresignFileParams(
-                    path=path,
-                    expires_in_seconds=expires_in_seconds,
-                    one_time=one_time,
-                ).model_dump(exclude_none=True, by_alias=True)
+                dump_request(
+                    {
+                        "path": path,
+                        "expires_in_seconds": expires_in_seconds,
+                        "one_time": one_time,
+                    },
+                    SandboxPresignFileParams,
+                )
             ),
             headers={"content-type": "application/json"},
         )

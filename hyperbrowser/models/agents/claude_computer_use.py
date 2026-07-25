@@ -1,4 +1,6 @@
-from typing import Any, Literal, Optional
+from __future__ import annotations
+
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -90,7 +92,7 @@ class ClaudeComputerUseStepResponse(BaseModel):
     role: str
     type: str
     model: str
-    content: list[Any]
+    content: List[Any]
     stop_reason: Optional[str] = Field(default=None)
     stop_sequence: Optional[str] = Field(default=None)
 
@@ -100,7 +102,7 @@ class ClaudeComputerUseTaskData(BaseModel):
         populate_by_alias=True,
     )
 
-    steps: list[ClaudeComputerUseStepResponse]
+    steps: List[ClaudeComputerUseStepResponse]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 

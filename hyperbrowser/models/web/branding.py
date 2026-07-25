@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional, List, Union
+from typing import Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -180,10 +180,10 @@ class BrandingTypography(BaseModel):
     font_sizes: Optional[BrandingFontSizes] = Field(
         default=None, alias="fontSizes", serialization_alias="fontSizes"
     )
-    line_heights: Optional[dict[str, Optional[float]]] = Field(
+    line_heights: Optional[Dict[str, Optional[float]]] = Field(
         default=None, alias="lineHeights", serialization_alias="lineHeights"
     )
-    font_weights: Optional[dict[str, Optional[float]]] = Field(
+    font_weights: Optional[Dict[str, Optional[float]]] = Field(
         default=None, alias="fontWeights", serialization_alias="fontWeights"
     )
 
@@ -197,8 +197,8 @@ class BrandingSpacing(BaseModel):
     border_radius: Optional[str] = Field(
         default=None, alias="borderRadius", serialization_alias="borderRadius"
     )
-    padding: Optional[dict[str, Optional[float]]] = None
-    margins: Optional[dict[str, Optional[float]]] = None
+    padding: Optional[Dict[str, Optional[float]]] = None
+    margins: Optional[Dict[str, Optional[float]]] = None
     grid_gutter: Optional[float] = Field(
         default=None, alias="gridGutter", serialization_alias="gridGutter"
     )

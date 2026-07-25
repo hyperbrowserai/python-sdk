@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -156,7 +158,7 @@ class HyperAgentTaskData(BaseModel):
         populate_by_alias=True,
     )
 
-    steps: list[Union[HyperAgentStep, HyperAgentStepV110]]
+    steps: List[Union[HyperAgentStep, HyperAgentStepV110]]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 

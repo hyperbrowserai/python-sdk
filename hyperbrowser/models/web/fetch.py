@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Any, Optional, List, Union
+from typing import Any, Dict, List, Optional
 from .common import (
     FetchOutputOptions,
     FetchBrowserOptions,
@@ -39,7 +39,7 @@ class FetchResponseData(BaseModel):
         populate_by_alias=True,
     )
 
-    metadata: Optional[dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None

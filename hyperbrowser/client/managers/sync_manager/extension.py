@@ -1,31 +1,34 @@
 import os
-from typing import List
+from typing import List, Union
 
+from hyperbrowser.client._request import coerce_request, dump_request
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.extension import CreateExtensionParams, ExtensionResponse
+from hyperbrowser.types import CreateExtensionParams as CreateExtensionParamsDict
 
 
 class ExtensionManager:
     def __init__(self, client):
         self._client = client
 
-    def create(self, params: CreateExtensionParams) -> ExtensionResponse:
-        file_path = params.file_path
-        params.file_path = None
+    def create(
+        self,
+        params: Union[CreateExtensionParamsDict, CreateExtensionParams],
+    ) -> ExtensionResponse:
+        normalized = coerce_request(params, CreateExtensionParams)
+        file_path = normalized.file_path
 
         # Check if file exists before trying to open it
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Extension file not found at path: {file_path}")
 
-        response = self._client.transport.post(
-            self._client._build_url("/extensions/add"),
-            data=(
-                {}
-                if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
-            ),
-            files={"file": open(file_path, "rb")},
-        )
+        normalized = normalized.model_copy(update={"file_path": None})
+        with open(file_path, "rb") as file_obj:
+            response = self._client.transport.post(
+                self._client._build_url("/extensions/add"),
+                data=dump_request(normalized, CreateExtensionParams),
+                files={"file": file_obj},
+            )
         return ExtensionResponse(**response.data)
 
     def list(self) -> List[ExtensionResponse]:

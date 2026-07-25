@@ -1,4 +1,6 @@
-from typing import List, Literal, Optional, Union, Any
+from __future__ import annotations
+
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from hyperbrowser.models.consts import (
@@ -34,10 +36,10 @@ class ScreenshotOptions(BaseModel):
 
 
 class StorageStateOptions(BaseModel):
-    local_storage: Optional[dict[str, str]] = Field(
+    local_storage: Optional[Dict[str, str]] = Field(
         default=None, serialization_alias="localStorage"
     )
-    session_storage: Optional[dict[str, str]] = Field(
+    session_storage: Optional[Dict[str, str]] = Field(
         default=None, serialization_alias="sessionStorage"
     )
 
@@ -117,7 +119,7 @@ class ScrapeJobData(BaseModel):
     Data from a scraped site.
     """
 
-    metadata: Optional[dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None
@@ -177,7 +179,7 @@ class ScrapedPage(BaseModel):
     url: str
     status: ScrapePageStatus
     error: Optional[str] = None
-    metadata: Optional[dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None

@@ -1,5 +1,20 @@
-from typing import List, Optional, Union, IO, overload
 import warnings
+from collections.abc import Mapping
+from typing import IO, List, Optional, Union, overload
+
+from hyperbrowser.client._request import coerce_request, dump_request
+from hyperbrowser.types import (
+    CaptchaEvaluationParams as CaptchaEvaluationParamsDict,
+    CreateSessionParams as CreateSessionParamsDict,
+    SessionEventLogListParams as SessionEventLogListParamsDict,
+    SessionGetParams as SessionGetParamsDict,
+    SessionListParams as SessionListParamsDict,
+    UpdateSessionProfileParams as UpdateSessionProfileParamsDict,
+    UpdateSessionProxyParams as UpdateSessionProxyParamsDict,
+    UpdateSessionScreenParams as UpdateSessionScreenParamsDict,
+    UpdateSessionSolveCaptchasParams as UpdateSessionSolveCaptchasParamsDict,
+)
+
 from ....models.session import (
     BasicResponse,
     CaptchaEvaluationParams,
@@ -16,7 +31,6 @@ from ....models.session import (
     UploadFileResponse,
     SessionEventLogListParams,
     SessionEventLogListResponse,
-    SessionEventLog,
     UpdateSessionProfileParams,
     UpdateSessionProxyParams,
     UpdateSessionScreenParams,
@@ -35,11 +49,15 @@ class SessionEventLogsManager:
     async def list(
         self,
         session_id: str,
-        params: SessionEventLogListParams = SessionEventLogListParams(),
-    ) -> List[SessionEventLog]:
+        params: Optional[
+            Union[SessionEventLogListParamsDict, SessionEventLogListParams]
+        ] = None,
+    ) -> SessionEventLogListResponse:
+        if params is None:
+            params = SessionEventLogListParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{session_id}/event-logs"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(params, SessionEventLogListParams),
         )
         return SessionEventLogListResponse(**response.data)
 
@@ -51,23 +69,26 @@ class SessionManager:
         self._client = client
         self.event_logs = SessionEventLogsManager(client)
 
-    async def create(self, params: CreateSessionParams = None) -> SessionDetail:
+    async def create(
+        self,
+        params: Optional[Union[CreateSessionParamsDict, CreateSessionParams]] = None,
+    ) -> SessionDetail:
         response = await self._client.transport.post(
             self._client._build_url("/session"),
-            data=(
-                {}
-                if params is None
-                else params.model_dump(exclude_none=True, by_alias=True)
-            ),
+            data=({} if params is None else dump_request(params, CreateSessionParams)),
         )
         return SessionDetail(**response.data)
 
     async def get(
-        self, id: str, params: SessionGetParams = SessionGetParams()
+        self,
+        id: str,
+        params: Optional[Union[SessionGetParamsDict, SessionGetParams]] = None,
     ) -> SessionDetail:
+        if params is None:
+            params = SessionGetParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/session/{id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(params, SessionGetParams),
         )
         return SessionDetail(**response.data)
 
@@ -87,12 +108,14 @@ class SessionManager:
     async def evaluate_captcha(
         self,
         id: str,
-        params: Optional[CaptchaEvaluationParams] = None,
+        params: Optional[
+            Union[CaptchaEvaluationParamsDict, CaptchaEvaluationParams]
+        ] = None,
     ) -> CaptchaEvaluationResponse:
-        params_obj = params or CaptchaEvaluationParams()
+        params_obj = params if params is not None else CaptchaEvaluationParams()
         response = await self._client.transport.post(
             self._client._build_url(f"/session/{id}/captcha/evaluate"),
-            data=params_obj.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params_obj, CaptchaEvaluationParams),
             timeout=max(
                 self._client.timeout, CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS
             ),
@@ -100,11 +123,14 @@ class SessionManager:
         return CaptchaEvaluationResponse(**response.data)
 
     async def list(
-        self, params: SessionListParams = SessionListParams()
+        self,
+        params: Optional[Union[SessionListParamsDict, SessionListParams]] = None,
     ) -> SessionListResponse:
+        if params is None:
+            params = SessionListParams()
         response = await self._client.transport.get(
             self._client._build_url("/sessions"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(params, SessionListParams),
         )
         return SessionListResponse(**response.data)
 
@@ -163,29 +189,46 @@ class SessionManager:
 
     @overload
     async def update_profile_params(
-        self, id: str, params: UpdateSessionProfileParams
+        self, id: str, params: UpdateSessionProfileParamsDict
     ) -> BasicResponse: ...
 
     @overload
     async def update_profile_params(
-        self, id: str, persist_changes: bool
+        self, id: str, params: UpdateSessionProfileParams
+    ) -> BasicResponse: ...
+
+    @overload
+    async def update_profile_params(self, id: str, params: bool) -> BasicResponse: ...
+
+    @overload
+    async def update_profile_params(
+        self,
+        id: str,
+        params: None = None,
+        *,
+        persist_changes: bool,
     ) -> BasicResponse: ...
 
     async def update_profile_params(
         self,
         id: str,
-        params: Union[UpdateSessionProfileParams, bool, None] = None,
+        params: Union[
+            UpdateSessionProfileParamsDict,
+            UpdateSessionProfileParams,
+            bool,
+            None,
+        ] = None,
         *,
         persist_changes: Optional[bool] = None,
     ) -> BasicResponse:
         params_obj: UpdateSessionProfileParams
 
-        if isinstance(params, UpdateSessionProfileParams):
+        if isinstance(params, (UpdateSessionProfileParams, Mapping)):
             if persist_changes is not None:
                 raise TypeError(
                     "Pass either UpdateSessionProfileParams as the second argument or persist_changes=bool, not both."
                 )
-            params_obj = params
+            params_obj = coerce_request(params, UpdateSessionProfileParams)
         elif isinstance(params, bool):
             if persist_changes is not None:
                 raise TypeError(
@@ -209,7 +252,7 @@ class SessionManager:
             self._client._build_url(f"/session/{id}/update"),
             data={
                 "type": "profile",
-                "params": params_obj.model_dump(exclude_none=True, by_alias=True),
+                "params": dump_request(params_obj, UpdateSessionProfileParams),
             },
         )
         return BasicResponse(**response.data)
@@ -217,13 +260,13 @@ class SessionManager:
     async def update_proxy_params(
         self,
         id: str,
-        params: UpdateSessionProxyParams,
+        params: Union[UpdateSessionProxyParamsDict, UpdateSessionProxyParams],
     ) -> BasicResponse:
         response = await self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={
                 "type": "proxy",
-                "params": params.model_dump(exclude_none=True, by_alias=True),
+                "params": dump_request(params, UpdateSessionProxyParams),
             },
         )
         return BasicResponse(**response.data)
@@ -231,13 +274,13 @@ class SessionManager:
     async def update_screen_size(
         self,
         id: str,
-        params: UpdateSessionScreenParams,
+        params: Union[UpdateSessionScreenParamsDict, UpdateSessionScreenParams],
     ) -> BasicResponse:
         response = await self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={
                 "type": "screen",
-                "params": params.model_dump(exclude_none=True, by_alias=True),
+                "params": dump_request(params, UpdateSessionScreenParams),
             },
         )
         return BasicResponse(**response.data)
@@ -245,16 +288,23 @@ class SessionManager:
     async def start_captcha_solving(
         self,
         id: str,
-        params: Optional[UpdateSessionSolveCaptchasParams] = None,
+        params: Optional[
+            Union[
+                UpdateSessionSolveCaptchasParamsDict,
+                UpdateSessionSolveCaptchasParams,
+            ]
+        ] = None,
     ) -> UpdateSessionSolveCaptchasResponse:
-        params_obj = params or UpdateSessionSolveCaptchasParams()
+        params_obj = (
+            params if params is not None else UpdateSessionSolveCaptchasParams()
+        )
         response = await self._client.transport.put(
             self._client._build_url(f"/session/{id}/update"),
             data={
                 "type": "solveCaptchas",
                 "params": {
                     "enabled": True,
-                    **params_obj.model_dump(exclude_none=True, by_alias=True),
+                    **dump_request(params_obj, UpdateSessionSolveCaptchasParams),
                 },
             },
         )

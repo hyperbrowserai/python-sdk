@@ -1,4 +1,6 @@
-from typing import Any, Literal, Optional
+from __future__ import annotations
+
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -122,7 +124,7 @@ class CuaStepResponse(BaseModel):
     error: Optional[CuaStepResponseError] = None
     incomplete_details: Optional[CuaStepIncompleteDetails] = None
     model: str
-    output: list[Any]
+    output: List[Any]
     reasoning: Optional[CuaStepReasoning] = None
     status: Optional[str] = None
 
@@ -132,7 +134,7 @@ class CuaTaskData(BaseModel):
         populate_by_alias=True,
     )
 
-    steps: list[CuaStepResponse]
+    steps: List[CuaStepResponse]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
 
 

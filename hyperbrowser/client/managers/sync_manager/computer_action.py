@@ -1,7 +1,10 @@
-from pydantic import BaseModel
+from collections.abc import Mapping
 from typing import Union, List, Optional
+
+from hyperbrowser.client._request import coerce_request, dump_request
 from hyperbrowser.models import (
     SessionDetail,
+    ComputerAction,
     ComputerActionParams,
     ComputerActionResponse,
     ClickActionParams,
@@ -20,6 +23,43 @@ from hyperbrowser.models import (
     PutSelectionTextActionParams,
     ListWindowsActionParams,
 )
+from hyperbrowser.types import (
+    ComputerActionParams as ComputerActionParamsDict,
+    Coordinate as CoordinateDict,
+)
+
+
+_ACTION_PARAM_MODELS = {
+    ComputerAction.CLICK.value: ClickActionParams,
+    ComputerAction.DRAG.value: DragActionParams,
+    ComputerAction.HOLD_KEY.value: HoldKeyActionParams,
+    ComputerAction.MOUSE_DOWN.value: MouseDownActionParams,
+    ComputerAction.MOUSE_UP.value: MouseUpActionParams,
+    ComputerAction.MOVE_MOUSE.value: MoveMouseActionParams,
+    ComputerAction.PRESS_KEYS.value: PressKeysActionParams,
+    ComputerAction.SCREENSHOT.value: ScreenshotActionParams,
+    ComputerAction.SCROLL.value: ScrollActionParams,
+    ComputerAction.TYPE_TEXT.value: TypeTextActionParams,
+    ComputerAction.GET_CLIPBOARD_TEXT.value: GetClipboardTextActionParams,
+    ComputerAction.PUT_SELECTION_TEXT.value: PutSelectionTextActionParams,
+    ComputerAction.LIST_WINDOWS.value: ListWindowsActionParams,
+}
+
+
+def _action_param_model(params):
+    for model in _ACTION_PARAM_MODELS.values():
+        if isinstance(params, model):
+            return model
+
+    if isinstance(params, Mapping):
+        action = params.get("action")
+        if isinstance(action, ComputerAction):
+            action = action.value
+        model = _ACTION_PARAM_MODELS.get(action)
+        if model is not None:
+            return model
+
+    raise TypeError("params must be a computer action params instance or mapping")
 
 
 class ComputerActionManager:
@@ -27,7 +67,9 @@ class ComputerActionManager:
         self._client = client
 
     def _execute_request(
-        self, session: Union[SessionDetail, str], params: ComputerActionParams
+        self,
+        session: Union[SessionDetail, str],
+        params: Union[ComputerActionParamsDict, ComputerActionParams],
     ) -> ComputerActionResponse:
         if isinstance(session, str):
             session = self._client.sessions.get(session)
@@ -35,10 +77,11 @@ class ComputerActionManager:
         if not session.computer_action_endpoint:
             raise ValueError("Computer action endpoint not available for this session")
 
-        if isinstance(params, BaseModel):
-            payload = params.model_dump(by_alias=True, exclude_none=True)
-        else:
-            payload = params
+        payload = dump_request(
+            params,
+            _action_param_model(params),
+            name="params",
+        )
 
         response = self._client.transport.post(
             session.computer_action_endpoint,
@@ -124,10 +167,16 @@ class ComputerActionManager:
     def drag(
         self,
         session: Union[SessionDetail, str],
-        path: List[Coordinate],
+        path: List[Union[CoordinateDict, Coordinate]],
         return_screenshot: bool = False,
     ) -> ComputerActionResponse:
-        params = DragActionParams(path=path, return_screenshot=return_screenshot)
+        params = DragActionParams(
+            path=[
+                coerce_request(coordinate, Coordinate, name="coordinate")
+                for coordinate in path
+            ],
+            return_screenshot=return_screenshot,
+        )
         return self._execute_request(session, params)
 
     def move_mouse(

@@ -1,0 +1,8 @@
+{
+  "include": [
+    "tests/typecheck/valid_requests.py"
+  ],
+  "pythonVersion": "3.8",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": "none"
+}

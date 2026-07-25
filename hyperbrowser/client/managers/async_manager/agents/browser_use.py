@@ -1,7 +1,13 @@
 import asyncio
-import jsonref
+from typing import Union
 
+from hyperbrowser.client._request import (
+    dump_request_with_schema,
+)
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.types import (
+    StartBrowserUseTaskParams as StartBrowserUseTaskParamsDict,
+)
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -18,18 +24,18 @@ class BrowserUseManager:
         self._client = client
 
     async def start(
-        self, params: StartBrowserUseTaskParams
+        self,
+        params: Union[StartBrowserUseTaskParamsDict, StartBrowserUseTaskParams],
     ) -> StartBrowserUseTaskResponse:
-        if params.output_model_schema:
-            if hasattr(params.output_model_schema, "model_json_schema"):
-                params.output_model_schema = jsonref.replace_refs(
-                    params.output_model_schema.model_json_schema(),
-                    proxies=False,
-                    lazy_load=False,
-                )
+        payload = dump_request_with_schema(
+            params,
+            StartBrowserUseTaskParams,
+            input_name="output_model_schema",
+            model_name="output_model_schema",
+        )
         response = await self._client.transport.post(
             self._client._build_url("/task/browser-use"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=payload,
         )
         return StartBrowserUseTaskResponse(**response.data)
 
@@ -52,7 +58,8 @@ class BrowserUseManager:
         return BasicResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartBrowserUseTaskParams
+        self,
+        params: Union[StartBrowserUseTaskParamsDict, StartBrowserUseTaskParams],
     ) -> BrowserUseTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id

@@ -1,6 +1,11 @@
 import asyncio
+from typing import Union
 
+from hyperbrowser.client._request import dump_request
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.types import (
+    StartClaudeComputerUseTaskParams as StartClaudeComputerUseTaskParamsDict,
+)
 
 from .....models import (
     POLLING_ATTEMPTS,
@@ -17,11 +22,15 @@ class ClaudeComputerUseManager:
         self._client = client
 
     async def start(
-        self, params: StartClaudeComputerUseTaskParams
+        self,
+        params: Union[
+            StartClaudeComputerUseTaskParamsDict,
+            StartClaudeComputerUseTaskParams,
+        ],
     ) -> StartClaudeComputerUseTaskResponse:
         response = await self._client.transport.post(
             self._client._build_url("/task/claude-computer-use"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, StartClaudeComputerUseTaskParams),
         )
         return StartClaudeComputerUseTaskResponse(**response.data)
 
@@ -44,7 +53,11 @@ class ClaudeComputerUseManager:
         return BasicResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartClaudeComputerUseTaskParams
+        self,
+        params: Union[
+            StartClaudeComputerUseTaskParamsDict,
+            StartClaudeComputerUseTaskParams,
+        ],
     ) -> ClaudeComputerUseTaskResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id

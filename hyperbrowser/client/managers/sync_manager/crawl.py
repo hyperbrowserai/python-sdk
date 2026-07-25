@@ -1,7 +1,12 @@
 import time
-from typing import Optional
+from typing import Optional, Union
 
+from hyperbrowser.client._request import dump_request
 from hyperbrowser.models.consts import POLLING_ATTEMPTS
+from hyperbrowser.types import (
+    GetCrawlJobParams as GetCrawlJobParamsDict,
+    StartCrawlJobParams as StartCrawlJobParamsDict,
+)
 from ....models.crawl import (
     CrawlJobResponse,
     CrawlJobStatus,
@@ -17,10 +22,13 @@ class CrawlManager:
     def __init__(self, client):
         self._client = client
 
-    def start(self, params: StartCrawlJobParams) -> StartCrawlJobResponse:
+    def start(
+        self,
+        params: Union[StartCrawlJobParamsDict, StartCrawlJobParams],
+    ) -> StartCrawlJobResponse:
         response = self._client.transport.post(
             self._client._build_url("/crawl"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request(params, StartCrawlJobParams),
         )
         return StartCrawlJobResponse(**response.data)
 
@@ -31,16 +39,22 @@ class CrawlManager:
         return CrawlJobStatusResponse(**response.data)
 
     def get(
-        self, job_id: str, params: GetCrawlJobParams = GetCrawlJobParams()
+        self,
+        job_id: str,
+        params: Optional[Union[GetCrawlJobParamsDict, GetCrawlJobParams]] = None,
     ) -> CrawlJobResponse:
+        if params is None:
+            params = GetCrawlJobParams()
         response = self._client.transport.get(
             self._client._build_url(f"/crawl/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(params, GetCrawlJobParams),
         )
         return CrawlJobResponse(**response.data)
 
     def start_and_wait(
-        self, params: StartCrawlJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartCrawlJobParamsDict, StartCrawlJobParams],
+        return_all_pages: bool = True,
     ) -> CrawlJobResponse:
         job_start_resp = self.start(params)
         job_id = job_start_resp.job_id

@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect as sync_ws_connect
 
+from ...._request import dump_request
 from .....models.sandbox import (
     SandboxTerminalCreateParams,
     SandboxTerminalExitEvent,
@@ -15,6 +16,9 @@ from .....models.sandbox import (
     SandboxTerminalWaitParams,
 )
 from .....sandbox_common import build_headers, to_websocket_transport_target
+from .....types import (
+    SandboxTerminalCreateParams as SandboxTerminalCreateParamsDict,
+)
 from ...sandboxes.shared import (
     _copy_model,
     _normalize_terminal_output_chunk,
@@ -121,10 +125,13 @@ class SandboxTerminalHandle:
         payload = self._transport.request_json(
             f"/sandbox/pty/{self.id}/wait",
             method="POST",
-            json_body=SandboxTerminalWaitParams(
-                timeout_ms=timeout_ms,
-                include_output=include_output,
-            ).model_dump(exclude_none=True, by_alias=True),
+            json_body=dump_request(
+                {
+                    "timeout_ms": timeout_ms,
+                    "include_output": include_output,
+                },
+                SandboxTerminalWaitParams,
+            ),
             headers={"content-type": "application/json"},
         )
         self._status = _normalize_terminal_status(payload["pty"])
@@ -208,14 +215,12 @@ class SandboxTerminalApi:
 
     def create(
         self,
-        input: SandboxTerminalCreateParams,
+        input: Union[SandboxTerminalCreateParamsDict, SandboxTerminalCreateParams],
     ) -> SandboxTerminalHandle:
-        if not isinstance(input, SandboxTerminalCreateParams):
-            raise TypeError("input must be a SandboxTerminalCreateParams instance")
         payload = self._transport.request_json(
             "/sandbox/pty",
             method="POST",
-            json_body=input.model_dump(exclude_none=True, by_alias=True),
+            json_body=dump_request(input, SandboxTerminalCreateParams, name="input"),
             headers={"content-type": "application/json"},
         )
         return SandboxTerminalHandle(

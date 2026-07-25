@@ -1,3 +1,11 @@
+import asyncio
+from typing import Optional, Union
+
+from hyperbrowser.client._request import (
+    dump_request,
+    dump_request_with_fetch_schemas,
+)
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     StartWebCrawlJobParams,
     StartWebCrawlJobResponse,
@@ -6,31 +14,24 @@ from hyperbrowser.models import (
     WebCrawlJobResponse,
     WebCrawlJobStatus,
     POLLING_ATTEMPTS,
-    FetchOutputJson,
 )
-from hyperbrowser.exceptions import HyperbrowserError
-import asyncio
-import jsonref
+from hyperbrowser.types import (
+    GetWebCrawlJobParams as GetWebCrawlJobParamsDict,
+    StartWebCrawlJobParams as StartWebCrawlJobParamsDict,
+)
 
 
 class WebCrawlManager:
     def __init__(self, client):
         self._client = client
 
-    async def start(self, params: StartWebCrawlJobParams) -> StartWebCrawlJobResponse:
-        if params.outputs and params.outputs.formats:
-            for output in params.outputs.formats:
-                if isinstance(output, FetchOutputJson) and output.schema_:
-                    if hasattr(output.schema_, "model_json_schema"):
-                        output.schema_ = jsonref.replace_refs(
-                            output.schema_.model_json_schema(),
-                            proxies=False,
-                            lazy_load=False,
-                        )
-
+    async def start(
+        self,
+        params: Union[StartWebCrawlJobParamsDict, StartWebCrawlJobParams],
+    ) -> StartWebCrawlJobResponse:
         response = await self._client.transport.post(
             self._client._build_url("/web/crawl"),
-            data=params.model_dump(exclude_none=True, by_alias=True),
+            data=dump_request_with_fetch_schemas(params, StartWebCrawlJobParams),
         )
         return StartWebCrawlJobResponse(**response.data)
 
@@ -41,16 +42,22 @@ class WebCrawlManager:
         return WebCrawlJobStatusResponse(**response.data)
 
     async def get(
-        self, job_id: str, params: GetWebCrawlJobParams = GetWebCrawlJobParams()
+        self,
+        job_id: str,
+        params: Optional[Union[GetWebCrawlJobParamsDict, GetWebCrawlJobParams]] = None,
     ) -> WebCrawlJobResponse:
+        if params is None:
+            params = GetWebCrawlJobParams()
         response = await self._client.transport.get(
             self._client._build_url(f"/web/crawl/{job_id}"),
-            params=params.model_dump(exclude_none=True, by_alias=True),
+            params=dump_request(params, GetWebCrawlJobParams),
         )
         return WebCrawlJobResponse(**response.data)
 
     async def start_and_wait(
-        self, params: StartWebCrawlJobParams, return_all_pages: bool = True
+        self,
+        params: Union[StartWebCrawlJobParamsDict, StartWebCrawlJobParams],
+        return_all_pages: bool = True,
     ) -> WebCrawlJobResponse:
         job_start_resp = await self.start(params)
         job_id = job_start_resp.job_id
