@@ -192,6 +192,8 @@ class BrowserUseBrowserStateHistory(BaseModel):
 
 
 class BrowserUseAgentHistory(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_output: Union[BrowserUseAgentOutput, None]
     result: List[BrowserUseActionResult]
     state: BrowserUseBrowserStateHistory
@@ -235,6 +237,8 @@ class BrowserUseStepMetadataV0710(BaseModel):
 
 
 class BrowserUseAgentHistoryV0710(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_output: Union[BrowserUseAgentOutputV0710, None]
     result: List[BrowserUseActionResultV0710]
     state: BrowserUseBrowserStateHistoryV0710

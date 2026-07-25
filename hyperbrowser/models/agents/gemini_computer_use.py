@@ -87,6 +87,7 @@ class GeminiComputerUseStepResponse(BaseModel):
 
     model_config = ConfigDict(
         populate_by_alias=True,
+        protected_namespaces=(),
     )
 
     candidates: Optional[List[Any]] = Field(

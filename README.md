@@ -15,6 +15,12 @@ It can be installed from `pypi` by running :
 pip install hyperbrowser
 ```
 
+The browser-control examples below also use Playwright:
+
+```shell
+pip install playwright
+```
+
 ## Configuration
 
 Both the sync and async client follow similar configuration params
@@ -81,8 +87,8 @@ for the complete compatibility details and migration checklist.
 
 ```python
 import asyncio
-from pyppeteer import connect
 from hyperbrowser import AsyncHyperbrowser
+from playwright.async_api import async_playwright
 
 HYPERBROWSER_API_KEY = "test-key"
 
@@ -90,29 +96,22 @@ async def main():
     async with AsyncHyperbrowser(api_key=HYPERBROWSER_API_KEY) as client:
         session = await client.sessions.create()
 
-        ws_endpoint = session.ws_endpoint
-        browser = await connect(browserWSEndpoint=ws_endpoint, defaultViewport=None)
+        try:
+            async with async_playwright() as playwright:
+                browser = await playwright.chromium.connect_over_cdp(
+                    session.ws_endpoint
+                )
+                context = browser.contexts[0]
+                page = context.pages[0]
 
-        # Get pages
-        pages = await browser.pages()
-        if not pages:
-            raise Exception("No pages available")
-
-        page = pages[0]
-
-        # Navigate to a website
-        print("Navigating to Hacker News...")
-        await page.goto("https://news.ycombinator.com/")
-        page_title = await page.title()
-        print("Page title:", page_title)
-
-        await page.close()
-        await browser.disconnect()
-        await client.sessions.stop(session.id)
-        print("Session completed!")
+                print("Navigating to Hacker News...")
+                await page.goto("https://news.ycombinator.com/")
+                print("Page title:", await page.title())
+        finally:
+            await client.sessions.stop(session.id)
 
 # Run the asyncio event loop
-asyncio.get_event_loop().run_until_complete(main())
+asyncio.run(main())
 ```
 ### Sync
 

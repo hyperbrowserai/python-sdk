@@ -31,10 +31,13 @@ from hyperbrowser.client.managers.sync_manager.extract import ExtractManager
 from hyperbrowser.client.managers.sync_manager.scrape import ScrapeManager
 from hyperbrowser.client.managers.sync_manager.web import WebManager
 from hyperbrowser.models import (
+    BrowserUseAgentHistory,
+    BrowserUseAgentHistoryV0710,
     CreateExtensionParams,
     FetchOutputJson,
     FetchOutputOptions,
     FetchParams,
+    GeminiComputerUseStepResponse,
     StartBrowserUseTaskParams,
     StartBatchFetchJobParams,
     StartScrapeJobParams,
@@ -45,6 +48,15 @@ from hyperbrowser.models import (
 class StubResponse:
     def __init__(self, data):
         self.data = data
+
+
+def test_model_prefixed_response_fields_support_the_pydantic_2_0_floor():
+    for model in (
+        BrowserUseAgentHistory,
+        BrowserUseAgentHistoryV0710,
+        GeminiComputerUseStepResponse,
+    ):
+        assert model.model_config["protected_namespaces"] == ()
 
 
 class RecordingSyncTransport:
