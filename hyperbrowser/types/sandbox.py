@@ -128,6 +128,13 @@ class SandboxSnapshotListParams(TypedDict, total=False):
     page: Optional[int]
 
 
+class SandboxImageBuildListParams(TypedDict, total=False):
+    """Filters for listing sandbox image builds."""
+
+    status: Optional[str]
+    limit: Optional[int]
+
+
 class SandboxMemorySnapshotParams(TypedDict, total=False):
     """Parameters for creating a sandbox memory snapshot."""
 
@@ -415,6 +422,7 @@ __all__ = [
     "SandboxFileWriteEntry",
     "SandboxFileWriteTextParams",
     "SandboxImageBuildInputFormat",
+    "SandboxImageBuildListParams",
     "SandboxImageInit",
     "SandboxImageListParams",
     "SandboxListParams",

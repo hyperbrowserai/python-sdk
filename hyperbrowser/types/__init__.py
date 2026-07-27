@@ -81,6 +81,7 @@ from .sandbox import (
     SandboxFileWriteEntry,
     SandboxFileWriteTextParams,
     SandboxImageBuildInputFormat,
+    SandboxImageBuildListParams,
     SandboxImageInit,
     SandboxImageListParams,
     SandboxListParams,
@@ -132,7 +133,7 @@ from .session import (
     UpdateSessionScreenParams,
     UpdateSessionSolveCaptchasParams,
 )
-from .volume import CreateVolumeParams
+from .volume import CreateVolumeParams, VolumeListParams
 from .web import (
     FetchBrowserLocationOptions,
     FetchBrowserOptions,
@@ -235,6 +236,7 @@ __all__ = [
     "SandboxFileWriteEntry",
     "SandboxFileWriteTextParams",
     "SandboxImageBuildInputFormat",
+    "SandboxImageBuildListParams",
     "SandboxImageInit",
     "SandboxImageListParams",
     "SandboxListParams",
@@ -282,6 +284,7 @@ __all__ = [
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
     "CreateVolumeParams",
+    "VolumeListParams",
     "FetchBrowserLocationOptions",
     "FetchBrowserOptions",
     "FetchCacheOptions",

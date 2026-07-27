@@ -309,6 +309,9 @@ class SandboxSnapshotSummary(SandboxBaseModel):
     image_name: str = Field(alias="imageName")
     image_id: str = Field(alias="imageId")
     status: SandboxSnapshotStatus
+    vcpus: Optional[int] = None
+    mem_mib: Optional[int] = Field(default=None, alias="memMiB")
+    disk_size_mib: Optional[int] = Field(default=None, alias="diskSizeMiB")
     compatibility_tag: Optional[str] = Field(default=None, alias="compatibilityTag")
     metadata: Dict[str, object]
     uploaded: bool
@@ -332,6 +335,10 @@ class SandboxSnapshotListResponse(SandboxBaseModel):
     total_count: Optional[int] = Field(default=None, alias="totalCount")
     page: Optional[int] = None
     per_page: Optional[int] = Field(default=None, alias="perPage")
+
+
+class SandboxSnapshotDeleteResult(SandboxBaseModel):
+    deleted: bool
 
 
 class SandboxMemorySnapshotParams(SandboxBaseModel):
@@ -421,6 +428,15 @@ class SandboxImageBuild(SandboxBaseModel):
 class SandboxImageBuildCreateResult(SandboxBaseModel):
     build: SandboxImageBuild
     upload: SandboxImageBuildUpload
+
+
+class SandboxImageBuildListParams(SandboxBaseModel):
+    status: Optional[str] = None
+    limit: Optional[int] = Field(default=None, ge=1)
+
+
+class SandboxImageBuildListResponse(SandboxBaseModel):
+    builds: List[SandboxImageBuild]
 
 
 class SandboxExecParams(SandboxBaseModel):

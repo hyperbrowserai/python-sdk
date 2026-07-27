@@ -4,7 +4,7 @@ from hyperbrowser.client.managers.async_manager.volume import (
     VolumeManager as AsyncVolumeManager,
 )
 from hyperbrowser.client.managers.sync_manager.volume import VolumeManager
-from hyperbrowser.models import CreateVolumeParams, Volume
+from hyperbrowser.models import CreateVolumeParams, Volume, VolumeListParams
 
 
 VOLUME_PAYLOAD = {
@@ -21,6 +21,9 @@ VOLUME_DETAIL_PAYLOAD = {
 
 VOLUME_LIST_PAYLOAD = {
     "volumes": [VOLUME_PAYLOAD],
+    "totalCount": 1,
+    "page": 1,
+    "perPage": 20,
 }
 
 
@@ -115,7 +118,7 @@ def test_sync_volume_manager_uses_expected_wire_keys():
     manager = VolumeManager(client)
 
     created = manager.create(CreateVolumeParams(name="project-cache"))
-    listed = manager.list()
+    listed = manager.list(VolumeListParams(search="project", page=1, limit=20))
     fetched = manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
@@ -128,7 +131,10 @@ def test_sync_volume_manager_uses_expected_wire_keys():
 
     assert list_call["method"] == "GET"
     assert list_call["url"].endswith("/volume")
+    assert list_call["params"] == {"search": "project", "page": 1, "limit": 20}
     assert listed.volumes[0].transfer_amount == 0
+    assert listed.total_count == 1
+    assert listed.per_page == 20
 
     assert get_call["method"] == "GET"
     assert get_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
@@ -143,7 +149,7 @@ async def test_async_volume_manager_uses_expected_wire_keys():
     manager = AsyncVolumeManager(client)
 
     created = await manager.create({"name": "project-cache"})
-    listed = await manager.list()
+    listed = await manager.list({"search": "project", "page": 1, "limit": 20})
     fetched = await manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
@@ -156,7 +162,9 @@ async def test_async_volume_manager_uses_expected_wire_keys():
 
     assert list_call["method"] == "GET"
     assert list_call["url"].endswith("/volume")
+    assert list_call["params"] == {"search": "project", "page": 1, "limit": 20}
     assert listed.volumes[0].size == 0
+    assert listed.total_count == 1
 
     assert get_call["method"] == "GET"
     assert get_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")

@@ -13,6 +13,12 @@ class CreateVolumeParams(VolumeBaseModel):
     name: str
 
 
+class VolumeListParams(VolumeBaseModel):
+    page: Optional[int] = Field(default=None, ge=1)
+    limit: Optional[int] = Field(default=None, ge=1)
+    search: Optional[str] = None
+
+
 class Volume(VolumeBaseModel):
     id: str
     name: str
@@ -27,3 +33,6 @@ class Volume(VolumeBaseModel):
 
 class VolumeListResponse(VolumeBaseModel):
     volumes: List[Volume]
+    total_count: Optional[int] = Field(default=None, alias="totalCount")
+    page: Optional[int] = None
+    per_page: Optional[int] = Field(default=None, alias="perPage")
