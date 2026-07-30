@@ -54,6 +54,23 @@ session = client.sessions.create(
 )
 ```
 
+Browser sessions can also use an outbound network policy. Omitting these fields
+keeps the default unrestricted behavior:
+
+```python
+session = client.sessions.create(
+    {
+        "allow_internet_access": False,
+        "allow_out": ["example.com"],
+        "deny_out": ["0.0.0.0/0"],
+    }
+)
+```
+
+Direct browser policies accept domains, IPv4 addresses, and CIDR ranges in
+`allow_out`; `deny_out` accepts IPv4 addresses and CIDR ranges. With a proxy,
+allow rules must be domains and the only supported deny rule is `0.0.0.0/0`.
+
 Existing Pydantic request classes remain accepted, so upgrading does not require
 an immediate rewrite:
 

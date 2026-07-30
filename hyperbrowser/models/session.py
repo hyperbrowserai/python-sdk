@@ -144,6 +144,11 @@ class SessionLaunchState(BaseModel):
         default=None, alias="enableVideoWebRecording"
     )
     enable_log_capture: Optional[bool] = Field(default=None, alias="enableLogCapture")
+    allow_internet_access: Optional[bool] = Field(
+        default=None, alias="allowInternetAccess"
+    )
+    allow_out: Optional[List[str]] = Field(default=None, alias="allowOut")
+    deny_out: Optional[List[str]] = Field(default=None, alias="denyOut")
     accept_cookies: Optional[bool] = Field(default=None, alias="acceptCookies")
     solver_type: Optional[CaptchaSolverType] = Field(default=None, alias="solverType")
     profile: Optional[SessionProfile] = Field(default=None, alias="profile")
@@ -472,6 +477,11 @@ class CreateSessionParams(BaseModel):
     timeout_minutes: Optional[int] = Field(
         default=None, serialization_alias="timeoutMinutes"
     )
+    allow_internet_access: Optional[bool] = Field(
+        default=None, serialization_alias="allowInternetAccess"
+    )
+    allow_out: Optional[List[str]] = Field(default=None, serialization_alias="allowOut")
+    deny_out: Optional[List[str]] = Field(default=None, serialization_alias="denyOut")
     enable_window_manager: Optional[bool] = Field(
         default=None, serialization_alias="enableWindowManager"
     )
