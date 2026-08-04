@@ -371,12 +371,12 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
     image_name: str = Field(serialization_alias="imageName")
     input_sha256: str = Field(serialization_alias="inputSha256")
     input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
-    input_format: SandboxImageBuildInputFormat = Field(
-        default="rootfs_export_tar_gz",
+    input_format: Optional[SandboxImageBuildInputFormat] = Field(
+        default=None,
         serialization_alias="inputFormat",
     )
-    source_platform: SandboxImageBuildSourcePlatform = Field(
-        default="linux/amd64",
+    source_platform: Optional[SandboxImageBuildSourcePlatform] = Field(
+        default=None,
         serialization_alias="sourcePlatform",
     )
     image_config_user: Optional[str] = Field(
@@ -388,13 +388,15 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
         serialization_alias="imageInit",
     )
 
+
 class CompleteSandboxImageBuildParams(SandboxBaseModel):
     input_sha256: str = Field(serialization_alias="inputSha256")
     input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
-    input_format: SandboxImageBuildInputFormat = Field(
-        default="rootfs_export_tar_gz",
+    input_format: Optional[SandboxImageBuildInputFormat] = Field(
+        default=None,
         serialization_alias="inputFormat",
     )
+
 
 class SandboxImageBuildUpload(SandboxBaseModel):
     url: str

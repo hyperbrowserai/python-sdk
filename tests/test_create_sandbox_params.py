@@ -124,6 +124,7 @@ def test_sandbox_image_build_params_serialize_expected_wire_keys():
         image_name="custom_node",
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
         source_platform="linux/amd64",
         image_config_user="node",
         image_init=SandboxImageInit(
@@ -148,12 +149,35 @@ def test_sandbox_image_build_params_serialize_expected_wire_keys():
     complete_params = CompleteSandboxImageBuildParams(
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
     )
 
     assert complete_params.model_dump(by_alias=True, exclude_none=True) == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
         "inputFormat": "rootfs_export_tar_gz",
+    }
+
+
+def test_sandbox_image_build_params_omit_unspecified_format_and_platform():
+    create_params = CreateSandboxImageBuildParams(
+        image_name="custom_node",
+        input_sha256="abc123",
+        input_size_bytes=123,
+    )
+    complete_params = CompleteSandboxImageBuildParams(
+        input_sha256="abc123",
+        input_size_bytes=123,
+    )
+
+    assert create_params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+    }
+    assert complete_params.model_dump(by_alias=True, exclude_none=True) == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
     }
 
 

@@ -775,6 +775,7 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         image_name="custom_node",
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
         source_platform="linux/amd64",
         image_config_user="node",
         image_init=SandboxImageInit(
@@ -797,6 +798,7 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
     assert CompleteSandboxImageBuildParams(
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
     ).model_dump(by_alias=True, exclude_none=True) == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
@@ -946,8 +948,6 @@ def test_sync_sandbox_image_build_manager_uses_expected_wire_keys():
         "imageName": "custom_node",
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
-        "sourcePlatform": "linux/amd64",
         "imageConfigUser": "node",
         "imageInit": {"args": ["node", "server.js"]},
     }
@@ -960,7 +960,6 @@ def test_sync_sandbox_image_build_manager_uses_expected_wire_keys():
     assert complete_call["json"] == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
     }
     assert cancel_call["method"] == "POST"
     assert cancel_call["url"].endswith("/images/builds/build-123/cancel")
@@ -1042,17 +1041,34 @@ def test_sync_sandbox_snapshot_and_image_build_list_contract(use_legacy_model):
         ),
     ],
 )
-def test_sync_image_build_defaults_serialize_for_dicts_and_legacy_models(params):
+def test_sync_image_build_omits_unspecified_fields_for_dicts_and_legacy_models(
+    params,
+):
     client = FakeSyncClient()
+    manager = SandboxManager(client)
 
-    SandboxManager(client).create_image_build(params)
+    manager.create_image_build(params)
+    complete_params = (
+        {
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+        }
+        if isinstance(params, dict)
+        else CompleteSandboxImageBuildParams(
+            input_sha256="abc123",
+            input_size_bytes=123,
+        )
+    )
+    manager.complete_image_build("build-123", complete_params)
 
     assert client.transport.client.calls[0]["json"] == {
         "imageName": "custom_node",
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
-        "sourcePlatform": "linux/amd64",
+    }
+    assert client.transport.client.calls[1]["json"] == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
     }
 
 
@@ -1559,8 +1575,6 @@ async def test_async_sandbox_image_build_manager_uses_expected_wire_keys():
         "imageName": "custom_node",
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
-        "sourcePlatform": "linux/amd64",
         "imageConfigUser": "node",
         "imageInit": {"args": ["node", "server.js"]},
     }
@@ -1573,7 +1587,6 @@ async def test_async_sandbox_image_build_manager_uses_expected_wire_keys():
     assert complete_call["json"] == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
     }
     assert cancel_call["method"] == "POST"
     assert cancel_call["url"].endswith("/images/builds/build-123/cancel")
