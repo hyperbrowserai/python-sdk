@@ -13,7 +13,7 @@ from hyperbrowser.models.consts import (
 )
 
 
-SessionStatus = Literal["active", "closed", "error"]
+SessionStatus = Literal["active", "closed", "error", "close-error"]
 BrowserMemorySize = Literal["small", "medium", "large"]
 CaptchaSolverType = Literal["visual"]
 CaptchaEvaluationType = Literal[

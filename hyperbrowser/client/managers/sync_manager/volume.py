@@ -1,8 +1,14 @@
-from typing import Union
+from typing import Optional, Union
 
 from hyperbrowser.client._request import dump_request
-from hyperbrowser.models.volume import CreateVolumeParams, Volume, VolumeListResponse
+from hyperbrowser.models.volume import (
+    CreateVolumeParams,
+    Volume,
+    VolumeListParams,
+    VolumeListResponse,
+)
 from hyperbrowser.types import CreateVolumeParams as CreateVolumeParamsDict
+from hyperbrowser.types import VolumeListParams as VolumeListParamsDict
 
 
 class VolumeManager:
@@ -19,8 +25,17 @@ class VolumeManager:
         )
         return Volume(**response.data)
 
-    def list(self) -> VolumeListResponse:
-        response = self._client.transport.get(self._client._build_url("/volume"))
+    def list(
+        self,
+        params: Optional[Union[VolumeListParamsDict, VolumeListParams]] = None,
+    ) -> VolumeListResponse:
+        response = self._client.transport.get(
+            self._client._build_url("/volume"),
+            params=dump_request(
+                params if params is not None else {},
+                VolumeListParams,
+            ),
+        )
         return VolumeListResponse(**response.data)
 
     def get(self, volume_id: str) -> Volume:

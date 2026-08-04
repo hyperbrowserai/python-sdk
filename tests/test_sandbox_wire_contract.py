@@ -6,6 +6,7 @@ import hyperbrowser.client.managers.async_manager.sandboxes.sandbox_terminal as 
 import hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal as sync_terminal_module
 
 from hyperbrowser.client.managers.async_manager.sandbox import (
+    SandboxHandle as AsyncSandboxHandle,
     SandboxManager as AsyncSandboxManager,
 )
 from hyperbrowser.client.managers.async_manager.sandboxes.sandbox_files import (
@@ -17,7 +18,10 @@ from hyperbrowser.client.managers.async_manager.sandboxes.sandbox_processes impo
 from hyperbrowser.client.managers.async_manager.sandboxes.sandbox_terminal import (
     SandboxTerminalApi as AsyncSandboxTerminalApi,
 )
-from hyperbrowser.client.managers.sync_manager.sandbox import SandboxManager
+from hyperbrowser.client.managers.sync_manager.sandbox import (
+    SandboxHandle,
+    SandboxManager,
+)
 from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_files import (
     SandboxFilesApi,
 )
@@ -28,6 +32,7 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import
     SandboxTerminalApi,
 )
 from hyperbrowser.client.managers.sandboxes.shared import _build_sandbox_exposed_url
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     CompleteSandboxImageBuildParams,
     CreateSandboxParams,
@@ -37,6 +42,7 @@ from hyperbrowser.models import (
     SandboxExecParams,
     SandboxFileWriteEntry,
     SandboxImageInit,
+    SandboxImageBuildListParams,
     SandboxImageListParams,
     SandboxListParams,
     SandboxMemorySnapshotParams,
@@ -53,6 +59,7 @@ from hyperbrowser.models import (
     SandboxTerminalWaitParams,
     SandboxUnexposeResult,
     SandboxVolumeMount,
+    StartSandboxFromSnapshotParams,
 )
 
 
@@ -78,6 +85,7 @@ SANDBOX_DETAIL_PAYLOAD = {
     "vcpus": 2,
     "memMiB": 2048,
     "diskSizeMiB": 8192,
+    "timeoutMinutes": 30,
     "runtime": {
         "transport": "regional_proxy",
         "host": "https://runtime.example.com",
@@ -188,6 +196,9 @@ SNAPSHOT_LIST_PAYLOAD = {
             "imageName": "node",
             "imageId": "img_123",
             "status": "created",
+            "vcpus": 2,
+            "memMiB": 2048,
+            "diskSizeMiB": 8192,
             "compatibilityTag": None,
             "metadata": {},
             "uploaded": True,
@@ -385,6 +396,28 @@ IMAGE_BUILD_PAYLOAD = {
     "build": IMAGE_BUILD_RECORD,
 }
 
+SERVER_IMAGE_BUILD_STATUSES = (
+    "awaiting_upload",
+    "upload_verified",
+    "dispatching",
+    "building",
+    "verifying",
+    "completed",
+    "failed",
+    "canceled",
+)
+
+IMAGE_BUILD_LIST_PAYLOAD = {
+    "builds": [
+        {
+            **IMAGE_BUILD_RECORD,
+            "id": f"build-{index}",
+            "status": status,
+        }
+        for index, status in enumerate(SERVER_IMAGE_BUILD_STATUSES)
+    ]
+}
+
 
 class RecordingHTTPClient:
     def __init__(self):
@@ -403,13 +436,23 @@ class RecordingHTTPClient:
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
         elif url.endswith("/images/builds"):
-            payload = IMAGE_BUILD_CREATE_PAYLOAD
+            payload = (
+                IMAGE_BUILD_LIST_PAYLOAD
+                if method == "GET"
+                else IMAGE_BUILD_CREATE_PAYLOAD
+            )
         elif "/images/builds/" in url:
             payload = IMAGE_BUILD_PAYLOAD
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
             payload = SNAPSHOT_LIST_PAYLOAD
+        elif "/snapshots/" in url:
+            payload = (
+                {"deleted": True}
+                if method == "DELETE"
+                else {"snapshot": SNAPSHOT_LIST_PAYLOAD["snapshots"][0]}
+            )
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
         elif url.endswith("/network"):
@@ -595,13 +638,23 @@ class RecordingAsyncHTTPClient:
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
         elif url.endswith("/images/builds"):
-            payload = IMAGE_BUILD_CREATE_PAYLOAD
+            payload = (
+                IMAGE_BUILD_LIST_PAYLOAD
+                if method == "GET"
+                else IMAGE_BUILD_CREATE_PAYLOAD
+            )
         elif "/images/builds/" in url:
             payload = IMAGE_BUILD_PAYLOAD
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
             payload = SNAPSHOT_LIST_PAYLOAD
+        elif "/snapshots/" in url:
+            payload = (
+                {"deleted": True}
+                if method == "DELETE"
+                else {"snapshot": SNAPSHOT_LIST_PAYLOAD["snapshots"][0]}
+            )
         elif url.endswith("/sandbox"):
             payload = SANDBOX_DETAIL_PAYLOAD
         elif url.endswith("/network"):
@@ -722,6 +775,7 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
         image_name="custom_node",
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
         source_platform="linux/amd64",
         image_config_user="node",
         image_init=SandboxImageInit(
@@ -744,6 +798,7 @@ def test_sandbox_request_models_serialize_expected_wire_keys():
     assert CompleteSandboxImageBuildParams(
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
     ).model_dump(by_alias=True, exclude_none=True) == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
@@ -893,8 +948,6 @@ def test_sync_sandbox_image_build_manager_uses_expected_wire_keys():
         "imageName": "custom_node",
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
-        "sourcePlatform": "linux/amd64",
         "imageConfigUser": "node",
         "imageInit": {"args": ["node", "server.js"]},
     }
@@ -907,13 +960,116 @@ def test_sync_sandbox_image_build_manager_uses_expected_wire_keys():
     assert complete_call["json"] == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
     }
     assert cancel_call["method"] == "POST"
     assert cancel_call["url"].endswith("/images/builds/build-123/cancel")
     assert build.image_name == "custom_node"
     assert completed.status == "upload_verified"
     assert canceled.status == "upload_verified"
+
+
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+def test_sync_start_from_snapshot_uses_snapshot_only_payload(use_legacy_model):
+    client = FakeSyncClient()
+    params_data = {
+        "snapshot_name": "snapshot-1",
+        "snapshot_id": "snap_123",
+        "timeout_minutes": 15,
+    }
+    params = (
+        StartSandboxFromSnapshotParams(**params_data)
+        if use_legacy_model
+        else params_data
+    )
+
+    sandbox = SandboxManager(client).start_from_snapshot(params)
+
+    assert sandbox.id == "sbx_123"
+    assert client.transport.client.calls[0]["json"] == {
+        "snapshotName": "snapshot-1",
+        "snapshotId": "snap_123",
+        "timeoutMinutes": 15,
+    }
+
+
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+def test_sync_sandbox_snapshot_and_image_build_list_contract(use_legacy_model):
+    client = FakeSyncClient()
+    manager = SandboxManager(client)
+    params_data = {"status": "dispatching", "limit": 25}
+    params = (
+        SandboxImageBuildListParams(**params_data) if use_legacy_model else params_data
+    )
+
+    builds = manager.list_image_builds(params)
+    snapshot = manager.get_snapshot("snapshot-1")
+    deleted = manager.delete_snapshot("snapshot-1")
+
+    list_call, get_call, delete_call = client.transport.client.calls
+    assert list_call == {
+        "method": "GET",
+        "url": "https://api.example.com/images/builds",
+        "params": params_data,
+        "json": None,
+    }
+    assert [build.status for build in builds.builds] == list(
+        SERVER_IMAGE_BUILD_STATUSES
+    )
+    assert get_call["method"] == "GET"
+    assert get_call["url"].endswith("/snapshots/snapshot-1")
+    assert snapshot.snapshot_name == "snapshot-1"
+    assert snapshot.vcpus == 2
+    assert snapshot.mem_mib == 2048
+    assert snapshot.disk_size_mib == 8192
+    assert delete_call["method"] == "DELETE"
+    assert delete_call["url"].endswith("/snapshots/snapshot-1")
+    assert deleted.deleted is True
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {
+            "image_name": "custom_node",
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+        },
+        CreateSandboxImageBuildParams(
+            image_name="custom_node",
+            input_sha256="abc123",
+            input_size_bytes=123,
+        ),
+    ],
+)
+def test_sync_image_build_omits_unspecified_fields_for_dicts_and_legacy_models(
+    params,
+):
+    client = FakeSyncClient()
+    manager = SandboxManager(client)
+
+    manager.create_image_build(params)
+    complete_params = (
+        {
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+        }
+        if isinstance(params, dict)
+        else CompleteSandboxImageBuildParams(
+            input_sha256="abc123",
+            input_size_bytes=123,
+        )
+    )
+    manager.complete_image_build("build-123", complete_params)
+
+    assert client.transport.client.calls[0]["json"] == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+    }
+    assert client.transport.client.calls[1]["json"] == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+    }
 
 
 def test_sync_sandbox_control_manager_uses_expected_wire_keys():
@@ -1108,6 +1264,53 @@ def test_snapshot_summary_allows_missing_compatibility_tag():
     snapshot = SandboxSnapshotSummary(**SNAPSHOT_PAYLOAD_WITHOUT_COMPATIBILITY_TAG)
 
     assert snapshot.compatibility_tag is None
+
+
+def test_sandbox_models_accept_close_error_status():
+    sandbox = SandboxDetail(**{**SANDBOX_DETAIL_PAYLOAD, "status": "close-error"})
+    params = SandboxListParams(status="close-error")
+
+    assert sandbox.status == "close-error"
+    assert params.status == "close-error"
+
+
+def test_sandbox_response_and_handles_expose_timeout_minutes():
+    detail = SandboxDetail(**SANDBOX_DETAIL_PAYLOAD)
+    sync_handle = SandboxHandle(SandboxManager(FakeSyncClient()), detail)
+    async_handle = AsyncSandboxHandle(AsyncSandboxManager(FakeAsyncClient()), detail)
+
+    assert detail.timeout_minutes == 30
+    assert sync_handle.timeout_minutes == 30
+    assert async_handle.timeout_minutes == 30
+
+
+def test_sync_close_error_sandbox_is_unavailable_at_runtime():
+    manager = SandboxManager(FakeSyncClient())
+    sandbox = SandboxHandle(
+        manager,
+        SandboxDetail(**{**SANDBOX_DETAIL_PAYLOAD, "status": "close-error"}),
+    )
+
+    with pytest.raises(HyperbrowserError, match="Sandbox sbx_123 is not running"):
+        sandbox.connect()
+
+
+@pytest.mark.anyio
+async def test_async_close_error_sandbox_is_unavailable_at_runtime():
+    manager = AsyncSandboxManager(FakeAsyncClient())
+    sandbox = AsyncSandboxHandle(
+        manager,
+        SandboxDetail(**{**SANDBOX_DETAIL_PAYLOAD, "status": "close-error"}),
+    )
+
+    with pytest.raises(HyperbrowserError, match="Sandbox sbx_123 is not running"):
+        await sandbox.connect()
+
+
+def test_image_build_list_params_leave_numeric_validation_to_server():
+    params = SandboxImageBuildListParams(limit=-1)
+
+    assert params.limit == -1
 
 
 def test_build_sandbox_exposed_url_uses_runtime_base_path_session_id():
@@ -1372,8 +1575,6 @@ async def test_async_sandbox_image_build_manager_uses_expected_wire_keys():
         "imageName": "custom_node",
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
-        "sourcePlatform": "linux/amd64",
         "imageConfigUser": "node",
         "imageInit": {"args": ["node", "server.js"]},
     }
@@ -1386,13 +1587,76 @@ async def test_async_sandbox_image_build_manager_uses_expected_wire_keys():
     assert complete_call["json"] == {
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
-        "inputFormat": "rootfs_export_tar_gz",
     }
     assert cancel_call["method"] == "POST"
     assert cancel_call["url"].endswith("/images/builds/build-123/cancel")
     assert build.image_name == "custom_node"
     assert completed.status == "upload_verified"
     assert canceled.status == "upload_verified"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+async def test_async_start_from_snapshot_uses_snapshot_only_payload(
+    use_legacy_model,
+):
+    client = FakeAsyncClient()
+    params_data = {
+        "snapshot_name": "snapshot-1",
+        "snapshot_id": "snap_123",
+        "timeout_minutes": 15,
+    }
+    params = (
+        StartSandboxFromSnapshotParams(**params_data)
+        if use_legacy_model
+        else params_data
+    )
+
+    sandbox = await AsyncSandboxManager(client).start_from_snapshot(params)
+
+    assert sandbox.id == "sbx_123"
+    assert client.transport.client.calls[0]["json"] == {
+        "snapshotName": "snapshot-1",
+        "snapshotId": "snap_123",
+        "timeoutMinutes": 15,
+    }
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+async def test_async_sandbox_snapshot_and_image_build_list_contract(
+    use_legacy_model,
+):
+    client = FakeAsyncClient()
+    manager = AsyncSandboxManager(client)
+    params_data = {"status": "verifying", "limit": 25}
+    params = (
+        SandboxImageBuildListParams(**params_data) if use_legacy_model else params_data
+    )
+
+    builds = await manager.list_image_builds(params)
+    snapshot = await manager.get_snapshot("snapshot-1")
+    deleted = await manager.delete_snapshot("snapshot-1")
+
+    list_call, get_call, delete_call = client.transport.client.calls
+    assert list_call == {
+        "method": "GET",
+        "url": "https://api.example.com/images/builds",
+        "params": params_data,
+        "json": None,
+    }
+    assert [build.status for build in builds.builds] == list(
+        SERVER_IMAGE_BUILD_STATUSES
+    )
+    assert get_call["method"] == "GET"
+    assert get_call["url"].endswith("/snapshots/snapshot-1")
+    assert snapshot.snapshot_name == "snapshot-1"
+    assert snapshot.vcpus == 2
+    assert snapshot.mem_mib == 2048
+    assert snapshot.disk_size_mib == 8192
+    assert delete_call["method"] == "DELETE"
+    assert delete_call["url"].endswith("/snapshots/snapshot-1")
+    assert deleted.deleted is True
 
 
 @pytest.mark.anyio

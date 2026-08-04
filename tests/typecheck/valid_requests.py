@@ -4,8 +4,11 @@ from pydantic import BaseModel
 
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
 from hyperbrowser.models import (
+    CreateSandboxImageBuildParams as LegacyCreateSandboxImageBuildParams,
     CreateSessionParams as LegacyCreateSessionParams,
     FetchParams as LegacyFetchParams,
+    SandboxImageBuildListParams as LegacySandboxImageBuildListParams,
+    VolumeListParams as LegacyVolumeListParams,
 )
 from hyperbrowser.tools import WebsiteExtractTool
 
@@ -28,6 +31,7 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.sessions.create(
         {
             "use_stealth": True,
+            "region": "us",
             "screen": {"width": 1440, "height": 900},
             "profile": {
                 "id": "profile_123",
@@ -107,8 +111,30 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             },
         }
     )
+    client.sandboxes.create_image_build(
+        {
+            "image_name": "custom_node",
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+            "source_platform": "linux/amd64",
+        }
+    )
+    client.sandboxes.create_image_build(
+        LegacyCreateSandboxImageBuildParams(
+            image_name="custom_node",
+            input_sha256="abc123",
+            input_size_bytes=123,
+            source_platform="linux/amd64",
+        )
+    )
+    client.sandboxes.list_image_builds({"status": "dispatching", "limit": -1})
+    client.sandboxes.list_image_builds(
+        LegacySandboxImageBuildListParams(status="verifying", limit=-1)
+    )
+    client.volumes.list({"page": 0, "limit": -1})
+    client.volumes.list(LegacyVolumeListParams(page=0, limit=-1))
 
-    client.sessions.create(LegacyCreateSessionParams(use_stealth=True))
+    client.sessions.create(LegacyCreateSessionParams(use_stealth=True, region="us"))
     client.web.fetch(LegacyFetchParams(url="https://example.com"))
     client.sessions.update_profile_params(
         "session_123",
@@ -162,6 +188,16 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             "exposed_ports": [{"port": 8080}],
         }
     )
+    await client.sandboxes.create_image_build(
+        {
+            "image_name": "custom_node",
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+            "source_platform": "linux/amd64",
+        }
+    )
+    await client.sandboxes.list_image_builds({"status": "verifying", "limit": -1})
+    await client.volumes.list({"page": 0, "limit": -1})
 
-    await client.sessions.create(LegacyCreateSessionParams(use_proxy=True))
+    await client.sessions.create(LegacyCreateSessionParams(use_proxy=True, region="us"))
     await client.web.fetch(LegacyFetchParams(url="https://example.com"))

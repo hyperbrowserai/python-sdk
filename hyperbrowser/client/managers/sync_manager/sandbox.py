@@ -13,6 +13,8 @@ from ....models.sandbox import (
     SandboxExposeResult,
     SandboxImageBuild,
     SandboxImageBuildCreateResult,
+    SandboxImageBuildListParams,
+    SandboxImageBuildListResponse,
     SandboxImageListParams,
     SandboxImageListResponse,
     SandboxImageInit,
@@ -23,8 +25,10 @@ from ....models.sandbox import (
     SandboxNetworkPolicy,
     SandboxNetworkUpdateResult,
     SandboxRuntimeSession,
+    SandboxSnapshotDeleteResult,
     SandboxSnapshotListParams,
     SandboxSnapshotListResponse,
+    SandboxSnapshotSummary,
     SandboxUnexposeResult,
     StartSandboxFromSnapshotParams,
 )
@@ -35,6 +39,7 @@ from ....types import (
     CreateSandboxParams as CreateSandboxParamsDict,
     SandboxExecParams as SandboxExecParamsDict,
     SandboxExposeParams as SandboxExposeParamsDict,
+    SandboxImageBuildListParams as SandboxImageBuildListParamsDict,
     SandboxImageInit as SandboxImageInitDict,
     SandboxImageListParams as SandboxImageListParamsDict,
     SandboxListParams as SandboxListParamsDict,
@@ -158,6 +163,10 @@ class SandboxHandle:
     @property
     def disk_mib(self):
         return self._detail.disk_mib
+
+    @property
+    def timeout_minutes(self):
+        return self._detail.timeout_minutes
 
     @property
     def exposed_ports(self):
@@ -338,7 +347,7 @@ class SandboxHandle:
         )
 
     def _assert_runtime_available(self) -> None:
-        if self._detail.status in {"closed", "error"}:
+        if self._detail.status in {"closed", "error", "close-error"}:
             raise HyperbrowserError(
                 f"Sandbox {self.id} is not running",
                 status_code=409,
@@ -386,7 +395,7 @@ class SandboxManager:
         ],
     ) -> SandboxHandle:
         normalized = coerce_request(params, StartSandboxFromSnapshotParams)
-        return self.create(normalized)
+        return self.create(normalized.model_dump(exclude_none=True))
 
     def get(self, sandbox_id: str) -> SandboxHandle:
         return self.attach(self.get_detail(sandbox_id))
@@ -442,6 +451,14 @@ class SandboxManager:
         )
         return SandboxSnapshotListResponse(**payload)
 
+    def get_snapshot(self, snapshot: str) -> SandboxSnapshotSummary:
+        payload = self._request("GET", f"/snapshots/{snapshot}")
+        return SandboxSnapshotSummary(**payload["snapshot"])
+
+    def delete_snapshot(self, snapshot: str) -> SandboxSnapshotDeleteResult:
+        payload = self._request("DELETE", f"/snapshots/{snapshot}")
+        return SandboxSnapshotDeleteResult(**payload)
+
     def stop(self, sandbox_id: str) -> BasicResponse:
         payload = self._request("PUT", f"/sandbox/{sandbox_id}/stop")
         return BasicResponse(**payload)
@@ -482,6 +499,22 @@ class SandboxManager:
     def cancel_image_build(self, build_id: str) -> SandboxImageBuild:
         payload = self._request("POST", f"/images/builds/{build_id}/cancel")
         return SandboxImageBuild(**payload["build"])
+
+    def list_image_builds(
+        self,
+        params: Optional[
+            Union[SandboxImageBuildListParamsDict, SandboxImageBuildListParams]
+        ] = None,
+    ) -> SandboxImageBuildListResponse:
+        payload = self._request(
+            "GET",
+            "/images/builds",
+            params=dump_request(
+                params if params is not None else {},
+                SandboxImageBuildListParams,
+            ),
+        )
+        return SandboxImageBuildListResponse(**payload)
 
     def wait_for_image_build(
         self,

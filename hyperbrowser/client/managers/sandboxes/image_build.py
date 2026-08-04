@@ -22,7 +22,7 @@ from ....models.sandbox import (
 IMAGE_BUILD_INPUT_FORMAT: SandboxImageBuildInputFormat = "rootfs_export_tar_gz"
 IMAGE_BUILD_SOURCE_PLATFORM = "linux/amd64"
 TERMINAL_IMAGE_BUILD_STATUSES: FrozenSet[SandboxImageBuildStatus] = frozenset(
-    {"completed", "failed", "canceled", "cancelled"}
+    {"completed", "failed", "canceled"}
 )
 _IMAGE_INIT_ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _RESERVED_IMAGE_INIT_ENV_KEYS = {

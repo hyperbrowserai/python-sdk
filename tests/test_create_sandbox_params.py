@@ -10,10 +10,12 @@ from hyperbrowser.models import (
     SandboxExecParams,
     SandboxImageInit,
     SandboxNetworkPolicy,
+    SandboxImageBuildListParams,
     SandboxProcessListParams,
     SandboxProcessWaitParams,
     SandboxSnapshotListParams,
     SandboxVolumeMount,
+    StartSandboxFromSnapshotParams,
 )
 
 
@@ -122,6 +124,7 @@ def test_sandbox_image_build_params_serialize_expected_wire_keys():
         image_name="custom_node",
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
         source_platform="linux/amd64",
         image_config_user="node",
         image_init=SandboxImageInit(
@@ -146,6 +149,7 @@ def test_sandbox_image_build_params_serialize_expected_wire_keys():
     complete_params = CompleteSandboxImageBuildParams(
         input_sha256="abc123",
         input_size_bytes=123,
+        input_format="rootfs_export_tar_gz",
     )
 
     assert complete_params.model_dump(by_alias=True, exclude_none=True) == {
@@ -155,6 +159,79 @@ def test_sandbox_image_build_params_serialize_expected_wire_keys():
     }
 
 
+def test_sandbox_image_build_params_omit_unspecified_format_and_platform():
+    create_params = CreateSandboxImageBuildParams(
+        image_name="custom_node",
+        input_sha256="abc123",
+        input_size_bytes=123,
+    )
+    complete_params = CompleteSandboxImageBuildParams(
+        input_sha256="abc123",
+        input_size_bytes=123,
+    )
+
+    assert create_params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+    }
+    assert complete_params.model_dump(by_alias=True, exclude_none=True) == {
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+    }
+
+
+def test_sandbox_image_build_params_reject_unsupported_source_platform():
+    with pytest.raises(ValidationError):
+        CreateSandboxImageBuildParams(
+            image_name="custom_node",
+            input_sha256="abc123",
+            input_size_bytes=123,
+            source_platform="linux/arm64",
+        )
+
+
+@pytest.mark.parametrize(
+    ("model", "kwargs"),
+    [
+        (
+            CreateSandboxImageBuildParams,
+            {
+                "image_name": "custom_node",
+                "input_sha256": "abc123",
+                "input_size_bytes": 123,
+                "input_format": " rootfs_export_tar_gz ",
+            },
+        ),
+        (
+            CreateSandboxImageBuildParams,
+            {
+                "image_name": "custom_node",
+                "input_sha256": "abc123",
+                "input_size_bytes": 123,
+                "source_platform": " Linux/AMD64 ",
+            },
+        ),
+        (
+            CompleteSandboxImageBuildParams,
+            {
+                "input_sha256": "abc123",
+                "input_size_bytes": 123,
+                "input_format": " rootfs_export_tar_gz ",
+            },
+        ),
+    ],
+)
+def test_sandbox_image_build_params_require_exact_literal_values(model, kwargs):
+    with pytest.raises(ValidationError):
+        model(**kwargs)
+
+
+def test_image_build_list_params_reject_noncanonical_cancelled_spelling():
+    with pytest.raises(ValidationError):
+        SandboxImageBuildListParams(status="cancelled")
+
+
 def test_create_sandbox_params_accepts_snapshot_source():
     params = CreateSandboxParams(snapshot_name="snap", snapshot_id="snap-id")
 
@@ -162,6 +239,34 @@ def test_create_sandbox_params_accepts_snapshot_source():
         "snapshotName": "snap",
         "snapshotId": "snap-id",
     }
+
+
+def test_start_sandbox_from_snapshot_params_are_snapshot_only():
+    params = StartSandboxFromSnapshotParams(
+        snapshot_name="snap",
+        snapshot_id="snap-id",
+        timeout_minutes=15,
+    )
+
+    assert params.model_dump(by_alias=True, exclude_none=True) == {
+        "timeoutMinutes": 15,
+        "snapshotName": "snap",
+        "snapshotId": "snap-id",
+    }
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"image_name": "node"},
+        {"snapshot_name": "snap", "image_name": "node"},
+        {"snapshot_name": "snap", "cpu": 2},
+    ],
+)
+def test_start_sandbox_from_snapshot_params_reject_invalid_sources(payload):
+    with pytest.raises(ValidationError):
+        StartSandboxFromSnapshotParams(**payload)
 
 
 def test_create_sandbox_params_rejects_camel_case_input():

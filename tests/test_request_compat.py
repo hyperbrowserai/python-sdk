@@ -18,6 +18,7 @@ from hyperbrowser.tools import _normalize_extract_tool_params
 def test_mapping_and_legacy_model_produce_identical_session_payloads():
     mapping = {
         "use_stealth": True,
+        "region": "us",
         "screen": {"width": 1920, "height": 1080},
         "start_from_snapshot": {"snapshot_id": "snapshot-123"},
     }
@@ -37,6 +38,7 @@ def test_mapping_and_legacy_model_produce_identical_session_payloads():
         "adblock": False,
         "trackers": False,
         "annoyances": False,
+        "region": "us",
         "startFromSnapshot": {"snapshotId": "snapshot-123"},
     }
 

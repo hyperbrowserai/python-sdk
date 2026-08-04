@@ -4,7 +4,7 @@ from hyperbrowser.client.managers.async_manager.volume import (
     VolumeManager as AsyncVolumeManager,
 )
 from hyperbrowser.client.managers.sync_manager.volume import VolumeManager
-from hyperbrowser.models import CreateVolumeParams, Volume
+from hyperbrowser.models import CreateVolumeParams, Volume, VolumeListParams
 
 
 VOLUME_PAYLOAD = {
@@ -21,6 +21,9 @@ VOLUME_DETAIL_PAYLOAD = {
 
 VOLUME_LIST_PAYLOAD = {
     "volumes": [VOLUME_PAYLOAD],
+    "totalCount": 1,
+    "page": 1,
+    "perPage": 20,
 }
 
 
@@ -110,12 +113,23 @@ def test_volume_models_serialize_and_parse_expected_wire_keys():
     assert parsed.transfer_amount == 7
 
 
-def test_sync_volume_manager_uses_expected_wire_keys():
+def test_volume_list_params_leave_numeric_validation_to_server():
+    params = VolumeListParams(page=0, limit=-1)
+
+    assert params.page == 0
+    assert params.limit == -1
+
+
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+def test_sync_volume_manager_uses_expected_wire_keys(use_legacy_model):
     client = FakeSyncClient()
     manager = VolumeManager(client)
+    list_params = {"search": "project", "page": 1, "limit": 20}
+    if use_legacy_model:
+        list_params = VolumeListParams(**list_params)
 
     created = manager.create(CreateVolumeParams(name="project-cache"))
-    listed = manager.list()
+    listed = manager.list(list_params)
     fetched = manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
@@ -128,7 +142,10 @@ def test_sync_volume_manager_uses_expected_wire_keys():
 
     assert list_call["method"] == "GET"
     assert list_call["url"].endswith("/volume")
+    assert list_call["params"] == {"search": "project", "page": 1, "limit": 20}
     assert listed.volumes[0].transfer_amount == 0
+    assert listed.total_count == 1
+    assert listed.per_page == 20
 
     assert get_call["method"] == "GET"
     assert get_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
@@ -138,12 +155,16 @@ def test_sync_volume_manager_uses_expected_wire_keys():
 
 
 @pytest.mark.anyio
-async def test_async_volume_manager_uses_expected_wire_keys():
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+async def test_async_volume_manager_uses_expected_wire_keys(use_legacy_model):
     client = FakeAsyncClient()
     manager = AsyncVolumeManager(client)
+    list_params = {"search": "project", "page": 1, "limit": 20}
+    if use_legacy_model:
+        list_params = VolumeListParams(**list_params)
 
     created = await manager.create({"name": "project-cache"})
-    listed = await manager.list()
+    listed = await manager.list(list_params)
     fetched = await manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
@@ -156,9 +177,28 @@ async def test_async_volume_manager_uses_expected_wire_keys():
 
     assert list_call["method"] == "GET"
     assert list_call["url"].endswith("/volume")
+    assert list_call["params"] == {"search": "project", "page": 1, "limit": 20}
     assert listed.volumes[0].size == 0
+    assert listed.total_count == 1
 
     assert get_call["method"] == "GET"
     assert get_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
     assert created.transfer_amount == 0
     assert fetched.name == "project-cache"
+
+
+def test_sync_volume_list_without_params_remains_supported():
+    client = FakeSyncClient()
+
+    VolumeManager(client).list()
+
+    assert client.transport.calls[0]["params"] == {}
+
+
+@pytest.mark.anyio
+async def test_async_volume_list_without_params_remains_supported():
+    client = FakeAsyncClient()
+
+    await AsyncVolumeManager(client).list()
+
+    assert client.transport.calls[0]["params"] == {}
