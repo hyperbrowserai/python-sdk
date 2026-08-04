@@ -14,8 +14,8 @@ class CreateVolumeParams(VolumeBaseModel):
 
 
 class VolumeListParams(VolumeBaseModel):
-    page: Optional[int] = Field(default=None, ge=1)
-    limit: Optional[int] = Field(default=None, ge=1)
+    page: Optional[int] = None
+    limit: Optional[int] = None
     search: Optional[str] = None
 
 

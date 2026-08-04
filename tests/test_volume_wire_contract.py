@@ -113,12 +113,23 @@ def test_volume_models_serialize_and_parse_expected_wire_keys():
     assert parsed.transfer_amount == 7
 
 
-def test_sync_volume_manager_uses_expected_wire_keys():
+def test_volume_list_params_leave_numeric_validation_to_server():
+    params = VolumeListParams(page=0, limit=-1)
+
+    assert params.page == 0
+    assert params.limit == -1
+
+
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+def test_sync_volume_manager_uses_expected_wire_keys(use_legacy_model):
     client = FakeSyncClient()
     manager = VolumeManager(client)
+    list_params = {"search": "project", "page": 1, "limit": 20}
+    if use_legacy_model:
+        list_params = VolumeListParams(**list_params)
 
     created = manager.create(CreateVolumeParams(name="project-cache"))
-    listed = manager.list(VolumeListParams(search="project", page=1, limit=20))
+    listed = manager.list(list_params)
     fetched = manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
@@ -144,12 +155,16 @@ def test_sync_volume_manager_uses_expected_wire_keys():
 
 
 @pytest.mark.anyio
-async def test_async_volume_manager_uses_expected_wire_keys():
+@pytest.mark.parametrize("use_legacy_model", [False, True])
+async def test_async_volume_manager_uses_expected_wire_keys(use_legacy_model):
     client = FakeAsyncClient()
     manager = AsyncVolumeManager(client)
+    list_params = {"search": "project", "page": 1, "limit": 20}
+    if use_legacy_model:
+        list_params = VolumeListParams(**list_params)
 
     created = await manager.create({"name": "project-cache"})
-    listed = await manager.list({"search": "project", "page": 1, "limit": 20})
+    listed = await manager.list(list_params)
     fetched = await manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
@@ -170,3 +185,20 @@ async def test_async_volume_manager_uses_expected_wire_keys():
     assert get_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
     assert created.transfer_amount == 0
     assert fetched.name == "project-cache"
+
+
+def test_sync_volume_list_without_params_remains_supported():
+    client = FakeSyncClient()
+
+    VolumeManager(client).list()
+
+    assert client.transport.calls[0]["params"] == {}
+
+
+@pytest.mark.anyio
+async def test_async_volume_list_without_params_remains_supported():
+    client = FakeAsyncClient()
+
+    await AsyncVolumeManager(client).list()
+
+    assert client.transport.calls[0]["params"] == {}

@@ -100,6 +100,7 @@ GrokReasoningEffort = Literal[
     "high",
 ]
 SessionRegion = Literal[
+    "us",
     "us-central",
     "asia-south",
     "us-dev",

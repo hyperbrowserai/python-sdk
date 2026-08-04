@@ -39,14 +39,16 @@ SandboxFileWatchRoute = Literal["ws", "stream"]
 SandboxFileSystemEventType = Literal["chmod", "create", "remove", "rename", "write"]
 SandboxVolumeMountType = Literal["rw", "ro"]
 SandboxImageBuildInputFormat = Literal["rootfs_export_tar_gz"]
+SandboxImageBuildSourcePlatform = Literal["linux/amd64"]
 SandboxImageBuildStatus = Literal[
     "awaiting_upload",
     "upload_verified",
+    "dispatching",
     "building",
+    "verifying",
     "completed",
     "failed",
     "canceled",
-    "cancelled",
 ]
 
 
@@ -147,6 +149,7 @@ class Sandbox(SandboxBaseModel):
     cpu: Optional[int] = Field(default=None, alias="vcpus")
     memory_mib: Optional[int] = Field(default=None, alias="memMiB")
     disk_mib: Optional[int] = Field(default=None, alias="diskSizeMiB")
+    timeout_minutes: Optional[int] = Field(default=None, alias="timeoutMinutes")
     runtime: SandboxRuntimeTarget
     exposed_ports: List[SandboxExposeResult] = Field(
         default_factory=list,
@@ -163,6 +166,7 @@ class Sandbox(SandboxBaseModel):
         "cpu",
         "memory_mib",
         "disk_mib",
+        "timeout_minutes",
         mode="before",
     )
     @classmethod
@@ -194,13 +198,7 @@ class SandboxRuntimeSession(SandboxBaseModel):
         return _parse_optional_datetime(value)
 
 
-class CreateSandboxParams(SandboxBaseModel):
-    snapshot_name: Optional[str] = Field(
-        default=None, serialization_alias="snapshotName"
-    )
-    snapshot_id: Optional[str] = Field(default=None, serialization_alias="snapshotId")
-    image_name: Optional[str] = Field(default=None, serialization_alias="imageName")
-    image_id: Optional[str] = Field(default=None, serialization_alias="imageId")
+class _SandboxLaunchCommonParams(SandboxBaseModel):
     region: Optional[SandboxRegion] = None
     enable_recording: Optional[bool] = Field(
         default=None, serialization_alias="enableRecording"
@@ -216,17 +214,26 @@ class CreateSandboxParams(SandboxBaseModel):
     timeout_minutes: Optional[int] = Field(
         default=None, serialization_alias="timeoutMinutes"
     )
-    cpu: Optional[int] = Field(default=None, ge=1, serialization_alias="vcpus")
-    memory_mib: Optional[int] = Field(default=None, ge=1, serialization_alias="memMiB")
-    disk_mib: Optional[int] = Field(
-        default=None, ge=1, serialization_alias="diskSizeMiB"
-    )
     allow_internet_access: Optional[bool] = Field(
         default=None,
         serialization_alias="allowInternetAccess",
     )
     allow_out: Optional[List[str]] = Field(default=None, serialization_alias="allowOut")
     deny_out: Optional[List[str]] = Field(default=None, serialization_alias="denyOut")
+
+
+class CreateSandboxParams(_SandboxLaunchCommonParams):
+    snapshot_name: Optional[str] = Field(
+        default=None, serialization_alias="snapshotName"
+    )
+    snapshot_id: Optional[str] = Field(default=None, serialization_alias="snapshotId")
+    image_name: Optional[str] = Field(default=None, serialization_alias="imageName")
+    image_id: Optional[str] = Field(default=None, serialization_alias="imageId")
+    cpu: Optional[int] = Field(default=None, ge=1, serialization_alias="vcpus")
+    memory_mib: Optional[int] = Field(default=None, ge=1, serialization_alias="memMiB")
+    disk_mib: Optional[int] = Field(
+        default=None, ge=1, serialization_alias="diskSizeMiB"
+    )
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -250,8 +257,11 @@ class CreateSandboxParams(SandboxBaseModel):
         return self
 
 
-class StartSandboxFromSnapshotParams(CreateSandboxParams):
-    pass
+class StartSandboxFromSnapshotParams(_SandboxLaunchCommonParams):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    snapshot_name: str = Field(min_length=1, serialization_alias="snapshotName")
+    snapshot_id: Optional[str] = Field(default=None, serialization_alias="snapshotId")
 
 
 class SandboxListParams(SandboxBaseModel):
@@ -365,7 +375,7 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
         default="rootfs_export_tar_gz",
         serialization_alias="inputFormat",
     )
-    source_platform: str = Field(
+    source_platform: SandboxImageBuildSourcePlatform = Field(
         default="linux/amd64",
         serialization_alias="sourcePlatform",
     )
@@ -378,7 +388,6 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
         serialization_alias="imageInit",
     )
 
-
 class CompleteSandboxImageBuildParams(SandboxBaseModel):
     input_sha256: str = Field(serialization_alias="inputSha256")
     input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
@@ -386,7 +395,6 @@ class CompleteSandboxImageBuildParams(SandboxBaseModel):
         default="rootfs_export_tar_gz",
         serialization_alias="inputFormat",
     )
-
 
 class SandboxImageBuildUpload(SandboxBaseModel):
     url: str
@@ -431,8 +439,8 @@ class SandboxImageBuildCreateResult(SandboxBaseModel):
 
 
 class SandboxImageBuildListParams(SandboxBaseModel):
-    status: Optional[str] = None
-    limit: Optional[int] = Field(default=None, ge=1)
+    status: Optional[SandboxImageBuildStatus] = None
+    limit: Optional[int] = None
 
 
 class SandboxImageBuildListResponse(SandboxBaseModel):

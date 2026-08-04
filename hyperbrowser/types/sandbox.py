@@ -3,7 +3,7 @@ from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Required, TypeAlias, TypedDict
 
 
-SandboxStatus: TypeAlias = Literal["active", "closed", "error"]
+SandboxStatus: TypeAlias = Literal["active", "closed", "error", "close-error"]
 SandboxRegion: TypeAlias = Literal[
     "us-central",
     "asia-south",
@@ -27,6 +27,17 @@ SandboxFileReadFormat: TypeAlias = Literal["text", "bytes", "blob", "stream"]
 SandboxFileWatchRoute: TypeAlias = Literal["ws", "stream"]
 SandboxVolumeMountType: TypeAlias = Literal["rw", "ro"]
 SandboxImageBuildInputFormat: TypeAlias = Literal["rootfs_export_tar_gz"]
+SandboxImageBuildSourcePlatform: TypeAlias = Literal["linux/amd64"]
+SandboxImageBuildStatus: TypeAlias = Literal[
+    "awaiting_upload",
+    "upload_verified",
+    "dispatching",
+    "building",
+    "verifying",
+    "completed",
+    "failed",
+    "canceled",
+]
 SandboxFileWriteData: TypeAlias = Union[str, bytes]
 
 
@@ -131,7 +142,7 @@ class SandboxSnapshotListParams(TypedDict, total=False):
 class SandboxImageBuildListParams(TypedDict, total=False):
     """Filters for listing sandbox image builds."""
 
-    status: Optional[str]
+    status: Optional[SandboxImageBuildStatus]
     limit: Optional[int]
 
 
@@ -148,7 +159,7 @@ class CreateSandboxImageBuildParams(TypedDict, total=False):
     input_sha256: Required[str]
     input_size_bytes: Required[int]
     input_format: SandboxImageBuildInputFormat
-    source_platform: str
+    source_platform: SandboxImageBuildSourcePlatform
     image_config_user: Optional[str]
     image_init: Optional[SandboxImageInit]
 
@@ -423,6 +434,8 @@ __all__ = [
     "SandboxFileWriteTextParams",
     "SandboxImageBuildInputFormat",
     "SandboxImageBuildListParams",
+    "SandboxImageBuildSourcePlatform",
+    "SandboxImageBuildStatus",
     "SandboxImageInit",
     "SandboxImageListParams",
     "SandboxListParams",

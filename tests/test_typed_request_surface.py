@@ -72,7 +72,6 @@ def test_typed_request_models_track_legacy_request_fields_and_required_keys():
             not is_typeddict(request_type)
             or not inspect.isclass(legacy_model)
             or not issubclass(legacy_model, BaseModel)
-            or name == "StartSandboxFromSnapshotParams"
         ):
             continue
 

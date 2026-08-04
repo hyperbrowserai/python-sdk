@@ -173,6 +173,10 @@ class SandboxHandle:
         return self._detail.disk_mib
 
     @property
+    def timeout_minutes(self):
+        return self._detail.timeout_minutes
+
+    @property
     def exposed_ports(self):
         return self._detail.exposed_ports
 
@@ -351,7 +355,7 @@ class SandboxHandle:
         )
 
     def _assert_runtime_available(self) -> None:
-        if self._detail.status in {"closed", "error"}:
+        if self._detail.status in {"closed", "error", "close-error"}:
             raise HyperbrowserError(
                 f"Sandbox {self.id} is not running",
                 status_code=409,
@@ -399,7 +403,7 @@ class SandboxManager:
         ],
     ) -> SandboxHandle:
         normalized = coerce_request(params, StartSandboxFromSnapshotParams)
-        return await self.create(normalized)
+        return await self.create(normalized.model_dump(exclude_none=True))
 
     async def get(self, sandbox_id: str) -> SandboxHandle:
         return self.attach(await self.get_detail(sandbox_id))
