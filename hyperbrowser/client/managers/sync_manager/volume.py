@@ -4,6 +4,7 @@ from hyperbrowser.client._request import dump_request
 from hyperbrowser.models.volume import (
     CreateVolumeParams,
     Volume,
+    VolumeDeleteResult,
     VolumeListParams,
     VolumeListResponse,
 )
@@ -43,3 +44,9 @@ class VolumeManager:
             self._client._build_url(f"/volume/{volume_id}")
         )
         return Volume(**response.data)
+
+    def delete(self, volume_id: str) -> VolumeDeleteResult:
+        response = self._client.transport.delete(
+            self._client._build_url(f"/volume/{volume_id}")
+        )
+        return VolumeDeleteResult(**response.data)

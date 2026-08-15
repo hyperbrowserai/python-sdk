@@ -210,7 +210,13 @@ from .profile import (
     ProfileListResponse,
     ProfileResponse,
 )
-from .volume import CreateVolumeParams, Volume, VolumeListParams, VolumeListResponse
+from .volume import (
+    CreateVolumeParams,
+    Volume,
+    VolumeDeleteResult,
+    VolumeListParams,
+    VolumeListResponse,
+)
 from .scrape import (
     BatchScrapeJobResponse,
     BatchScrapeJobStatusResponse,
@@ -537,6 +543,7 @@ __all__ = [
     "Volume",
     "VolumeListParams",
     "VolumeListResponse",
+    "VolumeDeleteResult",
     # scrape
     "BatchScrapeJobResponse",
     "BatchScrapeJobStatusResponse",

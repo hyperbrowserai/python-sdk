@@ -133,6 +133,7 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     )
     client.volumes.list({"page": 0, "limit": -1})
     client.volumes.list(LegacyVolumeListParams(page=0, limit=-1))
+    client.volumes.delete("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     client.sessions.create(LegacyCreateSessionParams(use_stealth=True, region="us"))
     client.web.fetch(LegacyFetchParams(url="https://example.com"))
@@ -198,6 +199,7 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     )
     await client.sandboxes.list_image_builds({"status": "verifying", "limit": -1})
     await client.volumes.list({"page": 0, "limit": -1})
+    await client.volumes.delete("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     await client.sessions.create(LegacyCreateSessionParams(use_proxy=True, region="us"))
     await client.web.fetch(LegacyFetchParams(url="https://example.com"))

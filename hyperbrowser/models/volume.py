@@ -36,3 +36,9 @@ class VolumeListResponse(VolumeBaseModel):
     total_count: Optional[int] = Field(default=None, alias="totalCount")
     page: Optional[int] = None
     per_page: Optional[int] = Field(default=None, alias="perPage")
+
+
+class VolumeDeleteResult(VolumeBaseModel):
+    deleted: bool
+    id: Optional[str] = None
+    name: Optional[str] = None
