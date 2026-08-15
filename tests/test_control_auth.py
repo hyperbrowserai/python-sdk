@@ -205,11 +205,46 @@ def test_legacy_app_base_url_maps_to_api(auth_home):
     assert auth.is_oauth is True
 
 
+def test_default_client_adopts_session_base_url(auth_home):
+    write_session(auth_home, base_url="https://staging.hyperbrowser.dev")
+    base_url, auth = resolve_control_plane_config(ClientConfig())
+    assert base_url == "https://staging.hyperbrowser.dev"
+    assert auth.is_oauth is True
+
+
 def test_oauth_base_url_mismatch(auth_home):
     write_session(auth_home, base_url="https://staging.hyperbrowser.dev")
     with pytest.raises(HyperbrowserError) as exc:
-        resolve_control_plane_config(ClientConfig())
+        resolve_control_plane_config(
+            ClientConfig(base_url="https://other.hyperbrowser.dev")
+        )
     assert exc.value.code == "oauth_base_url_mismatch"
+
+
+def test_empty_base_url_raises(auth_home):
+    write_session(auth_home)
+    with pytest.raises(HyperbrowserError) as exc:
+        resolve_control_plane_config(ClientConfig(api_key="key", base_url=""))
+    assert exc.value.code == "invalid_base_url"
+
+
+def test_empty_env_api_key_falls_back_to_oauth(auth_home, monkeypatch):
+    write_session(auth_home, access_token="session-access")
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "   ")
+    client = Hyperbrowser()
+    try:
+        headers, _ = client.auth.authorize_headers()
+    finally:
+        client.close()
+    assert headers == {"authorization": "Bearer session-access"}
+
+
+def test_api_key_mode_does_not_rewrite_explicit_base_url(auth_home):
+    base_url, auth = resolve_control_plane_config(
+        ClientConfig(api_key="key", base_url="https://app.hyperbrowser.ai/api")
+    )
+    assert base_url == "https://app.hyperbrowser.ai/api"
+    assert auth.is_oauth is False
 
 
 def test_invalid_session_json(auth_home):
@@ -294,13 +329,7 @@ def test_async_refresh_uses_frontend_url(auth_home, monkeypatch):
             json={"access_token": "async-refreshed", "expires_in": 3600},
         )
 
-    real_client = httpx.AsyncClient
-
-    def fake_client(*args, **kwargs):
-        kwargs["transport"] = httpx.MockTransport(handler)
-        return real_client(*args, **kwargs)
-
-    monkeypatch.setattr("hyperbrowser.control_auth.httpx.AsyncClient", fake_client)
+    _patch_httpx_client(monkeypatch, handler)
     _, auth = resolve_control_plane_config(ClientConfig())
     headers, token = asyncio.run(auth.aauthorize_headers())
     assert headers == {"authorization": "Bearer async-refreshed"}
@@ -459,6 +488,68 @@ def test_parse_timestamp_accepts_variable_fractional_seconds():
     six = _parse_timestamp("2026-08-15T12:00:00.123456Z")
     assert nine is not None and six is not None
     assert abs(nine - six) < 0.001
+
+
+def test_invalid_grant_does_not_delete_rotated_session(auth_home, monkeypatch):
+    path = write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+        refresh_token="old-refresh",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "base_url": DEFAULT_BASE_URL,
+                    "client_id": "hyperbrowser-cli",
+                    "token_type": "Bearer",
+                    "access_token": "rotated-access",
+                    "refresh_token": "rotated-refresh",
+                    "expiry": _expiry(hours=1),
+                    "scope": "cli",
+                }
+            )
+        )
+        return httpx.Response(400, json={"error": "invalid_grant"})
+
+    _patch_httpx_client(monkeypatch, handler)
+    _, auth = resolve_control_plane_config(ClientConfig())
+    with pytest.raises(HyperbrowserError) as exc:
+        auth.authorize_headers()
+    assert exc.value.code == "invalid_grant"
+    saved = json.loads(path.read_text())
+    assert saved["refresh_token"] == "rotated-refresh"
+    assert saved["access_token"] == "rotated-access"
+
+
+def test_missing_session_after_expire_is_oauth_session_expired(auth_home):
+    path = write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+        refresh_token_expiry=_expiry(minutes=-1),
+    )
+    _, auth = resolve_control_plane_config(ClientConfig())
+    path.unlink()
+    with pytest.raises(HyperbrowserError) as exc:
+        auth.authorize_headers()
+    assert exc.value.code == "oauth_session_expired"
+
+
+def test_sync_transport_accepts_api_key_string():
+    from hyperbrowser.transport.sync import SyncTransport
+
+    transport = SyncTransport("legacy-key")
+    try:
+        headers, token = transport.auth.authorize_headers()
+        assert headers == {"x-api-key": "legacy-key"}
+        assert token is None
+        assert transport.auth.is_oauth is False
+    finally:
+        transport.close()
 
 
 def test_refresh_timeout_is_independent_of_lock_timeout(auth_home, monkeypatch):

@@ -1,5 +1,6 @@
 import warnings
 from collections.abc import Mapping
+from pathlib import Path
 from typing import IO, List, Optional, Union, overload
 
 from hyperbrowser.client._request import coerce_request, dump_request
@@ -40,6 +41,17 @@ from ....models.session import (
 )
 
 CAPTCHA_EVALUATION_REQUEST_TIMEOUT_SECONDS = 185
+
+
+def _replayable_upload_files(file_path: str):
+    path = Path(file_path)
+    return {
+        "file": (
+            path.name or "upload.bin",
+            path.read_bytes(),
+            "application/octet-stream",
+        )
+    }
 
 
 class SessionEventLogsManager:
@@ -159,21 +171,14 @@ class SessionManager:
         return GetSessionDownloadsUrlResponse(**response.data)
 
     def upload_file(self, id: str, file_input: Union[str, IO]) -> UploadFileResponse:
-        response = None
         if isinstance(file_input, str):
-            with open(file_input, "rb") as file_obj:
-                files = {"file": file_obj}
-                response = self._client.transport.post(
-                    self._client._build_url(f"/session/{id}/uploads"),
-                    files=files,
-                )
+            files = _replayable_upload_files(file_input)
         else:
             files = {"file": file_input}
-            response = self._client.transport.post(
-                self._client._build_url(f"/session/{id}/uploads"),
-                files=files,
-            )
-
+        response = self._client.transport.post(
+            self._client._build_url(f"/session/{id}/uploads"),
+            files=files,
+        )
         return UploadFileResponse(**response.data)
 
     def extend_session(self, id: str, duration_minutes: int) -> BasicResponse:

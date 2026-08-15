@@ -79,26 +79,39 @@ def test_oauth_401_refreshes_and_retries(auth_home, monkeypatch):
     ]
 
 
-def test_oauth_401_without_replayable_body_does_not_retry(
-    auth_home, monkeypatch, tmp_path
+def test_oauth_401_refreshes_non_replayable_upload_without_retrying_body(
+    auth_home, monkeypatch
 ):
+    import io
+    import json
+    from pathlib import Path
+
     write_session(auth_home, access_token="old-access")
+    calls = []
 
     def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
         if request.url.path == "/oauth/token":
-            raise AssertionError("refresh should not run for non-replayable uploads")
+            return httpx.Response(
+                200,
+                json={"access_token": "new-access", "expires_in": 3600},
+            )
         return httpx.Response(401, json={"message": "unauthorized"})
 
     _patch_httpx_client(monkeypatch, handler)
-    upload = tmp_path / "file.bin"
-    upload.write_bytes(b"hello")
     client = Hyperbrowser()
     try:
         with pytest.raises(HyperbrowserError) as exc:
-            client.sessions.upload_file("session_123", str(upload))
+            client.sessions.upload_file("session_123", io.BytesIO(b"hello"))
         assert exc.value.status_code == 401
     finally:
         client.close()
+
+    assert calls == ["/api/session/session_123/uploads", "/oauth/token"]
+    saved = json.loads(
+        (Path(auth_home) / ".hx_config" / "auth" / "default.json").read_text()
+    )
+    assert saved["access_token"] == "new-access"
 
 
 def test_post_timeout_is_forwarded(auth_home, monkeypatch):
@@ -230,3 +243,15 @@ def test_sandbox_control_requests_include_api_key(auth_home, monkeypatch):
     assert seen
     assert seen[0]["path"] == "/api/sandbox/sbx_123"
     assert seen[0]["api_key"] == "sandbox-key"
+
+
+def test_file_pair_sequence_replayability():
+    from hyperbrowser.transport.base import is_request_replayable
+
+    class FileLike:
+        def read(self):
+            return b"x"
+
+    assert is_request_replayable((("file", b"one"), ("extra", b"two")))
+    assert is_request_replayable([("file", b"one"), ("extra", b"two")])
+    assert not is_request_replayable({"file": FileLike()})

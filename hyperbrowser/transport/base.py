@@ -1,5 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Generic, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from hyperbrowser.exceptions import HyperbrowserError
 
@@ -40,7 +50,7 @@ class TransportStrategy(ABC):
     """Abstract base class for different transport implementations"""
 
     @abstractmethod
-    def __init__(self, auth: "ControlPlaneAuthManager"):
+    def __init__(self, auth: Union[str, "ControlPlaneAuthManager"]):
         pass
 
     @abstractmethod
@@ -76,33 +86,80 @@ def is_request_replayable(files: Optional[Any] = None) -> bool:
     return _are_files_replayable(files)
 
 
+def oauth_unauthorized(auth: Any, response: Any) -> bool:
+    return response.status_code == 401 and bool(getattr(auth, "is_oauth", False))
+
+
+def retry_oauth_unauthorized(
+    auth: Any,
+    response: Any,
+    *,
+    access_token: Optional[str],
+    replayable: bool,
+    authorize: Callable[..., Any],
+    send: Callable[[Dict[str, str]], Any],
+    close_response: Callable[[Any], None],
+):
+    if not oauth_unauthorized(auth, response):
+        return response
+
+    retry_headers, _ = authorize(
+        force_refresh=True,
+        rejected_access_token=access_token,
+    )
+    if not replayable:
+        return response
+
+    close_response(response)
+    return send(retry_headers)
+
+
+async def aretry_oauth_unauthorized(
+    auth: Any,
+    response: Any,
+    *,
+    access_token: Optional[str],
+    replayable: bool,
+    authorize: Callable[..., Any],
+    send: Callable[[Dict[str, str]], Any],
+    close_response: Callable[[Any], None],
+):
+    if not oauth_unauthorized(auth, response):
+        return response
+
+    retry_headers, _ = await authorize(
+        force_refresh=True,
+        rejected_access_token=access_token,
+    )
+    if not replayable:
+        return response
+
+    await close_response(response)
+    return await send(retry_headers)
+
+
 def _are_files_replayable(files: Any) -> bool:
     if isinstance(files, dict):
         values = list(files.values())
-    elif isinstance(files, list):
-        values = [value for _, value in files]
-    elif isinstance(files, tuple) and len(files) == 2:
+    elif _is_file_pair_sequence(files):
+        values = [item[1] for item in files]
+    elif isinstance(files, tuple) and len(files) >= 2 and isinstance(files[0], str):
         values = [files[1]]
+    elif isinstance(files, (list, tuple)):
+        values = list(files)
     else:
         values = [files]
     return all(_is_file_value_replayable(value) for value in values)
+
+
+def _is_file_pair_sequence(files: Any) -> bool:
+    if not isinstance(files, (list, tuple)) or not files:
+        return False
+    first = files[0]
+    return isinstance(first, (list, tuple)) and len(first) >= 2
 
 
 def _is_file_value_replayable(value: Any) -> bool:
     if isinstance(value, tuple) and len(value) >= 2:
         return _is_file_value_replayable(value[1])
     return isinstance(value, (str, bytes, bytearray, memoryview))
-
-
-def merge_headers(
-    *header_groups: Optional[Dict[str, str]],
-) -> Dict[str, str]:
-    merged: Dict[str, str] = {}
-    for headers in header_groups:
-        if not headers:
-            continue
-        for key, value in headers.items():
-            if value is None:
-                continue
-            merged[str(key)] = str(value)
-    return merged

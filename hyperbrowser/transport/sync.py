@@ -1,15 +1,21 @@
 import httpx
 from typing import Any, Dict, Optional
 
+from hyperbrowser.control_auth import coerce_transport_auth
 from hyperbrowser.exceptions import HyperbrowserError
-from .base import TransportStrategy, APIResponse, is_request_replayable, merge_headers
+from .base import (
+    TransportStrategy,
+    APIResponse,
+    is_request_replayable,
+    retry_oauth_unauthorized,
+)
 
 
 class SyncTransport(TransportStrategy):
     """Synchronous transport implementation using httpx"""
 
     def __init__(self, auth):
-        self.auth = auth
+        self.auth = coerce_transport_auth(auth)
         self.client = httpx.Client()
 
     def _handle_response(self, response: httpx.Response) -> APIResponse:
@@ -147,39 +153,29 @@ class SyncTransport(TransportStrategy):
         replayable: bool = True,
     ) -> httpx.Response:
         auth_headers, access_token = self.auth.authorize_headers()
-        response = self._send(
-            method,
-            url,
-            params=params,
-            json_data=json_data,
-            data=data,
-            files=files,
-            auth_headers=auth_headers,
-            timeout=timeout,
-            follow_redirects=follow_redirects,
-        )
-        if (
-            response.status_code == 401
-            and getattr(self.auth, "is_oauth", False)
-            and replayable
-        ):
-            response.close()
-            retry_headers, _ = self.auth.authorize_headers(
-                force_refresh=True,
-                rejected_access_token=access_token,
-            )
-            response = self._send(
+
+        def send(headers: Dict[str, str]) -> httpx.Response:
+            return self._send(
                 method,
                 url,
                 params=params,
                 json_data=json_data,
                 data=data,
                 files=files,
-                auth_headers=retry_headers,
+                auth_headers=headers,
                 timeout=timeout,
                 follow_redirects=follow_redirects,
             )
-        return response
+
+        return retry_oauth_unauthorized(
+            self.auth,
+            send(auth_headers),
+            access_token=access_token,
+            replayable=replayable,
+            authorize=self.auth.authorize_headers,
+            send=send,
+            close_response=lambda response: response.close(),
+        )
 
     def _send(
         self,
@@ -195,7 +191,7 @@ class SyncTransport(TransportStrategy):
         follow_redirects: bool,
     ) -> httpx.Response:
         kwargs: Dict[str, Any] = {
-            "headers": merge_headers(auth_headers),
+            "headers": auth_headers,
             "follow_redirects": follow_redirects,
         }
         if params is not None:
