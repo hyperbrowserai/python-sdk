@@ -27,6 +27,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         base_url: Optional[str] = None,
         timeout: Optional[int] = 30,
         runtime_proxy_override: Optional[str] = None,
+        profile: Optional[str] = None,
     ):
         super().__init__(
             AsyncTransport,
@@ -34,6 +35,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
             api_key,
             base_url,
             runtime_proxy_override,
+            profile,
         )
         self.timeout = timeout or 30
         self.transport.client.timeout = timeout

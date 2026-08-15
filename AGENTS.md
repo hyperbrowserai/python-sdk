@@ -13,7 +13,7 @@
 - `poetry run ruff check .` — run lint checks.
 - `poetry run ruff format .` — format code with ruff.
 - `poetry run pytest tests --ignore=tests/sandbox/e2e` — run the local non-E2E suite.
-- Example run: create a small script using the README snippets and run with `python path/to/script.py` after setting `HYPERBROWSER_API_KEY`.
+- Example run: create a small script using the README snippets and run with `python path/to/script.py` after setting `HYPERBROWSER_API_KEY`, or after `hx auth login`.
 
 ## Coding Style & Naming Conventions
 - Python 3.8+ with 4‑space indentation.
@@ -33,6 +33,7 @@
 
 ## Configuration & Secrets
 - Set `HYPERBROWSER_API_KEY` via environment variables or pass `api_key=` in client constructors.
+- If no API key is set, the client uses a saved `hx auth login` session from `~/.hx_config/auth/`. Select a profile with `HYPERBROWSER_PROFILE` or `profile=`.
 - Never commit API keys or session data; use `.env` or local shell exports for development.
 
 ## Cursor Cloud specific instructions

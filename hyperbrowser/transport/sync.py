@@ -1,15 +1,16 @@
 import httpx
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
-from .base import TransportStrategy, APIResponse
+from .base import TransportStrategy, APIResponse, is_request_replayable, merge_headers
 
 
 class SyncTransport(TransportStrategy):
     """Synchronous transport implementation using httpx"""
 
-    def __init__(self, api_key: str):
-        self.client = httpx.Client(headers={"x-api-key": api_key})
+    def __init__(self, auth):
+        self.auth = auth
+        self.client = httpx.Client()
 
     def _handle_response(self, response: httpx.Response) -> APIResponse:
         try:
@@ -52,49 +53,114 @@ class SyncTransport(TransportStrategy):
         files: Optional[dict] = None,
         timeout: Optional[float] = None,
     ) -> APIResponse:
-        try:
-            kwargs = {}
-            if timeout is not None:
-                kwargs["timeout"] = timeout
-            if files:
-                response = self.client.post(url, data=data, files=files, **kwargs)
-            else:
-                response = self.client.post(url, json=data, **kwargs)
-            return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Post request failed", original_error=e)
+        return self._request(
+            "POST",
+            url,
+            json_data=None if files else data,
+            data=data if files else None,
+            files=files,
+            timeout=timeout,
+            replayable=is_request_replayable(files),
+        )
 
     def get(
         self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
     ) -> APIResponse:
         if params:
             params = {k: v for k, v in params.items() if v is not None}
-        try:
-            response = self.client.get(
-                url, params=params, follow_redirects=follow_redirects
-            )
-            return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Get request failed", original_error=e)
+        return self._request(
+            "GET",
+            url,
+            params=params,
+            follow_redirects=follow_redirects,
+        )
 
     def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
-        try:
-            response = self.client.put(url, json=data)
-            return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Put request failed", original_error=e)
+        return self._request("PUT", url, json_data=data)
 
     def delete(self, url: str) -> APIResponse:
+        return self._request("DELETE", url)
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict] = None,
+        json_data: Optional[Any] = None,
+        data: Optional[Any] = None,
+        files: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        follow_redirects: bool = False,
+        replayable: bool = True,
+    ) -> APIResponse:
         try:
-            response = self.client.delete(url)
+            auth_headers, access_token = self.auth.authorize_headers()
+            response = self._send(
+                method,
+                url,
+                params=params,
+                json_data=json_data,
+                data=data,
+                files=files,
+                auth_headers=auth_headers,
+                timeout=timeout,
+                follow_redirects=follow_redirects,
+            )
+            if (
+                response.status_code == 401
+                and getattr(self.auth, "is_oauth", False)
+                and replayable
+            ):
+                response.close()
+                retry_headers, _ = self.auth.authorize_headers(
+                    force_refresh=True,
+                    rejected_access_token=access_token,
+                )
+                response = self._send(
+                    method,
+                    url,
+                    params=params,
+                    json_data=json_data,
+                    data=data,
+                    files=files,
+                    auth_headers=retry_headers,
+                    timeout=timeout,
+                    follow_redirects=follow_redirects,
+                )
             return self._handle_response(response)
         except HyperbrowserError:
             raise
         except Exception as e:
-            raise HyperbrowserError("Delete request failed", original_error=e)
+            raise HyperbrowserError(
+                f"{method.title()} request failed", original_error=e
+            )
+
+    def _send(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict],
+        json_data: Optional[Any],
+        data: Optional[Any],
+        files: Optional[Any],
+        auth_headers: Dict[str, str],
+        timeout: Optional[float],
+        follow_redirects: bool,
+    ) -> httpx.Response:
+        kwargs: Dict[str, Any] = {
+            "headers": merge_headers(auth_headers),
+            "follow_redirects": follow_redirects,
+        }
+        if params is not None:
+            kwargs["params"] = params
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        if json_data is not None:
+            kwargs["json"] = json_data
+        if data is not None:
+            kwargs["data"] = data
+        if files is not None:
+            kwargs["files"] = files
+        return self.client.request(method, url, **kwargs)

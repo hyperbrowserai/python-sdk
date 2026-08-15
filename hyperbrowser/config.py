@@ -7,17 +7,22 @@ import os
 class ClientConfig:
     """Configuration for the Hyperbrowser client"""
 
-    api_key: str
+    api_key: Optional[str] = None
     base_url: str = "https://api.hyperbrowser.ai"
+    profile: Optional[str] = None
+    frontend_url: Optional[str] = None
+    auth_lock_timeout_ms: Optional[int] = None
+    auth_lock_poll_interval_ms: Optional[int] = None
+    auth_lock_stale_ms: Optional[int] = None
     runtime_proxy_override: Optional[str] = None
 
     @classmethod
     def from_env(cls) -> "ClientConfig":
-        api_key = os.environ.get("HYPERBROWSER_API_KEY")
-        if api_key is None:
-            raise ValueError("HYPERBROWSER_API_KEY environment variable is required")
-
-        base_url = os.environ.get(
-            "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
+        return cls(
+            api_key=os.environ.get("HYPERBROWSER_API_KEY"),
+            base_url=os.environ.get(
+                "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
+            ),
+            profile=os.environ.get("HYPERBROWSER_PROFILE"),
+            frontend_url=os.environ.get("HYPERBROWSER_FRONTEND_URL"),
         )
-        return cls(api_key=api_key, base_url=base_url)

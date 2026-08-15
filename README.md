@@ -28,11 +28,13 @@ Both the sync and async client follow similar configuration params
 ### API Key
 The API key can be configured either from the constructor arguments or environment variables using `HYPERBROWSER_API_KEY`
 
-If no API key is provided, the client falls back to a saved OAuth session created by `hx auth login`. By default it reads `~/.hx_config/auth/default.json`, or `~/.hx_config/auth/<profile>.json` when `HYPERBROWSER_PROFILE` or `ClientConfig(profile=...)` is set.
+If no API key is provided, the client falls back to a saved OAuth session created by `hx auth login`. By default it reads `~/.hx_config/auth/default.json`, or `~/.hx_config/auth/<profile>.json` when `HYPERBROWSER_PROFILE`, `Hyperbrowser(profile=...)`, or `ClientConfig(profile=...)` is set.
 
 Profile names must match `^[A-Za-z0-9._-]+$`.
 
 `base_url` and `HYPERBROWSER_BASE_URL` accept either `https://host` or `https://host/api`. The client normalizes both to the same control-plane base URL.
+
+Token refresh uses `https://app.hyperbrowser.ai` for the default API host, or `HYPERBROWSER_FRONTEND_URL` / `ClientConfig(frontend_url=...)` when set. Custom `base_url` values refresh against that same host.
 
 ## Usage
 

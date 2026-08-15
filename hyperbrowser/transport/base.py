@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, Generic, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Generic, Type, Union
 
 from hyperbrowser.exceptions import HyperbrowserError
+
+if TYPE_CHECKING:
+    from hyperbrowser.control_auth import ControlPlaneAuthManager
 
 T = TypeVar("T")
 
@@ -37,7 +40,7 @@ class TransportStrategy(ABC):
     """Abstract base class for different transport implementations"""
 
     @abstractmethod
-    def __init__(self, api_key: str):
+    def __init__(self, auth: "ControlPlaneAuthManager"):
         pass
 
     @abstractmethod
@@ -65,3 +68,41 @@ class TransportStrategy(ABC):
     @abstractmethod
     def delete(self, url: str) -> APIResponse:
         pass
+
+
+def is_request_replayable(files: Optional[Any] = None) -> bool:
+    if files is None:
+        return True
+    return _are_files_replayable(files)
+
+
+def _are_files_replayable(files: Any) -> bool:
+    if isinstance(files, dict):
+        values = list(files.values())
+    elif isinstance(files, list):
+        values = [value for _, value in files]
+    elif isinstance(files, tuple) and len(files) == 2:
+        values = [files[1]]
+    else:
+        values = [files]
+    return all(_is_file_value_replayable(value) for value in values)
+
+
+def _is_file_value_replayable(value: Any) -> bool:
+    if isinstance(value, tuple) and len(value) >= 2:
+        return _is_file_value_replayable(value[1])
+    return isinstance(value, (str, bytes, bytearray, memoryview))
+
+
+def merge_headers(
+    *header_groups: Optional[Dict[str, str]],
+) -> Dict[str, str]:
+    merged: Dict[str, str] = {}
+    for headers in header_groups:
+        if not headers:
+            continue
+        for key, value in headers.items():
+            if value is None:
+                continue
+            merged[str(key)] = str(value)
+    return merged
