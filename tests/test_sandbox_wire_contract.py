@@ -444,7 +444,16 @@ class RecordingHTTPClient:
         elif "/images/builds/" in url:
             payload = IMAGE_BUILD_PAYLOAD
         elif "/images/" in url:
-            payload = {"deleted": True} if method == "DELETE" else IMAGE_LIST_PAYLOAD
+            payload = (
+                {
+                    "deleted": True,
+                    "id": "img_123",
+                    "imageName": "custom_node",
+                    "uploaded": True,
+                }
+                if method == "DELETE"
+                else IMAGE_LIST_PAYLOAD
+            )
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
@@ -648,7 +657,16 @@ class RecordingAsyncHTTPClient:
         elif "/images/builds/" in url:
             payload = IMAGE_BUILD_PAYLOAD
         elif "/images/" in url:
-            payload = {"deleted": True} if method == "DELETE" else IMAGE_LIST_PAYLOAD
+            payload = (
+                {
+                    "deleted": True,
+                    "id": "img_123",
+                    "imageName": "custom_node",
+                    "uploaded": True,
+                }
+                if method == "DELETE"
+                else IMAGE_LIST_PAYLOAD
+            )
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
@@ -1032,6 +1050,9 @@ def test_sync_sandbox_snapshot_and_image_build_list_contract(use_legacy_model):
     assert delete_image_call["method"] == "DELETE"
     assert delete_image_call["url"].endswith("/images/custom_node")
     assert deleted_image.deleted is True
+    assert deleted_image.id == "img_123"
+    assert deleted_image.image_name == "custom_node"
+    assert deleted_image.uploaded is True
 
 
 @pytest.mark.parametrize(
@@ -1669,6 +1690,9 @@ async def test_async_sandbox_snapshot_and_image_build_list_contract(
     assert delete_image_call["method"] == "DELETE"
     assert delete_image_call["url"].endswith("/images/custom_node")
     assert deleted_image.deleted is True
+    assert deleted_image.id == "img_123"
+    assert deleted_image.image_name == "custom_node"
+    assert deleted_image.uploaded is True
 
 
 @pytest.mark.anyio
