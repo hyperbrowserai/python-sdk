@@ -21,21 +21,20 @@ LEGACY_DEFAULT_BASE_URL = "https://app.hyperbrowser.ai"
 DEFAULT_LOCK_TIMEOUT_MS = 30000
 DEFAULT_LOCK_POLL_INTERVAL_MS = 125
 DEFAULT_LOCK_STALE_MS = 120000
+DEFAULT_OAUTH_REFRESH_TIMEOUT_S = 30.0
 OAUTH_REFRESH_EARLY_EXPIRY_MS = 30000
 PROFILE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+ISO_TIMESTAMP_PATTERN = re.compile(
+    r"^(?P<head>\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})"
+    r"(?P<frac>\.\d+)?"
+    r"(?P<tz>Z|[+-]\d{2}:?\d{2})?$",
+    re.IGNORECASE,
+)
 TERMINAL_OAUTH_REFRESH_ERRORS = {
     "invalid_grant",
     "invalid_client",
     "unauthorized_client",
 }
-
-ENV_PROFILE = "HYPERBROWSER_PROFILE"
-ENV_API_KEY = "HYPERBROWSER_API_KEY"
-ENV_BASE_URL = "HYPERBROWSER_BASE_URL"
-ENV_FRONTEND_URL = "HYPERBROWSER_FRONTEND_URL"
-ENV_LOCK_TIMEOUT_MS = "HYPERBROWSER_AUTH_LOCK_TIMEOUT_MS"
-ENV_LOCK_POLL_INTERVAL_MS = "HYPERBROWSER_AUTH_LOCK_POLL_INTERVAL_MS"
-ENV_LOCK_STALE_MS = "HYPERBROWSER_AUTH_LOCK_STALE_MS"
 
 
 class ControlPlaneAuthManager:
@@ -249,9 +248,7 @@ class ControlPlaneAuthManager:
 
     def _refresh_oauth_session(self, session: Dict[str, str]) -> Dict[str, str]:
         try:
-            with httpx.Client(
-                timeout=int(self._mode["lock_timeout_ms"]) / 1000.0
-            ) as client:
+            with httpx.Client(timeout=self._refresh_http_timeout()) as client:
                 response = client.post(
                     str(self._mode["token_url"]),
                     headers={"content-type": "application/x-www-form-urlencoded"},
@@ -272,7 +269,7 @@ class ControlPlaneAuthManager:
     async def _arefresh_oauth_session(self, session: Dict[str, str]) -> Dict[str, str]:
         try:
             async with httpx.AsyncClient(
-                timeout=int(self._mode["lock_timeout_ms"]) / 1000.0
+                timeout=self._refresh_http_timeout()
             ) as client:
                 response = await client.post(
                     str(self._mode["token_url"]),
@@ -398,6 +395,7 @@ class ControlPlaneAuthManager:
         lock_path = Path(str(self._mode["lock_path"]))
         try:
             stat = lock_path.stat()
+            contents = lock_path.read_bytes()
         except FileNotFoundError:
             return
         except OSError as error:
@@ -410,22 +408,36 @@ class ControlPlaneAuthManager:
                 original_error=error,
             )
 
-        if (time.time() * 1000) - (stat.st_mtime * 1000) < int(
-            self._mode["lock_stale_ms"]
-        ):
+        if not _is_rotation_lock_stale(stat, int(self._mode["lock_stale_ms"])):
             return
 
         try:
-            lock_path.unlink(missing_ok=True)
-        except OSError as error:
-            raise HyperbrowserError(
-                "Failed to remove stale OAuth rotation lock",
-                code="auth_rotation_lock_failed",
-                retryable=False,
-                service="control",
-                cause=error,
-                original_error=error,
-            )
+            restat = lock_path.stat()
+            current_contents = lock_path.read_bytes()
+        except FileNotFoundError:
+            return
+        except OSError:
+            return
+
+        if not _is_rotation_lock_stale(restat, int(self._mode["lock_stale_ms"])):
+            return
+        if not _same_lock_identity(stat, restat) or current_contents != contents:
+            return
+
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            return
+        except OSError:
+            return
+
+    def _refresh_http_timeout(self) -> float:
+        timeout = self._mode.get("refresh_timeout_s", DEFAULT_OAUTH_REFRESH_TIMEOUT_S)
+        try:
+            parsed = float(timeout)
+        except (TypeError, ValueError):
+            return DEFAULT_OAUTH_REFRESH_TIMEOUT_S
+        return parsed if parsed > 0 else DEFAULT_OAUTH_REFRESH_TIMEOUT_S
 
     def _release_rotation_lock(self, lock_fd: int) -> None:
         lock_path = Path(str(self._mode["lock_path"]))
@@ -448,28 +460,25 @@ class ControlPlaneAuthManager:
 def resolve_control_plane_config(
     config: ClientConfig,
 ) -> Tuple[str, ControlPlaneAuthManager]:
-    explicit_api_key = _normalize_text(config.api_key)
-    env_api_key = _normalize_text(os.environ.get(ENV_API_KEY))
-    explicit_base_url = _normalize_control_base_url(config.base_url)
-    env_base_url = _normalize_control_base_url(os.environ.get(ENV_BASE_URL))
-
-    if explicit_api_key or env_api_key:
+    if config.api_key is not None:
+        api_key = _normalize_text(config.api_key)
+        if api_key == "":
+            raise HyperbrowserError(
+                "API key must be provided",
+                code="missing_auth",
+                retryable=False,
+                service="control",
+            )
         return (
-            explicit_base_url or env_base_url or DEFAULT_BASE_URL,
-            ControlPlaneAuthManager(
-                {"kind": "api_key", "api_key": explicit_api_key or env_api_key}
-            ),
+            _normalize_control_base_url(config.base_url) or DEFAULT_BASE_URL,
+            ControlPlaneAuthManager({"kind": "api_key", "api_key": api_key}),
         )
 
-    profile = _normalize_profile(
-        config.profile or os.environ.get(ENV_PROFILE) or DEFAULT_PROFILE
-    )
+    profile = _normalize_profile(config.profile or DEFAULT_PROFILE)
     session_path = _resolve_oauth_session_path(profile)
     session = _try_load_oauth_session(session_path)
-
     resolved_base_url = (
-        explicit_base_url
-        or env_base_url
+        _normalize_control_base_url(config.base_url)
         or _normalize_control_base_url((session or {}).get("base_url", ""))
         or DEFAULT_BASE_URL
     )
@@ -503,19 +512,20 @@ def resolve_control_plane_config(
             "lock_path": f"{session_path}.refresh.lock",
             "base_url": resolved_base_url,
             "token_url": f"{frontend_base_url}/oauth/token",
+            "refresh_timeout_s": DEFAULT_OAUTH_REFRESH_TIMEOUT_S,
             "lock_timeout_ms": _normalize_positive_int(
                 getattr(config, "auth_lock_timeout_ms", None),
-                os.environ.get(ENV_LOCK_TIMEOUT_MS),
+                None,
                 DEFAULT_LOCK_TIMEOUT_MS,
             ),
             "lock_poll_interval_ms": _normalize_positive_int(
                 getattr(config, "auth_lock_poll_interval_ms", None),
-                os.environ.get(ENV_LOCK_POLL_INTERVAL_MS),
+                None,
                 DEFAULT_LOCK_POLL_INTERVAL_MS,
             ),
             "lock_stale_ms": _normalize_positive_int(
                 getattr(config, "auth_lock_stale_ms", None),
-                os.environ.get(ENV_LOCK_STALE_MS),
+                None,
                 DEFAULT_LOCK_STALE_MS,
             ),
         }
@@ -529,9 +539,6 @@ def resolve_frontend_base_url(
     explicit = _normalize_base_url(explicit_frontend_url)
     if explicit:
         return explicit
-    env_value = _normalize_base_url(os.environ.get(ENV_FRONTEND_URL))
-    if env_value:
-        return env_value
     if _is_default_control_base_url(control_base_url):
         return DEFAULT_FRONTEND_BASE_URL
     return _normalize_base_url(control_base_url) or DEFAULT_FRONTEND_BASE_URL
@@ -601,7 +608,8 @@ def _validate_oauth_session(
             retryable=False,
             service="control",
         )
-    if _parse_timestamp(session.get("expiry")) is None:
+    expiry_text = _normalize_text(session.get("expiry"))
+    if expiry_text and _parse_timestamp(expiry_text) is None:
         raise HyperbrowserError(
             "Saved OAuth session has an invalid expiry",
             code="oauth_session_invalid",
@@ -659,9 +667,7 @@ def _build_refreshed_oauth_session(
         or _normalize_text(previous.get("token_type", ""))
         or "Bearer"
     )
-    expiry = _derive_expiry(payload.get("expires_in")) or _normalize_text(
-        previous.get("expiry", "")
-    )
+    expiry = _derive_expiry(payload.get("expires_in")) or ""
     refresh_expiry = _derive_expiry(
         payload.get("refresh_token_expires_in")
     ) or _normalize_text(previous.get("refresh_token_expiry", ""))
@@ -696,7 +702,7 @@ def _write_oauth_session_atomic(session_path: Path, session: Dict[str, str]) -> 
     )
     renamed = False
     try:
-        os.fchmod(fd, 0o600)
+        _try_fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(payload)
             handle.flush()
@@ -730,9 +736,11 @@ def _should_use_oauth_session(
 
 
 def _is_access_token_usable(session: Dict[str, str]) -> bool:
-    expiry = _parse_timestamp(session.get("expiry"))
-    if expiry is None or _normalize_text(session.get("access_token", "")) == "":
+    if _normalize_text(session.get("access_token", "")) == "":
         return False
+    expiry = _parse_timestamp(session.get("expiry"))
+    if expiry is None:
+        return True
     return (expiry * 1000) - (time.time() * 1000) > OAUTH_REFRESH_EARLY_EXPIRY_MS
 
 
@@ -772,18 +780,62 @@ def _derive_expiry(value: object) -> Optional[str]:
     return None
 
 
-def _parse_timestamp(value: Optional[str]) -> Optional[float]:
-    normalized = _normalize_text(value or "")
+def _parse_timestamp(value: Optional[object]) -> Optional[float]:
+    normalized = _normalize_text(value)
     if normalized == "":
         return None
-    try:
-        adjusted = normalized.replace("Z", "+00:00")
-        parsed = datetime.fromisoformat(adjusted)
-    except ValueError:
+    parsed = _parse_iso_datetime(normalized)
+    if parsed is None:
         return None
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.timestamp()
+
+
+def _parse_iso_datetime(value: str) -> Optional[datetime]:
+    match = ISO_TIMESTAMP_PATTERN.fullmatch(value)
+    if match is None:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    head = match.group("head").replace(" ", "T")
+    frac = match.group("frac") or ""
+    tz = match.group("tz") or ""
+    if frac:
+        frac = "." + frac[1:7].ljust(6, "0")
+    if tz.upper() == "Z":
+        tz = "+00:00"
+    elif len(tz) == 5 and tz[0] in "+-":
+        tz = f"{tz[:3]}:{tz[3:]}"
+
+    try:
+        return datetime.fromisoformat(f"{head}{frac}{tz}")
+    except ValueError:
+        return None
+
+
+def _is_rotation_lock_stale(stat_result, stale_ms: int) -> bool:
+    return (time.time() * 1000) - (stat_result.st_mtime * 1000) >= stale_ms
+
+
+def _same_lock_identity(left, right) -> bool:
+    return (
+        getattr(left, "st_dev", None) == getattr(right, "st_dev", None)
+        and getattr(left, "st_ino", None) == getattr(right, "st_ino", None)
+        and getattr(left, "st_mtime_ns", None) == getattr(right, "st_mtime_ns", None)
+    )
+
+
+def _try_fchmod(fd: int, mode: int) -> None:
+    setter = getattr(os, "fchmod", None)
+    if setter is None:
+        return
+    try:
+        setter(fd, mode)
+    except (NotImplementedError, OSError):
+        pass
 
 
 def _normalize_positive_int(

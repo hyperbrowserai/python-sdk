@@ -102,6 +102,25 @@ class AsyncTransport(TransportStrategy):
     async def delete(self, url: str) -> APIResponse:
         return await self._request("DELETE", url)
 
+    async def send_authenticated(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict] = None,
+        json: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        follow_redirects: bool = False,
+    ) -> httpx.Response:
+        return await self._exchange(
+            method,
+            url,
+            params=params,
+            json_data=json,
+            timeout=timeout,
+            follow_redirects=follow_redirects,
+        )
+
     async def _request(
         self,
         method: str,
@@ -116,39 +135,17 @@ class AsyncTransport(TransportStrategy):
         replayable: bool = True,
     ) -> APIResponse:
         try:
-            auth_headers, access_token = await self.auth.aauthorize_headers()
-            response = await self._send(
+            response = await self._exchange(
                 method,
                 url,
                 params=params,
                 json_data=json_data,
                 data=data,
                 files=files,
-                auth_headers=auth_headers,
                 timeout=timeout,
                 follow_redirects=follow_redirects,
+                replayable=replayable,
             )
-            if (
-                response.status_code == 401
-                and getattr(self.auth, "is_oauth", False)
-                and replayable
-            ):
-                await response.aclose()
-                retry_headers, _ = await self.auth.aauthorize_headers(
-                    force_refresh=True,
-                    rejected_access_token=access_token,
-                )
-                response = await self._send(
-                    method,
-                    url,
-                    params=params,
-                    json_data=json_data,
-                    data=data,
-                    files=files,
-                    auth_headers=retry_headers,
-                    timeout=timeout,
-                    follow_redirects=follow_redirects,
-                )
             return await self._handle_response(response)
         except HyperbrowserError:
             raise
@@ -156,6 +153,54 @@ class AsyncTransport(TransportStrategy):
             raise HyperbrowserError(
                 f"{method.title()} request failed", original_error=e
             )
+
+    async def _exchange(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict] = None,
+        json_data: Optional[Any] = None,
+        data: Optional[Any] = None,
+        files: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        follow_redirects: bool = False,
+        replayable: bool = True,
+    ) -> httpx.Response:
+        auth_headers, access_token = await self.auth.aauthorize_headers()
+        response = await self._send(
+            method,
+            url,
+            params=params,
+            json_data=json_data,
+            data=data,
+            files=files,
+            auth_headers=auth_headers,
+            timeout=timeout,
+            follow_redirects=follow_redirects,
+        )
+        if (
+            response.status_code == 401
+            and getattr(self.auth, "is_oauth", False)
+            and replayable
+        ):
+            await response.aclose()
+            retry_headers, _ = await self.auth.aauthorize_headers(
+                force_refresh=True,
+                rejected_access_token=access_token,
+            )
+            response = await self._send(
+                method,
+                url,
+                params=params,
+                json_data=json_data,
+                data=data,
+                files=files,
+                auth_headers=retry_headers,
+                timeout=timeout,
+                follow_redirects=follow_redirects,
+            )
+        return response
 
     async def _send(
         self,

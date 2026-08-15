@@ -11,6 +11,8 @@ from hyperbrowser.config import ClientConfig
 from hyperbrowser.control_auth import (
     DEFAULT_BASE_URL,
     DEFAULT_FRONTEND_BASE_URL,
+    DEFAULT_OAUTH_REFRESH_TIMEOUT_S,
+    _parse_timestamp,
     resolve_control_plane_config,
     resolve_frontend_base_url,
 )
@@ -78,9 +80,24 @@ def test_missing_auth_raises(auth_home):
     assert exc.value.code == "missing_auth"
 
 
-def test_from_env_does_not_require_api_key(auth_home):
+def test_from_env_requires_api_key(auth_home):
+    with pytest.raises(
+        ValueError, match="HYPERBROWSER_API_KEY environment variable is required"
+    ):
+        ClientConfig.from_env()
+
+
+def test_from_env_reads_api_key(auth_home, monkeypatch):
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "env-key")
     config = ClientConfig.from_env()
-    assert config.api_key is None
+    assert config.api_key == "env-key"
+
+
+def test_client_config_positional_runtime_proxy_override_is_preserved():
+    config = ClientConfig("key", "https://api.example", "socks5://proxy")
+    assert config.api_key == "key"
+    assert config.base_url == "https://api.example"
+    assert config.runtime_proxy_override == "socks5://proxy"
     assert config.profile is None
 
 
@@ -94,12 +111,44 @@ def test_api_key_is_preferred_over_saved_session(auth_home):
     assert token is None
 
 
-def test_env_api_key_is_preferred_over_saved_session(auth_home, monkeypatch):
+def test_constructor_env_api_key_is_preferred_over_saved_session(
+    auth_home, monkeypatch
+):
     write_session(auth_home)
     monkeypatch.setenv("HYPERBROWSER_API_KEY", "env-key")
-    _, auth = resolve_control_plane_config(ClientConfig())
-    headers, _ = auth.authorize_headers()
+    client = Hyperbrowser()
+    try:
+        headers, _ = client.auth.authorize_headers()
+    finally:
+        client.close()
     assert headers == {"x-api-key": "env-key"}
+
+
+def test_explicit_empty_api_key_raises(auth_home, monkeypatch):
+    write_session(auth_home)
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "env-key")
+    with pytest.raises(HyperbrowserError, match="API key must be provided") as exc:
+        Hyperbrowser(api_key="")
+    assert exc.value.code == "missing_auth"
+
+
+def test_client_config_none_api_key_does_not_read_env_key(auth_home, monkeypatch):
+    write_session(auth_home, access_token="session-access")
+    monkeypatch.setenv("HYPERBROWSER_API_KEY", "env-key")
+    _, auth = resolve_control_plane_config(ClientConfig(api_key=None))
+    headers, _ = auth.authorize_headers()
+    assert headers == {"authorization": "Bearer session-access"}
+
+
+def test_passed_config_ignores_env_base_url(auth_home, monkeypatch):
+    write_session(auth_home)
+    monkeypatch.setenv("HYPERBROWSER_BASE_URL", "https://staging.hyperbrowser.dev")
+    client = Hyperbrowser(config=ClientConfig())
+    try:
+        assert client.config.base_url == DEFAULT_BASE_URL
+        assert client.auth.is_oauth is True
+    finally:
+        client.close()
 
 
 def test_oauth_session_is_used_when_no_api_key(auth_home):
@@ -127,8 +176,11 @@ def test_profile_comes_from_constructor(auth_home):
 def test_profile_comes_from_env(auth_home, monkeypatch):
     write_session(auth_home, profile="ci", access_token="ci-access")
     monkeypatch.setenv("HYPERBROWSER_PROFILE", "ci")
-    _, auth = resolve_control_plane_config(ClientConfig())
-    headers, _ = auth.authorize_headers()
+    client = Hyperbrowser()
+    try:
+        headers, _ = client.auth.authorize_headers()
+    finally:
+        client.close()
     assert headers["authorization"] == "Bearer ci-access"
 
 
@@ -179,14 +231,14 @@ def test_resolve_frontend_base_url_defaults_and_overrides(auth_home, monkeypatch
         resolve_frontend_base_url("https://staging.example.com")
         == "https://staging.example.com"
     )
-    monkeypatch.setenv("HYPERBROWSER_FRONTEND_URL", "https://front.example.com/api")
-    assert resolve_frontend_base_url(DEFAULT_BASE_URL) == "https://front.example.com"
     assert (
         resolve_frontend_base_url(
             DEFAULT_BASE_URL, explicit_frontend_url="https://explicit.example"
         )
         == "https://explicit.example"
     )
+    monkeypatch.setenv("HYPERBROWSER_FRONTEND_URL", "https://front.example.com/api")
+    assert resolve_frontend_base_url(DEFAULT_BASE_URL) == DEFAULT_FRONTEND_BASE_URL
 
 
 def test_refresh_uses_frontend_url_and_persists_session(auth_home, monkeypatch):
@@ -331,3 +383,106 @@ def test_stale_rotation_lock_is_cleared(auth_home, monkeypatch):
     headers, _ = auth.authorize_headers()
     assert headers["authorization"] == "Bearer after-stale-lock"
     assert lock_path.exists() is False
+
+
+def test_stale_lock_clear_does_not_delete_replaced_lock(auth_home, monkeypatch):
+    write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+    )
+    session_path = Path(auth_home) / ".hx_config" / "auth" / "default.json"
+    lock_path = Path(f"{session_path}.refresh.lock")
+    lock_path.write_text("pid=old\n")
+    import os
+
+    os.utime(lock_path, (0, 0))
+
+    original_clear = None
+    from hyperbrowser.control_auth import ControlPlaneAuthManager
+
+    original_clear = ControlPlaneAuthManager._clear_stale_rotation_lock
+
+    def wrap(self):
+        original_clear(self)
+        lock_path.write_text("pid=fresh\n")
+
+    monkeypatch.setattr(ControlPlaneAuthManager, "_clear_stale_rotation_lock", wrap)
+
+    _, auth = resolve_control_plane_config(
+        ClientConfig(auth_lock_stale_ms=1, auth_lock_timeout_ms=40)
+    )
+    with pytest.raises(HyperbrowserError) as exc:
+        auth.authorize_headers()
+    assert exc.value.code == "auth_rotation_timeout"
+    assert lock_path.read_text() == "pid=fresh\n"
+
+
+def test_refresh_without_expires_in_does_not_keep_old_expiry(auth_home, monkeypatch):
+    old_expiry = _expiry(minutes=-5)
+    write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=old_expiry,
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "no-expiry-access",
+                "refresh_token": "same-refresh",
+            },
+        )
+
+    _patch_httpx_client(monkeypatch, handler)
+    _, auth = resolve_control_plane_config(ClientConfig())
+    headers, token = auth.authorize_headers()
+    assert headers == {"authorization": "Bearer no-expiry-access"}
+    assert token == "no-expiry-access"
+
+    saved = json.loads(
+        (Path(auth_home) / ".hx_config" / "auth" / "default.json").read_text()
+    )
+    assert saved["access_token"] == "no-expiry-access"
+    assert saved["expiry"] == ""
+    headers_again, _ = auth.authorize_headers()
+    assert headers_again == {"authorization": "Bearer no-expiry-access"}
+
+
+def test_parse_timestamp_accepts_variable_fractional_seconds():
+    assert _parse_timestamp("2026-08-15T12:00:00Z") is not None
+    assert _parse_timestamp("2026-08-15T12:00:00.1Z") is not None
+    assert _parse_timestamp("2026-08-15T12:00:00.123456789+00:00") is not None
+    assert _parse_timestamp("2026-08-15T12:00:00.123456789Z") is not None
+    nine = _parse_timestamp("2026-08-15T12:00:00.123456789Z")
+    six = _parse_timestamp("2026-08-15T12:00:00.123456Z")
+    assert nine is not None and six is not None
+    assert abs(nine - six) < 0.001
+
+
+def test_refresh_timeout_is_independent_of_lock_timeout(auth_home, monkeypatch):
+    write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+    )
+    seen = []
+
+    real_client = httpx.Client
+
+    def fake_client(*args, **kwargs):
+        seen.append(kwargs.get("timeout"))
+        kwargs["transport"] = httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                json={"access_token": "tok", "expires_in": 3600},
+            )
+        )
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr("hyperbrowser.control_auth.httpx.Client", fake_client)
+    _, auth = resolve_control_plane_config(ClientConfig(auth_lock_timeout_ms=5))
+    auth.authorize_headers()
+    assert seen
+    assert seen[0] == DEFAULT_OAUTH_REFRESH_TIMEOUT_S

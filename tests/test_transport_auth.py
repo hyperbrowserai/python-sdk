@@ -13,6 +13,7 @@ from tests.test_control_auth import (
     _patch_httpx_client,
     write_session,
 )
+from tests.test_sandbox_wire_contract import SANDBOX_DETAIL_PAYLOAD
 
 
 @pytest.fixture
@@ -205,3 +206,27 @@ def test_client_config_frontend_url_is_used_for_refresh(auth_home, monkeypatch):
     finally:
         client.close()
     assert headers["authorization"] == "Bearer front-access"
+
+
+def test_sandbox_control_requests_include_api_key(auth_home, monkeypatch):
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(
+            {
+                "path": request.url.path,
+                "api_key": request.headers.get("x-api-key"),
+            }
+        )
+        return httpx.Response(200, json=SANDBOX_DETAIL_PAYLOAD)
+
+    _patch_httpx_client(monkeypatch, handler)
+    client = Hyperbrowser(api_key="sandbox-key", base_url="https://api.example")
+    try:
+        client.sandboxes.get_detail("sbx_123")
+    finally:
+        client.close()
+
+    assert seen
+    assert seen[0]["path"] == "/api/sandbox/sbx_123"
+    assert seen[0]["api_key"] == "sandbox-key"

@@ -81,6 +81,25 @@ class SyncTransport(TransportStrategy):
     def delete(self, url: str) -> APIResponse:
         return self._request("DELETE", url)
 
+    def send_authenticated(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict] = None,
+        json: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        follow_redirects: bool = False,
+    ) -> httpx.Response:
+        return self._exchange(
+            method,
+            url,
+            params=params,
+            json_data=json,
+            timeout=timeout,
+            follow_redirects=follow_redirects,
+        )
+
     def _request(
         self,
         method: str,
@@ -95,39 +114,17 @@ class SyncTransport(TransportStrategy):
         replayable: bool = True,
     ) -> APIResponse:
         try:
-            auth_headers, access_token = self.auth.authorize_headers()
-            response = self._send(
+            response = self._exchange(
                 method,
                 url,
                 params=params,
                 json_data=json_data,
                 data=data,
                 files=files,
-                auth_headers=auth_headers,
                 timeout=timeout,
                 follow_redirects=follow_redirects,
+                replayable=replayable,
             )
-            if (
-                response.status_code == 401
-                and getattr(self.auth, "is_oauth", False)
-                and replayable
-            ):
-                response.close()
-                retry_headers, _ = self.auth.authorize_headers(
-                    force_refresh=True,
-                    rejected_access_token=access_token,
-                )
-                response = self._send(
-                    method,
-                    url,
-                    params=params,
-                    json_data=json_data,
-                    data=data,
-                    files=files,
-                    auth_headers=retry_headers,
-                    timeout=timeout,
-                    follow_redirects=follow_redirects,
-                )
             return self._handle_response(response)
         except HyperbrowserError:
             raise
@@ -135,6 +132,54 @@ class SyncTransport(TransportStrategy):
             raise HyperbrowserError(
                 f"{method.title()} request failed", original_error=e
             )
+
+    def _exchange(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Optional[dict] = None,
+        json_data: Optional[Any] = None,
+        data: Optional[Any] = None,
+        files: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        follow_redirects: bool = False,
+        replayable: bool = True,
+    ) -> httpx.Response:
+        auth_headers, access_token = self.auth.authorize_headers()
+        response = self._send(
+            method,
+            url,
+            params=params,
+            json_data=json_data,
+            data=data,
+            files=files,
+            auth_headers=auth_headers,
+            timeout=timeout,
+            follow_redirects=follow_redirects,
+        )
+        if (
+            response.status_code == 401
+            and getattr(self.auth, "is_oauth", False)
+            and replayable
+        ):
+            response.close()
+            retry_headers, _ = self.auth.authorize_headers(
+                force_refresh=True,
+                rejected_access_token=access_token,
+            )
+            response = self._send(
+                method,
+                url,
+                params=params,
+                json_data=json_data,
+                data=data,
+                files=files,
+                auth_headers=retry_headers,
+                timeout=timeout,
+                follow_redirects=follow_redirects,
+            )
+        return response
 
     def _send(
         self,
