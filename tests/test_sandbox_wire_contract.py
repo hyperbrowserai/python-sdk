@@ -443,6 +443,8 @@ class RecordingHTTPClient:
             )
         elif "/images/builds/" in url:
             payload = IMAGE_BUILD_PAYLOAD
+        elif "/images/" in url:
+            payload = {"deleted": True} if method == "DELETE" else IMAGE_LIST_PAYLOAD
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
@@ -645,6 +647,8 @@ class RecordingAsyncHTTPClient:
             )
         elif "/images/builds/" in url:
             payload = IMAGE_BUILD_PAYLOAD
+        elif "/images/" in url:
+            payload = {"deleted": True} if method == "DELETE" else IMAGE_LIST_PAYLOAD
         elif url.endswith("/images"):
             payload = IMAGE_LIST_PAYLOAD
         elif url.endswith("/snapshots"):
@@ -1004,8 +1008,9 @@ def test_sync_sandbox_snapshot_and_image_build_list_contract(use_legacy_model):
     builds = manager.list_image_builds(params)
     snapshot = manager.get_snapshot("snapshot-1")
     deleted = manager.delete_snapshot("snapshot-1")
+    deleted_image = manager.delete_image("custom_node")
 
-    list_call, get_call, delete_call = client.transport.client.calls
+    list_call, get_call, delete_call, delete_image_call = client.transport.client.calls
     assert list_call == {
         "method": "GET",
         "url": "https://api.example.com/images/builds",
@@ -1024,6 +1029,9 @@ def test_sync_sandbox_snapshot_and_image_build_list_contract(use_legacy_model):
     assert delete_call["method"] == "DELETE"
     assert delete_call["url"].endswith("/snapshots/snapshot-1")
     assert deleted.deleted is True
+    assert delete_image_call["method"] == "DELETE"
+    assert delete_image_call["url"].endswith("/images/custom_node")
+    assert deleted_image.deleted is True
 
 
 @pytest.mark.parametrize(
@@ -1637,8 +1645,9 @@ async def test_async_sandbox_snapshot_and_image_build_list_contract(
     builds = await manager.list_image_builds(params)
     snapshot = await manager.get_snapshot("snapshot-1")
     deleted = await manager.delete_snapshot("snapshot-1")
+    deleted_image = await manager.delete_image("custom_node")
 
-    list_call, get_call, delete_call = client.transport.client.calls
+    list_call, get_call, delete_call, delete_image_call = client.transport.client.calls
     assert list_call == {
         "method": "GET",
         "url": "https://api.example.com/images/builds",
@@ -1657,6 +1666,9 @@ async def test_async_sandbox_snapshot_and_image_build_list_contract(
     assert delete_call["method"] == "DELETE"
     assert delete_call["url"].endswith("/snapshots/snapshot-1")
     assert deleted.deleted is True
+    assert delete_image_call["method"] == "DELETE"
+    assert delete_image_call["url"].endswith("/images/custom_node")
+    assert deleted_image.deleted is True
 
 
 @pytest.mark.anyio

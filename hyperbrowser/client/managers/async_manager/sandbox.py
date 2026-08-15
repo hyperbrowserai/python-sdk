@@ -27,6 +27,7 @@ from ....models.sandbox import (
     SandboxNetworkPolicy,
     SandboxNetworkUpdateResult,
     SandboxRuntimeSession,
+    SandboxImageDeleteResult,
     SandboxSnapshotDeleteResult,
     SandboxSnapshotListParams,
     SandboxSnapshotListResponse,
@@ -426,6 +427,10 @@ class SandboxManager:
             ),
         )
         return SandboxListResponse(**payload)
+
+    async def delete_image(self, image: str) -> SandboxImageDeleteResult:
+        payload = await self._request("DELETE", f"/images/{image}")
+        return SandboxImageDeleteResult(**payload)
 
     async def list_images(
         self,

@@ -351,6 +351,10 @@ class SandboxSnapshotDeleteResult(SandboxBaseModel):
     deleted: bool
 
 
+class SandboxImageDeleteResult(SandboxBaseModel):
+    deleted: bool
+
+
 class SandboxMemorySnapshotParams(SandboxBaseModel):
     snapshot_name: Optional[str] = Field(
         default=None, serialization_alias="snapshotName"
