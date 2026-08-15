@@ -644,6 +644,13 @@ def _build_refreshed_oauth_session(
             details=payload,
         )
 
+    previous_refresh_token = _normalize_text(previous.get("refresh_token"))
+    refresh_token = (
+        _normalize_text(payload.get("refresh_token")) or previous_refresh_token
+    )
+    refresh_token_expiry = _derive_expiry(payload.get("refresh_token_expires_in"))
+    if refresh_token_expiry is None and refresh_token == previous_refresh_token:
+        refresh_token_expiry = _normalize_text(previous.get("refresh_token_expiry"))
     return {
         "version": previous.get("version", 1),
         "base_url": _normalize_base_url(previous.get("base_url")),
@@ -652,13 +659,11 @@ def _build_refreshed_oauth_session(
         or _normalize_text(previous.get("token_type"))
         or "Bearer",
         "access_token": access_token,
-        "refresh_token": _normalize_text(payload.get("refresh_token"))
-        or _normalize_text(previous.get("refresh_token")),
+        "refresh_token": refresh_token,
         "expiry": _derive_expiry(payload.get("expires_in")) or "",
         "scope": _normalize_text(payload.get("scope"))
         or _normalize_text(previous.get("scope")),
-        "refresh_token_expiry": _derive_expiry(payload.get("refresh_token_expires_in"))
-        or _normalize_text(previous.get("refresh_token_expiry")),
+        "refresh_token_expiry": refresh_token_expiry or "",
     }
 
 

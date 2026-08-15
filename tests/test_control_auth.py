@@ -479,6 +479,108 @@ def test_refresh_without_expires_in_does_not_keep_old_expiry(auth_home, monkeypa
     assert headers_again == {"authorization": "Bearer no-expiry-access"}
 
 
+def test_rotated_refresh_token_without_expires_in_clears_old_expiry(
+    auth_home, monkeypatch
+):
+    old_refresh_expiry = _expiry(minutes=1)
+    write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+        refresh_token="old-refresh",
+        refresh_token_expiry=old_refresh_expiry,
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "rotated-access",
+                "refresh_token": "rotated-refresh",
+                "expires_in": 3600,
+            },
+        )
+
+    _patch_httpx_client(monkeypatch, handler)
+    _, auth = resolve_control_plane_config(ClientConfig())
+    headers, token = auth.authorize_headers()
+    assert headers == {"authorization": "Bearer rotated-access"}
+    assert token == "rotated-access"
+
+    saved = json.loads(
+        (Path(auth_home) / ".hx_config" / "auth" / "default.json").read_text()
+    )
+    assert saved["refresh_token"] == "rotated-refresh"
+    assert saved["refresh_token_expiry"] == ""
+    assert saved["refresh_token_expiry"] != old_refresh_expiry
+
+
+def test_reused_refresh_token_without_expires_in_keeps_old_expiry(
+    auth_home, monkeypatch
+):
+    old_refresh_expiry = _expiry(hours=2)
+    write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+        refresh_token="same-refresh",
+        refresh_token_expiry=old_refresh_expiry,
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "refreshed-access",
+                "expires_in": 3600,
+            },
+        )
+
+    _patch_httpx_client(monkeypatch, handler)
+    _, auth = resolve_control_plane_config(ClientConfig())
+    auth.authorize_headers()
+
+    saved = json.loads(
+        (Path(auth_home) / ".hx_config" / "auth" / "default.json").read_text()
+    )
+    assert saved["refresh_token"] == "same-refresh"
+    assert saved["refresh_token_expiry"] == old_refresh_expiry
+
+
+def test_rotated_refresh_token_uses_new_expires_in(auth_home, monkeypatch):
+    old_refresh_expiry = _expiry(minutes=1)
+    write_session(
+        auth_home,
+        access_token="expired-access",
+        expiry=_expiry(minutes=-5),
+        refresh_token="old-refresh",
+        refresh_token_expiry=old_refresh_expiry,
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "rotated-access",
+                "refresh_token": "rotated-refresh",
+                "expires_in": 3600,
+                "refresh_token_expires_in": 7200,
+            },
+        )
+
+    _patch_httpx_client(monkeypatch, handler)
+    _, auth = resolve_control_plane_config(ClientConfig())
+    auth.authorize_headers()
+
+    saved = json.loads(
+        (Path(auth_home) / ".hx_config" / "auth" / "default.json").read_text()
+    )
+    assert saved["refresh_token"] == "rotated-refresh"
+    assert saved["refresh_token_expiry"] != old_refresh_expiry
+    assert saved["refresh_token_expiry"] != ""
+    assert _parse_timestamp(saved["refresh_token_expiry"]) is not None
+
+
 def test_parse_timestamp_accepts_variable_fractional_seconds():
     assert _parse_timestamp("2026-08-15T12:00:00Z") is not None
     assert _parse_timestamp("2026-08-15T12:00:00.1Z") is not None
