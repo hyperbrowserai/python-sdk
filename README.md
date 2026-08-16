@@ -223,6 +223,7 @@ sandbox = client.sandboxes.create(
 )
 
 sandbox.stop()
+client.volumes.delete(same_volume.id)
 client.close()
 ```
 

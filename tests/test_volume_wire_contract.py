@@ -4,7 +4,12 @@ from hyperbrowser.client.managers.async_manager.volume import (
     VolumeManager as AsyncVolumeManager,
 )
 from hyperbrowser.client.managers.sync_manager.volume import VolumeManager
-from hyperbrowser.models import CreateVolumeParams, Volume, VolumeListParams
+from hyperbrowser.models import (
+    CreateVolumeParams,
+    Volume,
+    VolumeDeleteResult,
+    VolumeListParams,
+)
 
 
 VOLUME_PAYLOAD = {
@@ -24,6 +29,12 @@ VOLUME_LIST_PAYLOAD = {
     "totalCount": 1,
     "page": 1,
     "perPage": 20,
+}
+
+VOLUME_DELETE_PAYLOAD = {
+    "deleted": True,
+    "id": "2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d",
+    "name": "project-cache",
 }
 
 
@@ -55,6 +66,10 @@ class RecordingSyncTransport:
             return StubResponse(VOLUME_DETAIL_PAYLOAD)
         return StubResponse({})
 
+    def delete(self, url):
+        self.calls.append({"method": "DELETE", "url": url})
+        return StubResponse(VOLUME_DELETE_PAYLOAD)
+
 
 class RecordingAsyncTransport:
     def __init__(self):
@@ -78,6 +93,10 @@ class RecordingAsyncTransport:
         if url.endswith(f"/volume/{VOLUME_DETAIL_PAYLOAD['id']}"):
             return StubResponse(VOLUME_DETAIL_PAYLOAD)
         return StubResponse({})
+
+    async def delete(self, url):
+        self.calls.append({"method": "DELETE", "url": url})
+        return StubResponse(VOLUME_DELETE_PAYLOAD)
 
 
 class FakeSyncClient:
@@ -131,10 +150,12 @@ def test_sync_volume_manager_uses_expected_wire_keys(use_legacy_model):
     created = manager.create(CreateVolumeParams(name="project-cache"))
     listed = manager.list(list_params)
     fetched = manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
+    deleted = manager.delete("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
     list_call = client.transport.calls[1]
     get_call = client.transport.calls[2]
+    delete_call = client.transport.calls[3]
 
     assert create_call["method"] == "POST"
     assert create_call["url"].endswith("/volume")
@@ -153,6 +174,13 @@ def test_sync_volume_manager_uses_expected_wire_keys(use_legacy_model):
     assert fetched.name == "project-cache"
     assert fetched.transfer_amount is None
 
+    assert delete_call["method"] == "DELETE"
+    assert delete_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
+    assert deleted.deleted is True
+    assert deleted.id == "2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d"
+    assert deleted.name == "project-cache"
+    assert isinstance(deleted, VolumeDeleteResult)
+
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("use_legacy_model", [False, True])
@@ -166,10 +194,12 @@ async def test_async_volume_manager_uses_expected_wire_keys(use_legacy_model):
     created = await manager.create({"name": "project-cache"})
     listed = await manager.list(list_params)
     fetched = await manager.get("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
+    deleted = await manager.delete("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
 
     create_call = client.transport.calls[0]
     list_call = client.transport.calls[1]
     get_call = client.transport.calls[2]
+    delete_call = client.transport.calls[3]
 
     assert create_call["method"] == "POST"
     assert create_call["url"].endswith("/volume")
@@ -185,6 +215,11 @@ async def test_async_volume_manager_uses_expected_wire_keys(use_legacy_model):
     assert get_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
     assert created.transfer_amount == 0
     assert fetched.name == "project-cache"
+
+    assert delete_call["method"] == "DELETE"
+    assert delete_call["url"].endswith("/volume/2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
+    assert deleted.deleted is True
+    assert deleted.name == "project-cache"
 
 
 def test_sync_volume_list_without_params_remains_supported():
