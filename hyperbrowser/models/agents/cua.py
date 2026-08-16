@@ -22,6 +22,18 @@ class CuaApiKeys(BaseModel):
     openai: Optional[str] = Field(default=None, serialization_alias="openai")
 
 
+class CuaBaseUrls(BaseModel):
+    """
+    Provider base URLs for the CUA task.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    openai: Optional[str] = Field(default=None, serialization_alias="openai")
+
+
 class StartCuaTaskParams(BaseModel):
     """
     Parameters for creating a new CUA task.
@@ -46,6 +58,9 @@ class StartCuaTaskParams(BaseModel):
         default=None, serialization_alias="useCustomApiKeys"
     )
     api_keys: Optional[CuaApiKeys] = Field(default=None, serialization_alias="apiKeys")
+    base_urls: Optional[CuaBaseUrls] = Field(
+        default=None, serialization_alias="baseUrls"
+    )
     use_computer_action: Optional[bool] = Field(
         default=None, serialization_alias="useComputerAction"
     )

@@ -123,6 +123,12 @@ class CuaApiKeys(TypedDict, total=False):
     openai: Optional[str]
 
 
+class CuaBaseUrls(TypedDict, total=False):
+    """Provider base URLs for an OpenAI CUA task."""
+
+    openai: Optional[str]
+
+
 class StartCuaTaskParams(TypedDict, total=False):
     """Parameters for starting an OpenAI CUA task."""
 
@@ -135,6 +141,7 @@ class StartCuaTaskParams(TypedDict, total=False):
     session_options: Optional[CreateSessionParams]
     use_custom_api_keys: Optional[bool]
     api_keys: Optional[CuaApiKeys]
+    base_urls: Optional[CuaBaseUrls]
     use_computer_action: Optional[bool]
 
 
@@ -165,6 +172,7 @@ __all__ = [
     "BrowserUseApiKeys",
     "ClaudeComputerUseApiKeys",
     "CuaApiKeys",
+    "CuaBaseUrls",
     "GeminiComputerUseApiKeys",
     "GrokComputerUseApiKeys",
     "HyperAgentApiKeys",

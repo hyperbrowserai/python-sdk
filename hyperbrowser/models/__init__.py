@@ -134,6 +134,7 @@ from .agents.cua import (
     StartCuaTaskParams,
     StartCuaTaskResponse,
     CuaApiKeys,
+    CuaBaseUrls,
     CuaTaskStatus,
 )
 from .agents.hyper_agent import (
@@ -493,6 +494,7 @@ __all__ = [
     "GeminiComputerUseApiKeys",
     "GrokComputerUseApiKeys",
     "CuaApiKeys",
+    "CuaBaseUrls",
     "HyperAgentApiKeys",
     "GrokComputerUseLlm",
     "GrokReasoningEffort",

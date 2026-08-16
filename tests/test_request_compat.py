@@ -8,9 +8,11 @@ from hyperbrowser.client._request import (
     normalize_pydantic_schema,
 )
 from hyperbrowser.models import (
+    CuaBaseUrls,
     CreateSandboxParams,
     CreateSessionParams,
     StartBrowserUseTaskParams,
+    StartCuaTaskParams,
 )
 from hyperbrowser.tools import _normalize_extract_tool_params
 
@@ -74,6 +76,36 @@ def test_mapping_uses_existing_cross_field_validation():
             {"image_name": "node", "snapshot_name": "snapshot"},
             CreateSandboxParams,
         )
+
+
+def test_cua_custom_base_url_serializes_for_mapping_and_legacy_model():
+    mapping = {
+        "task": "Complete the task",
+        "use_custom_api_keys": True,
+        "api_keys": {"openai": "openai-key"},
+        "base_urls": {
+            "openai": "https://example.openai.azure.com/openai/v1/",
+        },
+    }
+    legacy = StartCuaTaskParams(
+        task="Complete the task",
+        use_custom_api_keys=True,
+        api_keys={"openai": "openai-key"},
+        base_urls=CuaBaseUrls(openai="https://example.openai.azure.com/openai/v1/"),
+    )
+
+    assert dump_request(mapping, StartCuaTaskParams) == dump_request(
+        legacy,
+        StartCuaTaskParams,
+    )
+    assert dump_request(mapping, StartCuaTaskParams) == {
+        "task": "Complete the task",
+        "useCustomApiKeys": True,
+        "apiKeys": {"openai": "openai-key"},
+        "baseUrls": {
+            "openai": "https://example.openai.azure.com/openai/v1/",
+        },
+    }
 
 
 def test_raw_json_schema_is_copied_without_rewriting_or_dereferencing():
