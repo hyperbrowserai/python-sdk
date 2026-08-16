@@ -96,6 +96,16 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             "session_options": {"use_stealth": True},
         }
     )
+    client.agents.cua.start(
+        {
+            "task": "Complete the task",
+            "use_custom_api_keys": True,
+            "api_keys": {"openai": "openai-key"},
+            "base_urls": {
+                "openai": "https://example.openai.azure.com/openai/v1/",
+            },
+        }
+    )
     client.sandboxes.create(
         {
             "image_name": "node",
@@ -179,6 +189,16 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             "session_options": {
                 "use_stealth": True,
                 "screen": {"width": 1280, "height": 800},
+            },
+        }
+    )
+    await client.agents.cua.start(
+        {
+            "task": "Complete the task",
+            "use_custom_api_keys": True,
+            "api_keys": {"openai": "openai-key"},
+            "base_urls": {
+                "openai": "https://example.openai.azure.com/openai/v1/",
             },
         }
     )
