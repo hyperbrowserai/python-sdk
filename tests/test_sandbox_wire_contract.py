@@ -37,6 +37,7 @@ from hyperbrowser.models import (
     CompleteSandboxImageBuildParams,
     CreateSandboxParams,
     CreateSandboxImageBuildParams,
+    ReuseSandboxDockerImageParams,
     SandboxDetail,
     SandboxExposeParams,
     SandboxExecParams,
@@ -435,6 +436,8 @@ class RecordingHTTPClient:
 
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/images/builds/reuse"):
+            payload = {"hit": True, "build": IMAGE_BUILD_RECORD}
         elif url.endswith("/images/builds"):
             payload = (
                 IMAGE_BUILD_LIST_PAYLOAD
@@ -648,6 +651,8 @@ class RecordingAsyncHTTPClient:
 
         if url.endswith("/sandboxes"):
             payload = SANDBOX_LIST_PAYLOAD
+        elif url.endswith("/images/builds/reuse"):
+            payload = {"hit": True, "build": IMAGE_BUILD_RECORD}
         elif url.endswith("/images/builds"):
             payload = (
                 IMAGE_BUILD_LIST_PAYLOAD
@@ -988,6 +993,36 @@ def test_sync_sandbox_image_build_manager_uses_expected_wire_keys():
     assert build.image_name == "custom_node"
     assert completed.status == "upload_verified"
     assert canceled.status == "upload_verified"
+
+
+def test_sync_sandbox_image_build_reuse_uses_expected_wire_keys():
+    client = FakeSyncClient()
+    manager = SandboxManager(client)
+
+    result = manager.reuse_docker_image(
+        ReuseSandboxDockerImageParams(
+            image_name="custom_node",
+            source_image_digest="sha256:" + "a" * 64,
+            source_platform="linux/amd64",
+            image_config_user="node",
+            image_init=SandboxImageInit(working_dir="/app"),
+        )
+    )
+
+    assert client.transport.client.calls[0] == {
+        "method": "POST",
+        "url": "https://api.example.com/images/builds/reuse",
+        "params": {},
+        "json": {
+            "imageName": "custom_node",
+            "sourceImageDigest": "sha256:" + "a" * 64,
+            "sourcePlatform": "linux/amd64",
+            "imageConfigUser": "node",
+            "imageInit": {"workingDir": "/app"},
+        },
+    }
+    assert result.hit is True
+    assert result.build.image_name == "custom_node"
 
 
 @pytest.mark.parametrize("use_legacy_model", [False, True])
@@ -1622,6 +1657,33 @@ async def test_async_sandbox_image_build_manager_uses_expected_wire_keys():
     assert build.image_name == "custom_node"
     assert completed.status == "upload_verified"
     assert canceled.status == "upload_verified"
+
+
+@pytest.mark.anyio
+async def test_async_sandbox_image_build_reuse_uses_expected_wire_keys():
+    client = FakeAsyncClient()
+    manager = AsyncSandboxManager(client)
+
+    result = await manager.reuse_docker_image(
+        {
+            "image_name": "custom_node",
+            "source_image_digest": "sha256:" + "a" * 64,
+            "source_platform": "linux/amd64",
+        }
+    )
+
+    assert client.transport.client.calls[0] == {
+        "method": "POST",
+        "url": "https://api.example.com/images/builds/reuse",
+        "params": {},
+        "json": {
+            "imageName": "custom_node",
+            "sourceImageDigest": "sha256:" + "a" * 64,
+            "sourcePlatform": "linux/amd64",
+        },
+    }
+    assert result.hit is True
+    assert result.build.image_name == "custom_node"
 
 
 @pytest.mark.anyio

@@ -1,4 +1,8 @@
+import hashlib
+import io
+import json
 import subprocess
+import tarfile
 from types import SimpleNamespace
 
 import httpx
@@ -12,7 +16,12 @@ from hyperbrowser.client.managers.async_manager.sandbox import (
     SandboxManager as AsyncSandboxManager,
 )
 from hyperbrowser.client.managers.sync_manager.sandbox import SandboxManager
-from hyperbrowser.models import SandboxImageBuild, SandboxImageBuildUpload
+from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.models import (
+    SandboxImageBuild,
+    SandboxImageBuildCreateResult,
+    SandboxImageBuildUpload,
+)
 
 
 def _image_build(
@@ -208,6 +217,235 @@ def test_upload_image_build_artifact_streams_file_with_content_length(
     ]
 
 
+def test_upload_image_build_artifact_retries_retryable_status(monkeypatch, tmp_path):
+    artifact = tmp_path / "layer.tar"
+    artifact.write_bytes(b"layer")
+    statuses = iter([500, 200])
+    calls = []
+
+    def fake_request(method, url, content, headers, timeout):
+        status = next(statuses)
+        calls.append(status)
+        return httpx.Response(status, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(image_build.httpx, "request", fake_request)
+    monkeypatch.setattr(image_build.time, "sleep", lambda seconds: None)
+
+    image_build.upload_image_build_artifact(
+        SandboxImageBuildUpload(
+            sha256="a" * 64,
+            url="https://upload.example.com/layer",
+            method="PUT",
+            headers={},
+            objectKey="layers/a",
+            expiresInSeconds=900,
+            maxUploadBytes=1000,
+        ),
+        str(artifact),
+    )
+
+    assert calls == [500, 200]
+
+
+def test_remote_dockerfile_context_is_deterministic_and_sparse(tmp_path):
+    (tmp_path / "Dockerfile").write_text(
+        "FROM python:3.12\nCOPY requirements.txt /app/\nCOPY src /app/src\n"
+    )
+    (tmp_path / ".dockerignore").write_text("ignored.txt\n")
+    (tmp_path / "requirements.txt").write_text("httpx\n")
+    (tmp_path / "ignored.txt").write_text("not uploaded\n")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("print('ok')\n")
+
+    first = image_build.package_docker_build_context_manifest(tmp_path)
+    second = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        assert first.manifest.context_mode == "sparse"
+        assert first.artifact.sha256_hex == second.artifact.sha256_hex
+        assert sorted(first.bundles) == sorted(second.bundles)
+
+        archived_names = set()
+        for artifact in first.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                archived_names.update(name.rstrip("/") for name in archive.getnames())
+        assert {
+            "Dockerfile",
+            ".dockerignore",
+            "requirements.txt",
+            "src",
+            "src/app.py",
+        } <= archived_names
+        assert "ignored.txt" not in archived_names
+    finally:
+        first.cleanup()
+        second.cleanup()
+
+
+def test_remote_dockerfile_context_falls_back_for_variable_source(tmp_path):
+    (tmp_path / "Dockerfile").write_text("FROM scratch\nCOPY $SOURCE /app/\n")
+    (tmp_path / "payload.txt").write_text("payload\n")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        assert packaged.manifest.context_mode == "full"
+        assert packaged.manifest.fallback_reason == "copy_source_requires_expansion"
+    finally:
+        packaged.cleanup()
+
+
+def test_package_docker_image_manifest_preserves_reusable_layers(
+    monkeypatch,
+    tmp_path,
+):
+    config_bytes = b'{"architecture":"amd64","config":{}}'
+    layer_bytes = b"reusable-layer-tar"
+    save_manifest = json.dumps(
+        [{"Config": "config.json", "Layers": ["layer.tar"]}],
+        separators=(",", ":"),
+    ).encode()
+    archive_buffer = io.BytesIO()
+    with tarfile.open(fileobj=archive_buffer, mode="w") as archive:
+        for name, data in (
+            ("config.json", config_bytes),
+            ("layer.tar", layer_bytes),
+            ("manifest.json", save_manifest),
+        ):
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+    archive_bytes = archive_buffer.getvalue()
+
+    class FakeProcess:
+        def __init__(self):
+            self.stdout = io.BytesIO(archive_bytes)
+            self.return_code = None
+
+        def poll(self):
+            return self.return_code
+
+        def wait(self, timeout=None):
+            self.return_code = 0
+            return 0
+
+        def terminate(self):
+            self.return_code = -15
+
+        def kill(self):
+            self.return_code = -9
+
+    monkeypatch.setattr(
+        image_build.subprocess, "Popen", lambda *args, **kwargs: FakeProcess()
+    )
+    config_sha = hashlib.sha256(config_bytes).hexdigest()
+
+    packaged = image_build.package_docker_image_manifest(
+        "local/app:latest",
+        f"sha256:{config_sha}",
+        {"User": "node"},
+        temp_dir=str(tmp_path),
+    )
+    try:
+        layer_sha = hashlib.sha256(layer_bytes).hexdigest()
+        assert packaged.artifact.input_format == "docker_image_manifest_v1"
+        assert packaged.manifest.image_digest == f"sha256:{config_sha}"
+        assert packaged.manifest.config.sha256 == config_sha
+        assert [layer.sha256 for layer in packaged.manifest.layers] == [layer_sha]
+        assert open(packaged.layers[layer_sha].path, "rb").read() == layer_bytes
+    finally:
+        packaged.cleanup()
+
+
+def test_sync_dockerfile_build_uses_remote_context_by_default(monkeypatch, tmp_path):
+    (tmp_path / "Dockerfile").write_text("FROM scratch\n")
+    manager = SandboxManager(
+        SimpleNamespace(timeout=30, config=SimpleNamespace(runtime_proxy_override=None))
+    )
+    captured = []
+    monkeypatch.setattr(
+        manager,
+        "create_image_build",
+        lambda params: (
+            captured.append(params)
+            or SandboxImageBuildCreateResult(
+                build=_image_build("awaiting_upload"),
+                uploads=[],
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        manager,
+        "_complete_image_build_resilient",
+        lambda build_id, artifact: _image_build("dispatching"),
+    )
+    monkeypatch.setattr(
+        sync_sandbox_module,
+        "build_docker_image_from_dockerfile",
+        lambda **kwargs: pytest.fail("remote build unexpectedly invoked local Docker"),
+    )
+
+    result = manager.build_image_from_dockerfile(
+        context_path=tmp_path,
+        image_name="custom",
+        wait=False,
+    )
+
+    assert result.status == "dispatching"
+    assert captured[0].input_format == "dockerfile_context_manifest_v1"
+    assert captured[0].dockerfile_path == "Dockerfile"
+    assert captured[0].context_manifest.context_mode == "sparse"
+
+
+def test_sync_docker_image_exact_reuse_skips_docker_save(monkeypatch):
+    cleaned = []
+    source = image_build.DockerImageManifestSource(
+        image_digest="sha256:" + "a" * 64,
+        config={
+            "User": "node",
+            "Env": ["APP_ENV=prod"],
+            "Entrypoint": ["node"],
+            "Cmd": ["server.js"],
+            "WorkingDir": "/app",
+        },
+        cleanup_callback=lambda: cleaned.append(True),
+    )
+    monkeypatch.setattr(
+        sync_sandbox_module,
+        "prepare_docker_image_manifest_source",
+        lambda *args, **kwargs: source,
+    )
+    monkeypatch.setattr(
+        sync_sandbox_module,
+        "package_docker_image_manifest",
+        lambda *args, **kwargs: pytest.fail("cache hit unexpectedly ran docker save"),
+    )
+    manager = SandboxManager(
+        SimpleNamespace(timeout=30, config=SimpleNamespace(runtime_proxy_override=None))
+    )
+    reused = []
+    monkeypatch.setattr(
+        manager,
+        "reuse_docker_image",
+        lambda params: (
+            reused.append(params)
+            or SimpleNamespace(hit=True, build=_image_build("completed"))
+        ),
+    )
+
+    result = manager.build_image_from_docker_image(
+        docker_image="local/app:latest",
+        image_name="custom",
+        image_init={"env": {"APP_ENV": "test"}, "working_dir": "/srv"},
+    )
+
+    assert result.status == "completed"
+    assert reused[0].source_image_digest == "sha256:" + "a" * 64
+    assert reused[0].image_config_user == "node"
+    assert reused[0].image_init.env == {"APP_ENV": "test"}
+    assert reused[0].image_init.args == ["node", "server.js"]
+    assert reused[0].image_init.working_dir == "/srv"
+    assert cleaned == [True]
+
+
 def test_sync_dockerfile_image_build_cleans_temp_tag_on_build_failure(monkeypatch):
     removed = []
 
@@ -233,6 +471,7 @@ def test_sync_dockerfile_image_build_cleans_temp_tag_on_build_failure(monkeypatc
         manager.build_image_from_dockerfile(
             context_path=".",
             image_name="custom",
+            remote=False,
         )
 
     assert removed == ["temp:tag"]
@@ -280,6 +519,41 @@ def test_sync_wait_for_image_build_raises_detailed_failed_status(monkeypatch):
         manager.wait_for_image_build("build-123", poll_interval=0, timeout=1)
 
 
+def test_sync_complete_image_build_retries_upload_verification_race(monkeypatch):
+    manager = SandboxManager(
+        SimpleNamespace(
+            timeout=30,
+            config=SimpleNamespace(runtime_proxy_override=None),
+        )
+    )
+    calls = []
+
+    def fake_complete(build_id, params):
+        calls.append((build_id, params))
+        if len(calls) == 1:
+            raise HyperbrowserError("upload verification pending", status_code=409)
+        return _image_build("dispatching")
+
+    monkeypatch.setattr(manager, "complete_image_build", fake_complete)
+    monkeypatch.setattr(
+        manager,
+        "get_image_build",
+        lambda build_id: _image_build("upload_verified"),
+    )
+    monkeypatch.setattr(sync_sandbox_module.time, "sleep", lambda seconds: None)
+    artifact = image_build.DockerImageBuildArtifact(
+        path="unused",
+        sha256_hex="a" * 64,
+        size_bytes=123,
+        input_format="docker_image_manifest_v1",
+    )
+
+    result = manager._complete_image_build_resilient("build-123", artifact)
+
+    assert result.status == "dispatching"
+    assert len(calls) == 2
+
+
 @pytest.mark.anyio
 async def test_async_dockerfile_image_build_cleans_temp_tag_on_build_failure(
     monkeypatch,
@@ -312,6 +586,7 @@ async def test_async_dockerfile_image_build_cleans_temp_tag_on_build_failure(
         await manager.build_image_from_dockerfile(
             context_path=".",
             image_name="custom",
+            remote=False,
         )
 
     assert removed == ["temp:tag"]

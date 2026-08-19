@@ -26,7 +26,12 @@ SandboxFileEncoding: TypeAlias = Literal["utf8", "base64"]
 SandboxFileReadFormat: TypeAlias = Literal["text", "bytes", "blob", "stream"]
 SandboxFileWatchRoute: TypeAlias = Literal["ws", "stream"]
 SandboxVolumeMountType: TypeAlias = Literal["rw", "ro"]
-SandboxImageBuildInputFormat: TypeAlias = Literal["rootfs_export_tar_gz"]
+SandboxImageBuildInputFormat: TypeAlias = Literal[
+    "rootfs_export_tar_gz",
+    "dockerfile_context_tar_gz",
+    "dockerfile_context_manifest_v1",
+    "docker_image_manifest_v1",
+]
 SandboxImageBuildSourcePlatform: TypeAlias = Literal["linux/amd64"]
 SandboxImageBuildStatus: TypeAlias = Literal[
     "awaiting_upload",
@@ -118,6 +123,51 @@ class SandboxImageInit(TypedDict, total=False):
     env: Optional[Dict[str, str]]
     command: Optional[str]
     args: Optional[List[str]]
+    working_dir: Optional[str]
+
+
+class SandboxBuildContextBundle(TypedDict):
+    """One deterministic tar.gz bundle in a remote Docker build context."""
+
+    sha256: str
+    size_bytes: int
+    uncompressed_size_bytes: int
+    entry_count: int
+
+
+class SandboxBuildContextManifest(TypedDict, total=False):
+    """Manifest describing a sparse or full remote Docker build context."""
+
+    version: Literal[1]
+    dockerfile_path: Required[str]
+    context_mode: Required[Literal["sparse", "full"]]
+    fallback_reason: Optional[str]
+    bundles: Required[List[SandboxBuildContextBundle]]
+
+
+class SandboxDockerImageConfig(TypedDict):
+    """Inline Docker/OCI JSON descriptor used by an image manifest."""
+
+    sha256: str
+    size_bytes: int
+    data_base64: str
+
+
+class SandboxDockerImageLayer(TypedDict):
+    """One content-addressed image layer uploaded for a remote build."""
+
+    sha256: str
+    size_bytes: int
+
+
+class SandboxDockerImageManifest(TypedDict, total=False):
+    """Canonical Docker/OCI image manifest submitted to the build API."""
+
+    version: Literal[1]
+    image_digest: Required[str]
+    descriptor: Optional[SandboxDockerImageConfig]
+    config: Required[SandboxDockerImageConfig]
+    layers: Required[List[SandboxDockerImageLayer]]
 
 
 class SandboxImageListParams(TypedDict, total=False):
@@ -159,6 +209,19 @@ class CreateSandboxImageBuildParams(TypedDict, total=False):
     input_sha256: Required[str]
     input_size_bytes: Required[int]
     input_format: SandboxImageBuildInputFormat
+    source_platform: SandboxImageBuildSourcePlatform
+    image_config_user: Optional[str]
+    image_init: Optional[SandboxImageInit]
+    dockerfile_path: Optional[str]
+    context_manifest: Optional[SandboxBuildContextManifest]
+    docker_image_manifest: Optional[SandboxDockerImageManifest]
+
+
+class ReuseSandboxDockerImageParams(TypedDict, total=False):
+    """Metadata used to reuse an existing Docker image conversion."""
+
+    image_name: Required[str]
+    source_image_digest: Required[str]
     source_platform: SandboxImageBuildSourcePlatform
     image_config_user: Optional[str]
     image_init: Optional[SandboxImageInit]
