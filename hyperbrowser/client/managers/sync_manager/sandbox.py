@@ -607,7 +607,9 @@ class SandboxManager:
                         image_init=normalized_image_init,
                     )
                 )
-            except HyperbrowserError:
+            except HyperbrowserError as error:
+                if error.status_code != 404:
+                    raise
                 reused = None
             if reused is not None and reused.hit:
                 if reused.build is None:
