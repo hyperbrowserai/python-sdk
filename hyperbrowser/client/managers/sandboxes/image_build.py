@@ -6,7 +6,6 @@ import json
 import os
 import posixpath
 import re
-import shlex
 import shutil
 import subprocess
 import tarfile
@@ -16,10 +15,22 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Tuple
+from typing import (
+    Callable,
+    Dict,
+    FrozenSet,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 import httpx
-from pathspec import PathSpec
+
+from .dockerfile_analysis import analyze_dockerfile_sources
+from .dockerignore import DockerIgnoreMatcher
 
 from ....models.sandbox import (
     SandboxBuildContextBundle,
@@ -204,8 +215,8 @@ def package_docker_build_context_manifest(
 
     dockerfile_bytes = dockerfile_path.read_bytes()
     ignore_relative = _select_dockerignore(context_root, dockerfile_relative)
-    ignore_spec = _load_dockerignore(context_root / ignore_relative)
-    source_groups, fallback_reason = _analyze_dockerfile_sources(dockerfile_bytes)
+    ignore_matcher = _load_dockerignore(context_root / ignore_relative)
+    source_groups, fallback_reason = analyze_dockerfile_sources(dockerfile_bytes)
     if force_full_context:
         source_groups = []
         fallback_reason = "requested_full_context"
@@ -216,7 +227,7 @@ def package_docker_build_context_manifest(
     if any("." in group for group in source_groups):
         fallback_reason = fallback_reason or ""
 
-    context_mode = (
+    context_mode: Literal["sparse", "full"] = (
         "full"
         if fallback_reason or any("." in group for group in source_groups)
         else "sparse"
@@ -230,13 +241,13 @@ def package_docker_build_context_manifest(
             _collect_context_entries(
                 context_root,
                 ["."],
-                ignore_spec=ignore_spec,
+                ignore_matcher=ignore_matcher,
                 required=False,
             )
             | _collect_context_entries(
                 context_root,
                 control_sources,
-                ignore_spec=None,
+                ignore_matcher=None,
                 required=False,
             )
         ]
@@ -245,7 +256,7 @@ def package_docker_build_context_manifest(
             _collect_context_entries(
                 context_root,
                 control_sources,
-                ignore_spec=None,
+                ignore_matcher=None,
                 required=False,
             )
         ]
@@ -254,7 +265,7 @@ def package_docker_build_context_manifest(
                 _collect_context_entries(
                     context_root,
                     group,
-                    ignore_spec=ignore_spec,
+                    ignore_matcher=ignore_matcher,
                     required=True,
                 )
             )
@@ -265,13 +276,13 @@ def package_docker_build_context_manifest(
                 _collect_context_entries(
                     context_root,
                     ["."],
-                    ignore_spec=ignore_spec,
+                    ignore_matcher=ignore_matcher,
                     required=False,
                 )
                 | _collect_context_entries(
                     context_root,
                     control_sources,
-                    ignore_spec=None,
+                    ignore_matcher=None,
                     required=False,
                 )
             ]
@@ -444,13 +455,13 @@ def package_docker_image_manifest(
             data_base64=base64.b64encode(config_bytes).decode("ascii"),
         )
         layer_descriptors = []
-        layers = {}
+        layers: Dict[str, DockerImageBuildArtifact] = {}
         for layer in layer_entries:
-            descriptor = SandboxDockerImageLayer(
+            layer_descriptor = SandboxDockerImageLayer(
                 sha256=layer.sha256_hex,
                 size_bytes=layer.size_bytes,
             )
-            layer_descriptors.append(descriptor)
+            layer_descriptors.append(layer_descriptor)
             existing = layers.get(layer.sha256_hex)
             if existing is not None and existing.size_bytes != layer.size_bytes:
                 raise RuntimeError(
@@ -465,9 +476,9 @@ def package_docker_image_manifest(
                     source_platform=platform,
                 )
 
-        descriptor = None
+        image_descriptor = None
         if image_digest != f"sha256:{config_descriptor.sha256}":
-            descriptor = _resolve_oci_image_descriptor(
+            image_descriptor = _resolve_oci_image_descriptor(
                 entries,
                 image_digest,
                 config_descriptor,
@@ -476,7 +487,7 @@ def package_docker_image_manifest(
         manifest = SandboxDockerImageManifest(
             version=1,
             image_digest=image_digest,
-            descriptor=descriptor,
+            descriptor=image_descriptor,
             config=config_descriptor,
             layers=layer_descriptors,
         )
@@ -561,7 +572,7 @@ def upload_image_build_artifact(
         )
     method = (upload.method or "PUT").strip().upper()
     attempts = 3 if method == "PUT" else 1
-    last_error = None
+    last_error: Optional[Exception] = None
     for attempt in range(1, attempts + 1):
         try:
             _upload_image_build_artifact_once(
@@ -666,7 +677,7 @@ def merge_image_init(
         env=env or None,
         command=command or None,
         args=args or None,
-        working_dir=working_dir or None,
+        workingDir=working_dir or None,
     )
 
 
@@ -894,7 +905,7 @@ def _derive_auto_image_init(config: Dict[str, object]) -> Optional[SandboxImageI
     return SandboxImageInit(
         env=env or None,
         args=args or None,
-        working_dir=working_dir or None,
+        workingDir=working_dir or None,
     )
 
 
@@ -966,131 +977,13 @@ def _select_dockerignore(context_root: Path, dockerfile_relative: str) -> str:
     return ".dockerignore"
 
 
-def _load_dockerignore(ignore_path: Path) -> Optional[PathSpec]:
+def _load_dockerignore(ignore_path: Path) -> Optional[DockerIgnoreMatcher]:
     if not ignore_path.exists():
         return None
     try:
-        lines = ignore_path.read_text(encoding="utf-8-sig").splitlines()
-        return PathSpec.from_lines("gitwildmatch", lines)
+        return DockerIgnoreMatcher.from_file(ignore_path)
     except (OSError, UnicodeError, ValueError) as exc:
         raise ValueError(f"parse .dockerignore: {exc}") from exc
-
-
-def _analyze_dockerfile_sources(data: bytes) -> Tuple[List[List[str]], str]:
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        return [], "dockerfile_parse_failed"
-    escape_match = re.search(r"(?im)^\s*#\s*escape\s*=\s*(\S+)", text)
-    if escape_match and escape_match.group(1) != "\\":
-        return [], "dockerfile_parse_failed"
-    syntax_match = re.search(r"(?im)^\s*#\s*syntax\s*=\s*([^\s]+)", text)
-    if syntax_match and not _is_official_dockerfile_frontend(syntax_match.group(1)):
-        return [], "custom_dockerfile_frontend"
-    if "<<" in text:
-        return [], "dockerfile_instruction_parse_failed"
-    logical_lines = []
-    current = ""
-    for raw_line in text.splitlines():
-        stripped = raw_line.strip()
-        if not current and (not stripped or stripped.startswith("#")):
-            continue
-        current = f"{current}{stripped}"
-        if current.endswith("\\"):
-            current = current[:-1] + " "
-            continue
-        logical_lines.append(current.strip())
-        current = ""
-    if current:
-        return [], "dockerfile_parse_failed"
-
-    groups = []
-    for line in logical_lines:
-        command, separator, body = line.partition(" ")
-        if not separator:
-            continue
-        instruction = command.upper()
-        if instruction in ("COPY", "ADD"):
-            try:
-                flags, values = _parse_copy_add_values(body)
-            except (ValueError, json.JSONDecodeError):
-                return [], "dockerfile_instruction_parse_failed"
-            if instruction == "COPY" and "from" in flags:
-                continue
-            sources = values[:-1]
-            local_sources = []
-            for source in sources:
-                if "$" in source or "\x00" in source:
-                    reason = (
-                        "copy_source_requires_expansion"
-                        if instruction == "COPY"
-                        else "add_source_requires_expansion"
-                    )
-                    return [], reason
-                if instruction == "ADD" and _is_remote_add_source(source):
-                    continue
-                local_sources.append(source)
-            if local_sources:
-                groups.append(local_sources)
-        elif instruction == "RUN":
-            for mount in re.findall(r"--mount=([^\s]+)", body):
-                options = {}
-                for option in mount.split(","):
-                    key, _, value = option.partition("=")
-                    options[key.strip()] = value.strip()
-                if options.get("type") != "bind" or options.get("from"):
-                    continue
-                source = options.get("source") or options.get("src") or "."
-                if "$" in source:
-                    return [], "run_bind_source_requires_expansion"
-                groups.append([source])
-    return groups, ""
-
-
-def _parse_copy_add_values(body: str) -> Tuple[Dict[str, str], List[str]]:
-    flags = {}
-    remaining = body.strip()
-    while remaining.startswith("--"):
-        token, separator, remaining = remaining.partition(" ")
-        if not separator:
-            raise ValueError("COPY/ADD is missing source and destination")
-        key, has_value, value = token[2:].partition("=")
-        flags[key.lower()] = value if has_value else ""
-        remaining = remaining.lstrip()
-    if remaining.startswith("["):
-        values = json.loads(remaining)
-        if not isinstance(values, list) or not all(
-            isinstance(value, str) for value in values
-        ):
-            raise ValueError("invalid JSON COPY/ADD")
-    else:
-        values = shlex.split(remaining, posix=True)
-    if len(values) < 2:
-        raise ValueError("COPY/ADD is missing source or destination")
-    return flags, values
-
-
-def _is_official_dockerfile_frontend(reference: str) -> bool:
-    normalized = reference.strip()
-    if normalized.startswith("docker-image://"):
-        normalized = normalized[len("docker-image://") :]
-    normalized = normalized.split("@", 1)[0]
-    last_slash = normalized.rfind("/")
-    last_colon = normalized.rfind(":")
-    if last_colon > last_slash:
-        normalized = normalized[:last_colon]
-    return normalized in {
-        "docker/dockerfile",
-        "docker.io/docker/dockerfile",
-        "index.docker.io/docker/dockerfile",
-        "docker/dockerfile-upstream",
-        "docker.io/docker/dockerfile-upstream",
-        "index.docker.io/docker/dockerfile-upstream",
-    }
-
-
-def _is_remote_add_source(source: str) -> bool:
-    return source.startswith(("http://", "https://", "git://", "ssh://"))
 
 
 def _deduplicate_source_groups(groups: List[List[str]]) -> List[List[str]]:
@@ -1118,10 +1011,10 @@ def _collect_context_entries(
     context_root: Path,
     sources: Sequence[str],
     *,
-    ignore_spec: Optional[PathSpec],
+    ignore_matcher: Optional[DockerIgnoreMatcher],
     required: bool,
 ):
-    entries = set()
+    entries: Set[str] = set()
     for raw_source in sources:
         source = _normalize_context_source(raw_source)
         if source == ".":
@@ -1141,45 +1034,143 @@ def _collect_context_entries(
                 f'Docker build context source not found: "{source}"'
             )
         for match in existing_matches:
-            resolved_parent = (
-                context_root
-                if match == context_root
-                else match.parent.resolve(strict=True)
-            )
-            if not _path_is_within(context_root, resolved_parent):
-                raise ValueError(
-                    f'Docker build context source escapes context: "{source}"'
+            relative_match = match.relative_to(context_root).as_posix()
+            for followed_relative in _follow_context_source_symlinks(
+                context_root, relative_match
+            ):
+                followed_path = (
+                    context_root
+                    if followed_relative == "."
+                    else context_root / followed_relative
                 )
-            _collect_context_path(context_root, match, entries, ignore_spec)
+                if followed_path.exists() or followed_path.is_symlink():
+                    _collect_context_path(
+                        context_root,
+                        followed_path,
+                        entries,
+                        ignore_matcher,
+                    )
     return entries
+
+
+def _follow_context_source_symlinks(
+    context_root: Path, relative_source: str
+) -> List[str]:
+    """Return a sparse source plus symlinks and their in-context targets.
+
+    This mirrors fsutil ``FollowPaths``: symlink targets are interpreted
+    inside the context root, including absolute or ``..`` targets, and cycles
+    terminate after retaining every symlink encountered.
+    """
+
+    pending = [_normalize_context_source(relative_source)]
+    resolved = []
+    seen = set()
+    while pending:
+        relative = pending.pop()
+        if relative in seen:
+            continue
+        seen.add(relative)
+
+        parts = [] if relative == "." else relative.split("/")
+        current_parts = []
+        followed = False
+        for index, part in enumerate(parts):
+            current_parts.append(part)
+            current_relative = "/".join(current_parts)
+            current_path = context_root / current_relative
+            if not current_path.is_symlink():
+                continue
+
+            resolved.append(current_relative)
+            try:
+                target = os.readlink(current_path)
+            except OSError as exc:
+                raise ValueError(
+                    f'read build context symlink "{current_relative}": {exc}'
+                ) from exc
+            if not target or "\x00" in target:
+                raise ValueError(
+                    f'build context symlink "{current_relative}" has an '
+                    "invalid target"
+                )
+
+            remainder = parts[index + 1 :]
+            if target.startswith("/"):
+                combined = posixpath.join(target, *remainder)
+            else:
+                combined = posixpath.join(
+                    posixpath.dirname(current_relative), target, *remainder
+                )
+            normalized_target = posixpath.normpath("/" + combined).lstrip("/")
+            pending.append(normalized_target or ".")
+            followed = True
+            break
+
+        if not followed:
+            resolved.append(relative)
+
+    return resolved
 
 
 def _collect_context_path(
     context_root: Path,
     path: Path,
     entries,
-    ignore_spec: Optional[PathSpec],
+    ignore_matcher: Optional[DockerIgnoreMatcher],
 ) -> None:
     relative = path.relative_to(context_root).as_posix()
-    if relative != "." and not _is_ignored(relative, path.is_dir(), ignore_spec):
-        entries.add(relative)
+    path_is_ignored = relative != "." and _is_ignored(relative, ignore_matcher)
+    can_prune_ignored_directories = not _ignore_matcher_has_negations(ignore_matcher)
+    if relative != "." and not path_is_ignored:
+        _add_context_entry_with_parents(entries, relative)
     if path.is_symlink() or not path.is_dir():
         return
-    for root, directories, files in os.walk(str(path), followlinks=False):
+    if path_is_ignored and can_prune_ignored_directories:
+        return
+    for root, directories, files in os.walk(str(path), topdown=True, followlinks=False):
         root_path = Path(root)
-        for name in sorted(directories + files):
+        ordered_directories = sorted(directories)
+        directories[:] = ordered_directories
+        retained_directories = []
+        for name in ordered_directories:
             child = root_path / name
             child_relative = child.relative_to(context_root).as_posix()
-            if _is_ignored(child_relative, child.is_dir(), ignore_spec):
+            if _is_ignored(child_relative, ignore_matcher):
+                if not can_prune_ignored_directories:
+                    retained_directories.append(name)
                 continue
-            entries.add(child_relative)
+            _add_context_entry_with_parents(entries, child_relative)
+            retained_directories.append(name)
+        if can_prune_ignored_directories:
+            directories[:] = retained_directories
+        for name in sorted(files):
+            child = root_path / name
+            child_relative = child.relative_to(context_root).as_posix()
+            if _is_ignored(child_relative, ignore_matcher):
+                continue
+            _add_context_entry_with_parents(entries, child_relative)
 
 
-def _is_ignored(relative: str, is_directory: bool, spec: Optional[PathSpec]) -> bool:
-    if spec is None:
+def _is_ignored(relative: str, matcher: Optional[DockerIgnoreMatcher]) -> bool:
+    if matcher is None:
         return False
-    candidate = f"{relative}/" if is_directory else relative
-    return spec.match_file(candidate)
+    return matcher.matches(relative)
+
+
+def _add_context_entry_with_parents(entries, relative: str) -> None:
+    current = relative
+    while current not in ("", "."):
+        entries.add(current)
+        current = posixpath.dirname(current)
+
+
+def _ignore_matcher_has_negations(
+    matcher: Optional[DockerIgnoreMatcher],
+) -> bool:
+    if matcher is None:
+        return False
+    return matcher.has_negations
 
 
 def _remove_subsumed_entry_groups(groups):

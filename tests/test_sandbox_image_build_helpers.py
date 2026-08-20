@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import subprocess
 import tarfile
 from types import SimpleNamespace
@@ -289,6 +290,194 @@ def test_remote_dockerfile_context_falls_back_for_variable_source(tmp_path):
     try:
         assert packaged.manifest.context_mode == "full"
         assert packaged.manifest.fallback_reason == "copy_source_requires_expansion"
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_dockerfile_context_falls_back_for_source_glob(tmp_path):
+    (tmp_path / "Dockerfile").write_text("FROM scratch\nCOPY * /app/\n")
+    (tmp_path / ".env").write_text("SECRET=not-a-real-secret\n")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        assert packaged.manifest.context_mode == "full"
+        assert packaged.manifest.fallback_reason == "dockerfile_source_pattern"
+        archived_names = set()
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                archived_names.update(name.rstrip("/") for name in archive.getnames())
+        assert ".env" in archived_names
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_context_prunes_ignored_directories_without_negations(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "Dockerfile").write_text("FROM scratch\nCOPY . /app/\n")
+    (tmp_path / ".dockerignore").write_text("node_modules\n")
+    (tmp_path / "included.txt").write_text("included\n")
+    (tmp_path / "node_modules" / "nested").mkdir(parents=True)
+    (tmp_path / "node_modules" / "nested" / "package.js").write_text("ignored\n")
+
+    original_scandir = os.scandir
+    walked_context_paths = []
+    context_root = os.fspath(tmp_path)
+
+    def tracking_scandir(path):
+        if isinstance(path, (str, bytes, os.PathLike)):
+            raw_path = os.fspath(path)
+            if isinstance(raw_path, str) and (
+                raw_path == context_root
+                or raw_path.startswith(f"{context_root}{os.sep}")
+            ):
+                walked_context_paths.append(os.path.relpath(raw_path, context_root))
+        return original_scandir(path)
+
+    monkeypatch.setattr(image_build.os, "scandir", tracking_scandir)
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        archived_names = set()
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                archived_names.update(name.rstrip("/") for name in archive.getnames())
+        assert "included.txt" in archived_names
+        assert not any(name.startswith("node_modules") for name in archived_names)
+        assert "node_modules" not in walked_context_paths
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_context_preserves_negated_descendant(tmp_path):
+    (tmp_path / "Dockerfile").write_text("FROM scratch\nCOPY . /app/\n")
+    (tmp_path / ".dockerignore").write_text("node_modules\n!node_modules/keep.txt\n")
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "keep.txt").write_text("keep\n")
+    (tmp_path / "node_modules" / "drop.txt").write_text("drop\n")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        archived_names = set()
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                archived_names.update(name.rstrip("/") for name in archive.getnames())
+        assert "node_modules/keep.txt" in archived_names
+        assert "node_modules/drop.txt" not in archived_names
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_context_honors_dockerfile_specific_ignore_rules(tmp_path):
+    (tmp_path / "docker").mkdir()
+    (tmp_path / "docker" / "Buildfile").write_text(
+        "FROM scratch\nCOPY src/*.js /app/\nCOPY assets /assets\n"
+    )
+    (tmp_path / ".dockerignore").write_text("src\nassets\n")
+    (tmp_path / "docker" / "Buildfile.dockerignore").write_text(
+        "src/*\n!src/keep.js\nassets/private\n"
+    )
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "keep.js").write_text("keep\n")
+    (tmp_path / "src" / "drop.js").write_text("drop\n")
+    (tmp_path / "assets" / "private").mkdir(parents=True)
+    (tmp_path / "assets" / "public.txt").write_text("public\n")
+    (tmp_path / "assets" / "private" / "secret").write_text("secret\n")
+
+    packaged = image_build.package_docker_build_context_manifest(
+        tmp_path, dockerfile="docker/Buildfile"
+    )
+    try:
+        archived_names = set()
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                archived_names.update(name.rstrip("/") for name in archive.getnames())
+        assert packaged.manifest.context_mode == "full"
+        assert {
+            "docker/Buildfile",
+            "docker/Buildfile.dockerignore",
+            "src/keep.js",
+            "assets/public.txt",
+        } <= archived_names
+        assert "src/drop.js" not in archived_names
+        assert "assets/private/secret" not in archived_names
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_context_sparse_source_includes_symlink_target_closure(tmp_path):
+    (tmp_path / "Dockerfile").write_text(
+        "FROM scratch\nCOPY alias/data.txt /app/data.txt\n"
+    )
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real" / "data.txt").write_text("selected\n")
+    (tmp_path / "real" / "unreferenced.txt").write_text("not selected\n")
+    (tmp_path / "alias").symlink_to("real")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        headers = {}
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                headers.update(
+                    {member.name.rstrip("/"): member for member in archive.getmembers()}
+                )
+
+        assert packaged.manifest.context_mode == "sparse"
+        assert headers["alias"].issym()
+        assert headers["alias"].linkname == "real"
+        assert headers["real"].isdir()
+        assert headers["real/data.txt"].isfile()
+        assert "real/unreferenced.txt" not in headers
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_context_includes_ignored_symlink_dockerfile_target(tmp_path):
+    (tmp_path / "docker").mkdir()
+    (tmp_path / "docker" / "ActualDockerfile").write_text(
+        "FROM scratch\nCOPY app /app\n"
+    )
+    (tmp_path / "Dockerfile").symlink_to("docker/ActualDockerfile")
+    (tmp_path / ".dockerignore").write_text("docker\n")
+    (tmp_path / "app").write_text("payload\n")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        names = set()
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                names.update(member.name.rstrip("/") for member in archive.getmembers())
+
+        assert {"Dockerfile", "docker", "docker/ActualDockerfile", "app"} <= names
+    finally:
+        packaged.cleanup()
+
+
+def test_remote_context_preserves_external_and_broken_symlink_metadata(tmp_path):
+    (tmp_path / "Dockerfile").write_text("FROM scratch\nCOPY links /links\n")
+    (tmp_path / "links").mkdir()
+    (tmp_path / "links" / "relative").symlink_to("../../outside")
+    (tmp_path / "links" / "absolute").symlink_to("/etc/passwd")
+    (tmp_path / "links" / "broken link").symlink_to("missing target")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        symlinks = {}
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                symlinks.update(
+                    {
+                        member.name: member.linkname
+                        for member in archive.getmembers()
+                        if member.issym()
+                    }
+                )
+
+        assert symlinks == {
+            "links/absolute": "/etc/passwd",
+            "links/broken link": "missing target",
+            "links/relative": "../../outside",
+        }
     finally:
         packaged.cleanup()
 

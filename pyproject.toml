@@ -19,7 +19,6 @@ httpx = ">=0.23.0,<1"
 jsonref = ">=1.1.0"
 websockets = ">=13,<16"
 typing-extensions = ">=4.0,<5"
-pathspec = "^0.12.1"
 
 
 [tool.poetry.group.dev.dependencies]
