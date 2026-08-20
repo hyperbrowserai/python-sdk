@@ -282,6 +282,25 @@ def test_remote_dockerfile_context_is_deterministic_and_sparse(tmp_path):
         second.cleanup()
 
 
+def test_remote_dockerfile_context_includes_colon_named_add_sources(tmp_path):
+    (tmp_path / "Dockerfile").write_text(
+        "FROM scratch\nADD assets:latest /assets/\nADD http:archive /archive/\n"
+    )
+    (tmp_path / "assets:latest").write_text("asset\n")
+    (tmp_path / "http:archive").write_text("archive\n")
+
+    packaged = image_build.package_docker_build_context_manifest(tmp_path)
+    try:
+        assert packaged.manifest.context_mode == "sparse"
+        archived_names = set()
+        for artifact in packaged.bundles.values():
+            with tarfile.open(artifact.path, "r:gz") as archive:
+                archived_names.update(name.rstrip("/") for name in archive.getnames())
+        assert {"assets:latest", "http:archive"} <= archived_names
+    finally:
+        packaged.cleanup()
+
+
 def test_remote_dockerfile_context_falls_back_for_variable_source(tmp_path):
     (tmp_path / "Dockerfile").write_text("FROM scratch\nCOPY $SOURCE /app/\n")
     (tmp_path / "payload.txt").write_text("payload\n")

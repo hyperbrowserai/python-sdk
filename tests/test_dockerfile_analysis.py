@@ -64,6 +64,21 @@ ADD git@github.com:moby/buildkit.git /ssh-git/
         ),
         pytest.param(
             """\
+FROM scratch
+ADD assets:latest /colon/
+ADD http:archive.tar /http-colon/
+ADD oci-layout://example/image /unsupported-scheme/
+""",
+            [
+                ["assets:latest"],
+                ["http:archive.tar"],
+                ["oci-layout://example/image"],
+            ],
+            "",
+            id="add-colon-paths-and-unsupported-schemes-are-local",
+        ),
+        pytest.param(
+            """\
 FROM scratch AS generated
 RUN --mount=type=bind,source=src,target=/src true
 RUN --mount=source=vendor,target=/vendor true

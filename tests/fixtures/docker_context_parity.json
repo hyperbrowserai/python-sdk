@@ -85,7 +85,14 @@
     {
       "name": "add-arbitrary-uri-scheme",
       "dockerfile": "FROM scratch\nADD oci-layout://example/image /image/\n",
-      "goSourceGroups": [],
+      "goSourceGroups": [["oci-layout://example/image"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "add-colon-paths-are-local",
+      "dockerfile": "FROM scratch\nADD assets:latest /asset/\nADD http:archive /archive/\n",
+      "goSourceGroups": [["assets:latest"], ["http:archive"]],
       "goFallback": "",
       "pythonExpectation": "exact"
     },

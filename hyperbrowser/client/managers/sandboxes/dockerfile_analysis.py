@@ -11,7 +11,6 @@ import json
 import re
 import shlex
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlsplit
 
 
 _KNOWN_INSTRUCTIONS = frozenset(
@@ -291,8 +290,4 @@ def _is_official_dockerfile_frontend(reference: str) -> bool:
 def _is_remote_add_source(source: str) -> bool:
     if _SCP_GIT_SOURCE_PATTERN.match(source):
         return True
-    try:
-        parsed = urlsplit(source)
-    except ValueError:
-        return False
-    return bool(parsed.scheme and parsed.scheme.lower() != "file")
+    return source.startswith(("http://", "https://", "git://", "ssh://"))
