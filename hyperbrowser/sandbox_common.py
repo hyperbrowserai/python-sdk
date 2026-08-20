@@ -30,6 +30,28 @@ def get_request_id(response: httpx.Response) -> Optional[str]:
     return response.headers.get("x-request-id") or response.headers.get("request-id")
 
 
+def send_control_http_request(transport, method: str, url: str, **kwargs):
+    send = getattr(transport, "send_authenticated", None)
+    if send is None:
+        raise HyperbrowserError(
+            "Transport cannot send authenticated control-plane requests",
+            retryable=False,
+            service="control",
+        )
+    return send(method, url, **kwargs)
+
+
+async def asend_control_http_request(transport, method: str, url: str, **kwargs):
+    send = getattr(transport, "send_authenticated", None)
+    if send is None:
+        raise HyperbrowserError(
+            "Transport cannot send authenticated control-plane requests",
+            retryable=False,
+            service="control",
+        )
+    return await send(method, url, **kwargs)
+
+
 def is_retryable_network_error(error: BaseException) -> bool:
     return isinstance(
         error,

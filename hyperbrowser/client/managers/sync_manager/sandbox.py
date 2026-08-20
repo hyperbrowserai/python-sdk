@@ -57,6 +57,7 @@ from ....sandbox_common import (
     ensure_response_ok,
     normalize_network_error,
     parse_json_response,
+    send_control_http_request,
 )
 from ..sandboxes.shared import (
     _build_sandbox_exposed_url,
@@ -926,7 +927,8 @@ class SandboxManager:
         data: Optional[Dict[str, object]] = None,
     ):
         try:
-            response = self._client.transport.client.request(
+            response = send_control_http_request(
+                self._client.transport,
                 method,
                 self._client._build_url(path),
                 params={k: v for k, v in (params or {}).items() if v is not None},

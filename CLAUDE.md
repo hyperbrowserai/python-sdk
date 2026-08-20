@@ -75,7 +75,8 @@ Response and legacy models are re-exported from
 
 ## Key Patterns
 
-- **API Key**: Via constructor `api_key=` or `HYPERBROWSER_API_KEY` env var
+- **API Key**: Via constructor `api_key=` or `HYPERBROWSER_API_KEY` env var. If omitted, the client uses a saved `hx auth login` session (`~/.hx_config/auth/<profile>.json`).
+- **Profile**: `HYPERBROWSER_PROFILE`, `profile=`, or `ClientConfig(profile=...)` (default `default`)
 - **Base URL**: Defaults to `https://api.hyperbrowser.ai`, configurable via `base_url=` or `HYPERBROWSER_BASE_URL`
 - **Job Polling**: Managers provide `start_and_wait()` methods that poll until completion
 - **Context Managers**: `AsyncHyperbrowser` supports `async with` for automatic cleanup

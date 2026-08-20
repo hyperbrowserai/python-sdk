@@ -1,9 +1,9 @@
+from dataclasses import replace
 from typing import Optional
 
-from hyperbrowser.exceptions import HyperbrowserError
 from ..config import ClientConfig
+from ..control_auth import resolve_control_plane_config
 from ..transport.base import TransportStrategy
-import os
 
 
 class HyperbrowserBase:
@@ -16,29 +16,20 @@ class HyperbrowserBase:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         runtime_proxy_override: Optional[str] = None,
+        profile: Optional[str] = None,
     ):
         if config is None:
-            config = ClientConfig(
-                api_key=(
-                    api_key
-                    if api_key is not None
-                    else os.environ.get("HYPERBROWSER_API_KEY", "")
-                ),
-                base_url=(
-                    base_url
-                    if base_url is not None
-                    else os.environ.get(
-                        "HYPERBROWSER_BASE_URL", "https://api.hyperbrowser.ai"
-                    )
-                ),
+            config = ClientConfig.from_constructor(
+                api_key=api_key,
+                base_url=base_url,
                 runtime_proxy_override=runtime_proxy_override,
+                profile=profile,
             )
 
-        if not config.api_key:
-            raise HyperbrowserError("API key must be provided")
-
-        self.config = config
-        self.transport = transport(config.api_key)
+        resolved_base_url, auth = resolve_control_plane_config(config)
+        self.config = replace(config, base_url=resolved_base_url)
+        self.auth = auth
+        self.transport = transport(auth)
 
     def _build_url(self, path: str) -> str:
         return f"{self.config.base_url}/api{path}"

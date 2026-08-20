@@ -56,6 +56,7 @@ from ....types import (
 )
 from ....sandbox_common import (
     RuntimeConnection,
+    asend_control_http_request,
     ensure_response_ok,
     normalize_network_error,
     parse_json_response,
@@ -943,7 +944,8 @@ class SandboxManager:
         data: Optional[Dict[str, object]] = None,
     ):
         try:
-            response = await self._client.transport.client.request(
+            response = await asend_control_http_request(
+                self._client.transport,
                 method,
                 self._client._build_url(path),
                 params={k: v for k, v in (params or {}).items() if v is not None},

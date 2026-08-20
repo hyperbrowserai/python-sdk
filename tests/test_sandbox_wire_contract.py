@@ -627,7 +627,23 @@ class AsyncRecordingTransport(RecordingTransport):
 class FakeSyncClient:
     def __init__(self):
         http_client = RecordingHTTPClient()
-        self.transport = type("Transport", (), {"client": http_client})()
+
+        def send_authenticated(method, url, **kwargs):
+            return http_client.request(
+                method,
+                url,
+                params=kwargs.get("params"),
+                json=kwargs.get("json"),
+            )
+
+        self.transport = type(
+            "Transport",
+            (),
+            {
+                "client": http_client,
+                "send_authenticated": staticmethod(send_authenticated),
+            },
+        )()
         self.config = type("Config", (), {"runtime_proxy_override": None})()
         self.timeout = 30
 
@@ -705,7 +721,23 @@ class RecordingAsyncHTTPClient:
 class FakeAsyncClient:
     def __init__(self):
         http_client = RecordingAsyncHTTPClient()
-        self.transport = type("Transport", (), {"client": http_client})()
+
+        async def send_authenticated(method, url, **kwargs):
+            return await http_client.request(
+                method,
+                url,
+                params=kwargs.get("params"),
+                json=kwargs.get("json"),
+            )
+
+        self.transport = type(
+            "Transport",
+            (),
+            {
+                "client": http_client,
+                "send_authenticated": staticmethod(send_authenticated),
+            },
+        )()
         self.config = type("Config", (), {"runtime_proxy_override": None})()
         self.timeout = 30
 
