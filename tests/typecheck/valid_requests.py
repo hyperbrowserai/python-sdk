@@ -130,6 +130,36 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
         }
     )
     client.sandboxes.create_image_build(
+        {
+            "image_name": "remote_context",
+            "input_sha256": "a" * 64,
+            "input_size_bytes": 123,
+            "input_format": "dockerfile_context_manifest_v1",
+            "source_platform": "linux/amd64",
+            "dockerfile_path": "Dockerfile",
+            "context_manifest": {
+                "dockerfile_path": "Dockerfile",
+                "context_mode": "sparse",
+                "bundles": [
+                    {
+                        "sha256": "b" * 64,
+                        "size_bytes": 10,
+                        "uncompressed_size_bytes": 20,
+                        "entry_count": 2,
+                    }
+                ],
+            },
+        }
+    )
+    client.sandboxes.reuse_docker_image(
+        {
+            "image_name": "custom_node",
+            "source_image_digest": "sha256:" + "c" * 64,
+            "source_platform": "linux/amd64",
+            "image_init": {"working_dir": "/app"},
+        }
+    )
+    client.sandboxes.create_image_build(
         LegacyCreateSandboxImageBuildParams(
             image_name="custom_node",
             input_sha256="abc123",
@@ -214,6 +244,13 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             "image_name": "custom_node",
             "input_sha256": "abc123",
             "input_size_bytes": 123,
+            "source_platform": "linux/amd64",
+        }
+    )
+    await client.sandboxes.reuse_docker_image(
+        {
+            "image_name": "custom_node",
+            "source_image_digest": "sha256:" + "c" * 64,
             "source_platform": "linux/amd64",
         }
     )

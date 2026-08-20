@@ -5,6 +5,12 @@ from hyperbrowser.models import (
     CompleteSandboxImageBuildParams,
     CreateSandboxParams,
     CreateSandboxImageBuildParams,
+    ReuseSandboxDockerImageParams,
+    SandboxBuildContextBundle,
+    SandboxBuildContextManifest,
+    SandboxDockerImageConfig,
+    SandboxDockerImageLayer,
+    SandboxDockerImageManifest,
     SandboxExposeParams,
     SandboxFileWriteEntry,
     SandboxExecParams,
@@ -156,6 +162,88 @@ def test_sandbox_image_build_params_serialize_expected_wire_keys():
         "inputSha256": "abc123",
         "inputSizeBytes": 123,
         "inputFormat": "rootfs_export_tar_gz",
+    }
+
+
+def test_remote_image_build_params_serialize_manifest_and_reuse_wire_keys():
+    context_manifest = SandboxBuildContextManifest(
+        dockerfile_path="docker/Dockerfile",
+        context_mode="sparse",
+        bundles=[
+            SandboxBuildContextBundle(
+                sha256="a" * 64,
+                size_bytes=10,
+                uncompressed_size_bytes=20,
+                entry_count=2,
+            )
+        ],
+    )
+    docker_manifest = SandboxDockerImageManifest(
+        image_digest="sha256:" + "b" * 64,
+        config=SandboxDockerImageConfig(
+            sha256="b" * 64,
+            size_bytes=2,
+            data_base64="e30=",
+        ),
+        layers=[SandboxDockerImageLayer(sha256="c" * 64, size_bytes=30)],
+    )
+    params = CreateSandboxImageBuildParams(
+        image_name="custom_node",
+        input_sha256="d" * 64,
+        input_size_bytes=123,
+        input_format="dockerfile_context_manifest_v1",
+        source_platform="linux/amd64",
+        dockerfile_path="docker/Dockerfile",
+        image_init=SandboxImageInit(working_dir="/app"),
+        context_manifest=context_manifest,
+        docker_image_manifest=docker_manifest,
+    )
+
+    assert params.model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "custom_node",
+        "inputSha256": "d" * 64,
+        "inputSizeBytes": 123,
+        "inputFormat": "dockerfile_context_manifest_v1",
+        "sourcePlatform": "linux/amd64",
+        "dockerfilePath": "docker/Dockerfile",
+        "imageInit": {"workingDir": "/app"},
+        "contextManifest": {
+            "version": 1,
+            "dockerfilePath": "docker/Dockerfile",
+            "contextMode": "sparse",
+            "bundles": [
+                {
+                    "sha256": "a" * 64,
+                    "sizeBytes": 10,
+                    "uncompressedSizeBytes": 20,
+                    "entryCount": 2,
+                }
+            ],
+        },
+        "dockerImageManifest": {
+            "version": 1,
+            "imageDigest": "sha256:" + "b" * 64,
+            "config": {
+                "sha256": "b" * 64,
+                "sizeBytes": 2,
+                "dataBase64": "e30=",
+            },
+            "layers": [{"sha256": "c" * 64, "sizeBytes": 30}],
+        },
+    }
+
+    assert ReuseSandboxDockerImageParams(
+        image_name="custom_node",
+        source_image_digest="sha256:" + "b" * 64,
+        source_platform="linux/amd64",
+        image_config_user="node",
+        image_init=SandboxImageInit(args=["node", "server.js"]),
+    ).model_dump(by_alias=True, exclude_none=True) == {
+        "imageName": "custom_node",
+        "sourceImageDigest": "sha256:" + "b" * 64,
+        "sourcePlatform": "linux/amd64",
+        "imageConfigUser": "node",
+        "imageInit": {"args": ["node", "server.js"]},
     }
 
 

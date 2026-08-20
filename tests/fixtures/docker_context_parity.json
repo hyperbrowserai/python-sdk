@@ -1,0 +1,434 @@
+{
+  "metadata": {
+    "buildkit": "v0.30.0",
+    "patternmatcher": "v0.6.1",
+    "fsutil": "a2aa163d723f"
+  },
+  "dockerfiles": [
+    {
+      "name": "no-context-sources",
+      "dockerfile": "FROM scratch\nCMD [\"true\"]\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "shell-copy-single",
+      "dockerfile": "FROM scratch\nCOPY app.py /app/\n",
+      "goSourceGroups": [["app.py"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "shell-copy-multiple",
+      "dockerfile": "FROM scratch\nCOPY pyproject.toml poetry.lock src /app/\n",
+      "goSourceGroups": [["pyproject.toml", "poetry.lock", "src"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "json-copy-spaces",
+      "dockerfile": "FROM scratch\nCOPY [\"one file\", \"two\", \"/dest/\"]\n",
+      "goSourceGroups": [["one file", "two"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-modern-flags",
+      "dockerfile": "# syntax=docker/dockerfile:1-labs\nFROM scratch\nCOPY --chown=1:1 --chmod=0755 --link --parents --exclude=*.tmp src /app/\n",
+      "goSourceGroups": [["src"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-from-stage",
+      "dockerfile": "FROM scratch AS generated\nFROM scratch\nCOPY --from=generated /out /out\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-from-named-context",
+      "dockerfile": "FROM scratch\nCOPY --from=config /settings.json /settings.json\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-continuation",
+      "dockerfile": "FROM scratch\nCOPY --link \\\n  first \\\n  second /dest/\n",
+      "goSourceGroups": [["first", "second"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-tabs-and-lowercase",
+      "dockerfile": "from scratch\ncopy\tfile.txt\t/dest/\n",
+      "goSourceGroups": [["file.txt"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-escaped-space",
+      "dockerfile": "FROM scratch\nCOPY one\\ file /dest/\n",
+      "goSourceGroups": [["one\\", "file"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "local-and-remote-add",
+      "dockerfile": "FROM scratch\nADD local.tar /local/\nADD https://example.com/archive.tar /remote/\nADD https://example.com/archive.tar?version=1 /remote-query/\nADD git://example.com/repository /git/\nADD git@github.com:moby/buildkit.git /ssh-git/\n",
+      "goSourceGroups": [["local.tar"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "add-arbitrary-uri-scheme",
+      "dockerfile": "FROM scratch\nADD oci-layout://example/image /image/\n",
+      "goSourceGroups": [["oci-layout://example/image"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "add-colon-paths-are-local",
+      "dockerfile": "FROM scratch\nADD assets:latest /asset/\nADD http:archive /archive/\n",
+      "goSourceGroups": [["assets:latest"], ["http:archive"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "add-file-uri-is-local",
+      "dockerfile": "FROM scratch\nADD file:///context/archive.tar /archive/\n",
+      "goSourceGroups": [["file:///context/archive.tar"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "copy-variable",
+      "dockerfile": "FROM scratch\nARG SOURCE=src\nCOPY $SOURCE /app/\n",
+      "goSourceGroups": [],
+      "goFallback": "copy_source_requires_expansion",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "add-variable",
+      "dockerfile": "FROM scratch\nADD ${SOURCE} /app/\n",
+      "goSourceGroups": [],
+      "goFallback": "add_source_requires_expansion",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "copy-star-pattern",
+      "dockerfile": "FROM scratch\nCOPY src/*.py /app/\n",
+      "goSourceGroups": [["src/*.py"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "copy-doublestar-pattern",
+      "dockerfile": "# syntax=docker/dockerfile:1-labs\nFROM scratch\nCOPY --parents src/**/*.txt /app/\n",
+      "goSourceGroups": [["src/**/*.txt"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "copy-escaped-character-class",
+      "dockerfile": "FROM scratch\nCOPY arr[[]0].txt /app/\n",
+      "goSourceGroups": [["arr[[]0].txt"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "copy-heredoc-and-local-source",
+      "dockerfile": "# syntax=docker/dockerfile:1\nFROM scratch\nCOPY local.txt <<EOF /app/\ninline\nEOF\n",
+      "goSourceGroups": [["local.txt"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "copy-heredoc-only",
+      "dockerfile": "# syntax=docker/dockerfile:1\nFROM scratch\nCOPY <<EOF /app/file.txt\ninline\nEOF\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "run-bind-explicit",
+      "dockerfile": "FROM scratch\nRUN --mount=type=bind,source=src,target=/src true\n",
+      "goSourceGroups": [["src"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-bind-default-type",
+      "dockerfile": "FROM scratch\nRUN --mount=source=vendor,target=/vendor true\n",
+      "goSourceGroups": [["vendor"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-bind-src-alias",
+      "dockerfile": "FROM scratch\nRUN --mount=type=bind,src=vendor,target=/vendor true\n",
+      "goSourceGroups": [["vendor"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-bind-context-root",
+      "dockerfile": "FROM scratch\nRUN --mount=type=bind,target=/context true\n",
+      "goSourceGroups": [["."]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-bind-from-stage",
+      "dockerfile": "FROM scratch AS generated\nRUN --mount=type=bind,from=generated,source=/out,target=/out true\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-cache-does-not-use-context",
+      "dockerfile": "FROM scratch\nRUN --mount=type=cache,target=/cache true\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-two-bind-mounts",
+      "dockerfile": "FROM scratch\nRUN --mount=type=bind,source=src,target=/src --mount=type=bind,source=vendor,target=/vendor true\n",
+      "goSourceGroups": [["src"], ["vendor"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "run-bind-variable",
+      "dockerfile": "FROM scratch\nRUN --mount=type=bind,source=$SOURCE,target=/src true\n",
+      "goSourceGroups": [],
+      "goFallback": "run_bind_source_requires_expansion",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "run-bind-quoted-source",
+      "dockerfile": "FROM scratch\nRUN --mount=type=bind,source=\"dir with space\",target=/src true\n",
+      "goSourceGroups": [["dir with space"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "run-mount-text-inside-command",
+      "dockerfile": "FROM scratch\nRUN echo --mount=type=bind,source=not-a-flag,target=/src\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "official-labs-frontend",
+      "dockerfile": "# syntax=docker/dockerfile:1-labs\nFROM scratch\nCOPY src /app/\n",
+      "goSourceGroups": [["src"]],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "custom-frontend",
+      "dockerfile": "# syntax=example.com/acme/custom-frontend:v2\nFROM scratch\nCOPY src /app/\n",
+      "goSourceGroups": [],
+      "goFallback": "custom_dockerfile_frontend",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "unknown-instruction",
+      "dockerfile": "FROM scratch\nCUSTOM source /app/\n",
+      "goSourceGroups": [],
+      "goFallback": "dockerfile_instruction_parse_failed",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "backtick-escape-directive",
+      "dockerfile": "# escape=`\nFROM scratch\nCOPY dir /dir/\n",
+      "goSourceGroups": [["dir"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "comment-inside-continuation",
+      "dockerfile": "FROM scratch\nCOPY first \\\n# ignored continuation comment\n  second /dest/\n",
+      "goSourceGroups": [["first", "second"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    },
+    {
+      "name": "onbuild-does-not-use-current-context",
+      "dockerfile": "FROM scratch\nONBUILD ADD . /app/src\n",
+      "goSourceGroups": [],
+      "goFallback": "",
+      "pythonExpectation": "exact"
+    },
+    {
+      "name": "utf8-bom",
+      "dockerfile": "﻿FROM scratch\nCOPY src /app/\n",
+      "goSourceGroups": [["src"]],
+      "goFallback": "",
+      "pythonExpectation": "full"
+    }
+  ],
+  "ignoreContexts": [
+    {
+      "name": "no-patterns",
+      "dockerignore": "",
+      "files": [".dockerignore", ".env", "README.md", "app/main.py"],
+      "expectedEntries": [".dockerignore", ".env", "README.md", "app", "app/main.py"]
+    },
+    {
+      "name": "root-ignored-directories",
+      "dockerignore": "node_modules\n.git\n",
+      "files": [".dockerignore", ".git/config", "app/main.py", "node_modules/pkg/index.js"],
+      "expectedEntries": [".dockerignore", "app", "app/main.py"]
+    },
+    {
+      "name": "negated-descendant",
+      "dockerignore": "node_modules\n!node_modules/keep.js\n",
+      "files": [".dockerignore", "node_modules/drop.js", "node_modules/keep.js"],
+      "expectedEntries": [".dockerignore", "node_modules", "node_modules/keep.js"]
+    },
+    {
+      "name": "ordered-negation",
+      "dockerignore": "*.log\n!important.log\n",
+      "files": [".dockerignore", "data.txt", "important.log", "logs/a.log"],
+      "expectedEntries": [".dockerignore", "data.txt", "important.log", "logs", "logs/a.log"]
+    },
+    {
+      "name": "root-anchored-pattern",
+      "dockerignore": "/root.txt\n",
+      "files": [".dockerignore", "nested/root.txt", "root.txt"],
+      "expectedEntries": [".dockerignore", "nested", "nested/root.txt"]
+    },
+    {
+      "name": "trailing-slash-normalization",
+      "dockerignore": "cache/\n",
+      "files": [".dockerignore", "cache/root.bin", "nested/cache/nested.bin"],
+      "expectedEntries": [".dockerignore", "nested", "nested/cache", "nested/cache/nested.bin"]
+    },
+    {
+      "name": "doublestar-directory",
+      "dockerignore": "**/tmp/**\n",
+      "files": [".dockerignore", "tmp/root.bin", "a/tmp/nested.bin", "a/tmpkeep/kept.bin"],
+      "expectedEntries": [".dockerignore", "a", "a/tmp", "a/tmpkeep", "a/tmpkeep/kept.bin", "tmp"]
+    },
+    {
+      "name": "negation-under-unrelated-directory",
+      "dockerignore": "vendor\n!src/keep.py\n",
+      "files": [".dockerignore", "src/drop.py", "src/keep.py", "vendor/pkg/file.py"],
+      "expectedEntries": [".dockerignore", "src", "src/drop.py", "src/keep.py"]
+    },
+    {
+      "name": "wildcard-negation",
+      "dockerignore": "**/*.py\n!src/**/keep.py\n",
+      "files": [".dockerignore", "README.md", "other/drop.py", "src/a/drop.py", "src/a/keep.py"],
+      "expectedEntries": [".dockerignore", "README.md", "other", "src", "src/a", "src/a/keep.py"]
+    },
+    {
+      "name": "character-class",
+      "dockerignore": "logs/[0-9].log\n",
+      "files": [".dockerignore", "logs/1.log", "logs/a.log", "logs/10.log"],
+      "expectedEntries": [".dockerignore", "logs", "logs/10.log", "logs/a.log"]
+    },
+    {
+      "name": "trim-and-clean-patterns",
+      "dockerignore": "  /build/../node_modules/  \n",
+      "files": [".dockerignore", "node_modules/drop.js", "src/main.js"],
+      "expectedEntries": [".dockerignore", "src", "src/main.js"]
+    },
+    {
+      "name": "leading-space-hash-is-literal",
+      "dockerignore": " #literal\n# comment\n",
+      "files": ["#literal", ".dockerignore", "kept.txt"],
+      "expectedEntries": [".dockerignore", "kept.txt"]
+    },
+    {
+      "name": "nested-bare-name-is-not-root-name",
+      "dockerignore": "generated\n",
+      "files": [".dockerignore", "generated/root.txt", "src/generated/nested.txt"],
+      "expectedEntries": [".dockerignore", "src", "src/generated", "src/generated/nested.txt"]
+    },
+    {
+      "name": "sparse-nested-file",
+      "dockerignore": "",
+      "sources": ["src/app/main.py"],
+      "files": [".dockerignore", "README.md", "src/app/main.py", "src/other.py"],
+      "expectedEntries": ["src", "src/app", "src/app/main.py"]
+    },
+    {
+      "name": "sparse-directory",
+      "dockerignore": "src/drop.py\n",
+      "sources": ["src"],
+      "files": [".dockerignore", "README.md", "src/drop.py", "src/keep.py", "src/nested/data.txt"],
+      "expectedEntries": ["src", "src/keep.py", "src/nested", "src/nested/data.txt"]
+    },
+    {
+      "name": "sparse-leaf-symlink",
+      "dockerignore": "",
+      "sources": ["link.txt"],
+      "files": [".dockerignore", "target.txt", "unrelated.txt"],
+      "symlinks": [{"path": "link.txt", "target": "target.txt"}],
+      "expectedEntries": ["link.txt", "target.txt"]
+    },
+    {
+      "name": "sparse-intermediate-symlink",
+      "dockerignore": "",
+      "sources": ["alias/data.txt"],
+      "files": [".dockerignore", "real/data.txt", "real/other.txt", "unrelated.txt"],
+      "symlinks": [{"path": "alias", "target": "real"}],
+      "expectedEntries": ["alias", "real", "real/data.txt"]
+    },
+    {
+      "name": "sparse-symlink-cycle",
+      "dockerignore": "",
+      "sources": ["first"],
+      "files": [".dockerignore", "unrelated.txt"],
+      "symlinks": [
+        {"path": "first", "target": "second"},
+        {"path": "second", "target": "first"}
+      ],
+      "expectedEntries": ["first", "second"]
+    },
+    {
+      "name": "sparse-broken-symlink",
+      "dockerignore": "",
+      "sources": ["broken.txt"],
+      "files": [".dockerignore", "unrelated.txt"],
+      "symlinks": [{"path": "broken.txt", "target": "missing.txt"}],
+      "expectedEntries": ["broken.txt"]
+    },
+    {
+      "name": "sparse-symlink-target-is-ignored",
+      "dockerignore": "target.txt\n",
+      "sources": ["link.txt"],
+      "files": [".dockerignore", "target.txt", "unrelated.txt"],
+      "symlinks": [{"path": "link.txt", "target": "target.txt"}],
+      "expectedEntries": ["link.txt"]
+    },
+    {
+      "name": "sparse-parent-relative-symlink",
+      "dockerignore": "",
+      "sources": ["nested/link.txt"],
+      "files": [".dockerignore", "target.txt", "unrelated.txt"],
+      "symlinks": [{"path": "nested/link.txt", "target": "../target.txt"}],
+      "expectedEntries": ["nested", "nested/link.txt", "target.txt"]
+    },
+    {
+      "name": "sparse-directory-symlink",
+      "dockerignore": "real/drop.txt\n",
+      "sources": ["alias"],
+      "files": [".dockerignore", "real/drop.txt", "real/keep.txt", "real/nested/data.txt", "unrelated.txt"],
+      "symlinks": [{"path": "alias", "target": "real"}],
+      "expectedEntries": ["alias", "real", "real/keep.txt", "real/nested", "real/nested/data.txt"]
+    },
+    {
+      "name": "unix-backslash-filename-is-not-a-separator",
+      "dockerignore": "foo/bar\n",
+      "files": [".dockerignore", "foo/bar", "foo\\bar"],
+      "expectedEntries": [".dockerignore", "foo", "foo\\bar"]
+    }
+  ]
+}

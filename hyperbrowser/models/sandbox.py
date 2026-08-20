@@ -38,7 +38,12 @@ SandboxFileReadFormat = Literal["text", "bytes", "blob", "stream"]
 SandboxFileWatchRoute = Literal["ws", "stream"]
 SandboxFileSystemEventType = Literal["chmod", "create", "remove", "rename", "write"]
 SandboxVolumeMountType = Literal["rw", "ro"]
-SandboxImageBuildInputFormat = Literal["rootfs_export_tar_gz"]
+SandboxImageBuildInputFormat = Literal[
+    "rootfs_export_tar_gz",
+    "dockerfile_context_tar_gz",
+    "dockerfile_context_manifest_v1",
+    "docker_image_manifest_v1",
+]
 SandboxImageBuildSourcePlatform = Literal["linux/amd64"]
 SandboxImageBuildStatus = Literal[
     "awaiting_upload",
@@ -284,6 +289,7 @@ class SandboxImageInit(SandboxBaseModel):
     env: Optional[Dict[str, str]] = None
     command: Optional[str] = None
     args: Optional[List[str]] = None
+    working_dir: Optional[str] = Field(default=None, alias="workingDir")
 
 
 class SandboxImageListParams(SandboxBaseModel):
@@ -374,6 +380,43 @@ class SandboxMemorySnapshotResult(SandboxBaseModel):
     image_namespace: str = Field(alias="imageNamespace")
 
 
+class SandboxBuildContextBundle(SandboxBaseModel):
+    sha256: str
+    size_bytes: int = Field(serialization_alias="sizeBytes")
+    uncompressed_size_bytes: int = Field(serialization_alias="uncompressedSizeBytes")
+    entry_count: int = Field(serialization_alias="entryCount")
+
+
+class SandboxBuildContextManifest(SandboxBaseModel):
+    version: Literal[1] = 1
+    dockerfile_path: str = Field(serialization_alias="dockerfilePath")
+    context_mode: Literal["sparse", "full"] = Field(serialization_alias="contextMode")
+    fallback_reason: Optional[str] = Field(
+        default=None,
+        serialization_alias="fallbackReason",
+    )
+    bundles: List[SandboxBuildContextBundle]
+
+
+class SandboxDockerImageConfig(SandboxBaseModel):
+    sha256: str
+    size_bytes: int = Field(serialization_alias="sizeBytes")
+    data_base64: str = Field(serialization_alias="dataBase64")
+
+
+class SandboxDockerImageLayer(SandboxBaseModel):
+    sha256: str
+    size_bytes: int = Field(serialization_alias="sizeBytes")
+
+
+class SandboxDockerImageManifest(SandboxBaseModel):
+    version: Literal[1] = 1
+    image_digest: str = Field(serialization_alias="imageDigest")
+    descriptor: Optional[SandboxDockerImageConfig] = None
+    config: SandboxDockerImageConfig
+    layers: List[SandboxDockerImageLayer]
+
+
 class CreateSandboxImageBuildParams(SandboxBaseModel):
     image_name: str = Field(serialization_alias="imageName")
     input_sha256: str = Field(serialization_alias="inputSha256")
@@ -382,6 +425,35 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
         default=None,
         serialization_alias="inputFormat",
     )
+    source_platform: Optional[SandboxImageBuildSourcePlatform] = Field(
+        default=None,
+        serialization_alias="sourcePlatform",
+    )
+    image_config_user: Optional[str] = Field(
+        default=None,
+        serialization_alias="imageConfigUser",
+    )
+    image_init: Optional[SandboxImageInit] = Field(
+        default=None,
+        serialization_alias="imageInit",
+    )
+    dockerfile_path: Optional[str] = Field(
+        default=None,
+        serialization_alias="dockerfilePath",
+    )
+    context_manifest: Optional[SandboxBuildContextManifest] = Field(
+        default=None,
+        serialization_alias="contextManifest",
+    )
+    docker_image_manifest: Optional[SandboxDockerImageManifest] = Field(
+        default=None,
+        serialization_alias="dockerImageManifest",
+    )
+
+
+class ReuseSandboxDockerImageParams(SandboxBaseModel):
+    image_name: str = Field(serialization_alias="imageName")
+    source_image_digest: str = Field(serialization_alias="sourceImageDigest")
     source_platform: Optional[SandboxImageBuildSourcePlatform] = Field(
         default=None,
         serialization_alias="sourcePlatform",
@@ -406,6 +478,7 @@ class CompleteSandboxImageBuildParams(SandboxBaseModel):
 
 
 class SandboxImageBuildUpload(SandboxBaseModel):
+    sha256: Optional[str] = None
     url: str
     method: str
     headers: Dict[str, str]
@@ -444,7 +517,13 @@ class SandboxImageBuild(SandboxBaseModel):
 
 class SandboxImageBuildCreateResult(SandboxBaseModel):
     build: SandboxImageBuild
-    upload: SandboxImageBuildUpload
+    upload: Optional[SandboxImageBuildUpload] = None
+    uploads: List[SandboxImageBuildUpload] = Field(default_factory=list)
+
+
+class SandboxDockerImageReuseResult(SandboxBaseModel):
+    hit: bool
+    build: Optional[SandboxImageBuild] = None
 
 
 class SandboxImageBuildListParams(SandboxBaseModel):

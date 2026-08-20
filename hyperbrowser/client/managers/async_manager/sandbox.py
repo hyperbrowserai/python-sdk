@@ -9,12 +9,14 @@ from ....models.sandbox import (
     CompleteSandboxImageBuildParams,
     CreateSandboxParams,
     CreateSandboxImageBuildParams,
+    ReuseSandboxDockerImageParams,
     SandboxDetail,
     SandboxExecParams,
     SandboxExposeParams,
     SandboxExposeResult,
     SandboxImageBuild,
     SandboxImageBuildCreateResult,
+    SandboxDockerImageReuseResult,
     SandboxImageBuildListParams,
     SandboxImageBuildListResponse,
     SandboxImageListParams,
@@ -39,6 +41,7 @@ from ....models.session import BasicResponse
 from ....types import (
     CompleteSandboxImageBuildParams as CompleteSandboxImageBuildParamsDict,
     CreateSandboxImageBuildParams as CreateSandboxImageBuildParamsDict,
+    ReuseSandboxDockerImageParams as ReuseSandboxDockerImageParamsDict,
     CreateSandboxParams as CreateSandboxParamsDict,
     SandboxExecParams as SandboxExecParamsDict,
     SandboxExposeParams as SandboxExposeParamsDict,
@@ -67,9 +70,12 @@ from ..sandboxes.image_build import (
     build_docker_image_from_dockerfile,
     is_terminal_image_build_status,
     make_temp_docker_tag,
-    package_docker_image,
+    merge_image_init,
+    package_docker_build_context_manifest,
+    package_docker_image_manifest,
+    prepare_docker_image_manifest_source,
     remove_docker_image,
-    upload_image_build_artifact,
+    upload_missing_image_build_artifacts,
 )
 from .sandboxes.sandbox_files import (
     DEFAULT_WATCH_TIMEOUT_MS,
@@ -494,6 +500,20 @@ class SandboxManager:
         payload = await self._request("GET", f"/images/builds/{build_id}")
         return SandboxImageBuild(**payload["build"])
 
+    async def reuse_docker_image(
+        self,
+        params: Union[
+            ReuseSandboxDockerImageParamsDict,
+            ReuseSandboxDockerImageParams,
+        ],
+    ) -> SandboxDockerImageReuseResult:
+        payload = await self._request(
+            "POST",
+            "/images/builds/reuse",
+            data=dump_request(params, ReuseSandboxDockerImageParams),
+        )
+        return SandboxDockerImageReuseResult(**payload)
+
     async def complete_image_build(
         self,
         build_id: str,
@@ -566,18 +586,158 @@ class SandboxManager:
         temp_dir: Optional[str] = None,
         upload_timeout: Optional[float] = None,
     ) -> SandboxImageBuild:
-        artifact = await _run_blocking(
-            package_docker_image,
+        source = await _run_blocking(
+            prepare_docker_image_manifest_source,
             docker_image,
             platform=platform,
+        )
+        try:
+            explicit_image_init = (
+                coerce_request(image_init, SandboxImageInit, name="image_init")
+                if image_init is not None
+                else None
+            )
+            normalized_image_init = merge_image_init(
+                source.image_init,
+                explicit_image_init,
+            )
+            normalized_image_config_user = (
+                image_config_user
+                if image_config_user is not None
+                else source.image_config_user
+            )
+            try:
+                reused = await self.reuse_docker_image(
+                    ReuseSandboxDockerImageParams(
+                        image_name=image_name,
+                        source_image_digest=source.image_digest,
+                        source_platform=platform,
+                        image_config_user=normalized_image_config_user,
+                        image_init=normalized_image_init,
+                    )
+                )
+            except HyperbrowserError as error:
+                if error.status_code != 404:
+                    raise
+                reused = None
+            if reused is not None and reused.hit:
+                if reused.build is None:
+                    raise RuntimeError(
+                        "exact image cache response is missing its completed build"
+                    )
+                return reused.build
+
+            packaged = await _run_blocking(
+                package_docker_image_manifest,
+                docker_image,
+                source.image_digest,
+                source.config,
+                platform=platform,
+                temp_dir=temp_dir,
+            )
+            build_id = None
+            build_started = False
+            try:
+                artifact = packaged.artifact
+                create_result = await self.create_image_build(
+                    CreateSandboxImageBuildParams(
+                        image_name=image_name,
+                        input_sha256=artifact.sha256_hex,
+                        input_size_bytes=artifact.size_bytes,
+                        input_format=artifact.input_format,
+                        source_platform=artifact.source_platform,
+                        image_config_user=normalized_image_config_user,
+                        image_init=normalized_image_init,
+                        docker_image_manifest=packaged.manifest,
+                    )
+                )
+                build_id = create_result.build.id
+                await _run_blocking(
+                    upload_missing_image_build_artifacts,
+                    create_result.uploads,
+                    packaged.layers,
+                    label="Docker image layer",
+                    timeout=upload_timeout,
+                )
+                build = await self._complete_image_build_resilient(
+                    build_id,
+                    artifact,
+                )
+                build_started = True
+                if wait:
+                    return await self.wait_for_image_build(
+                        build.id,
+                        poll_interval=poll_interval,
+                        timeout=wait_timeout,
+                    )
+                return build
+            except Exception:
+                if build_id is not None and not build_started:
+                    try:
+                        await self.cancel_image_build(build_id)
+                    except Exception:
+                        pass
+                raise
+            finally:
+                await _run_blocking(packaged.cleanup)
+        finally:
+            await _run_blocking(source.cleanup)
+
+    async def _complete_image_build_resilient(
+        self,
+        build_id: str,
+        artifact,
+    ) -> SandboxImageBuild:
+        params = CompleteSandboxImageBuildParams(
+            input_sha256=artifact.sha256_hex,
+            input_size_bytes=artifact.size_bytes,
+            input_format=artifact.input_format,
+        )
+        try:
+            return await self.complete_image_build(build_id, params)
+        except HyperbrowserError as exc:
+            if exc.status_code != 409:
+                raise
+            if "already in progress" in str(exc).lower():
+                return await self.get_image_build(build_id)
+            current = await self.get_image_build(build_id)
+            if current.status not in ("awaiting_upload", "upload_verified"):
+                raise
+            await asyncio.sleep(2)
+            return await self.complete_image_build(build_id, params)
+
+    async def _build_image_from_remote_dockerfile(
+        self,
+        *,
+        context_path,
+        image_name: str,
+        dockerfile,
+        platform: str,
+        remote_full_context: bool,
+        image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]],
+        image_config_user: Optional[str],
+        wait: bool,
+        poll_interval: float,
+        wait_timeout: Optional[float],
+        temp_dir: Optional[str],
+        upload_timeout: Optional[float],
+    ) -> SandboxImageBuild:
+        packaged = await _run_blocking(
+            package_docker_build_context_manifest,
+            context_path,
+            dockerfile=dockerfile,
+            force_full_context=remote_full_context,
             temp_dir=temp_dir,
         )
+        build_id = None
+        build_started = False
         try:
             normalized_image_init = (
                 coerce_request(image_init, SandboxImageInit, name="image_init")
                 if image_init is not None
-                else artifact.image_init
+                else None
             )
+            artifact = packaged.artifact
             create_result = await self.create_image_build(
                 CreateSandboxImageBuildParams(
                     image_name=image_name,
@@ -585,28 +745,22 @@ class SandboxManager:
                     input_size_bytes=artifact.size_bytes,
                     input_format=artifact.input_format,
                     source_platform=artifact.source_platform,
-                    image_config_user=(
-                        image_config_user
-                        if image_config_user is not None
-                        else artifact.image_config_user
-                    ),
+                    dockerfile_path=packaged.manifest.dockerfile_path,
+                    image_config_user=image_config_user,
                     image_init=normalized_image_init,
+                    context_manifest=packaged.manifest,
                 )
             )
+            build_id = create_result.build.id
             await _run_blocking(
-                upload_image_build_artifact,
-                create_result.upload,
-                artifact.path,
+                upload_missing_image_build_artifacts,
+                create_result.uploads,
+                packaged.bundles,
+                label="build context bundle",
                 timeout=upload_timeout,
             )
-            build = await self.complete_image_build(
-                create_result.build.id,
-                CompleteSandboxImageBuildParams(
-                    input_sha256=artifact.sha256_hex,
-                    input_size_bytes=artifact.size_bytes,
-                    input_format=artifact.input_format,
-                ),
-            )
+            build = await self._complete_image_build_resilient(build_id, artifact)
+            build_started = True
             if wait:
                 return await self.wait_for_image_build(
                     build.id,
@@ -614,8 +768,15 @@ class SandboxManager:
                     timeout=wait_timeout,
                 )
             return build
+        except Exception:
+            if build_id is not None and not build_started:
+                try:
+                    await self.cancel_image_build(build_id)
+                except Exception:
+                    pass
+            raise
         finally:
-            artifact.cleanup()
+            await _run_blocking(packaged.cleanup)
 
     async def build_image_from_dockerfile(
         self,
@@ -623,6 +784,8 @@ class SandboxManager:
         context_path,
         image_name: str,
         dockerfile="Dockerfile",
+        remote: bool = True,
+        remote_full_context: bool = False,
         docker_tag: Optional[str] = None,
         platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
         build_args: Optional[Dict[str, str]] = None,
@@ -634,6 +797,26 @@ class SandboxManager:
         temp_dir: Optional[str] = None,
         upload_timeout: Optional[float] = None,
     ) -> SandboxImageBuild:
+        if remote:
+            if docker_tag is not None or build_args:
+                raise ValueError(
+                    "docker_tag and build_args require remote=False; remote "
+                    "Dockerfile builds send the build context to Hyperbrowser"
+                )
+            return await self._build_image_from_remote_dockerfile(
+                context_path=context_path,
+                image_name=image_name,
+                dockerfile=dockerfile,
+                platform=platform,
+                remote_full_context=remote_full_context,
+                image_init=image_init,
+                image_config_user=image_config_user,
+                wait=wait,
+                poll_interval=poll_interval,
+                wait_timeout=wait_timeout,
+                temp_dir=temp_dir,
+                upload_timeout=upload_timeout,
+            )
         tag = docker_tag or make_temp_docker_tag()
         remove_tag = docker_tag is None
         try:
