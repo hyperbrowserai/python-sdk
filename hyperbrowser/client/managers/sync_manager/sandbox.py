@@ -55,8 +55,11 @@ from ....types import (
 from ....sandbox_common import (
     RuntimeConnection,
     ensure_response_ok,
+    get_retry_delay_seconds,
     normalize_network_error,
+    request_context,
     parse_json_response,
+    should_retry_get,
 )
 from ..sandboxes.shared import (
     _build_sandbox_exposed_url,
@@ -925,19 +928,31 @@ class SandboxManager:
         params: Optional[Dict[str, object]] = None,
         data: Optional[Dict[str, object]] = None,
     ):
-        try:
-            response = self._client.transport.client.request(
-                method,
-                self._client._build_url(path),
-                params={k: v for k, v in (params or {}).items() if v is not None},
-                json=data,
-            )
-        except BaseException as error:
-            raise normalize_network_error(
-                error,
-                "control",
-                "Unknown error occurred",
-            )
+        failed_attempt = 1
+        while True:
+            try:
+                response = self._client.transport.client.request(
+                    method,
+                    self._client._build_url(path),
+                    params={
+                        key: value
+                        for key, value in (params or {}).items()
+                        if value is not None
+                    },
+                    json=data,
+                )
+                ensure_response_ok(response, "control")
+            except BaseException as cause:
+                error = normalize_network_error(
+                    cause,
+                    "control",
+                    "Unknown error occurred",
+                    request_context(method, path),
+                )
+                if not should_retry_get(method, error, failed_attempt):
+                    raise error
+                time.sleep(get_retry_delay_seconds(failed_attempt))
+                failed_attempt += 1
+                continue
 
-        ensure_response_ok(response, "control")
-        return parse_json_response(response, "control")
+            return parse_json_response(response, "control")

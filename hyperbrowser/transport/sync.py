@@ -1,7 +1,18 @@
+import time
+
 import httpx
 from typing import Optional
 
 from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.sandbox_common import (
+    RETRYABLE_STATUS_CODES,
+    get_request_id,
+    get_retry_delay_seconds,
+    is_retryable_network_error,
+    normalize_network_error,
+    request_context,
+    should_retry_get,
+)
 from .base import TransportStrategy, APIResponse
 
 
@@ -25,6 +36,9 @@ class SyncTransport(TransportStrategy):
                         status_code=response.status_code,
                         response=response,
                         original_error=e,
+                        request_id=get_request_id(response),
+                        retryable=response.status_code in RETRYABLE_STATUS_CODES,
+                        service="control",
                     )
                 return APIResponse.from_status(response.status_code)
         except httpx.HTTPStatusError as e:
@@ -38,9 +52,17 @@ class SyncTransport(TransportStrategy):
                 status_code=response.status_code,
                 response=response,
                 original_error=e,
+                request_id=get_request_id(response),
+                retryable=response.status_code in RETRYABLE_STATUS_CODES,
+                service="control",
             )
         except httpx.RequestError as e:
-            raise HyperbrowserError("Request failed", original_error=e)
+            raise HyperbrowserError(
+                "Request failed",
+                original_error=e,
+                retryable=is_retryable_network_error(e),
+                service="control",
+            )
 
     def close(self) -> None:
         self.client.close()
@@ -61,25 +83,34 @@ class SyncTransport(TransportStrategy):
             else:
                 response = self.client.post(url, json=data, **kwargs)
             return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Post request failed", original_error=e)
+        except BaseException as e:
+            raise normalize_network_error(
+                e, "control", "Post request failed", request_context("POST", url)
+            )
 
     def get(
         self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
     ) -> APIResponse:
         if params:
             params = {k: v for k, v in params.items() if v is not None}
-        try:
-            response = self.client.get(
-                url, params=params, follow_redirects=follow_redirects
-            )
-            return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Get request failed", original_error=e)
+        failed_attempt = 1
+        while True:
+            try:
+                response = self.client.get(
+                    url, params=params, follow_redirects=follow_redirects
+                )
+                return self._handle_response(response)
+            except BaseException as cause:
+                error = normalize_network_error(
+                    cause,
+                    "control",
+                    "Get request failed",
+                    request_context("GET", url),
+                )
+                if not should_retry_get("GET", error, failed_attempt):
+                    raise error
+                time.sleep(get_retry_delay_seconds(failed_attempt))
+                failed_attempt += 1
 
     def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
         try:
