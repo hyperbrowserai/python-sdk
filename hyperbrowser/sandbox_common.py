@@ -1,4 +1,5 @@
 import json
+import random
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -8,6 +9,9 @@ import httpx
 from .exceptions import HyperbrowserError, HyperbrowserService
 
 RETRYABLE_STATUS_CODES = {429, 502, 503, 504}
+GET_RETRY_MAX_ATTEMPTS = 3
+GET_RETRY_INITIAL_DELAY_SECONDS = 0.25
+GET_RETRY_MAX_DELAY_SECONDS = 1.0
 RUNTIME_SESSION_REFRESH_BUFFER_MS = 60_000
 
 
@@ -43,6 +47,26 @@ def is_retryable_network_error(error: BaseException) -> bool:
             httpx.PoolTimeout,
         ),
     )
+
+
+def should_retry_get(
+    method: str,
+    error: HyperbrowserError,
+    failed_attempt: int,
+) -> bool:
+    return (
+        method.upper() == "GET"
+        and error.retryable
+        and failed_attempt < GET_RETRY_MAX_ATTEMPTS
+    )
+
+
+def get_retry_delay_seconds(failed_attempt: int) -> float:
+    maximum_delay = min(
+        GET_RETRY_INITIAL_DELAY_SECONDS * (2 ** (failed_attempt - 1)),
+        GET_RETRY_MAX_DELAY_SECONDS,
+    )
+    return random.uniform(maximum_delay / 2, maximum_delay)
 
 
 def parse_error_payload(
@@ -230,16 +254,55 @@ def to_websocket_transport_target(
     )
 
 
+def request_context(method: Optional[str], path_or_url: Optional[str]) -> str:
+    """Render "[POST /sandbox]" for error messages.
+
+    Accepts either a bare path or a full URL. The query string is dropped so
+    request parameters never reach error text or logs.
+    """
+    normalized_method = (method or "").strip().upper()
+    raw_target = (path_or_url or "").strip()
+    normalized_path = urlsplit(raw_target).path or raw_target.split("?", 1)[0]
+    if normalized_method and normalized_path:
+        return f"[{normalized_method} {normalized_path}]"
+    if normalized_path:
+        return f"[{normalized_path}]"
+    return f"[{normalized_method}]" if normalized_method else ""
+
+
+def describe_network_error(
+    error: BaseException,
+    default_message: str,
+    context: str = "",
+) -> str:
+    suffix = f" {context}" if context else ""
+    detail = str(error).strip()
+    if detail:
+        return f"{detail}{suffix}"
+    # Several httpx transport exceptions are raised with no arguments, so str()
+    # is empty and the caller's fallback alone would not say which one failed.
+    name = type(error).__name__
+    base = f"{default_message} ({name})" if default_message else name
+    return f"{base}{suffix}"
+
+
 def normalize_network_error(
     error: BaseException,
     service: HyperbrowserService,
     default_message: str,
+    context: str = "",
 ) -> HyperbrowserError:
     if isinstance(error, HyperbrowserError):
         return error
+    if not isinstance(error, Exception):
+        # CancelledError, KeyboardInterrupt and SystemExit are control flow, not
+        # transport failures. Callers catch BaseException around their requests,
+        # so wrapping these would strand the cancellation and report a request
+        # the caller itself abandoned as a network error.
+        raise error
 
     return HyperbrowserError(
-        str(error) if str(error) else default_message,
+        describe_network_error(error, default_message, context),
         retryable=is_retryable_network_error(error),
         service=service,
         cause=error,

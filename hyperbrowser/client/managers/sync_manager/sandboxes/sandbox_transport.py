@@ -9,6 +9,7 @@ from .....sandbox_common import (
     ensure_response_ok,
     normalize_network_error,
     parse_json_response,
+    request_context,
     resolve_runtime_transport_target,
 )
 from ...sandboxes.shared import _build_query_path, _is_replayable_http_content
@@ -273,6 +274,7 @@ class RuntimeTransport:
                 error,
                 "runtime",
                 "Unknown runtime request error",
+                request_context(method, path),
             )
 
         response.read()
@@ -307,6 +309,7 @@ class RuntimeTransport:
                 error,
                 "runtime",
                 "Unknown runtime request error",
+                request_context(method, path),
             )
 
     def _send_stream(
@@ -339,4 +342,5 @@ class RuntimeTransport:
                 error,
                 "runtime",
                 "Unknown runtime request error",
+                request_context("GET", path),
             )
