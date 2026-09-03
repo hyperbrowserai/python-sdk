@@ -68,6 +68,7 @@ HyperAgentLlm = Literal[
     "gemini-3-flash-preview",
 ]
 ClaudeComputerUseLlm = Literal[
+    "claude-fable-5-1",
     "claude-opus-5",
     "claude-opus-4-5",
     "claude-opus-4-6",
