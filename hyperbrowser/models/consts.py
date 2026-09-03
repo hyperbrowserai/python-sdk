@@ -36,6 +36,7 @@ BrowserUseLlm = Literal[
     "gpt-4.1-mini",
     "gpt-5",
     "gpt-5-mini",
+    "claude-fable-5-1",
     "claude-sonnet-5",
     "claude-sonnet-4-6",
     "claude-sonnet-4-5",
@@ -58,6 +59,7 @@ HyperAgentLlm = Literal[
     "gpt-4.1",
     "gpt-4.1-mini",
     "gpt-4.1-nano",
+    "claude-fable-5-1",
     "claude-sonnet-5",
     "claude-sonnet-4-6",
     "claude-sonnet-4-5",
@@ -66,6 +68,7 @@ HyperAgentLlm = Literal[
     "gemini-3-flash-preview",
 ]
 ClaudeComputerUseLlm = Literal[
+    "claude-fable-5-1",
     "claude-opus-5",
     "claude-opus-4-5",
     "claude-opus-4-6",
