@@ -109,8 +109,8 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.agents.meta_computer_use.start(
         {
             "task": "Complete the task",
-            "llm": "muse-spark-1.1",
-            "reasoning_effort": "medium",
+            "llm": "muse-spark-1.3",
+            "reasoning_effort": "max",
             "use_custom_api_keys": True,
             "api_keys": {"meta": "meta-key"},
         }
@@ -245,7 +245,7 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.agents.meta_computer_use.start(
         {
             "task": "Complete the task",
-            "llm": "muse-spark-1.1",
+            "llm": "muse-spark-1.2",
             "reasoning_effort": "xhigh",
         }
     )
