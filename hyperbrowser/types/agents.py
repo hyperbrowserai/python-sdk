@@ -10,6 +10,8 @@ from hyperbrowser.models.consts import (
     GeminiComputerUseLlm,
     GrokComputerUseLlm,
     GrokReasoningEffort,
+    MetaComputerUseLlm,
+    MetaReasoningEffort,
     HyperAgentLlm,
     HyperAgentVersion,
 )
@@ -117,6 +119,28 @@ class StartGrokComputerUseTaskParams(TypedDict, total=False):
     use_computer_action: Optional[bool]
 
 
+class MetaComputerUseApiKeys(TypedDict, total=False):
+    """Provider API keys for a Meta Computer Use task."""
+
+    meta: Optional[str]
+
+
+class StartMetaComputerUseTaskParams(TypedDict, total=False):
+    """Parameters for starting a Meta Computer Use task."""
+
+    task: Required[str]
+    llm: Optional[MetaComputerUseLlm]
+    reasoning_effort: Optional[MetaReasoningEffort]
+    session_id: Optional[str]
+    max_failures: Optional[int]
+    max_steps: Optional[int]
+    keep_browser_open: Optional[bool]
+    session_options: Optional[CreateSessionParams]
+    use_custom_api_keys: Optional[bool]
+    api_keys: Optional[MetaComputerUseApiKeys]
+    use_computer_action: Optional[bool]
+
+
 class CuaApiKeys(TypedDict, total=False):
     """Provider API keys for an OpenAI CUA task."""
 
@@ -176,10 +200,12 @@ __all__ = [
     "GeminiComputerUseApiKeys",
     "GrokComputerUseApiKeys",
     "HyperAgentApiKeys",
+    "MetaComputerUseApiKeys",
     "StartBrowserUseTaskParams",
     "StartClaudeComputerUseTaskParams",
     "StartCuaTaskParams",
     "StartGeminiComputerUseTaskParams",
     "StartGrokComputerUseTaskParams",
     "StartHyperAgentTaskParams",
+    "StartMetaComputerUseTaskParams",
 ]
