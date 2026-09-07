@@ -129,6 +129,7 @@ from .agents.grok_computer_use import (
 )
 from .agents.meta_computer_use import (
     MetaComputerUseTaskStatus,
+    MetaComputerUseStepReasoning,
     MetaComputerUseStepResponse,
     MetaComputerUseTaskData,
     MetaComputerUseTaskResponse,
@@ -509,6 +510,7 @@ __all__ = [
     "StartGrokComputerUseTaskParams",
     "StartGrokComputerUseTaskResponse",
     "MetaComputerUseTaskStatus",
+    "MetaComputerUseStepReasoning",
     "MetaComputerUseStepResponse",
     "MetaComputerUseTaskData",
     "MetaComputerUseTaskResponse",

@@ -4,7 +4,7 @@ from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .cua import CuaStepIncompleteDetails, CuaStepReasoning, CuaStepResponseError
+from .cua import CuaStepIncompleteDetails, CuaStepResponseError
 from ..session import CreateSessionParams
 from ..consts import MetaComputerUseLlm, MetaReasoningEffort
 
@@ -84,6 +84,19 @@ class MetaComputerUseTaskStatusResponse(BaseModel):
     status: MetaComputerUseTaskStatus
 
 
+class MetaComputerUseStepReasoning(BaseModel):
+    """
+    Reasoning metadata on a compacted Meta Computer Use step.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    effort: Optional[str] = Field(default=None, serialization_alias="effort")
+    summary: Optional[str] = Field(default=None, serialization_alias="summary")
+
+
 class MetaComputerUseStepResponse(BaseModel):
     """
     Response from a single Meta Computer Use step.
@@ -106,7 +119,7 @@ class MetaComputerUseStepResponse(BaseModel):
     )
     model: Optional[str] = Field(default=None, serialization_alias="model")
     output: Optional[List[Any]] = Field(default=None, serialization_alias="output")
-    reasoning: Optional[CuaStepReasoning] = Field(
+    reasoning: Optional[MetaComputerUseStepReasoning] = Field(
         default=None, serialization_alias="reasoning"
     )
     status: Optional[str] = Field(default=None, serialization_alias="status")
