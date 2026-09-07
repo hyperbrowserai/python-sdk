@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -70,6 +71,7 @@ class StartMetaComputerUseTaskResponse(BaseModel):
 
     job_id: str = Field(alias="jobId")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")
+    live_domain: Optional[str] = Field(default=None, alias="liveDomain")
 
 
 class MetaComputerUseTaskStatusResponse(BaseModel):
@@ -146,6 +148,32 @@ class MetaComputerUseTaskMetadata(BaseModel):
     )
 
 
+class MetaComputerUseJobParams(BaseModel):
+    """
+    Echoed start params returned on a Meta Computer Use task.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    task: Optional[str] = Field(default=None, alias="task")
+    llm: Optional[MetaComputerUseLlm] = Field(default=None, alias="llm")
+    reasoning_effort: Optional[MetaReasoningEffort] = Field(
+        default=None, alias="reasoningEffort"
+    )
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    max_steps: Optional[int] = Field(default=None, alias="maxSteps")
+    keep_browser_open: Optional[bool] = Field(default=None, alias="keepBrowserOpen")
+    max_failures: Optional[int] = Field(default=None, alias="maxFailures")
+    use_custom_api_keys: Optional[bool] = Field(
+        default=None, alias="useCustomApiKeys"
+    )
+    use_computer_action: Optional[bool] = Field(
+        default=None, alias="useComputerAction"
+    )
+
+
 class MetaComputerUseTaskResponse(BaseModel):
     """
     Response from a Meta Computer Use task.
@@ -157,9 +185,15 @@ class MetaComputerUseTaskResponse(BaseModel):
 
     job_id: str = Field(alias="jobId")
     status: MetaComputerUseTaskStatus
+    created_at: Optional[datetime] = Field(default=None, alias="createdAt")
+    finished_at: Optional[datetime] = Field(default=None, alias="finishedAt")
     metadata: Optional[MetaComputerUseTaskMetadata] = Field(
         default=None, alias="metadata"
     )
     data: Optional[MetaComputerUseTaskData] = Field(default=None, alias="data")
     error: Optional[str] = Field(default=None, alias="error")
     live_url: Optional[str] = Field(default=None, alias="liveUrl")
+    live_domain: Optional[str] = Field(default=None, alias="liveDomain")
+    job_params: Optional[MetaComputerUseJobParams] = Field(
+        default=None, alias="jobParams"
+    )

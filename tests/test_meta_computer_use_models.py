@@ -5,6 +5,21 @@ def test_meta_computer_use_task_response_parses_responses_style_step_payload() -
     payload = {
         "jobId": "job-123",
         "status": "completed",
+        "createdAt": "2026-09-07T01:33:08.205Z",
+        "finishedAt": "2026-09-07T01:33:33.038Z",
+        "liveUrl": None,
+        "liveDomain": None,
+        "jobParams": {
+            "task": "Go to example.com",
+            "llm": "muse-spark-1.3",
+            "reasoningEffort": "medium",
+            "sessionId": "session-123",
+            "maxSteps": 5,
+            "keepBrowserOpen": False,
+            "maxFailures": 3,
+            "useCustomApiKeys": False,
+            "useComputerAction": True,
+        },
         "data": {
             "steps": [
                 {
@@ -72,6 +87,14 @@ def test_meta_computer_use_task_response_parses_responses_style_step_payload() -
     }
 
     result = MetaComputerUseTaskResponse(**payload)
+
+    assert result.created_at is not None
+    assert result.finished_at is not None
+    assert result.live_domain is None
+    assert result.job_params is not None
+    assert result.job_params.llm == "muse-spark-1.3"
+    assert result.job_params.reasoning_effort == "medium"
+    assert result.job_params.session_id == "session-123"
 
     final_step = result.data.steps[0]
     assert final_step.created_at == 1788743504
