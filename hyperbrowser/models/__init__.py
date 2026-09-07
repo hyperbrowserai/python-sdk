@@ -137,7 +137,6 @@ from .agents.meta_computer_use import (
     StartMetaComputerUseTaskParams,
     StartMetaComputerUseTaskResponse,
     MetaComputerUseApiKeys,
-    MetaComputerUseJobParams,
 )
 from .agents.cua import (
     CuaTaskData,
@@ -529,7 +528,6 @@ __all__ = [
     "GeminiComputerUseApiKeys",
     "GrokComputerUseApiKeys",
     "MetaComputerUseApiKeys",
-    "MetaComputerUseJobParams",
     "CuaApiKeys",
     "CuaBaseUrls",
     "HyperAgentApiKeys",
