@@ -106,6 +106,19 @@ GrokReasoningEffort = Literal[
     "medium",
     "high",
 ]
+MetaComputerUseLlm = Literal[
+    "muse-spark-1.1",
+    "muse-spark-1.2",
+    "muse-spark-1.3",
+]
+MetaReasoningEffort = Literal[
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+]
 SessionRegion = Literal[
     "us",
     "us-central",

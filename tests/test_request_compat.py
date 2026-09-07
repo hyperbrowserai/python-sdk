@@ -11,8 +11,10 @@ from hyperbrowser.models import (
     CuaBaseUrls,
     CreateSandboxParams,
     CreateSessionParams,
+    MetaComputerUseApiKeys,
     StartBrowserUseTaskParams,
     StartCuaTaskParams,
+    StartMetaComputerUseTaskParams,
 )
 from hyperbrowser.tools import _normalize_extract_tool_params
 
@@ -105,6 +107,38 @@ def test_cua_custom_base_url_serializes_for_mapping_and_legacy_model():
         "baseUrls": {
             "openai": "https://example.openai.azure.com/openai/v1/",
         },
+    }
+
+
+def test_meta_computer_use_serializes_for_mapping_and_legacy_model():
+    mapping = {
+        "task": "Complete the task",
+        "llm": "muse-spark-1.3",
+        "reasoning_effort": "max",
+        "use_custom_api_keys": True,
+        "api_keys": {"meta": "meta-key"},
+        "use_computer_action": True,
+    }
+    legacy = StartMetaComputerUseTaskParams(
+        task="Complete the task",
+        llm="muse-spark-1.3",
+        reasoning_effort="max",
+        use_custom_api_keys=True,
+        api_keys=MetaComputerUseApiKeys(meta="meta-key"),
+        use_computer_action=True,
+    )
+
+    assert dump_request(mapping, StartMetaComputerUseTaskParams) == dump_request(
+        legacy,
+        StartMetaComputerUseTaskParams,
+    )
+    assert dump_request(mapping, StartMetaComputerUseTaskParams) == {
+        "task": "Complete the task",
+        "llm": "muse-spark-1.3",
+        "reasoningEffort": "max",
+        "useCustomApiKeys": True,
+        "apiKeys": {"meta": "meta-key"},
+        "useComputerAction": True,
     }
 
 

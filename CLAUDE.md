@@ -47,7 +47,7 @@ client.crawl        # Website crawling jobs
 client.extract      # Data extraction jobs
 client.web          # Web fetch/search operations
 client.web.batch_fetch # Batch web fetch operations
-client.agents       # AI agent integrations (browser_use, cua, claude_computer_use, hyper_agent, gemini_computer_use)
+client.agents       # AI agent integrations (browser_use, cua, claude_computer_use, hyper_agent, gemini_computer_use, grok_computer_use, meta_computer_use)
 client.profiles     # Browser profile management
 client.extensions   # Browser extension management
 client.team         # Team/credit info
