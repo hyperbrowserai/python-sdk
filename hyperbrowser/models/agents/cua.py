@@ -4,7 +4,7 @@ from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..consts import CuaLlm
+from ..consts import CuaLlm, CuaReasoningEffort
 from ..session import CreateSessionParams
 
 CuaTaskStatus = Literal["pending", "running", "completed", "failed", "stopped"]
@@ -45,6 +45,9 @@ class StartCuaTaskParams(BaseModel):
 
     task: str
     llm: Optional[CuaLlm] = Field(default=None, serialization_alias="llm")
+    reasoning_effort: Optional[CuaReasoningEffort] = Field(
+        default=None, serialization_alias="reasoningEffort"
+    )
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     max_steps: Optional[int] = Field(default=None, serialization_alias="maxSteps")

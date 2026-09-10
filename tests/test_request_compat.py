@@ -8,11 +8,13 @@ from hyperbrowser.client._request import (
     normalize_pydantic_schema,
 )
 from hyperbrowser.models import (
+    ClaudeComputerUseApiKeys,
     CuaBaseUrls,
     CreateSandboxParams,
     CreateSessionParams,
     MetaComputerUseApiKeys,
     StartBrowserUseTaskParams,
+    StartClaudeComputerUseTaskParams,
     StartCuaTaskParams,
     StartMetaComputerUseTaskParams,
 )
@@ -83,6 +85,8 @@ def test_mapping_uses_existing_cross_field_validation():
 def test_cua_custom_base_url_serializes_for_mapping_and_legacy_model():
     mapping = {
         "task": "Complete the task",
+        "llm": "gpt-5.6-terra",
+        "reasoning_effort": "high",
         "use_custom_api_keys": True,
         "api_keys": {"openai": "openai-key"},
         "base_urls": {
@@ -91,6 +95,8 @@ def test_cua_custom_base_url_serializes_for_mapping_and_legacy_model():
     }
     legacy = StartCuaTaskParams(
         task="Complete the task",
+        llm="gpt-5.6-terra",
+        reasoning_effort="high",
         use_custom_api_keys=True,
         api_keys={"openai": "openai-key"},
         base_urls=CuaBaseUrls(openai="https://example.openai.azure.com/openai/v1/"),
@@ -102,11 +108,42 @@ def test_cua_custom_base_url_serializes_for_mapping_and_legacy_model():
     )
     assert dump_request(mapping, StartCuaTaskParams) == {
         "task": "Complete the task",
+        "llm": "gpt-5.6-terra",
+        "reasoningEffort": "high",
         "useCustomApiKeys": True,
         "apiKeys": {"openai": "openai-key"},
         "baseUrls": {
             "openai": "https://example.openai.azure.com/openai/v1/",
         },
+    }
+
+
+def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_model():
+    mapping = {
+        "task": "Complete the task",
+        "llm": "claude-opus-5",
+        "reasoning_effort": "xhigh",
+        "use_custom_api_keys": True,
+        "api_keys": {"anthropic": "anthropic-key"},
+    }
+    legacy = StartClaudeComputerUseTaskParams(
+        task="Complete the task",
+        llm="claude-opus-5",
+        reasoning_effort="xhigh",
+        use_custom_api_keys=True,
+        api_keys=ClaudeComputerUseApiKeys(anthropic="anthropic-key"),
+    )
+
+    assert dump_request(mapping, StartClaudeComputerUseTaskParams) == dump_request(
+        legacy,
+        StartClaudeComputerUseTaskParams,
+    )
+    assert dump_request(mapping, StartClaudeComputerUseTaskParams) == {
+        "task": "Complete the task",
+        "llm": "claude-opus-5",
+        "reasoningEffort": "xhigh",
+        "useCustomApiKeys": True,
+        "apiKeys": {"anthropic": "anthropic-key"},
     }
 
 

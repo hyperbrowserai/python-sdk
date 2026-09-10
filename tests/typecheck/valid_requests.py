@@ -99,11 +99,20 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.agents.cua.start(
         {
             "task": "Complete the task",
+            "llm": "gpt-5.6-terra",
+            "reasoning_effort": "high",
             "use_custom_api_keys": True,
             "api_keys": {"openai": "openai-key"},
             "base_urls": {
                 "openai": "https://example.openai.azure.com/openai/v1/",
             },
+        }
+    )
+    client.agents.claude_computer_use.start(
+        {
+            "task": "Complete the task",
+            "llm": "claude-opus-5",
+            "reasoning_effort": "xhigh",
         }
     )
     client.agents.meta_computer_use.start(
@@ -235,11 +244,20 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.agents.cua.start(
         {
             "task": "Complete the task",
+            "llm": "gpt-5.4",
+            "reasoning_effort": "none",
             "use_custom_api_keys": True,
             "api_keys": {"openai": "openai-key"},
             "base_urls": {
                 "openai": "https://example.openai.azure.com/openai/v1/",
             },
+        }
+    )
+    await client.agents.claude_computer_use.start(
+        {
+            "task": "Complete the task",
+            "llm": "claude-sonnet-4-6",
+            "reasoning_effort": "max",
         }
     )
     await client.agents.meta_computer_use.start(
