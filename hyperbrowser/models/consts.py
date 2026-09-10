@@ -81,6 +81,13 @@ ClaudeComputerUseLlm = Literal[
     "claude-sonnet-4-20250514",
     "claude-3-7-sonnet-20250219",
 ]
+ClaudeComputerUseReasoningEffort = Literal[
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+]
 CuaLlm = Literal[
     "computer-use-preview",
     "gpt-6-astra",
@@ -90,6 +97,14 @@ CuaLlm = Literal[
     "gpt-5.5",
     "gpt-5.4",
     "gpt-5.4-mini",
+]
+CuaReasoningEffort = Literal[
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
 ]
 GeminiComputerUseLlm = Literal[
     "gemini-3.8-flash",

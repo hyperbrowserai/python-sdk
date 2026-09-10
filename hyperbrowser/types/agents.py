@@ -6,7 +6,9 @@ from hyperbrowser.models.consts import (
     BrowserUseLlm,
     BrowserUseVersion,
     ClaudeComputerUseLlm,
+    ClaudeComputerUseReasoningEffort,
     CuaLlm,
+    CuaReasoningEffort,
     GeminiComputerUseLlm,
     GrokComputerUseLlm,
     GrokReasoningEffort,
@@ -66,6 +68,7 @@ class StartClaudeComputerUseTaskParams(TypedDict, total=False):
 
     task: Required[str]
     llm: Optional[ClaudeComputerUseLlm]
+    reasoning_effort: Optional[ClaudeComputerUseReasoningEffort]
     session_id: Optional[str]
     max_failures: Optional[int]
     max_steps: Optional[int]
@@ -158,6 +161,7 @@ class StartCuaTaskParams(TypedDict, total=False):
 
     task: Required[str]
     llm: Optional[CuaLlm]
+    reasoning_effort: Optional[CuaReasoningEffort]
     session_id: Optional[str]
     max_failures: Optional[int]
     max_steps: Optional[int]
