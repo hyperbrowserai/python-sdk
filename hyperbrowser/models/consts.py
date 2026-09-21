@@ -115,7 +115,11 @@ GeminiComputerUseLlm = Literal[
     "gemini-3-flash-preview",
     "gemini-2.5-computer-use-preview-10-2025",
 ]
-GrokComputerUseLlm = Literal["grok-4.5",]
+GrokComputerUseLlm = Literal[
+    "grok-4.7",
+    "grok-4.6",
+    "grok-4.5",
+]
 GrokReasoningEffort = Literal[
     "low",
     "medium",
