@@ -1,4 +1,11 @@
-from hyperbrowser.models.agents.grok_computer_use import GrokComputerUseTaskResponse
+import pytest
+from pydantic import ValidationError
+
+from hyperbrowser.client._request import dump_request
+from hyperbrowser.models.agents.grok_computer_use import (
+    GrokComputerUseTaskResponse,
+    StartGrokComputerUseTaskParams,
+)
 
 
 def test_grok_computer_use_task_response_parses_xai_style_step_payload() -> None:
@@ -35,3 +42,19 @@ def test_grok_computer_use_task_response_parses_xai_style_step_payload() -> None
     assert step.incomplete_details.reason == "timeout"
     assert step.reasoning is not None
     assert step.reasoning.effort == "high"
+
+
+@pytest.mark.parametrize("llm", ["grok-4.7", "grok-4.6", "grok-4.5"])
+def test_start_grok_computer_use_accepts_api_models(llm: str) -> None:
+    model_params = StartGrokComputerUseTaskParams(task="Inspect the page", llm=llm)
+    dict_params = {"task": "Inspect the page", "llm": llm}
+
+    for params in (model_params, dict_params):
+        dumped = dump_request(params, StartGrokComputerUseTaskParams)
+        assert dumped["task"] == "Inspect the page"
+        assert dumped["llm"] == llm
+
+
+def test_start_grok_computer_use_rejects_unknown_model() -> None:
+    with pytest.raises(ValidationError):
+        StartGrokComputerUseTaskParams(task="Inspect the page", llm="grok-4")
