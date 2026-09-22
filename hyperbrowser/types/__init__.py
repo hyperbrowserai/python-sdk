@@ -20,6 +20,7 @@ from .agents import (
     GeminiComputerUseApiKeys,
     GrokComputerUseApiKeys,
     HyperAgentApiKeys,
+    JevComputerUseApiKeys,
     MetaComputerUseApiKeys,
     StartBrowserUseTaskParams,
     StartClaudeComputerUseTaskParams,
@@ -27,6 +28,7 @@ from .agents import (
     StartGeminiComputerUseTaskParams,
     StartGrokComputerUseTaskParams,
     StartHyperAgentTaskParams,
+    StartJevComputerUseTaskParams,
     StartMetaComputerUseTaskParams,
 )
 from .computer_action import (
@@ -186,6 +188,7 @@ __all__ = [
     "GeminiComputerUseApiKeys",
     "GrokComputerUseApiKeys",
     "HyperAgentApiKeys",
+    "JevComputerUseApiKeys",
     "MetaComputerUseApiKeys",
     "StartBrowserUseTaskParams",
     "StartClaudeComputerUseTaskParams",
@@ -193,6 +196,7 @@ __all__ = [
     "StartGeminiComputerUseTaskParams",
     "StartGrokComputerUseTaskParams",
     "StartHyperAgentTaskParams",
+    "StartJevComputerUseTaskParams",
     "StartMetaComputerUseTaskParams",
     "ClickActionParams",
     "ComputerActionMouseButton",

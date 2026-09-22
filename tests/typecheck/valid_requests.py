@@ -99,7 +99,7 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.agents.cua.start(
         {
             "task": "Complete the task",
-            "llm": "gpt-5.6-terra",
+            "llm": "gpt-6-sol",
             "reasoning_effort": "high",
             "use_custom_api_keys": True,
             "api_keys": {"openai": "openai-key"},
@@ -111,8 +111,17 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.agents.claude_computer_use.start(
         {
             "task": "Complete the task",
-            "llm": "claude-opus-5",
+            "llm": "claude-opus-5-5",
             "reasoning_effort": "xhigh",
+        }
+    )
+    client.agents.jev_computer_use.start(
+        {
+            "task": "Find the order",
+            "llm": "jev-1.13.0",
+            "text_llm": "gemini-3.5-flash-lite",
+            "use_custom_api_keys": True,
+            "api_keys": {"jev": "jev-key", "google": "google-key"},
         }
     )
     client.agents.meta_computer_use.start(
@@ -264,7 +273,7 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.agents.cua.start(
         {
             "task": "Complete the task",
-            "llm": "gpt-5.4",
+            "llm": "gpt-6-luna",
             "reasoning_effort": "none",
             "use_custom_api_keys": True,
             "api_keys": {"openai": "openai-key"},
@@ -278,6 +287,13 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             "task": "Complete the task",
             "llm": "claude-sonnet-4-6",
             "reasoning_effort": "max",
+        }
+    )
+    await client.agents.jev_computer_use.start(
+        {
+            "task": "Find the order",
+            "llm": "jev-latest",
+            "text_llm": "gemini-3.5-flash-lite",
         }
     )
     await client.agents.meta_computer_use.start(

@@ -68,6 +68,7 @@ HyperAgentLlm = Literal[
     "gemini-3-flash-preview",
 ]
 ClaudeComputerUseLlm = Literal[
+    "claude-opus-5-5",
     "claude-fable-5-1",
     "claude-opus-5",
     "claude-opus-4-5",
@@ -91,6 +92,8 @@ ClaudeComputerUseReasoningEffort = Literal[
 CuaLlm = Literal[
     "computer-use-preview",
     "gpt-6-astra",
+    "gpt-6-sol",
+    "gpt-6-luna",
     "gpt-5.6-sol",
     "gpt-5.6-terra",
     "gpt-5.6-luna",
@@ -138,6 +141,11 @@ MetaReasoningEffort = Literal[
     "xhigh",
     "max",
 ]
+JevComputerUseLlm = Literal[
+    "jev-1.13.0",
+    "jev-latest",
+]
+JevTextLlm = Literal["gemini-3.5-flash-lite",]
 SessionRegion = Literal[
     "us",
     "us-central",
