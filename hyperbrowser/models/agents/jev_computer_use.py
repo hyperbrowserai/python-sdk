@@ -86,9 +86,6 @@ class JevComputerUseTaskData(BaseModel):
 
     steps: List[Dict[str, Any]]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
-    reached_max_steps: Optional[bool] = Field(default=None, alias="reachedMaxSteps")
-    final_url: Optional[str] = Field(default=None, alias="finalUrl")
-    warnings: Optional[List[str]] = None
 
 
 class JevComputerUseTaskMetadata(BaseModel):

@@ -29,9 +29,6 @@ def test_jev_computer_use_task_response_parses_step_payload() -> None:
                 }
             ],
             "finalResult": "Found the order",
-            "reachedMaxSteps": False,
-            "finalUrl": "https://example.com/orders/1",
-            "warnings": [],
         },
     }
 
@@ -43,8 +40,9 @@ def test_jev_computer_use_task_response_parses_step_payload() -> None:
     assert step["action"] == {"kind": "click", "target": "submit"}
     assert step["pageText"] == "Order details"
     assert result.data.final_result == "Found the order"
-    assert result.data.final_url == "https://example.com/orders/1"
-    assert result.data.reached_max_steps is False
+    assert not hasattr(result.data, "final_url")
+    assert not hasattr(result.data, "reached_max_steps")
+    assert not hasattr(result.data, "warnings")
 
 
 @pytest.mark.parametrize("llm", ["jev-1.13.0", "jev-latest"])
