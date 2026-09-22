@@ -198,37 +198,6 @@ client.close()
 
 `cpu`, `memory_mib`, and `disk_mib` are only supported for image launches.
 
-### Configure remote image-builder resources
-
-```python
-from hyperbrowser import Hyperbrowser
-
-client = Hyperbrowser()
-build = client.sandboxes.build_image_from_dockerfile(
-    context_path="./environment",
-    image_name="custom-world",
-    builder_cpus=8,
-    builder_memory_mib=16384,
-    builder_scratch_mib=65536,
-)
-print(build.image_id)
-client.close()
-```
-
-These optional settings control the remote image-builder VM, independently of
-the resources of sandboxes launched from the resulting image. Memory and scratch
-disk sizes are in MiB. Overrides require the team's
-`custom_image_builder_resources` feature flag; enabling the flag alone does not
-increase resources. Omitted settings use the service defaults (currently 2 vCPUs,
-4096 MiB memory, and 65536 MiB scratch disk). The service currently permits up to
-8 vCPUs, 16384 MiB memory, and 65536 MiB scratch disk.
-
-The same options are available on `build_image_from_docker_image` and in the
-dictionary or legacy model passed to `create_image_build`, with both sync and
-async clients. With `remote=False`, Dockerfile compilation uses local Docker;
-these settings apply only to the subsequent remote image conversion. An exact
-image cache hit reuses the existing image without starting a builder VM.
-
 ### Manage volumes and mount them in a sandbox
 
 ```python
