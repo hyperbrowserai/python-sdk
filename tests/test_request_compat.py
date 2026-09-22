@@ -12,10 +12,12 @@ from hyperbrowser.models import (
     CuaBaseUrls,
     CreateSandboxParams,
     CreateSessionParams,
+    JevComputerUseApiKeys,
     MetaComputerUseApiKeys,
     StartBrowserUseTaskParams,
     StartClaudeComputerUseTaskParams,
     StartCuaTaskParams,
+    StartJevComputerUseTaskParams,
     StartMetaComputerUseTaskParams,
 )
 from hyperbrowser.tools import _normalize_extract_tool_params
@@ -121,14 +123,14 @@ def test_cua_custom_base_url_serializes_for_mapping_and_legacy_model():
 def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_model():
     mapping = {
         "task": "Complete the task",
-        "llm": "claude-opus-5",
+        "llm": "claude-opus-5-5",
         "reasoning_effort": "xhigh",
         "use_custom_api_keys": True,
         "api_keys": {"anthropic": "anthropic-key"},
     }
     legacy = StartClaudeComputerUseTaskParams(
         task="Complete the task",
-        llm="claude-opus-5",
+        llm="claude-opus-5-5",
         reasoning_effort="xhigh",
         use_custom_api_keys=True,
         api_keys=ClaudeComputerUseApiKeys(anthropic="anthropic-key"),
@@ -140,7 +142,7 @@ def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_
     )
     assert dump_request(mapping, StartClaudeComputerUseTaskParams) == {
         "task": "Complete the task",
-        "llm": "claude-opus-5",
+        "llm": "claude-opus-5-5",
         "reasoningEffort": "xhigh",
         "useCustomApiKeys": True,
         "apiKeys": {"anthropic": "anthropic-key"},
@@ -176,6 +178,41 @@ def test_meta_computer_use_serializes_for_mapping_and_legacy_model():
         "useCustomApiKeys": True,
         "apiKeys": {"meta": "meta-key"},
         "useComputerAction": True,
+    }
+
+
+def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
+    mapping = {
+        "task": "Find the order",
+        "llm": "jev-1.13.0",
+        "text_llm": "gemini-3.5-flash-lite",
+        "start_url": "https://example.com",
+        "use_custom_api_keys": True,
+        "api_keys": {"jev": "jev-key", "google": "google-key"},
+        "use_computer_action": False,
+    }
+    legacy = StartJevComputerUseTaskParams(
+        task="Find the order",
+        llm="jev-1.13.0",
+        text_llm="gemini-3.5-flash-lite",
+        start_url="https://example.com",
+        use_custom_api_keys=True,
+        api_keys=JevComputerUseApiKeys(jev="jev-key", google="google-key"),
+        use_computer_action=False,
+    )
+
+    assert dump_request(mapping, StartJevComputerUseTaskParams) == dump_request(
+        legacy,
+        StartJevComputerUseTaskParams,
+    )
+    assert dump_request(mapping, StartJevComputerUseTaskParams) == {
+        "task": "Find the order",
+        "llm": "jev-1.13.0",
+        "textLlm": "gemini-3.5-flash-lite",
+        "startUrl": "https://example.com",
+        "useCustomApiKeys": True,
+        "apiKeys": {"jev": "jev-key", "google": "google-key"},
+        "useComputerAction": False,
     }
 
 
