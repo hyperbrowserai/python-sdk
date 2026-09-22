@@ -38,12 +38,10 @@ def test_jev_computer_use_task_response_parses_step_payload() -> None:
     result = JevComputerUseTaskResponse(**payload)
 
     step = result.data.steps[0]
-    assert step.step == 1
-    assert step.action.kind == "click"
-    assert step.action.target == "submit"
-    assert step.page_text == "Order details"
-    assert step.target_description == "Submit button"
-    assert step.page_changed is True
+    assert isinstance(step, dict)
+    assert step["step"] == 1
+    assert step["action"] == {"kind": "click", "target": "submit"}
+    assert step["pageText"] == "Order details"
     assert result.data.final_result == "Found the order"
     assert result.data.final_url == "https://example.com/orders/1"
     assert result.data.reached_max_steps is False

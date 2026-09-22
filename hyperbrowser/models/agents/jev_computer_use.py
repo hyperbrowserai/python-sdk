@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -79,54 +79,12 @@ class JevComputerUseTaskStatusResponse(BaseModel):
     status: JevComputerUseTaskStatus
 
 
-class JevComputerUseAction(BaseModel):
-    """
-    A single Jev action recorded during a task step.
-    """
-
-    model_config = ConfigDict(
-        populate_by_alias=True,
-    )
-
-    kind: str
-    target: Optional[str] = None
-    option: Optional[str] = None
-
-
-class JevComputerUseStepResponse(BaseModel):
-    """
-    Response from a single Jev Computer Use step.
-    """
-
-    model_config = ConfigDict(
-        populate_by_alias=True,
-    )
-
-    step: int
-    action: JevComputerUseAction
-    url: str
-    value: Optional[str] = None
-    title: Optional[str] = None
-    page_text: Optional[str] = Field(default=None, alias="pageText")
-    target_description: Optional[str] = Field(default=None, alias="targetDescription")
-    confidence: Optional[float] = None
-    error: Optional[str] = None
-    error_kind: Optional[str] = Field(default=None, alias="errorKind")
-    page_changed: Optional[bool] = Field(default=None, alias="pageChanged")
-    outcome: Optional[str] = None
-    after: Optional[str] = None
-    before_tab: Optional[str] = Field(default=None, alias="beforeTab")
-    after_tab: Optional[str] = Field(default=None, alias="afterTab")
-    before_observation: Optional[int] = Field(default=None, alias="beforeObservation")
-    after_observation: Optional[int] = Field(default=None, alias="afterObservation")
-
-
 class JevComputerUseTaskData(BaseModel):
     model_config = ConfigDict(
         populate_by_alias=True,
     )
 
-    steps: List[JevComputerUseStepResponse]
+    steps: List[Dict[str, Any]]
     final_result: Optional[str] = Field(default=None, alias="finalResult")
     reached_max_steps: Optional[bool] = Field(default=None, alias="reachedMaxSteps")
     final_url: Optional[str] = Field(default=None, alias="finalUrl")

@@ -140,8 +140,6 @@ from .agents.meta_computer_use import (
 )
 from .agents.jev_computer_use import (
     JevComputerUseTaskStatus,
-    JevComputerUseAction,
-    JevComputerUseStepResponse,
     JevComputerUseTaskData,
     JevComputerUseTaskResponse,
     JevComputerUseTaskStatusResponse,
@@ -535,8 +533,6 @@ __all__ = [
     "StartMetaComputerUseTaskParams",
     "StartMetaComputerUseTaskResponse",
     "JevComputerUseTaskStatus",
-    "JevComputerUseAction",
-    "JevComputerUseStepResponse",
     "JevComputerUseTaskData",
     "JevComputerUseTaskResponse",
     "JevComputerUseTaskStatusResponse",
