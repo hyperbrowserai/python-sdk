@@ -643,6 +643,8 @@ def test_sync_docker_image_exact_reuse_skips_docker_save(monkeypatch):
         docker_image="local/app:latest",
         image_name="custom",
         image_init={"env": {"APP_ENV": "test"}, "working_dir": "/srv"},
+        builder_cpus=8,
+        builder_memory_mib=16384,
     )
 
     assert result.status == "completed"
@@ -652,6 +654,122 @@ def test_sync_docker_image_exact_reuse_skips_docker_save(monkeypatch):
     assert reused[0].image_init.args == ["node", "server.js"]
     assert reused[0].image_init.working_dir == "/srv"
     assert cleaned == [True]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("source", ["remote-dockerfile", "local-dockerfile", "image"])
+@pytest.mark.parametrize(
+    "resources, expected",
+    [
+        ({}, {}),
+        (
+            {
+                "builder_cpus": 8,
+                "builder_memory_mib": 16384,
+                "builder_scratch_mib": 65536,
+            },
+            {"vcpus": 8, "memMiB": 16384, "scratchMiB": 65536},
+        ),
+    ],
+    ids=["defaults", "custom"],
+)
+async def test_image_build_helpers_forward_builder_resources(
+    monkeypatch, tmp_path, use_async, source, resources, expected
+):
+    module = async_sandbox_module if use_async else sync_sandbox_module
+    manager = module.SandboxManager(
+        SimpleNamespace(timeout=30, config=SimpleNamespace(runtime_proxy_override=None))
+    )
+    captured = []
+
+    def request(method, path, *, data):
+        assert method == "POST"
+        if path == "/images/builds/reuse":
+            return {"hit": False}
+        if path == "/images/builds":
+            captured.append(data)
+            return {
+                "build": _image_build("awaiting_upload").model_dump(by_alias=True),
+                "uploads": [],
+            }
+        assert path == "/images/builds/build-123/complete"
+        return {"build": _image_build("dispatching").model_dump(by_alias=True)}
+
+    async def async_request(*args, **kwargs):
+        return request(*args, **kwargs)
+
+    monkeypatch.setattr(manager, "_request", async_request if use_async else request)
+    (tmp_path / "Dockerfile").write_text("FROM scratch\n")
+    local_builds = []
+    monkeypatch.setattr(
+        module,
+        "build_docker_image_from_dockerfile",
+        lambda **kwargs: local_builds.append(kwargs),
+    )
+    monkeypatch.setattr(
+        module,
+        "prepare_docker_image_manifest_source",
+        lambda *args, **kwargs: image_build.DockerImageManifestSource(
+            image_digest="sha256:" + "a" * 64,
+            config={},
+            cleanup_callback=lambda: None,
+        ),
+    )
+    monkeypatch.setattr(
+        module,
+        "package_docker_image_manifest",
+        lambda *args, **kwargs: SimpleNamespace(
+            artifact=image_build.DockerImageBuildArtifact(
+                path="unused",
+                sha256_hex="a" * 64,
+                size_bytes=123,
+                input_format="docker_image_manifest_v1",
+            ),
+            manifest={
+                "image_digest": "sha256:" + "a" * 64,
+                "config": {"sha256": "a" * 64, "size_bytes": 2, "data_base64": "e30="},
+                "layers": [],
+            },
+            layers={},
+            cleanup=lambda: None,
+        ),
+    )
+
+    if source == "image":
+        result = manager.build_image_from_docker_image(
+            docker_image="local/app:latest",
+            image_name="custom",
+            wait=False,
+            **resources,
+        )
+    else:
+        kwargs = (
+            {"remote": False, "docker_tag": "local/app:latest"}
+            if source == "local-dockerfile"
+            else {}
+        )
+        result = manager.build_image_from_dockerfile(
+            context_path=tmp_path,
+            image_name="custom",
+            wait=False,
+            **kwargs,
+            **resources,
+        )
+    if use_async:
+        result = await result
+
+    assert result.status == "dispatching"
+    assert len(captured) == 1
+    assert {
+        key: captured[0][key]
+        for key in ("vcpus", "memMiB", "scratchMiB")
+        if key in captured[0]
+    } == expected
+    assert not any(key.startswith("builder_") for key in captured[0])
+    assert len(local_builds) == (1 if source == "local-dockerfile" else 0)
+    if local_builds:
+        assert not any(key.startswith("builder_") for key in local_builds[0])
 
 
 def test_sync_dockerfile_image_build_cleans_temp_tag_on_build_failure(monkeypatch):

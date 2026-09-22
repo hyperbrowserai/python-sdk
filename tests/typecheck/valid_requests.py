@@ -145,6 +145,9 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             "input_sha256": "abc123",
             "input_size_bytes": 123,
             "source_platform": "linux/amd64",
+            "builder_cpus": 8,
+            "builder_memory_mib": 16384,
+            "builder_scratch_mib": 65536,
         }
     )
     client.sandboxes.create_image_build(
@@ -183,7 +186,24 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             input_sha256="abc123",
             input_size_bytes=123,
             source_platform="linux/amd64",
+            builder_cpus=8,
+            builder_memory_mib=16384,
+            builder_scratch_mib=65536,
         )
+    )
+    client.sandboxes.build_image_from_dockerfile(
+        context_path=".",
+        image_name="custom",
+        builder_cpus=8,
+        builder_memory_mib=16384,
+        builder_scratch_mib=65536,
+    )
+    client.sandboxes.build_image_from_docker_image(
+        docker_image="local/app:latest",
+        image_name="custom",
+        builder_cpus=None,
+        builder_memory_mib=16384,
+        builder_scratch_mib=None,
     )
     client.sandboxes.list_image_builds({"status": "dispatching", "limit": -1})
     client.sandboxes.list_image_builds(
@@ -279,7 +299,34 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             "input_sha256": "abc123",
             "input_size_bytes": 123,
             "source_platform": "linux/amd64",
+            "builder_cpus": 8,
+            "builder_memory_mib": 16384,
+            "builder_scratch_mib": 65536,
         }
+    )
+    await client.sandboxes.create_image_build(
+        LegacyCreateSandboxImageBuildParams(
+            image_name="custom_node",
+            input_sha256="abc123",
+            input_size_bytes=123,
+            builder_cpus=8,
+            builder_memory_mib=16384,
+            builder_scratch_mib=65536,
+        )
+    )
+    await client.sandboxes.build_image_from_dockerfile(
+        context_path=".",
+        image_name="custom",
+        builder_cpus=8,
+        builder_memory_mib=16384,
+        builder_scratch_mib=65536,
+    )
+    await client.sandboxes.build_image_from_docker_image(
+        docker_image="local/app:latest",
+        image_name="custom",
+        builder_cpus=None,
+        builder_memory_mib=16384,
+        builder_scratch_mib=None,
     )
     await client.sandboxes.reuse_docker_image(
         {

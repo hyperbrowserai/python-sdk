@@ -208,6 +208,9 @@ class CreateSandboxImageBuildParams(TypedDict, total=False):
     image_name: Required[str]
     input_sha256: Required[str]
     input_size_bytes: Required[int]
+    builder_cpus: Optional[int]
+    builder_memory_mib: Optional[int]
+    builder_scratch_mib: Optional[int]
     input_format: SandboxImageBuildInputFormat
     source_platform: SandboxImageBuildSourcePlatform
     image_config_user: Optional[str]
