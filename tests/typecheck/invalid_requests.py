@@ -22,6 +22,24 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
         }
     )
     client.sandboxes.list_image_builds({"status": "cancelled"})  # M,P
+    client.sandboxes.create_image_build(
+        {  # P
+            "image_name": "custom",
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+            "builder_cpus": "eight",  # M
+        }
+    )
+    client.sandboxes.build_image_from_dockerfile(
+        context_path=".",
+        image_name="custom",
+        builder_memory_mib="16g",  # M,P
+    )
+    client.sandboxes.build_image_from_docker_image(
+        docker_image="local/app:latest",
+        image_name="custom",
+        builder_scratch_mib="64g",  # M,P
+    )
     client.sandboxes.start_from_snapshot({"image_name": "node"})  # M,P
     WebsiteExtractTool.runnable(
         client,
@@ -30,6 +48,24 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
 
 
 async def invalid_async_requests(client: AsyncHyperbrowser) -> None:
+    await client.sandboxes.create_image_build(
+        {  # P
+            "image_name": "custom",
+            "input_sha256": "abc123",
+            "input_size_bytes": 123,
+            "builder_memory_mib": "16g",  # M
+        }
+    )
+    await client.sandboxes.build_image_from_dockerfile(
+        context_path=".",
+        image_name="custom",
+        builder_cpus="eight",  # M,P
+    )
+    await client.sandboxes.build_image_from_docker_image(
+        docker_image="local/app:latest",
+        image_name="custom",
+        builder_scratch_mib="64g",  # M,P
+    )
     await client.sessions.create(
         {"screen": {"width": "wide", "height": 720}}  # M,P
     )

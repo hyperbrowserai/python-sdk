@@ -421,6 +421,13 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
     image_name: str = Field(serialization_alias="imageName")
     input_sha256: str = Field(serialization_alias="inputSha256")
     input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
+    builder_cpus: Optional[int] = Field(default=None, ge=1, serialization_alias="vcpus")
+    builder_memory_mib: Optional[int] = Field(
+        default=None, ge=1, serialization_alias="memMiB"
+    )
+    builder_scratch_mib: Optional[int] = Field(
+        default=None, ge=1, serialization_alias="scratchMiB"
+    )
     input_format: Optional[SandboxImageBuildInputFormat] = Field(
         default=None,
         serialization_alias="inputFormat",

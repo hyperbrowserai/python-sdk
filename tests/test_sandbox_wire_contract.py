@@ -1136,6 +1136,62 @@ def test_sync_image_build_omits_unspecified_fields_for_dicts_and_legacy_models(
     }
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("use_legacy_model", [False, True], ids=["dict", "model"])
+@pytest.mark.parametrize(
+    "resources, expected",
+    [
+        ({}, {}),
+        (
+            {
+                "builder_cpus": None,
+                "builder_memory_mib": None,
+                "builder_scratch_mib": None,
+            },
+            {},
+        ),
+        ({"builder_memory_mib": 8192}, {"memMiB": 8192}),
+        (
+            {
+                "builder_cpus": 8,
+                "builder_memory_mib": 16384,
+                "builder_scratch_mib": 65536,
+            },
+            {"vcpus": 8, "memMiB": 16384, "scratchMiB": 65536},
+        ),
+    ],
+    ids=["omitted", "none", "memory-only", "all"],
+)
+async def test_image_builder_resources_wire_contract(
+    use_async, use_legacy_model, resources, expected
+):
+    client = FakeAsyncClient() if use_async else FakeSyncClient()
+    manager = AsyncSandboxManager(client) if use_async else SandboxManager(client)
+    params_data = {
+        "image_name": "custom_node",
+        "input_sha256": "abc123",
+        "input_size_bytes": 123,
+        **resources,
+    }
+    params = (
+        CreateSandboxImageBuildParams(**params_data)
+        if use_legacy_model
+        else params_data
+    )
+
+    result = manager.create_image_build(params)
+    if use_async:
+        await result
+
+    assert client.transport.client.calls[0]["json"] == {
+        "imageName": "custom_node",
+        "inputSha256": "abc123",
+        "inputSizeBytes": 123,
+        **expected,
+    }
+
+
 def test_sync_sandbox_control_manager_uses_expected_wire_keys():
     client = FakeSyncClient()
     manager = SandboxManager(client)
