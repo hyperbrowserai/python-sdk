@@ -55,13 +55,11 @@ def test_start_jev_computer_use_accepts_api_models(llm: str) -> None:
         task="Find the order",
         llm=llm,
         text_llm="gemini-3.5-flash-lite",
-        start_url="https://example.com",
     )
     dict_params = {
         "task": "Find the order",
         "llm": llm,
         "text_llm": "gemini-3.5-flash-lite",
-        "start_url": "https://example.com",
     }
 
     for params in (model_params, dict_params):
@@ -69,7 +67,7 @@ def test_start_jev_computer_use_accepts_api_models(llm: str) -> None:
         assert dumped["task"] == "Find the order"
         assert dumped["llm"] == llm
         assert dumped["textLlm"] == "gemini-3.5-flash-lite"
-        assert dumped["startUrl"] == "https://example.com"
+        assert "startUrl" not in dumped
 
 
 def test_start_jev_computer_use_rejects_unknown_model() -> None:

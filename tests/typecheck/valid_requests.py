@@ -120,7 +120,6 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             "task": "Find the order",
             "llm": "jev-1.13.0",
             "text_llm": "gemini-3.5-flash-lite",
-            "start_url": "https://example.com",
             "use_custom_api_keys": True,
             "api_keys": {"jev": "jev-key", "google": "google-key"},
         }

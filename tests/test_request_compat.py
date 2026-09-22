@@ -186,7 +186,6 @@ def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
         "task": "Find the order",
         "llm": "jev-1.13.0",
         "text_llm": "gemini-3.5-flash-lite",
-        "start_url": "https://example.com",
         "use_custom_api_keys": True,
         "api_keys": {"jev": "jev-key", "google": "google-key"},
     }
@@ -194,7 +193,6 @@ def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
         task="Find the order",
         llm="jev-1.13.0",
         text_llm="gemini-3.5-flash-lite",
-        start_url="https://example.com",
         use_custom_api_keys=True,
         api_keys=JevComputerUseApiKeys(jev="jev-key", google="google-key"),
     )
@@ -207,7 +205,6 @@ def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
         "task": "Find the order",
         "llm": "jev-1.13.0",
         "textLlm": "gemini-3.5-flash-lite",
-        "startUrl": "https://example.com",
         "useCustomApiKeys": True,
         "apiKeys": {"jev": "jev-key", "google": "google-key"},
     }

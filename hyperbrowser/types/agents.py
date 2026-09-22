@@ -159,7 +159,6 @@ class StartJevComputerUseTaskParams(TypedDict, total=False):
     task: Required[str]
     llm: Optional[JevComputerUseLlm]
     text_llm: Optional[JevTextLlm]
-    start_url: Optional[str]
     session_id: Optional[str]
     max_failures: Optional[int]
     max_steps: Optional[int]

@@ -37,7 +37,6 @@ class StartJevComputerUseTaskParams(BaseModel):
     task: str
     llm: Optional[JevComputerUseLlm] = Field(default=None, serialization_alias="llm")
     text_llm: Optional[JevTextLlm] = Field(default=None, serialization_alias="textLlm")
-    start_url: Optional[str] = Field(default=None, serialization_alias="startUrl")
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     max_steps: Optional[int] = Field(default=None, serialization_alias="maxSteps")
