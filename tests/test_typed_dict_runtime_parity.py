@@ -197,6 +197,14 @@ class RecordingRuntimeTransport:
     def __init__(self):
         self.calls = []
 
+    def stream_sse(self, path, *, method="GET", json_body=None, on_open=None):
+        self.calls.append({"path": path, "method": method, "json_body": json_body})
+        yield {"event": "started", "data": PROCESS_SUMMARY_PAYLOAD["process"]}
+        yield {
+            "event": "done",
+            "data": {**PROCESS_RESULT_PAYLOAD["result"], "last_seq": 0},
+        }
+
     def request_json(
         self,
         path,
@@ -221,6 +229,10 @@ class RecordingRuntimeTransport:
 
 
 class AsyncRecordingRuntimeTransport(RecordingRuntimeTransport):
+    async def stream_sse(self, path, **kwargs):
+        for event in super().stream_sse(path, **kwargs):
+            yield event
+
     async def request_json(
         self,
         path,

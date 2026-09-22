@@ -357,3 +357,21 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
 
     await client.sessions.create(LegacyCreateSessionParams(use_proxy=True, region="us"))
     await client.web.fetch(LegacyFetchParams(url="https://example.com"))
+
+
+def valid_sync_process_collection(client: Hyperbrowser) -> None:
+    sandbox = client.sandboxes.get("sandbox-id")
+    sandbox.exec("echo hello", max_output_bytes=1024)
+    process = sandbox.processes.start({"command": "echo hello"}, max_output_bytes=1024)
+    process.wait(timeout_sec=10)
+    process.disconnect()
+
+
+async def valid_async_process_collection(client: AsyncHyperbrowser) -> None:
+    sandbox = await client.sandboxes.get("sandbox-id")
+    await sandbox.exec("echo hello", max_output_bytes=1024)
+    process = await sandbox.processes.start(
+        {"command": "echo hello"}, max_output_bytes=1024
+    )
+    await process.wait(timeout_sec=10)
+    await process.disconnect()

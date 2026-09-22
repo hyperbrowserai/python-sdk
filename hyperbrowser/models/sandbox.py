@@ -577,6 +577,8 @@ class SandboxProcessSummary(SandboxBaseModel):
 
 
 class SandboxProcessResult(SandboxBaseModel):
+    output_truncated: bool = False
+    last_seq: Optional[int] = None
     id: str
     status: SandboxProcessStatus
     exit_code: Optional[int] = Field(

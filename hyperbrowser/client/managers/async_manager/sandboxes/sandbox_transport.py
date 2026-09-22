@@ -3,6 +3,7 @@ from typing import Any, AsyncIterator, Dict, Optional
 
 import httpx
 
+from .....exceptions import HyperbrowserError
 from .....sandbox_common import (
     RuntimeConnection,
     build_headers,
@@ -83,9 +84,16 @@ class RuntimeTransport:
             await client.aclose()
 
     async def stream_sse(
-        self, path: str, params: Optional[Dict[str, object]] = None
+        self,
+        path: str,
+        params: Optional[Dict[str, object]] = None,
+        *,
+        method: str = "GET",
+        json_body: Optional[Dict[str, object]] = None,
     ) -> AsyncIterator[Dict[str, object]]:
-        client, response = await self._open_stream(path, params=params)
+        client, response = await self._open_stream(
+            path, params=params, method=method, json_body=json_body
+        )
         event_name = "message"
         event_id = None
         data_lines = []
@@ -194,18 +202,37 @@ class RuntimeTransport:
         *,
         params: Optional[Dict[str, object]] = None,
         allow_refresh: bool = True,
+        method: str = "GET",
+        json_body: Optional[Dict[str, object]] = None,
     ):
         connection = await self._resolve_connection(False)
-        client, response = await self._send_stream(connection, path, params=params)
+        client, response = await self._send_stream(
+            connection, path, params=params, method=method, json_body=json_body
+        )
         if response.status_code == 401 and allow_refresh:
             await response.aclose()
             await client.aclose()
             refreshed = await self._resolve_connection(True)
-            client, response = await self._send_stream(refreshed, path, params=params)
+            client, response = await self._send_stream(
+                refreshed, path, params=params, method=method, json_body=json_body
+            )
 
-        if not response.is_success:
-            await response.aread()
-        ensure_response_ok(response, "runtime")
+        try:
+            if not response.is_success:
+                await response.aread()
+            ensure_response_ok(response, "runtime")
+            if method == "POST" and "text/event-stream" not in response.headers.get(
+                "content-type", ""
+            ):
+                raise HyperbrowserError(
+                    "Receiver does not support streaming command start; update the receiver. The command may have started; do not retry it automatically.",
+                    code="streaming_not_supported",
+                    service="runtime",
+                )
+        except BaseException:
+            await response.aclose()
+            await client.aclose()
+            raise
         return client, response
 
     async def _open_binary_stream(
@@ -320,6 +347,8 @@ class RuntimeTransport:
         path: str,
         *,
         params: Optional[Dict[str, object]],
+        method: str = "GET",
+        json_body: Optional[Dict[str, object]] = None,
     ):
         request_path = _build_query_path(path, params)
         target = resolve_runtime_transport_target(
@@ -335,7 +364,9 @@ class RuntimeTransport:
         client = httpx.AsyncClient(timeout=self._timeout)
 
         try:
-            request = client.build_request("GET", target.url, headers=headers)
+            request = client.build_request(
+                method, target.url, headers=headers, json=json_body
+            )
             response = await client.send(request, stream=True)
             return client, response
         except BaseException as error:
@@ -344,5 +375,5 @@ class RuntimeTransport:
                 error,
                 "runtime",
                 "Unknown runtime request error",
-                request_context("GET", path),
+                request_context(method, path),
             )

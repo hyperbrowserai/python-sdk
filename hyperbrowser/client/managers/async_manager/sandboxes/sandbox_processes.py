@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from typing import AsyncIterator, Dict, Optional, Union
 
@@ -16,6 +17,11 @@ from .....types import (
     SandboxProcessStdinParams as SandboxProcessStdinParamsDict,
 )
 from ...sandboxes.shared import _normalize_exec_params
+from ...sandboxes.process_output import (
+    DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
+    ProcessOutput,
+    validate_output_limit,
+)
 from .sandbox_transport import RuntimeTransport
 
 DEFAULT_PROCESS_KILL_WAIT_SECONDS = 5.0
@@ -25,6 +31,10 @@ class SandboxProcessHandle:
     def __init__(self, transport: RuntimeTransport, summary: SandboxProcessSummary):
         self._transport = transport
         self._summary = summary
+        self._output = None
+        self._collector = None
+        self._events = None
+        self._changed = asyncio.Event()
 
     @property
     def id(self) -> str:
@@ -50,6 +60,15 @@ class SandboxProcessHandle:
         timeout_ms: Optional[int] = None,
         timeout_sec: Optional[int] = None,
     ) -> SandboxProcessResult:
+        if self._collector is not None:
+            timeout = None
+            if timeout_sec is not None and timeout_sec > 0:
+                timeout = timeout_sec
+            elif timeout_ms is not None and timeout_ms > 0:
+                timeout = timeout_ms / 1000
+            if not self._collector.done():
+                await asyncio.wait_for(asyncio.shield(self._collector), timeout)
+            return self._collected_result()
         payload = await self._transport.request_json(
             f"/sandbox/processes/{self.id}/wait",
             method="POST",
@@ -60,6 +79,10 @@ class SandboxProcessHandle:
             headers={"content-type": "application/json"},
         )
         result = SandboxProcessResult(**payload["result"])
+        if result.output_truncated:
+            raise ProcessOutput(self.id, 0).failure(
+                "Retained process output is incomplete; collect output from process start"
+            )
         self._summary = SandboxProcessSummary(
             id=result.id,
             status=result.status,
@@ -133,6 +156,21 @@ class SandboxProcessHandle:
         )
 
     async def stream(self, from_seq: Optional[int] = None) -> AsyncIterator[object]:
+        if self._output is not None:
+            index = 0
+            while True:
+                self._changed.clear()
+                while index < len(self._output.events):
+                    event = self._output.events[index]
+                    index += 1
+                    if from_seq is None or event.seq >= from_seq:
+                        yield event
+                if self._collector.done():
+                    yield SandboxProcessExitEvent(
+                        type="exit", result=self._collected_result()
+                    )
+                    return
+                await self._changed.wait()
         params = {"from_seq": from_seq} if from_seq and from_seq > 0 else None
         async for event in self._transport.stream_sse(
             f"/sandbox/processes/{self.id}/stream",
@@ -153,6 +191,70 @@ class SandboxProcessHandle:
                     result=SandboxProcessResult(**data),
                 )
 
+    def _collected_result(self) -> SandboxProcessResult:
+        if self._output.error is not None:
+            raise self._output.error
+        if self._output.result is None:
+            raise self._output.failure(
+                "Command stream ended before its completion event"
+            )
+        result = self._output.result
+        self._summary = self._summary.model_copy(
+            update={
+                "status": result.status,
+                "exit_code": result.exit_code,
+                "completed_at": result.completed_at,
+            }
+        )
+        return result
+
+    async def _collect(self) -> None:
+        try:
+            async for event in self._events:
+                self._output.consume(event)
+                self._changed.set()
+                if self._output.result is not None:
+                    return
+            self._output.error = self._output.failure(
+                "Command stream ended before its completion event"
+            )
+        except asyncio.CancelledError:
+            if self._output.result is None:
+                self._output.error = self._output.failure(
+                    "Command output collection disconnected"
+                )
+        except Exception as error:
+            self._output.error = (
+                self._output.failure(str(error))
+                if not hasattr(error, "code")
+                else error
+            )
+        finally:
+            try:
+                await self._events.aclose()
+            except Exception as error:
+                if self._output.result is None and self._output.error is None:
+                    self._output.error = self._output.failure(str(error))
+            finally:
+                self._changed.set()
+
+    async def disconnect(self) -> None:
+        """Stop collecting output; the detached command continues running."""
+        if self._collector is not None and not self._collector.done():
+            if self._output.result is None and self._output.error is None:
+                self._output.error = self._output.failure(
+                    "Command output collection disconnected"
+                )
+            self._collector.cancel()
+            try:
+                await self._collector
+            except asyncio.CancelledError:
+                pass
+            finally:
+                # Cancellation may happen before the collector gets its first turn.
+                await self._events.aclose()
+                self._changed.set()
+
     async def result(self) -> SandboxProcessResult:
         return await self.wait()
 
@@ -170,22 +272,21 @@ class SandboxProcessesApi:
         timeout_ms: Optional[int] = None,
         timeout_sec: Optional[int] = None,
         run_as: Optional[str] = None,
+        max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
     ) -> SandboxProcessResult:
-        params = _normalize_exec_params(
+        handle = await self.start(
             input,
             cwd=cwd,
             env=env,
             timeout_ms=timeout_ms,
             timeout_sec=timeout_sec,
             run_as=run_as,
+            max_output_bytes=max_output_bytes,
         )
-        payload = await self._transport.request_json(
-            "/sandbox/exec",
-            method="POST",
-            json_body=dump_request(params, SandboxExecParams),
-            headers={"content-type": "application/json"},
-        )
-        return SandboxProcessResult(**payload["result"])
+        try:
+            return await handle.wait()
+        finally:
+            await handle.disconnect()
 
     async def start(
         self,
@@ -196,7 +297,9 @@ class SandboxProcessesApi:
         timeout_ms: Optional[int] = None,
         timeout_sec: Optional[int] = None,
         run_as: Optional[str] = None,
+        max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
     ) -> SandboxProcessHandle:
+        validate_output_limit(max_output_bytes)
         params = _normalize_exec_params(
             input,
             cwd=cwd,
@@ -205,16 +308,25 @@ class SandboxProcessesApi:
             timeout_sec=timeout_sec,
             run_as=run_as,
         )
-        payload = await self._transport.request_json(
+        events = self._transport.stream_sse(
             "/sandbox/processes",
             method="POST",
             json_body=dump_request(params, SandboxExecParams),
-            headers={"content-type": "application/json"},
         )
-        return SandboxProcessHandle(
-            self._transport,
-            SandboxProcessSummary(**payload["process"]),
-        )
+        try:
+            started = await events.__anext__()
+            if started["event"] != "started":
+                raise RuntimeError("Expected process start event")
+            handle = SandboxProcessHandle(
+                self._transport, SandboxProcessSummary(**started["data"])
+            )
+        except BaseException:
+            await events.aclose()
+            raise
+        handle._events = events
+        handle._output = ProcessOutput(handle.id, max_output_bytes)
+        handle._collector = asyncio.create_task(handle._collect())
+        return handle
 
     async def get(self, process_id: str) -> SandboxProcessHandle:
         payload = await self._transport.request_json(f"/sandbox/processes/{process_id}")

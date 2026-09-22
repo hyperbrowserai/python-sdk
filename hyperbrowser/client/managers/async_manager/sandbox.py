@@ -307,6 +307,7 @@ class SandboxHandle:
         timeout_ms: Optional[int] = None,
         timeout_sec: Optional[int] = None,
         run_as: Optional[str] = None,
+        max_output_bytes: int = 64 * 1024 * 1024,
     ):
         return await self.processes.exec(
             input,
@@ -315,6 +316,7 @@ class SandboxHandle:
             timeout_ms=timeout_ms,
             timeout_sec=timeout_sec,
             run_as=run_as,
+            max_output_bytes=max_output_bytes,
         )
 
     async def get_process(self, process_id: str) -> SandboxProcessHandle:

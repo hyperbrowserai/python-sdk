@@ -1,8 +1,10 @@
 import json
-from typing import Any, Dict, Iterator, Optional
+import socket
+from typing import Any, Callable, Dict, Iterator, Optional
 
 import httpx
 
+from .....exceptions import HyperbrowserError
 from .....sandbox_common import (
     RuntimeConnection,
     build_headers,
@@ -81,9 +83,33 @@ class RuntimeTransport:
             client.close()
 
     def stream_sse(
-        self, path: str, params: Optional[Dict[str, object]] = None
+        self,
+        path: str,
+        params: Optional[Dict[str, object]] = None,
+        *,
+        method: str = "GET",
+        json_body: Optional[Dict[str, object]] = None,
+        on_open: Optional[Callable] = None,
     ) -> Iterator[Dict[str, object]]:
-        client, response = self._open_stream(path, params=params)
+        client, response = self._open_stream(
+            path, params=params, method=method, json_body=json_body
+        )
+        if on_open is not None:
+
+            def disconnect():
+                # close() alone need not interrupt a recv() on another thread.
+                # Each stream owns its HTTP client/connection, so shutdown is safe.
+                network = response.extensions.get("network_stream")
+                if network is not None:
+                    sock = network.get_extra_info("socket")
+                    if sock is not None:
+                        try:
+                            sock.shutdown(socket.SHUT_RDWR)
+                        except OSError:
+                            pass
+                response.close()
+
+            on_open(disconnect)
         event_name = "message"
         event_id = None
         data_lines = []
@@ -192,18 +218,37 @@ class RuntimeTransport:
         *,
         params: Optional[Dict[str, object]] = None,
         allow_refresh: bool = True,
+        method: str = "GET",
+        json_body: Optional[Dict[str, object]] = None,
     ):
         connection = self._resolve_connection(False)
-        client, response = self._send_stream(connection, path, params=params)
+        client, response = self._send_stream(
+            connection, path, params=params, method=method, json_body=json_body
+        )
         if response.status_code == 401 and allow_refresh:
             response.close()
             client.close()
             refreshed = self._resolve_connection(True)
-            client, response = self._send_stream(refreshed, path, params=params)
+            client, response = self._send_stream(
+                refreshed, path, params=params, method=method, json_body=json_body
+            )
 
-        if not response.is_success:
-            response.read()
-        ensure_response_ok(response, "runtime")
+        try:
+            if not response.is_success:
+                response.read()
+            ensure_response_ok(response, "runtime")
+            if method == "POST" and "text/event-stream" not in response.headers.get(
+                "content-type", ""
+            ):
+                raise HyperbrowserError(
+                    "Receiver does not support streaming command start; update the receiver. The command may have started; do not retry it automatically.",
+                    code="streaming_not_supported",
+                    service="runtime",
+                )
+        except BaseException:
+            response.close()
+            client.close()
+            raise
         return client, response
 
     def _open_binary_stream(
@@ -318,6 +363,8 @@ class RuntimeTransport:
         path: str,
         *,
         params: Optional[Dict[str, object]],
+        method: str = "GET",
+        json_body: Optional[Dict[str, object]] = None,
     ):
         request_path = _build_query_path(path, params)
         target = resolve_runtime_transport_target(
@@ -333,7 +380,9 @@ class RuntimeTransport:
         client = httpx.Client(timeout=self._timeout)
 
         try:
-            request = client.build_request("GET", target.url, headers=headers)
+            request = client.build_request(
+                method, target.url, headers=headers, json=json_body
+            )
             response = client.send(request, stream=True)
             return client, response
         except BaseException as error:
@@ -342,5 +391,5 @@ class RuntimeTransport:
                 error,
                 "runtime",
                 "Unknown runtime request error",
-                request_context("GET", path),
+                request_context(method, path),
             )
