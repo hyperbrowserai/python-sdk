@@ -167,7 +167,6 @@ class StartJevComputerUseTaskParams(TypedDict, total=False):
     session_options: Optional[CreateSessionParams]
     use_custom_api_keys: Optional[bool]
     api_keys: Optional[JevComputerUseApiKeys]
-    use_computer_action: Optional[bool]
 
 
 class CuaApiKeys(TypedDict, total=False):

@@ -53,9 +53,6 @@ class StartJevComputerUseTaskParams(BaseModel):
     api_keys: Optional[JevComputerUseApiKeys] = Field(
         default=None, serialization_alias="apiKeys"
     )
-    use_computer_action: Optional[bool] = Field(
-        default=None, serialization_alias="useComputerAction"
-    )
 
 
 class StartJevComputerUseTaskResponse(BaseModel):

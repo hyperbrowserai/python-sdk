@@ -189,7 +189,6 @@ def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
         "start_url": "https://example.com",
         "use_custom_api_keys": True,
         "api_keys": {"jev": "jev-key", "google": "google-key"},
-        "use_computer_action": False,
     }
     legacy = StartJevComputerUseTaskParams(
         task="Find the order",
@@ -198,7 +197,6 @@ def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
         start_url="https://example.com",
         use_custom_api_keys=True,
         api_keys=JevComputerUseApiKeys(jev="jev-key", google="google-key"),
-        use_computer_action=False,
     )
 
     assert dump_request(mapping, StartJevComputerUseTaskParams) == dump_request(
@@ -212,7 +210,6 @@ def test_jev_computer_use_serializes_for_mapping_and_legacy_model():
         "startUrl": "https://example.com",
         "useCustomApiKeys": True,
         "apiKeys": {"jev": "jev-key", "google": "google-key"},
-        "useComputerAction": False,
     }
 
 
