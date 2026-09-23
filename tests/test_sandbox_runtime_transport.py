@@ -19,6 +19,66 @@ def _connection(token: str) -> RuntimeConnection:
     )
 
 
+def test_sync_streaming_start_does_not_fallback_or_reexecute_on_old_receiver(
+    monkeypatch,
+):
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(202, json={"process": {"id": "already-started"}})
+
+    client = httpx.Client
+    monkeypatch.setattr(
+        sync_transport_module.httpx,
+        "Client",
+        lambda **kwargs: client(transport=httpx.MockTransport(respond), **kwargs),
+    )
+    transport = sync_transport_module.RuntimeTransport(lambda _: _connection("token"))
+    with pytest.raises(HyperbrowserError) as error:
+        list(
+            transport.stream_sse(
+                "/sandbox/processes", method="POST", json_body={"command": "echo hi"}
+            )
+        )
+    assert error.value.code == "streaming_not_supported"
+    assert not error.value.retryable
+    assert len(requests) == 1
+    assert requests[0].method == "POST"
+    assert requests[0].headers["accept"] == "text/event-stream"
+
+
+@pytest.mark.anyio
+async def test_async_streaming_start_does_not_fallback_or_reexecute_on_old_receiver(
+    monkeypatch,
+):
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(202, json={"process": {"id": "already-started"}})
+
+    client = httpx.AsyncClient
+    monkeypatch.setattr(
+        async_transport_module.httpx,
+        "AsyncClient",
+        lambda **kwargs: client(transport=httpx.MockTransport(respond), **kwargs),
+    )
+
+    async def resolve(_):
+        return _connection("token")
+
+    transport = async_transport_module.RuntimeTransport(resolve)
+    with pytest.raises(HyperbrowserError) as error:
+        async for _ in transport.stream_sse(
+            "/sandbox/processes", method="POST", json_body={"command": "echo hi"}
+        ):
+            pass
+    assert error.value.code == "streaming_not_supported"
+    assert not error.value.retryable
+    assert len(requests) == 1
+
+
 def test_sync_runtime_transport_does_not_retry_consumed_stream_body(monkeypatch):
     calls = []
 

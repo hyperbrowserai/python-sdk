@@ -295,6 +295,49 @@ sandbox.files.write(
 )
 ```
 
+### Run commands and collect output
+
+`sandbox.exec()` and `sandbox.processes.start()` stream command output from the
+receiver as soon as execution starts. The SDK collects stdout and stderr in
+memory, so a completed result is not limited to the receiver's replay buffer.
+This requires a receiver supporting streaming `POST /sandbox/processes`; roll
+out the receiver before upgrading the SDK.
+
+```python
+result = sandbox.exec("make test", max_output_bytes=128 * 1024 * 1024)
+print(result.stdout, result.stderr, result.exit_code)
+
+process = sandbox.processes.start("make test")
+try:
+    for event in process.stream():
+        if event.type == "stdout":
+            print(event.data, end="")
+    result = process.wait()
+finally:
+    process.disconnect()
+```
+
+The combined output limit defaults to 64 MiB per command and can be adjusted
+with `max_output_bytes`. Exceeding it raises `output_limit_exceeded`. A broken
+stream, missing output, or receiver truncation raises `incomplete_output`.
+These errors include the process ID and do not automatically rerun the command.
+
+Process streams use a separate 60-second read-idle timeout once response headers
+arrive. Output and the receiver's 15-second heartbeats reset this timeout, so quiet
+commands can run longer than the client's ordinary HTTP timeout. That ordinary
+timeout still applies to connection setup and waiting for response headers.
+
+`start()` returns after the process starts and collects in the background.
+`wait(timeout_sec=...)` limits the local wait; collection continues after a wait
+timeout. The timeout passed to `start()` or `exec()` limits command execution.
+A local wait timeout raises `TimeoutError` (`asyncio.TimeoutError` in the async API).
+`disconnect()` stops collection and leaves the command running. Use `kill()` to
+stop it. Reattaching with `get()` can retrieve only retained receiver output;
+`wait()` raises if that output has been truncated.
+
+The async API has the same behavior: await `exec()`, `start()`, `wait()`, and
+`disconnect()`, and use `async for` with `stream()`.
+
 ### Resume terminal output after reconnect
 
 ```python

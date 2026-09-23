@@ -14,6 +14,7 @@ from hyperbrowser.client.managers.async_manager.sandboxes.sandbox_files import (
 )
 from hyperbrowser.client.managers.async_manager.sandboxes.sandbox_processes import (
     SandboxProcessesApi as AsyncSandboxProcessesApi,
+    SandboxProcessHandle as AsyncSandboxProcessHandle,
 )
 from hyperbrowser.client.managers.async_manager.sandboxes.sandbox_terminal import (
     SandboxTerminalApi as AsyncSandboxTerminalApi,
@@ -27,6 +28,7 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_files import (
 )
 from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_processes import (
     SandboxProcessesApi,
+    SandboxProcessHandle,
 )
 from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import (
     SandboxTerminalApi,
@@ -539,6 +541,18 @@ class RecordingTransport:
             return MOVE_FILE_PAYLOAD
         raise AssertionError(f"Unexpected request path: {path}")
 
+    def stream_sse(
+        self, path, params=None, *, method="GET", json_body=None, on_open=None
+    ):
+        self.calls.append(
+            {"path": path, "method": method, "params": params, "json_body": json_body}
+        )
+        yield {"event": "started", "data": PROCESS_SUMMARY_PAYLOAD["process"]}
+        yield {
+            "event": "done",
+            "data": {**PROCESS_RESULT_PAYLOAD["result"], "last_seq": 0},
+        }
+
     def request_bytes(self, path, *, method="GET", params=None, headers=None):
         self.calls.append(
             {
@@ -596,6 +610,12 @@ class AsyncRecordingTransport(RecordingTransport):
             content=content,
             headers=headers,
         )
+
+    async def stream_sse(self, path, params=None, *, method="GET", json_body=None):
+        for event in super().stream_sse(
+            path, params, method=method, json_body=json_body
+        ):
+            yield event
 
     async def request_bytes(self, path, *, method="GET", params=None, headers=None):
         return super().request_bytes(
@@ -1473,6 +1493,9 @@ def test_sync_sandbox_runtime_apis_use_expected_wire_keys():
     processes.exec(process_input)
     handle = processes.start(process_input)
     handle.wait(timeout_ms=250, timeout_sec=3)
+    SandboxProcessHandle(
+        transport, SandboxProcessSummary(**PROCESS_SUMMARY_PAYLOAD["process"])
+    ).wait(timeout_ms=250, timeout_sec=3)
     processes.list(
         status=["running", "exited"],
         limit=10,
@@ -1655,6 +1678,7 @@ def test_sync_sandbox_handle_exec_string_call_supports_run_as(monkeypatch):
                 "timeout_ms": None,
                 "timeout_sec": None,
                 "run_as": "root",
+                "max_output_bytes": 64 * 1024 * 1024,
             },
         )
     ]
@@ -2018,6 +2042,9 @@ async def test_async_sandbox_runtime_apis_use_expected_wire_keys():
     await processes.exec(process_input)
     handle = await processes.start(process_input)
     await handle.wait(timeout_ms=250, timeout_sec=3)
+    await AsyncSandboxProcessHandle(
+        transport, SandboxProcessSummary(**PROCESS_SUMMARY_PAYLOAD["process"])
+    ).wait(timeout_ms=250, timeout_sec=3)
     await processes.list(
         status=["running", "exited"],
         limit=10,

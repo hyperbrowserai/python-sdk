@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from hyperbrowser.models import SandboxExecParams
@@ -101,21 +103,28 @@ async def test_async_sandbox_process_e2e():
         assert result.exit_code == 0
         assert "result-alias-ok" in result.stdout
 
+        noisy_line = "process-replay-window-overflow-" + "x" * 64
         noisy_process = await sandbox.processes.start(
             SandboxExecParams(
                 command="bash",
                 args=[
                     "-lc",
-                    'yes "process-replay-window-overflow-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" | head -n 120000',
+                    f"yes {noisy_line} | head -n 120000",
                 ],
             )
         )
         result = await noisy_process.result()
-        assert len(result.stdout) > 3 * 1024 * 1024
+        assert result.stdout == (noisy_line + "\n") * 120000
+        events = await _collect_process_stream(noisy_process.stream(1))
+        assert (
+            "".join(event.data for event in events if event.type == "stdout")
+            == result.stdout
+        )
 
+        reattached = await sandbox.get_process(noisy_process.id)
         await expect_hyperbrowser_error_async(
             "process replay window expired",
-            lambda: _collect_process_stream(noisy_process.stream(1)),
+            lambda: _collect_process_stream(reattached.stream(1)),
             status_code=410,
             code="replay_window_expired",
             service="runtime",
@@ -126,14 +135,8 @@ async def test_async_sandbox_process_e2e():
         timeout_process = await sandbox.processes.start(
             SandboxExecParams(command="bash", args=["-lc", "sleep 10"])
         )
-        await expect_hyperbrowser_error_async(
-            "process wait timeout",
-            lambda: timeout_process.wait(timeout_ms=100),
-            status_code=408,
-            service="runtime",
-            retryable=False,
-            message_includes="timed out",
-        )
+        with pytest.raises(asyncio.TimeoutError):
+            await timeout_process.wait(timeout_ms=100)
         await timeout_process.signal("TERM")
         result = await timeout_process.wait(timeout_ms=3000)
         assert result.status in {"exited", "failed", "killed", "timed_out"}
