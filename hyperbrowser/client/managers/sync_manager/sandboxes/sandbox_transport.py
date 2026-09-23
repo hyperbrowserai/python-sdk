@@ -14,7 +14,11 @@ from .....sandbox_common import (
     request_context,
     resolve_runtime_transport_target,
 )
-from ...sandboxes.shared import _build_query_path, _is_replayable_http_content
+from ...sandboxes.shared import (
+    PROCESS_STREAM_IDLE_TIMEOUT_SECONDS,
+    _build_query_path,
+    _is_replayable_http_content,
+)
 
 
 class RuntimeTransport:
@@ -139,6 +143,8 @@ class RuntimeTransport:
 
         try:
             for line in response.iter_lines():
+                # HTTPX < 0.24 includes line terminators in iter_lines().
+                line = line.rstrip("\r\n")
                 if line == "":
                     event = flush_event()
                     if event is not None:
@@ -244,6 +250,14 @@ class RuntimeTransport:
                     "Receiver does not support streaming command start; update the receiver. The command may have started; do not retry it automatically.",
                     code="streaming_not_supported",
                     service="runtime",
+                )
+            if "text/event-stream" in response.headers.get("content-type", ""):
+                # HTTPX passes this timeout extension through to body reads.
+                # Change it before reading the body, after response headers have
+                # arrived under the ordinary request timeout. Heartbeats reset
+                # this idle timeout independently of the command's deadline.
+                response.request.extensions["timeout"]["read"] = (
+                    PROCESS_STREAM_IDLE_TIMEOUT_SECONDS
                 )
         except BaseException:
             response.close()

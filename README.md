@@ -322,6 +322,11 @@ with `max_output_bytes`. Exceeding it raises `output_limit_exceeded`. A broken
 stream, missing output, or receiver truncation raises `incomplete_output`.
 These errors include the process ID and do not automatically rerun the command.
 
+Process streams use a separate 60-second read-idle timeout once response headers
+arrive. Output and the receiver's 15-second heartbeats reset this timeout, so quiet
+commands can run longer than the client's ordinary HTTP timeout. That ordinary
+timeout still applies to connection setup and waiting for response headers.
+
 `start()` returns after the process starts and collects in the background.
 `wait(timeout_sec=...)` limits the local wait; collection continues after a wait
 timeout. The timeout passed to `start()` or `exec()` limits command execution.

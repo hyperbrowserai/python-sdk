@@ -27,6 +27,8 @@ from ....types import (
 )
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
+# The receiver sends process SSE keepalives every 15 seconds.
+PROCESS_STREAM_IDLE_TIMEOUT_SECONDS = 60.0
 SHELL_SAFE_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_@%+=:,./-]+$")
 
 
