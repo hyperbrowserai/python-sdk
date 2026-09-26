@@ -7,6 +7,7 @@ import os
 import posixpath
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -25,6 +26,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Union,
 )
 
 import httpx
@@ -99,6 +101,7 @@ class PackagedDockerBuildContext:
     manifest: SandboxBuildContextManifest
     bundles: Dict[str, DockerImageBuildArtifact]
     workspace: str
+    fingerprint: str
 
     def cleanup(self) -> None:
         shutil.rmtree(self.workspace, ignore_errors=True)
@@ -155,6 +158,85 @@ class _HashingCountingWriter:
         return self._fileobj.flush()
 
 
+class _ContextHashingReader:
+    def __init__(self, source, hasher):
+        self._source = source
+        self._hasher = hasher
+
+    def read(self, size):
+        data = self._source.read(size)
+        self._hasher.update(data)
+        return data
+
+
+class DockerBuildContextChangedError(ValueError):
+    """The packaged context no longer matches the caller's cache fingerprint."""
+
+
+@dataclass
+class _DockerBuildContextSelection:
+    root: Path
+    dockerfile: str
+    mode: Literal["sparse", "full"]
+    fallback_reason: Optional[str]
+    entry_groups: List[Set[str]]
+
+    def fingerprint(self, bundle_hashes: Sequence[str]) -> str:
+        # Hash entry metadata and contents, not transport encoding: cache
+        # identity must not depend on tar headers or a compression library.
+        identity = {
+            "version": 1,
+            "dockerfile": self.dockerfile,
+            "contextMode": self.mode,
+            "bundles": sorted(set(bundle_hashes)),
+        }
+        return hashlib.sha256(
+            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+
+
+def docker_build_context_fingerprint(
+    context_path: Union[str, Path],
+    *,
+    dockerfile: str = "Dockerfile",
+    force_full_context: bool = False,
+) -> str:
+    """Fingerprint the effective remote context without compressing or staging it.
+
+    Uses the same Dockerfile source selection, ignore rules, and normalized tar
+    entries as remote packaging. Reads file contents with bounded memory. This
+    is blocking I/O; async callers should run it in an executor. Pass the result
+    as ``expected_context_fingerprint`` when building to detect context changes.
+    Build options outside the context (e.g. platform or image_init) must also be
+    included in the caller's cache key. Mutable base tags and network resources
+    are not resolved by this fingerprint.
+    """
+    selection = _select_docker_build_context(
+        context_path, dockerfile=dockerfile, force_full_context=force_full_context
+    )
+    hashes = []
+    for entries in selection.entry_groups:
+        hasher = hashlib.sha256()
+        for relative in sorted(entries):
+            info = _context_entry_info(selection.root, relative)
+            if info is None:
+                continue
+            _hash_context_entry_metadata(hasher, info)
+            if info.isfile():
+                with open(selection.root / relative, "rb") as source:
+                    reader = _ContextHashingReader(source, hasher)
+                    remaining = info.size
+                    while remaining:
+                        data = reader.read(min(64 * 1024, remaining))
+                        if not data:
+                            raise OSError(
+                                f'build context file "{relative}" was truncated'
+                            )
+                        remaining -= len(data)
+        hashes.append(hasher.hexdigest())
+    return selection.fingerprint(hashes)
+
+
 def build_docker_image_from_dockerfile(
     *,
     context_path,
@@ -188,13 +270,12 @@ def build_docker_image_from_dockerfile(
     _run_command(args)
 
 
-def package_docker_build_context_manifest(
+def _select_docker_build_context(
     context_path,
     *,
     dockerfile="Dockerfile",
     force_full_context: bool = False,
-    temp_dir: Optional[str] = None,
-) -> PackagedDockerBuildContext:
+) -> _DockerBuildContextSelection:
     context_root = Path(context_path).expanduser().resolve(strict=True)
     if not context_root.is_dir():
         raise ValueError("Docker build context must be a directory")
@@ -288,28 +369,59 @@ def package_docker_build_context_manifest(
             ]
 
     entry_groups = _remove_subsumed_entry_groups(entry_groups)
+    return _DockerBuildContextSelection(
+        context_root, dockerfile_relative, context_mode, fallback_reason, entry_groups
+    )
+
+
+def package_docker_build_context_manifest(
+    context_path,
+    *,
+    dockerfile="Dockerfile",
+    force_full_context: bool = False,
+    temp_dir: Optional[str] = None,
+    expected_context_fingerprint: Optional[str] = None,
+) -> PackagedDockerBuildContext:
+    if expected_context_fingerprint is not None and not _SHA256_PATTERN.fullmatch(
+        expected_context_fingerprint
+    ):
+        raise ValueError("expected_context_fingerprint must be a SHA-256 hex digest")
+    selection = _select_docker_build_context(
+        context_path, dockerfile=dockerfile, force_full_context=force_full_context
+    )
     workspace = tempfile.mkdtemp(prefix="hb-docker-context-", dir=temp_dir)
     try:
         bundles = {}
         descriptors = []
-        for index, entries in enumerate(entry_groups):
-            artifact, descriptor = _package_context_bundle(
-                context_root,
+        bundle_hashes = []
+        for index, entries in enumerate(selection.entry_groups):
+            artifact, descriptor, bundle_hash = _package_context_bundle(
+                selection.root,
                 sorted(entries),
                 workspace,
                 index,
             )
+            bundle_hashes.append(bundle_hash)
             if descriptor.sha256 in bundles:
                 artifact.cleanup()
                 continue
             bundles[descriptor.sha256] = artifact
             descriptors.append(descriptor)
         descriptors.sort(key=lambda item: item.sha256)
+        fingerprint = selection.fingerprint(bundle_hashes)
+        if (
+            expected_context_fingerprint is not None
+            and fingerprint != expected_context_fingerprint
+        ):
+            raise DockerBuildContextChangedError(
+                "Docker build context changed after its cache fingerprint was "
+                "computed. Retry the build with a fresh fingerprint."
+            )
         manifest = SandboxBuildContextManifest(
             version=1,
-            dockerfile_path=dockerfile_relative,
-            context_mode=context_mode,
-            fallback_reason=fallback_reason or None,
+            dockerfile_path=selection.dockerfile,
+            context_mode=selection.mode,
+            fallback_reason=selection.fallback_reason or None,
             bundles=descriptors,
         )
         manifest_bytes = _canonical_model_json(manifest)
@@ -324,6 +436,7 @@ def package_docker_build_context_manifest(
             manifest=manifest,
             bundles=bundles,
             workspace=workspace,
+            fingerprint=fingerprint,
         )
     except Exception:
         shutil.rmtree(workspace, ignore_errors=True)
@@ -1192,11 +1305,10 @@ def _package_context_bundle(
     entries: Sequence[str],
     workspace: str,
     index: int,
-) -> Tuple[DockerImageBuildArtifact, SandboxBuildContextBundle]:
+) -> Tuple[DockerImageBuildArtifact, SandboxBuildContextBundle, str]:
     bundle_path = os.path.join(workspace, f"bundle-{index:04d}.tar.gz")
     hasher = hashlib.sha256()
-    uncompressed_size = 0
-    entry_count = 0
+    context_hasher = hashlib.sha256()
     with open(bundle_path, "wb") as destination:
         writer = _HashingCountingWriter(destination, hasher)
         with gzip.GzipFile(
@@ -1206,36 +1318,12 @@ def _package_context_bundle(
             compresslevel=1,
             mtime=0,
         ) as compressed:
-            with tarfile.open(
-                fileobj=compressed,
-                mode="w",
-                format=tarfile.PAX_FORMAT,
-            ) as archive:
-                for relative in entries:
-                    _validate_archive_relative_path(relative)
-                    absolute = context_root / relative
-                    info = archive.gettarinfo(str(absolute), arcname=relative)
-                    if not (info.isfile() or info.isdir() or info.issym()):
-                        continue
-                    info.uid = 0
-                    info.gid = 0
-                    info.uname = ""
-                    info.gname = ""
-                    info.mtime = 0
-                    info.pax_headers = {}
-                    if info.isdir() and not info.name.endswith("/"):
-                        info.name += "/"
-                    if info.issym() and not info.linkname:
-                        raise ValueError(
-                            f'build context symlink "{relative}" has an invalid target'
-                        )
-                    if info.isfile():
-                        with open(absolute, "rb") as source:
-                            archive.addfile(info, source)
-                        uncompressed_size += info.size
-                    else:
-                        archive.addfile(info)
-                    entry_count += 1
+            uncompressed_size, entry_count = _write_context_archive(
+                context_root,
+                entries,
+                compressed,
+                context_hasher,
+            )
     size_bytes = os.path.getsize(bundle_path)
     sha256_hex = hasher.hexdigest()
     artifact = DockerImageBuildArtifact(
@@ -1250,7 +1338,73 @@ def _package_context_bundle(
         uncompressed_size_bytes=uncompressed_size,
         entry_count=entry_count,
     )
-    return artifact, descriptor
+    return artifact, descriptor, context_hasher.hexdigest()
+
+
+def _context_entry_info(context_root: Path, relative: str) -> Optional[tarfile.TarInfo]:
+    _validate_archive_relative_path(relative)
+    absolute = context_root / relative
+    metadata = absolute.lstat()
+    # Construct normalized metadata directly. gettarinfo() resolves owner names
+    # that we discard and converts repeated host inodes to hard-link entries.
+    # Every regular path must instead be present with its own contents; preserve
+    # symlinks without following them.
+    info = tarfile.TarInfo(relative)
+    info.mode = stat.S_IMODE(metadata.st_mode)
+    if stat.S_ISREG(metadata.st_mode):
+        info.type = tarfile.REGTYPE
+        info.size = metadata.st_size
+    elif stat.S_ISDIR(metadata.st_mode):
+        info.type = tarfile.DIRTYPE
+        info.name += "/"
+    elif stat.S_ISLNK(metadata.st_mode):
+        info.type = tarfile.SYMTYPE
+        info.linkname = os.readlink(absolute)
+        if not info.linkname:
+            raise ValueError(
+                f'build context symlink "{relative}" has an invalid target'
+            )
+    else:
+        return None
+    return info
+
+
+def _hash_context_entry_metadata(hasher, info: tarfile.TarInfo) -> None:
+    metadata = json.dumps(
+        [
+            info.name.rstrip("/") if info.isdir() else info.name,
+            "file" if info.isfile() else "directory" if info.isdir() else "symlink",
+            info.mode,
+            info.size,
+            info.linkname,
+        ],
+        separators=(",", ":"),
+    ).encode()
+    hasher.update(len(metadata).to_bytes(8, "big"))
+    hasher.update(metadata)
+
+
+def _write_context_archive(
+    context_root: Path, entries: Sequence[str], destination, hasher
+):
+    uncompressed_size = 0
+    entry_count = 0
+    with tarfile.open(
+        fileobj=destination, mode="w", format=tarfile.PAX_FORMAT
+    ) as archive:
+        for relative in entries:
+            info = _context_entry_info(context_root, relative)
+            if info is None:
+                continue
+            _hash_context_entry_metadata(hasher, info)
+            if info.isfile():
+                with open(context_root / relative, "rb") as source:
+                    archive.addfile(info, _ContextHashingReader(source, hasher))
+                uncompressed_size += info.size
+            else:
+                archive.addfile(info)
+            entry_count += 1
+    return uncompressed_size, entry_count
 
 
 def _normalize_docker_save_entry_name(raw: str) -> str:

@@ -352,6 +352,42 @@ for event in connection.events():
     print(event)
 ```
 
+### Cache remote Dockerfile builds
+
+Use the public context fingerprint when deriving a cache name. It uses the same
+Dockerfile source selection and `.dockerignore` rules as remote packaging,
+including file contents, modes, paths, and symlinks. It ignores timestamps and
+does not compress or stage the context on disk.
+
+```python
+from hyperbrowser.build_context import docker_build_context_fingerprint
+
+fingerprint = docker_build_context_fingerprint("./app")
+# Include build options such as platform and image_init in your cache key too.
+image_name = f"app-{fingerprint[:32]}"
+build = client.sandboxes.build_image_from_dockerfile(
+    context_path="./app",
+    image_name=image_name,
+    expected_context_fingerprint=fingerprint,
+)
+```
+
+If the archived inputs differ from the fingerprint, the SDK raises
+`DockerBuildContextChangedError` before creating or uploading a build. Compute a
+fresh fingerprint and repeat the lookup/build operation. Use the same `dockerfile`
+and `force_full_context` selection when fingerprinting and building (the latter
+is named `remote_full_context` on the build method). The expected fingerprint is
+supported only for remote builds.
+
+Fingerprinting streams included files and performs blocking I/O. Async callers
+should use `await asyncio.to_thread(docker_build_context_fingerprint, "./app")`
+(Python 3.9+) or an executor. It does not resolve mutable base-image tags or
+network resources fetched by a Dockerfile; rebuild explicitly when those change.
+
+Image listings distinguish `ready` from `uploaded`: a completed team image can
+be ready to launch before its durability backup is uploaded. `ready` is `None`
+when talking to an older server. Keep the returned image ID to pin that revision.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

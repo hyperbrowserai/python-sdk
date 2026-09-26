@@ -306,6 +306,7 @@ class SandboxImageSummary(SandboxBaseModel):
     source: Optional[str] = None
     image_init: Optional[SandboxImageInit] = Field(default=None, alias="imageInit")
     uploaded: bool
+    ready: Optional[bool] = None
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 
