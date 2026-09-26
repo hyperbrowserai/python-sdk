@@ -33,6 +33,7 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
     client.sandboxes.build_image_from_dockerfile(
         context_path=".",
         image_name="custom",
+        expected_context_fingerprint=123,  # M,P
         builder_memory_mib="16g",  # M,P
     )
     client.sandboxes.build_image_from_docker_image(

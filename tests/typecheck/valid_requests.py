@@ -3,6 +3,7 @@ from typing import Any, Dict
 from pydantic import BaseModel
 
 from hyperbrowser import AsyncHyperbrowser, Hyperbrowser
+from hyperbrowser.build_context import docker_build_context_fingerprint
 from hyperbrowser.models import (
     CreateSandboxImageBuildParams as LegacyCreateSandboxImageBuildParams,
     CreateSessionParams as LegacyCreateSessionParams,
@@ -203,6 +204,7 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.sandboxes.build_image_from_dockerfile(
         context_path=".",
         image_name="custom",
+        expected_context_fingerprint=docker_build_context_fingerprint("."),
         builder_cpus=8,
         builder_memory_mib=16384,
         builder_scratch_mib=65536,
@@ -333,6 +335,7 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.sandboxes.build_image_from_dockerfile(
         context_path=".",
         image_name="custom",
+        expected_context_fingerprint="a" * 64,
         builder_cpus=8,
         builder_memory_mib=16384,
         builder_scratch_mib=65536,

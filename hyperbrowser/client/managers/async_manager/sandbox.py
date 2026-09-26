@@ -725,6 +725,7 @@ class SandboxManager:
         dockerfile,
         platform: str,
         remote_full_context: bool,
+        expected_context_fingerprint: Optional[str],
         image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]],
         image_config_user: Optional[str],
         builder_cpus: Optional[int],
@@ -741,6 +742,7 @@ class SandboxManager:
             context_path,
             dockerfile=dockerfile,
             force_full_context=remote_full_context,
+            expected_context_fingerprint=expected_context_fingerprint,
             temp_dir=temp_dir,
         )
         build_id = None
@@ -803,6 +805,7 @@ class SandboxManager:
         dockerfile="Dockerfile",
         remote: bool = True,
         remote_full_context: bool = False,
+        expected_context_fingerprint: Optional[str] = None,
         docker_tag: Optional[str] = None,
         platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
         build_args: Optional[Dict[str, str]] = None,
@@ -829,6 +832,7 @@ class SandboxManager:
                 dockerfile=dockerfile,
                 platform=platform,
                 remote_full_context=remote_full_context,
+                expected_context_fingerprint=expected_context_fingerprint,
                 image_init=image_init,
                 image_config_user=image_config_user,
                 builder_cpus=builder_cpus,
@@ -840,6 +844,8 @@ class SandboxManager:
                 temp_dir=temp_dir,
                 upload_timeout=upload_timeout,
             )
+        if expected_context_fingerprint is not None:
+            raise ValueError("expected_context_fingerprint requires remote=True")
         tag = docker_tag or make_temp_docker_tag()
         remove_tag = docker_tag is None
         try:
