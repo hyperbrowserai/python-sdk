@@ -72,6 +72,7 @@ class SandboxNetworkPolicy(TypedDict, total=False):
 class _CreateSandboxCommon(TypedDict, total=False):
     """Fields shared by image- and snapshot-based sandbox launches."""
 
+    runtime_class: Optional[Literal["firecracker", "gvisor-cpu"]]
     region: Optional[SandboxRegion]
     enable_recording: Optional[bool]
     exposed_ports: Optional[List[SandboxExposeParams]]

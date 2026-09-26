@@ -480,3 +480,13 @@ def test_sandbox_file_write_entry_supports_batch_write_options():
         "append": True,
         "mode": "600",
     }
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_gvisor_runtime_class_serializes_for_dict_and_legacy(legacy):
+    from hyperbrowser.client._request import dump_request
+
+    params = {"image_name": "cpu-image", "runtime_class": "gvisor-cpu"}
+    if legacy:
+        params = CreateSandboxParams(**params)
+    assert dump_request(params, CreateSandboxParams)["runtimeClass"] == "gvisor-cpu"

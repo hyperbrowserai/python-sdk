@@ -130,7 +130,23 @@ class SandboxNetworkUpdateResult(SandboxBaseModel):
     network: SandboxNetworkPolicy
 
 
+class SandboxCapabilities(SandboxBaseModel):
+    commands: bool
+    files: bool
+    pty: bool
+    gpu: bool
+    snapshots: bool
+    volumes: bool
+    exposed_ports: bool = Field(alias="exposedPorts")
+    internet_access: bool = Field(alias="internetAccess")
+    writable_storage: Literal["memory"] = Field(alias="writableStorage")
+
+
 class Sandbox(SandboxBaseModel):
+    runtime_class: Literal["firecracker", "gvisor-cpu"] = Field(
+        default="firecracker", alias="runtimeClass"
+    )
+    capabilities: Optional[SandboxCapabilities] = None
     id: str
     team_id: str = Field(alias="teamId")
     status: SandboxStatus
@@ -204,6 +220,9 @@ class SandboxRuntimeSession(SandboxBaseModel):
 
 
 class _SandboxLaunchCommonParams(SandboxBaseModel):
+    runtime_class: Optional[Literal["firecracker", "gvisor-cpu"]] = Field(
+        default=None, serialization_alias="runtimeClass"
+    )
     region: Optional[SandboxRegion] = None
     enable_recording: Optional[bool] = Field(
         default=None, serialization_alias="enableRecording"
