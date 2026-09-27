@@ -264,6 +264,64 @@ def test_docker_identity_is_verified_before_import(resolve, monkeypatch, changed
         assert result.image_id == "image-1"
 
 
+@pytest.mark.parametrize(
+    "message,unsupported",
+    [
+        (
+            '"--platform" requires API version 1.49, but the Docker daemon API version is 1.48',
+            True,
+        ),
+        ("unknown flag: --platform", True),
+        ("Error response from daemon: No such image: local/app:latest", False),
+        ("Cannot connect to the Docker daemon", False),
+    ],
+)
+def test_docker_identity_errors_fail_before_http(
+    resolve, monkeypatch, message, unsupported
+):
+    original = RuntimeError(message)
+    calls = []
+
+    def command(args):
+        calls.append(args)
+        raise original
+
+    monkeypatch.setattr(image_build, "_run_command_output", command)
+    backend = Backend()
+    with pytest.raises(RuntimeError) as error:
+        resolve(backend, docker_image="local/app:latest")
+    if unsupported:
+        assert "API 1.49 or newer (Docker 28.1+)" in str(error.value)
+        assert "DOCKER_API_VERSION" in str(error.value)
+        assert error.value.__cause__ is original
+    else:
+        assert error.value is original
+    assert backend.requests == []
+    assert len(calls) == 1
+    assert calls[0][:3] == ["docker", "image", "inspect"]
+
+
+@pytest.mark.parametrize("source", ["dockerfile", "known-digest"])
+def test_remote_build_and_known_digest_cache_hit_need_no_docker(
+    context, resolve, monkeypatch, source
+):
+    def command(*args, **kwargs):
+        pytest.fail("This path must not invoke Docker")
+
+    monkeypatch.setattr(image_build, "_run_command_result", command)
+    backend = Backend(ready=source == "known-digest")
+    kwargs = (
+        {"context_path": context}
+        if source == "dockerfile"
+        else {
+            "docker_image": "local/app:latest",
+            "expected_image_digest": "sha256:" + "a" * 64,
+        }
+    )
+    result = resolve(backend, **kwargs)
+    assert result.outcome == ("created" if source == "dockerfile" else "reused")
+
+
 def test_identity_separates_content_and_initialization_but_normalizes_dict_order():
     common = dict(source="dockerfile", fingerprint="a" * 64)
     default = image_build_name(**common)

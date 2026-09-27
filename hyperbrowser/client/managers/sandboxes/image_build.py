@@ -446,10 +446,22 @@ def package_docker_build_context_manifest(
 def docker_image_digest(
     docker_image: str, *, platform: str = IMAGE_BUILD_SOURCE_PLATFORM
 ) -> str:
-    """Inspect the platform identity without creating temporary resources."""
-    return _normalize_sha256_digest(
-        _inspect_docker_image(docker_image, platform).get("Id")
-    )
+    """Inspect platform identity with Docker API 1.49+, without temporary resources."""
+    try:
+        inspection = _inspect_docker_image(docker_image, platform)
+    except RuntimeError as error:
+        message = str(error)
+        if (
+            '"--platform" requires API version' in message
+            or "unknown flag: --platform" in message
+        ):
+            raise RuntimeError(
+                "Local Docker image imports require a Docker CLI and Engine "
+                "supporting API 1.49 or newer (Docker 28.1+). Upgrade Docker "
+                "or remove an older DOCKER_API_VERSION override."
+            ) from error
+        raise
+    return _normalize_sha256_digest(inspection.get("Id"))
 
 
 def prepare_docker_image_manifest_source(

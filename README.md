@@ -420,6 +420,12 @@ identity discovery; supply a fresh identity for each resolution request. Changes
 between identity discovery and packaging are rejected instead of published under
 the wrong name. Local Docker images must already be available in the daemon.
 
+Automatic local-image identity discovery requires a Docker CLI and Engine
+supporting **API 1.49 or newer (Docker 28.1+)** for platform-specific inspection.
+Upgrade Docker and check for an older `DOCKER_API_VERSION` override if the helper
+reports this requirement. Remote Dockerfile builds do not require local Docker.
+The existing explicit-name import method retains its inspection fallback.
+
 `force_build=True` skips ready-image lookup but still joins matching active builds
 and permits existing layer/artifact caches. Use it to refresh mutable base tags or
 external Dockerfile downloads. Joining does not change an existing builder's
