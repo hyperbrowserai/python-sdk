@@ -443,6 +443,15 @@ def package_docker_build_context_manifest(
         raise
 
 
+def docker_image_digest(
+    docker_image: str, *, platform: str = IMAGE_BUILD_SOURCE_PLATFORM
+) -> str:
+    """Inspect the platform identity without creating temporary resources."""
+    return _normalize_sha256_digest(
+        _inspect_docker_image(docker_image, platform).get("Id")
+    )
+
+
 def prepare_docker_image_manifest_source(
     docker_image: str,
     *,

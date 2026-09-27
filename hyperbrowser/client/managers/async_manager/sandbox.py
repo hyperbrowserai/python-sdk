@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import time
+from pathlib import Path
 from typing import Dict, Optional, Union
 
 from ..._request import coerce_request, dump_request
@@ -15,6 +16,8 @@ from ....models.sandbox import (
     SandboxExposeParams,
     SandboxExposeResult,
     SandboxImageBuild,
+    SandboxImageBuildResolution,
+    SandboxImageSummary,
     SandboxImageBuildCreateResult,
     SandboxDockerImageReuseResult,
     SandboxImageBuildListParams,
@@ -63,6 +66,11 @@ from ....sandbox_common import (
     parse_json_response,
     should_retry_get,
 )
+from ..sandboxes.image_resolution import (
+    image_build_name,
+    matching_image_build,
+    completed_image_id,
+)
 from ..sandboxes.shared import (
     _build_sandbox_exposed_url,
     _copy_model,
@@ -70,6 +78,8 @@ from ..sandboxes.shared import (
 )
 from ..sandboxes.image_build import (
     IMAGE_BUILD_SOURCE_PLATFORM,
+    docker_build_context_fingerprint,
+    docker_image_digest,
     build_docker_image_from_dockerfile,
     is_terminal_image_build_status,
     make_temp_docker_tag,
@@ -459,6 +469,159 @@ class SandboxManager:
         )
         return SandboxImageListResponse(**payload)
 
+    async def find_ready_image(self, image_name: str) -> Optional[SandboxImageSummary]:
+        """Find an exact ready team image, including revisions awaiting backup."""
+        page = 1
+        while True:
+            response = await self.list_images(
+                SandboxImageListParams(
+                    search=image_name, sources=["team"], page=page, limit=100
+                )
+            )
+            for image in response.images:
+                if image.image_name == image_name and (
+                    image.uploaded or getattr(image, "ready", False)
+                ):
+                    return image
+            if len(response.images) < 100:
+                return None
+            if response.total_count is not None and page * 100 >= response.total_count:
+                return None
+            page += 1
+
+    async def get_or_build_image(
+        self,
+        *,
+        context_path: Optional[Union[str, Path]] = None,
+        docker_image: Optional[str] = None,
+        image_name_prefix: str = "hb",
+        dockerfile: str = "Dockerfile",
+        platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
+        remote_full_context: bool = False,
+        expected_context_fingerprint: Optional[str] = None,
+        expected_image_digest: Optional[str] = None,
+        image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
+        image_config_user: Optional[str] = None,
+        builder_cpus: Optional[int] = None,
+        builder_memory_mib: Optional[int] = None,
+        builder_scratch_mib: Optional[int] = None,
+        force_build: bool = False,
+        wait: bool = True,
+        poll_interval: float = 3.0,
+        wait_timeout: Optional[float] = 35 * 60,
+        upload_timeout: Optional[float] = 600,
+        temp_dir: Optional[str] = None,
+    ) -> SandboxImageBuildResolution:
+        """Reuse, join, or build content-derived remote Dockerfile/image inputs.
+
+        Supply exactly one of context_path or docker_image. Names include source
+        contents, platform and image initialization overrides. force_build skips
+        ready-image lookup, but joins matching active builds and retains builder
+        layer/artifact caches. Canceling polling never cancels the backend build.
+        wait_timeout applies to this caller's polling, independently of uploads.
+        This composes existing APIs; lookup plus creation is not server-atomic.
+        """
+        platform = platform.strip().lower()
+        if platform != "linux/amd64":
+            raise ValueError("Image builds require platform='linux/amd64'")
+        if (context_path is None) == (docker_image is None):
+            raise ValueError("Supply exactly one of context_path or docker_image")
+        if context_path is not None:
+            if expected_image_digest is not None:
+                raise ValueError("expected_image_digest requires docker_image")
+            fingerprint = expected_context_fingerprint
+            if fingerprint is None:
+                fingerprint = await _run_blocking(
+                    docker_build_context_fingerprint,
+                    context_path,
+                    dockerfile=dockerfile,
+                    force_full_context=remote_full_context,
+                )
+            source = "dockerfile"
+            input_format = "dockerfile_context_manifest_v1"
+        else:
+            if (
+                expected_context_fingerprint is not None
+                or remote_full_context
+                or dockerfile != "Dockerfile"
+            ):
+                raise ValueError("Dockerfile context options require context_path")
+            fingerprint = expected_image_digest
+            if fingerprint is None:
+                fingerprint = await _run_blocking(
+                    docker_image_digest, docker_image, platform=platform
+                )
+            source = "prebuilt"
+            input_format = "docker_image_manifest_v1"
+        image_name = image_build_name(
+            source=source,
+            fingerprint=fingerprint,
+            name_prefix=image_name_prefix,
+            platform=platform,
+            image_init=image_init,
+            image_config_user=image_config_user,
+        )
+        if not force_build:
+            image = await self.find_ready_image(image_name)
+            if image is not None:
+                return SandboxImageBuildResolution(
+                    outcome="reused",
+                    image_name=image_name,
+                    image_id=image.id,
+                )
+        common = dict(
+            image_name=image_name,
+            platform=platform,
+            image_init=image_init,
+            image_config_user=image_config_user,
+            builder_cpus=builder_cpus,
+            builder_memory_mib=builder_memory_mib,
+            builder_scratch_mib=builder_scratch_mib,
+            wait=False,
+            upload_timeout=upload_timeout,
+            temp_dir=temp_dir,
+        )
+        common = {
+            key: value
+            for key, value in common.items()
+            if not (key.startswith("builder_") and value is None)
+        }
+        outcome = "created"
+        try:
+            if context_path is not None:
+                build = await self.build_image_from_dockerfile(
+                    context_path=context_path,
+                    dockerfile=dockerfile,
+                    remote=True,
+                    remote_full_context=remote_full_context,
+                    expected_context_fingerprint=fingerprint,
+                    **common,
+                )
+            else:
+                build = await self.build_image_from_docker_image(
+                    docker_image=docker_image,
+                    expected_image_digest=fingerprint,
+                    **common,
+                )
+        except HyperbrowserError as error:
+            existing = matching_image_build(error, image_name, input_format)
+            if existing is None:
+                raise
+            build = existing
+            outcome = "joined"
+        if wait and build.status != "completed":
+            build = await self.wait_for_image_build(
+                build.id,
+                poll_interval=poll_interval,
+                timeout=wait_timeout,
+            )
+        return SandboxImageBuildResolution(
+            outcome=outcome,
+            image_name=image_name,
+            image_id=completed_image_id(build),
+            build=build,
+        )
+
     async def list_snapshots(
         self,
         params: Optional[
@@ -582,6 +745,7 @@ class SandboxManager:
         *,
         docker_image: str,
         image_name: str,
+        expected_image_digest: Optional[str] = None,
         platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
         image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
         image_config_user: Optional[str] = None,
@@ -600,6 +764,14 @@ class SandboxManager:
             platform=platform,
         )
         try:
+            if (
+                expected_image_digest is not None
+                and source.image_digest != expected_image_digest.lower()
+            ):
+                raise RuntimeError(
+                    "Docker image changed after its cache identity was computed. "
+                    "Retry with a fresh image digest."
+                )
             explicit_image_init = (
                 coerce_request(image_init, SandboxImageInit, name="image_init")
                 if image_init is not None

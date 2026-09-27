@@ -201,6 +201,14 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             builder_scratch_mib=65536,
         )
     )
+    resolution = client.sandboxes.get_or_build_image(
+        context_path=".",
+        image_name_prefix="example",
+        force_build=False,
+        image_init={"env": {"MY_SETTING": "value"}},
+        wait_timeout=600,
+    )
+    client.sandboxes.find_ready_image(resolution.image_name)
     client.sandboxes.build_image_from_dockerfile(
         context_path=".",
         image_name="custom",
@@ -332,6 +340,13 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             builder_scratch_mib=65536,
         )
     )
+    resolution = await client.sandboxes.get_or_build_image(
+        docker_image="local/app:latest",
+        image_name_prefix="example",
+        wait=False,
+        expected_image_digest="sha256:" + "a" * 64,
+    )
+    await client.sandboxes.find_ready_image(resolution.image_name)
     await client.sandboxes.build_image_from_dockerfile(
         context_path=".",
         image_name="custom",

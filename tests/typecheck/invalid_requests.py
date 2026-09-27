@@ -30,6 +30,11 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
             "builder_cpus": "eight",  # M
         }
     )
+    client.sandboxes.get_or_build_image(
+        context_path=".",
+        force_build="yes",  # M,P
+        image_init={"command": 42},  # M,P
+    )
     client.sandboxes.build_image_from_dockerfile(
         context_path=".",
         image_name="custom",
@@ -56,6 +61,10 @@ async def invalid_async_requests(client: AsyncHyperbrowser) -> None:
             "input_size_bytes": 123,
             "builder_memory_mib": "16g",  # M
         }
+    )
+    await client.sandboxes.get_or_build_image(
+        docker_image="local/app:latest",
+        wait_timeout="600",  # M,P
     )
     await client.sandboxes.build_image_from_dockerfile(
         context_path=".",
