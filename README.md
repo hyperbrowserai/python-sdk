@@ -388,6 +388,56 @@ Image listings distinguish `ready` from `uploaded`: a completed team image can
 be ready to launch before its durability backup is uploaded. `ready` is `None`
 when talking to an older server. Keep the returned image ID to pin that revision.
 
+### Reuse an image or join a build
+
+`get_or_build_image` provides the same operation on sync and async clients. Give
+it either a remote Dockerfile context or a local Docker image. It derives a name
+from the input identity and image initialization options, reuses a ready team
+image, or submits a build and joins a compatible concurrent build automatically.
+The optional prefix is a namespace, not a fixed image alias: different inputs
+produce different names under the same prefix.
+
+```python
+resolved = client.sandboxes.get_or_build_image(
+    context_path="./app",  # alternatively: docker_image="local/app:latest"
+    image_name_prefix="my-app",
+    wait_timeout=3600,
+)
+print(resolved.outcome)  # "reused", "joined", or "created"
+sandbox = client.sandboxes.create({
+    "image_name": resolved.image_name,
+    "image_id": resolved.image_id,
+})
+```
+
+With `wait=False`, a submitted/joined build is returned as `resolved.build`;
+`image_id` is populated only when ready. `find_ready_image(name)` exposes the
+exact-name lookup separately. Older servers fall back to uploaded-image reuse.
+The public `hyperbrowser.image_builds.image_build_name` helper lets integrations
+derive the same name from an existing context fingerprint or Docker image digest.
+Passing `expected_context_fingerprint` or `expected_image_digest` avoids repeating
+identity discovery; supply a fresh identity for each resolution request. Changes
+between identity discovery and packaging are rejected instead of published under
+the wrong name. Local Docker images must already be available in the daemon.
+
+Automatic local-image identity discovery requires a Docker CLI and Engine
+supporting **API 1.49 or newer (Docker 28.1+)** for platform-specific inspection.
+Upgrade Docker and check for an older `DOCKER_API_VERSION` override if the helper
+reports this requirement. Remote Dockerfile builds do not require local Docker.
+The existing explicit-name import method retains its inspection fallback.
+
+`force_build=True` skips ready-image lookup but still joins matching active builds
+and permits existing layer/artifact caches. Use it to refresh mutable base tags or
+external Dockerfile downloads. Joining does not change an existing builder's
+resources. Lookup and creation use separate API calls; if another build completes
+between them, an additional revision can be submitted.
+
+Each caller owns its polling timeout. Canceling that wait does not cancel an
+accepted backend build. Uploads have a separate inactivity allowance
+(`upload_timeout=600` by default), not a total upload-duration limit. The existing
+`build_image_from_dockerfile` and `build_image_from_docker_image` methods retain
+their explicit-name behavior and continue to report build conflicts directly.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

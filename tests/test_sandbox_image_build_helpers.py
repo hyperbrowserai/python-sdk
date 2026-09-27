@@ -501,6 +501,34 @@ def test_remote_context_preserves_external_and_broken_symlink_metadata(tmp_path)
         packaged.cleanup()
 
 
+def test_existing_import_source_retains_container_fallback(monkeypatch):
+    digest = "sha256:" + "a" * 64
+    calls = []
+
+    def command(args, **kwargs):
+        calls.append(args)
+        if args[1:3] == ["image", "inspect"]:
+            raise RuntimeError('"--platform" requires API version 1.49')
+        if args[1] == "create":
+            output = "stopped-container"
+        elif args[1:3] == ["container", "inspect"]:
+            output = '{"User":"1000"}' if args[4] == "{{json .Config}}" else digest
+        else:
+            assert args[1:] == ["rm", "-f", "stopped-container"]
+            output = ""
+        return subprocess.CompletedProcess(args, 0, stdout=output, stderr="")
+
+    monkeypatch.setattr(image_build, "_run_command_result", command)
+    source = image_build.prepare_docker_image_manifest_source("local/app:latest")
+    try:
+        assert source.image_digest == digest
+        assert source.config == {"User": "1000"}
+        assert not any(args[1] == "rm" for args in calls)
+    finally:
+        source.cleanup()
+    assert calls[-1] == ["docker", "rm", "-f", "stopped-container"]
+
+
 def test_package_docker_image_manifest_preserves_reusable_layers(
     monkeypatch,
     tmp_path,
