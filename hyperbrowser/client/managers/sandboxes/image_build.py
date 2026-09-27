@@ -65,7 +65,6 @@ _RESERVED_IMAGE_INIT_ENV_KEYS = {
     "USER",
     "LOGNAME",
     "SHELL",
-    "PATH",
     "PWD",
     "DISPLAY",
 }

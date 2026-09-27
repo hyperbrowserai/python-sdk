@@ -631,54 +631,79 @@ def test_sync_dockerfile_build_uses_remote_context_by_default(monkeypatch, tmp_p
     assert captured[0].context_manifest.context_mode == "sparse"
 
 
-def test_sync_docker_image_exact_reuse_skips_docker_save(monkeypatch):
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("path_override", [None, "/request/bin:/usr/bin", ""])
+async def test_docker_image_exact_reuse_preserves_env_without_docker_save(
+    monkeypatch, use_async, path_override
+):
     cleaned = []
     source = image_build.DockerImageManifestSource(
         image_digest="sha256:" + "a" * 64,
         config={
             "User": "node",
-            "Env": ["APP_ENV=prod"],
+            "Env": [
+                "APP_ENV=prod",
+                "PATH=/opt/venv/bin:/usr/bin",
+                "VIRTUAL_ENV=/opt/venv",
+                "HOME=/ignored",
+                "SANDBOX_ENABLED=false",
+            ],
             "Entrypoint": ["node"],
             "Cmd": ["server.js"],
             "WorkingDir": "/app",
         },
         cleanup_callback=lambda: cleaned.append(True),
     )
+    module = async_sandbox_module if use_async else sync_sandbox_module
     monkeypatch.setattr(
-        sync_sandbox_module,
+        module,
         "prepare_docker_image_manifest_source",
         lambda *args, **kwargs: source,
     )
     monkeypatch.setattr(
-        sync_sandbox_module,
+        module,
         "package_docker_image_manifest",
         lambda *args, **kwargs: pytest.fail("cache hit unexpectedly ran docker save"),
     )
-    manager = SandboxManager(
+    manager_class = AsyncSandboxManager if use_async else SandboxManager
+    manager = manager_class(
         SimpleNamespace(timeout=30, config=SimpleNamespace(runtime_proxy_override=None))
     )
     reused = []
+
+    def reuse(params):
+        reused.append(params)
+        return SimpleNamespace(hit=True, build=_image_build("completed"))
+
+    async def reuse_async(params):
+        return reuse(params)
+
     monkeypatch.setattr(
-        manager,
-        "reuse_docker_image",
-        lambda params: (
-            reused.append(params)
-            or SimpleNamespace(hit=True, build=_image_build("completed"))
-        ),
+        manager, "reuse_docker_image", reuse_async if use_async else reuse
     )
+    overrides = {"APP_ENV": "test"}
+    if path_override is not None:
+        overrides["PATH"] = path_override
 
     result = manager.build_image_from_docker_image(
         docker_image="local/app:latest",
         image_name="custom",
-        image_init={"env": {"APP_ENV": "test"}, "working_dir": "/srv"},
+        image_init={"env": overrides, "working_dir": "/srv"},
         builder_cpus=8,
         builder_memory_mib=16384,
     )
+    if use_async:
+        result = await result
 
     assert result.status == "completed"
     assert reused[0].source_image_digest == "sha256:" + "a" * 64
     assert reused[0].image_config_user == "node"
-    assert reused[0].image_init.env == {"APP_ENV": "test"}
+    assert reused[0].image_init.env == {
+        "APP_ENV": "test",
+        "VIRTUAL_ENV": "/opt/venv",
+        "PATH": "/opt/venv/bin:/usr/bin" if path_override is None else path_override,
+    }
     assert reused[0].image_init.args == ["node", "server.js"]
     assert reused[0].image_init.working_dir == "/srv"
     assert cleaned == [True]
