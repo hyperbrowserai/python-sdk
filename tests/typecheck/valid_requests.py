@@ -100,7 +100,7 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.agents.cua.start(
         {
             "task": "Complete the task",
-            "llm": "gpt-6-sol",
+            "llm": "gpt-6.1-sol",
             "reasoning_effort": "high",
             "use_custom_api_keys": True,
             "api_keys": {"openai": "openai-key"},
