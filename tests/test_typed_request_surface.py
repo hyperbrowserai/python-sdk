@@ -11,6 +11,7 @@ import hyperbrowser.types as request_types
 
 
 ACTION_TYPES = {
+    "CursorPositionActionParams",
     "ClickActionParams",
     "DragActionParams",
     "GetClipboardTextActionParams",

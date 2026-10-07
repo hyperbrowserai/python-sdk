@@ -23,6 +23,7 @@ class ClickActionParams(TypedDict, total=False):
     y: Optional[int]
     button: ComputerActionMouseButton
     num_clicks: int
+    keys: List[str]
     return_screenshot: bool
 
 
@@ -31,6 +32,7 @@ class DragActionParams(TypedDict, total=False):
 
     action: Required[Literal["drag"]]
     path: Required[List[Coordinate]]
+    keys: List[str]
     return_screenshot: bool
 
 
@@ -82,12 +84,20 @@ class ScreenshotActionParams(TypedDict):
     action: Literal["screenshot"]
 
 
+class CursorPositionActionParams(TypedDict, total=False):
+    """Parameters for reading the desktop cursor position."""
+
+    action: Required[Literal["cursor_position"]]
+    return_screenshot: bool
+
+
 class ScrollActionParams(TypedDict, total=False):
     """Parameters for scrolling at a screen coordinate."""
 
     action: Required[Literal["scroll"]]
-    x: Required[int]
-    y: Required[int]
+    x: Optional[int]
+    y: Optional[int]
+    keys: List[str]
     scroll_x: Required[int]
     scroll_y: Required[int]
     return_screenshot: bool
@@ -129,6 +139,7 @@ ComputerActionParams: TypeAlias = Union[
     PressKeysActionParams,
     MoveMouseActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,

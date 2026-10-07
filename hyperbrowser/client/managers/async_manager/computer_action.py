@@ -12,6 +12,7 @@ from hyperbrowser.models import (
     PressKeysActionParams,
     MoveMouseActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
     TypeTextActionParams,
     Coordinate,
@@ -38,6 +39,7 @@ _ACTION_PARAM_MODELS = {
     ComputerAction.MOVE_MOUSE.value: MoveMouseActionParams,
     ComputerAction.PRESS_KEYS.value: PressKeysActionParams,
     ComputerAction.SCREENSHOT.value: ScreenshotActionParams,
+    ComputerAction.CURSOR_POSITION.value: CursorPositionActionParams,
     ComputerAction.SCROLL.value: ScrollActionParams,
     ComputerAction.TYPE_TEXT.value: TypeTextActionParams,
     ComputerAction.GET_CLIPBOARD_TEXT.value: GetClipboardTextActionParams,
@@ -97,12 +99,14 @@ class ComputerActionManager:
         button: ComputerActionMouseButton = "left",
         num_clicks: int = 1,
         return_screenshot: bool = False,
+        keys: Optional[List[str]] = None,
     ) -> ComputerActionResponse:
         params = ClickActionParams(
             x=x,
             y=y,
             button=button,
             num_clicks=num_clicks,
+            keys=keys,
             return_screenshot=return_screenshot,
         )
         return await self._execute_request(session, params)
@@ -121,6 +125,14 @@ class ComputerActionManager:
         session: Union[SessionDetail, str],
     ) -> ComputerActionResponse:
         params = ScreenshotActionParams()
+        return await self._execute_request(session, params)
+
+    async def cursor_position(
+        self,
+        session: Union[SessionDetail, str],
+        return_screenshot: bool = False,
+    ) -> ComputerActionResponse:
+        params = CursorPositionActionParams(return_screenshot=return_screenshot)
         return await self._execute_request(session, params)
 
     async def press_keys(
@@ -169,6 +181,7 @@ class ComputerActionManager:
         session: Union[SessionDetail, str],
         path: List[Union[CoordinateDict, Coordinate]],
         return_screenshot: bool = False,
+        keys: Optional[List[str]] = None,
     ) -> ComputerActionResponse:
         params = DragActionParams(
             path=[
@@ -176,6 +189,7 @@ class ComputerActionManager:
                 for coordinate in path
             ],
             return_screenshot=return_screenshot,
+            keys=keys,
         )
         return await self._execute_request(session, params)
 
@@ -192,17 +206,19 @@ class ComputerActionManager:
     async def scroll(
         self,
         session: Union[SessionDetail, str],
-        x: int,
-        y: int,
-        scroll_x: int,
-        scroll_y: int,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+        scroll_x: int = 0,
+        scroll_y: int = 0,
         return_screenshot: bool = False,
+        keys: Optional[List[str]] = None,
     ) -> ComputerActionResponse:
         params = ScrollActionParams(
             x=x,
             y=y,
             scroll_x=scroll_x,
             scroll_y=scroll_y,
+            keys=keys,
             return_screenshot=return_screenshot,
         )
         return await self._execute_request(session, params)

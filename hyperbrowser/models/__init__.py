@@ -274,6 +274,7 @@ from .computer_action import (
     MoveMouseActionParams,
     PressKeysActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
     TypeTextActionParams,
     ComputerActionMouseButton,
@@ -283,6 +284,7 @@ from .computer_action import (
     ComputerActionWindow,
     ComputerActionResponseDataClipboardText,
     ComputerActionResponseDataListWindows,
+    ComputerActionResponseDataCursorPosition,
     ComputerActionResponseData,
 )
 from .session import (
@@ -779,6 +781,7 @@ __all__ = [
     "MoveMouseActionParams",
     "PressKeysActionParams",
     "ScreenshotActionParams",
+    "CursorPositionActionParams",
     "ScrollActionParams",
     "TypeTextActionParams",
     "ComputerActionMouseButton",
@@ -788,6 +791,7 @@ __all__ = [
     "ComputerActionWindow",
     "ComputerActionResponseDataClipboardText",
     "ComputerActionResponseDataListWindows",
+    "ComputerActionResponseDataCursorPosition",
     "ComputerActionResponseData",
     # web
     "StartBatchFetchJobParams",

@@ -32,6 +32,7 @@ from .agents import (
     StartMetaComputerUseTaskParams,
 )
 from .computer_action import (
+    CursorPositionActionParams,
     ClickActionParams,
     ComputerActionMouseButton,
     ComputerActionParams,
@@ -212,6 +213,7 @@ __all__ = [
     "PressKeysActionParams",
     "PutSelectionTextActionParams",
     "ScreenshotActionParams",
+    "CursorPositionActionParams",
     "ScrollActionParams",
     "TypeTextActionParams",
     "GetCrawlJobParams",
