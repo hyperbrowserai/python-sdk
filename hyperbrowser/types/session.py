@@ -117,6 +117,7 @@ class StartSessionFromSnapshotParams(TypedDict):
 class CreateSessionParams(TypedDict, total=False):
     """Configuration for creating a browser session."""
 
+    enable_web_mcp: Optional[bool]
     use_ultra_stealth: bool
     use_stealth: bool
     use_proxy: bool

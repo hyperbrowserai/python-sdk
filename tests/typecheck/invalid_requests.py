@@ -83,3 +83,15 @@ async def invalid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.agents.browser_use.start(
         {"task": "Browse", "output_model_schema": True}  # M,P
     )
+
+
+def invalid_webmcp_requests(client: Hyperbrowser) -> None:
+    client.sessions.webmcp.invoke("s", {"toolRef": "t"})  # M,P
+    client.sessions.webmcp.start("s", {"input": {}})  # M,P
+    client.sessions.webmcp.invoke("s", {"tool_ref": "t", "input": []})  # M,P
+    client.sessions.webmcp.get_result("s", "i", {"wait_seconds": "30"})  # M,P
+
+
+async def invalid_async_webmcp_requests(client: AsyncHyperbrowser) -> None:
+    await client.sessions.webmcp.invoke("s", {"tool_ref": "t", "timeout_seconds": "60"})  # M,P
+    await client.sessions.webmcp.get_result("s", "i", {"waitSeconds": 30})  # M,P

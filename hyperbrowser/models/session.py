@@ -129,6 +129,8 @@ class SessionLaunchState(BaseModel):
         populate_by_alias=True,
     )
 
+    enable_web_mcp: Optional[bool] = Field(default=None, alias="enableWebMcp")
+
     use_ultra_stealth: Optional[bool] = Field(default=None, alias="useUltraStealth")
     use_stealth: Optional[bool] = Field(default=None, alias="useStealth")
     use_proxy: Optional[bool] = Field(default=None, alias="useProxy")
@@ -409,6 +411,10 @@ class CreateSessionParams(BaseModel):
 
     model_config = ConfigDict(
         populate_by_alias=True,
+    )
+
+    enable_web_mcp: Optional[bool] = Field(
+        default=None, serialization_alias="enableWebMcp"
     )
 
     use_ultra_stealth: bool = Field(

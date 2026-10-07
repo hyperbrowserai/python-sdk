@@ -1,3 +1,18 @@
+from .webmcp import (
+    WebMCPAnnotations,
+    WebMCPFrame,
+    WebMCPSource,
+    WebMCPTool,
+    WebMCPToolsResponse,
+    WebMCPInvokeParams,
+    WebMCPStartParams,
+    WebMCPResultParams,
+    WebMCPInvokeStatus,
+    WebMCPInvocationStatus,
+    WebMCPInvokeResult,
+    WebMCPInvocationError,
+    WebMCPInvocation,
+)
 from .web.batch_fetch import (
     StartBatchFetchJobParams,
     StartBatchFetchJobResponse,
@@ -436,6 +451,20 @@ from .sandbox import (
 from .team import TeamCreditInfo
 
 __all__ = [
+    "WebMCPAnnotations",
+    "WebMCPFrame",
+    "WebMCPSource",
+    "WebMCPTool",
+    "WebMCPToolsResponse",
+    "WebMCPInvokeParams",
+    "WebMCPStartParams",
+    "WebMCPResultParams",
+    "WebMCPInvokeStatus",
+    "WebMCPInvocationStatus",
+    "WebMCPInvokeResult",
+    "WebMCPInvocationError",
+    "WebMCPInvocation",
+
     # consts
     "ISO639_1",
     "POLLING_ATTEMPTS",
