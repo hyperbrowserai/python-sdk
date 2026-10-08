@@ -56,6 +56,8 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
 
 
 async def invalid_async_requests(client: AsyncHyperbrowser) -> None:
+    await client.computer_action.scroll("session-id", scroll_y=1)  # M,P
+    await client.computer_action.scroll_at_cursor("session-id", keys="Shift_L")  # M,P
     await client.computer_action.drag("session-id", [], keys="Shift_L")  # M,P
     await client.sandboxes.create_image_build(
         {  # P

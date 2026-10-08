@@ -441,7 +441,7 @@ their explicit-name behavior and continue to report build conflicts directly.
 ## Computer action cursor and modifier keys
 
 Read the cursor in physical desktop pixels, or hold an xdotool key chord during a
-click, drag or scroll. Omit scroll coordinates to scroll at the current cursor.
+click, drag or scroll. Use `scroll_at_cursor()` to scroll at the current pointer.
 These methods are available on both `Hyperbrowser` and `AsyncHyperbrowser`.
 
 ```python
@@ -458,13 +458,16 @@ try:
     client.computer_action.drag(
         session, [{"x": 100, "y": 200}, {"x": 200, "y": 300}], keys=["Shift_L"]
     )
-    client.computer_action.scroll(session, scroll_y=2, keys=["Control_L"])
+    client.computer_action.scroll_at_cursor(session, scroll_y=2, keys=["Control_L"])
 finally:
     client.sessions.stop(session.id)
     client.close()
 ```
 
 Existing positional arguments remain unchanged; `keys` is appended and optional.
+`scroll()` still requires coordinates; `scroll_at_cursor()` scrolls at the current
+pointer. `cursor_position()` returns a separate `CursorPositionActionResponse`,
+leaving the existing action enum, request union and response-data union unchanged.
 
 ## License
 
