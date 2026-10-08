@@ -24,7 +24,6 @@ from hyperbrowser.models import (
     ComputerActionResponseDataCursorPosition,
     ComputerActionResponseDataListWindows,
     CursorPositionActionParams,
-    CursorPositionActionResponse,
     DragActionParams,
     ScrollActionParams,
     ScrollAtCursorActionParams,
@@ -70,7 +69,11 @@ def test_cursor_position_helper(manager, by_id):
     driver, session, calls = manager
     result = run(driver.cursor_position("session-id" if by_id else session, True))
     assert result.success
-    assert isinstance(result, CursorPositionActionResponse)
+    assert isinstance(result, ComputerActionResponse)
+    assert (
+        inspect.signature(driver.cursor_position).return_annotation
+        is ComputerActionResponse
+    )
     assert isinstance(result.data, ComputerActionResponseDataCursorPosition)
     assert (result.data.x, result.data.y) == (123, 456)
     assert calls[-1] == (
@@ -211,7 +214,6 @@ def test_new_request_and_response_types_are_public():
 
     assert "CursorPositionActionParams" in models.__all__
     assert "CursorPositionActionParams" in types.__all__
-    assert "CursorPositionActionResponse" in models.__all__
     assert "ScrollAtCursorActionParams" in models.__all__
     assert "ScrollAtCursorActionParams" in types.__all__
     assert ScrollAtCursorActionParams in get_args(ComputerActionParams)
@@ -267,7 +269,7 @@ def test_old_scroll_helper_still_requires_coordinates(manager_class):
 
 
 def test_cursor_response_preserves_failure_without_coordinates():
-    response = CursorPositionActionResponse(success=False, error="action failed")
+    response = ComputerActionResponse(success=False, error="action failed")
     assert response.data is None
     assert response.error == "action failed"
 

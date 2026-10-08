@@ -466,9 +466,9 @@ finally:
 
 Existing positional arguments remain unchanged; `keys` is appended and optional.
 `scroll()` still requires coordinates; `scroll_at_cursor()` scrolls at the current
-pointer. `cursor_position()` returns a dedicated `CursorPositionActionResponse`,
-so its coordinates are accessible after checking that `data` exists. The general
-action enum and request/response unions include cursor position.
+pointer. All actions, including `cursor_position()`, return `ComputerActionResponse`.
+Check that `data` is `ComputerActionResponseDataCursorPosition` before accessing
+coordinates. The general action enum and request/response unions include cursor position.
 
 ## License
 

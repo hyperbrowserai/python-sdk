@@ -15,7 +15,7 @@ from hyperbrowser.models import (
     ComputerActionResponseData,
     ComputerActionResponseDataListWindows,
     ComputerActionResponseDataCursorPosition,
-    CursorPositionActionResponse,
+    ComputerActionResponse,
 )
 from hyperbrowser.types import ScrollActionParams
 from hyperbrowser.tools import WebsiteExtractTool
@@ -397,10 +397,10 @@ def valid_sync_computer_actions(client: Hyperbrowser) -> None:
     client.computer_action._execute_request(
         "session-id", LegacyScrollAtCursorActionParams(scroll_x=0, scroll_y=1)
     )
-    cursor: CursorPositionActionResponse = client.computer_action.cursor_position(
+    cursor: ComputerActionResponse = client.computer_action.cursor_position(
         "session-id"
     )
-    if cursor.data is not None:
+    if isinstance(cursor.data, ComputerActionResponseDataCursorPosition):
         x: int = cursor.data.x
         y: int = cursor.data.y
         print(x, y)
@@ -433,10 +433,10 @@ async def valid_async_computer_actions(client: AsyncHyperbrowser) -> None:
     await client.computer_action._execute_request(
         "session-id", LegacyScrollAtCursorActionParams(scroll_x=0, scroll_y=1)
     )
-    cursor: CursorPositionActionResponse = await client.computer_action.cursor_position(
+    cursor: ComputerActionResponse = await client.computer_action.cursor_position(
         "session-id"
     )
-    if cursor.data is not None:
+    if isinstance(cursor.data, ComputerActionResponseDataCursorPosition):
         x: int = cursor.data.x
         y: int = cursor.data.y
         print(x, y)

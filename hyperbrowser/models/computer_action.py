@@ -294,15 +294,3 @@ class ComputerActionResponse(BaseModel):
     data: Optional[ComputerActionResponseData] = None
     error: Optional[str] = None
     message: Optional[str] = None
-
-
-class CursorPositionActionResponse(BaseModel):
-    """Response from reading the desktop cursor position."""
-
-    model_config = ConfigDict(populate_by_alias=True)
-
-    success: bool
-    screenshot: Optional[str] = None
-    data: Optional[ComputerActionResponseDataCursorPosition] = None
-    error: Optional[str] = None
-    message: Optional[str] = None

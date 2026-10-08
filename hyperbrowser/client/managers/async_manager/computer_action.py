@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Dict, Union, List, Optional, Type, TypeVar
+from typing import Union, List, Optional
 
 from hyperbrowser.client._request import coerce_request, dump_request
 from hyperbrowser.models import (
@@ -13,7 +13,6 @@ from hyperbrowser.models import (
     MoveMouseActionParams,
     ScreenshotActionParams,
     CursorPositionActionParams,
-    CursorPositionActionResponse,
     ScrollAtCursorActionParams,
     ScrollActionParams,
     TypeTextActionParams,
@@ -49,10 +48,6 @@ _ACTION_PARAM_MODELS = {
     ComputerAction.LIST_WINDOWS.value: ListWindowsActionParams,
 }
 
-_ResponseModel = TypeVar(
-    "_ResponseModel", ComputerActionResponse, CursorPositionActionResponse
-)
-
 
 def _action_param_model(params):
     if isinstance(params, ScrollAtCursorActionParams):
@@ -85,14 +80,6 @@ class ComputerActionManager:
         params: Union[ComputerActionParamsDict, ComputerActionParams],
     ) -> ComputerActionResponse:
         payload = dump_request(params, _action_param_model(params), name="params")
-        return await self._post_request(session, payload, ComputerActionResponse)
-
-    async def _post_request(
-        self,
-        session: Union[SessionDetail, str],
-        payload: Dict[str, Any],
-        response_model: Type[_ResponseModel],
-    ) -> _ResponseModel:
         if isinstance(session, str):
             session = await self._client.sessions.get(session)
 
@@ -103,7 +90,7 @@ class ComputerActionManager:
             session.computer_action_endpoint,
             data=payload,
         )
-        return response_model(**response.data)
+        return ComputerActionResponse(**response.data)
 
     async def click(
         self,
@@ -145,10 +132,9 @@ class ComputerActionManager:
         self,
         session: Union[SessionDetail, str],
         return_screenshot: bool = False,
-    ) -> CursorPositionActionResponse:
+    ) -> ComputerActionResponse:
         params = CursorPositionActionParams(return_screenshot=return_screenshot)
-        payload = dump_request(params, CursorPositionActionParams, name="params")
-        return await self._post_request(session, payload, CursorPositionActionResponse)
+        return await self._execute_request(session, params)
 
     async def press_keys(
         self,
