@@ -438,38 +438,6 @@ accepted backend build. Uploads have a separate inactivity allowance
 `build_image_from_dockerfile` and `build_image_from_docker_image` methods retain
 their explicit-name behavior and continue to report build conflicts directly.
 
-## Computer action cursor and modifier keys
-
-Read the cursor in physical desktop pixels, or hold an xdotool key chord during a
-click, drag or scroll. Use `scroll_at_cursor()` to scroll at the current pointer.
-These methods are available on both `Hyperbrowser` and `AsyncHyperbrowser`.
-
-```python
-from hyperbrowser import Hyperbrowser
-from hyperbrowser.models import ComputerActionResponseDataCursorPosition
-
-client = Hyperbrowser()
-session = client.sessions.create()
-try:
-    result = client.computer_action.cursor_position(session)
-    if isinstance(result.data, ComputerActionResponseDataCursorPosition):
-        print(result.data.x, result.data.y)
-    client.computer_action.click(session, 100, 200, keys=["Control_L"])
-    client.computer_action.drag(
-        session, [{"x": 100, "y": 200}, {"x": 200, "y": 300}], keys=["Shift_L"]
-    )
-    client.computer_action.scroll_at_cursor(session, scroll_y=2, keys=["Control_L"])
-finally:
-    client.sessions.stop(session.id)
-    client.close()
-```
-
-Existing positional arguments remain unchanged; `keys` is appended and optional.
-`scroll()` still requires coordinates; `scroll_at_cursor()` scrolls at the current
-pointer. All actions, including `cursor_position()`, return `ComputerActionResponse`.
-Check that `data` is `ComputerActionResponseDataCursorPosition` before accessing
-coordinates. The general action enum and request/response unions include cursor position.
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
