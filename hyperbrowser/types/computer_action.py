@@ -151,6 +151,7 @@ ComputerActionParams: TypeAlias = Union[
     ScreenshotActionParams,
     CursorPositionActionParams,
     ScrollActionParams,
+    ScrollAtCursorActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,
     MouseDownActionParams,

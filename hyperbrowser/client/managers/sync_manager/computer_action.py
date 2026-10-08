@@ -55,6 +55,9 @@ _ResponseModel = TypeVar(
 
 
 def _action_param_model(params):
+    if isinstance(params, ScrollAtCursorActionParams):
+        return ScrollAtCursorActionParams
+
     for model in _ACTION_PARAM_MODELS.values():
         if isinstance(params, model):
             return model
@@ -64,6 +67,8 @@ def _action_param_model(params):
         if isinstance(action, ComputerAction):
             action = action.value
         model = _ACTION_PARAM_MODELS.get(action)
+        if model is ScrollActionParams and "x" not in params and "y" not in params:
+            return ScrollAtCursorActionParams
         if model is not None:
             return model
 
@@ -247,8 +252,7 @@ class ComputerActionManager:
             keys=keys,
             return_screenshot=return_screenshot,
         )
-        payload = dump_request(params, ScrollAtCursorActionParams, name="params")
-        return self._post_request(session, payload, ComputerActionResponse)
+        return self._execute_request(session, params)
 
     def get_clipboard_text(
         self,

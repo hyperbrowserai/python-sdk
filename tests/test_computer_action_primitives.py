@@ -214,18 +214,41 @@ def test_new_request_and_response_types_are_public():
     assert "CursorPositionActionResponse" in models.__all__
     assert "ScrollAtCursorActionParams" in models.__all__
     assert "ScrollAtCursorActionParams" in types.__all__
+    assert ScrollAtCursorActionParams in get_args(ComputerActionParams)
+    assert types.ScrollAtCursorActionParams in get_args(types.ComputerActionParams)
     assert "ComputerActionResponseDataCursorPosition" in models.__all__
 
 
 @pytest.mark.parametrize("keys", [None, [], ["Shift_L"]])
-def test_scroll_at_cursor_dict_and_model_wire_parity(keys):
+def test_scroll_at_cursor_dict_and_model_wire_parity(manager, keys):
+    driver, session, calls = manager
     params = {"action": "scroll", "scroll_x": 0, "scroll_y": -2}
     if keys is not None:
         params["keys"] = keys
     model = ScrollAtCursorActionParams(**params)
-    assert dump_request(
-        params, ScrollAtCursorActionParams, name="params"
-    ) == dump_request(model, ScrollAtCursorActionParams, name="params")
+    run(driver._execute_request(session, params))
+    run(driver._execute_request(session, model))
+    assert calls[-1] == calls[-2]
+    assert calls[-1][2] == {
+        "action": "scroll",
+        "scrollX": 0,
+        "scrollY": -2,
+        "returnScreenshot": False,
+        **({"keys": keys} if keys is not None else {}),
+    }
+
+
+@pytest.mark.parametrize("coordinates", [{"x": 10}, {"y": 20}, {"x": None, "y": None}])
+def test_scroll_requests_reject_incomplete_or_null_coordinates(manager, coordinates):
+    driver, session, calls = manager
+    with pytest.raises(ValueError):
+        run(
+            driver._execute_request(
+                session,
+                {"action": "scroll", "scroll_x": 0, "scroll_y": 1, **coordinates},
+            )
+        )
+    assert not calls
 
 
 def test_old_scroll_model_still_requires_coordinates():

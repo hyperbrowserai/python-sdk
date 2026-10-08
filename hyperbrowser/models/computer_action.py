@@ -232,6 +232,7 @@ ComputerActionParams = Union[
     ScreenshotActionParams,
     CursorPositionActionParams,
     ScrollActionParams,
+    ScrollAtCursorActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,
     MouseDownActionParams,
