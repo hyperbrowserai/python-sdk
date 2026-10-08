@@ -33,7 +33,6 @@ from .agents import (
 )
 from .computer_action import (
     CursorPositionActionParams,
-    ScrollAtCursorActionParams,
     ClickActionParams,
     ComputerActionMouseButton,
     ComputerActionParams,
@@ -215,7 +214,6 @@ __all__ = [
     "PutSelectionTextActionParams",
     "ScreenshotActionParams",
     "CursorPositionActionParams",
-    "ScrollAtCursorActionParams",
     "ScrollActionParams",
     "TypeTextActionParams",
     "GetCrawlJobParams",

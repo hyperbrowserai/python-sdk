@@ -95,21 +95,11 @@ class ScrollActionParams(TypedDict, total=False):
     """Parameters for scrolling at a screen coordinate."""
 
     action: Required[Literal["scroll"]]
-    x: Required[int]
-    y: Required[int]
+    x: Optional[int]
+    y: Optional[int]
     keys: List[str]
     scroll_x: Required[int]
     scroll_y: Required[int]
-    return_screenshot: bool
-
-
-class ScrollAtCursorActionParams(TypedDict, total=False):
-    """Parameters for scrolling without moving the desktop cursor."""
-
-    action: Required[Literal["scroll"]]
-    scroll_x: Required[int]
-    scroll_y: Required[int]
-    keys: List[str]
     return_screenshot: bool
 
 
@@ -149,6 +139,7 @@ ComputerActionParams: TypeAlias = Union[
     PressKeysActionParams,
     MoveMouseActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,
@@ -165,7 +156,6 @@ __all__ = [
     "ComputerActionMouseButton",
     "ComputerActionParams",
     "Coordinate",
-    "CursorPositionActionParams",
     "DragActionParams",
     "GetClipboardTextActionParams",
     "HoldKeyActionParams",
@@ -177,6 +167,5 @@ __all__ = [
     "PutSelectionTextActionParams",
     "ScreenshotActionParams",
     "ScrollActionParams",
-    "ScrollAtCursorActionParams",
     "TypeTextActionParams",
 ]

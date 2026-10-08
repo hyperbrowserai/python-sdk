@@ -24,7 +24,6 @@ ACTION_TYPES = {
     "PutSelectionTextActionParams",
     "ScreenshotActionParams",
     "ScrollActionParams",
-    "ScrollAtCursorActionParams",
     "TypeTextActionParams",
 }
 

@@ -14,6 +14,7 @@ class ComputerAction(str, Enum):
     MOVE_MOUSE = "move_mouse"
     PRESS_KEYS = "press_keys"
     SCREENSHOT = "screenshot"
+    CURSOR_POSITION = "cursor_position"
     SCROLL = "scroll"
     TYPE_TEXT = "type_text"
     GET_CLIPBOARD_TEXT = "get_clipboard_text"
@@ -137,7 +138,7 @@ class CursorPositionActionParams(BaseModel):
 
     model_config = ConfigDict(use_enum_values=True)
 
-    action: Literal["cursor_position"] = "cursor_position"
+    action: Literal[ComputerAction.CURSOR_POSITION] = ComputerAction.CURSOR_POSITION
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )
@@ -149,25 +150,11 @@ class ScrollActionParams(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     action: Literal[ComputerAction.SCROLL] = ComputerAction.SCROLL
-    x: int
-    y: int
+    x: Optional[int] = None
+    y: Optional[int] = None
     keys: Optional[List[str]] = None
     scroll_x: int = Field(serialization_alias="scrollX")
     scroll_y: int = Field(serialization_alias="scrollY")
-    return_screenshot: bool = Field(
-        serialization_alias="returnScreenshot", default=False
-    )
-
-
-class ScrollAtCursorActionParams(BaseModel):
-    """Parameters for scrolling without moving the desktop cursor."""
-
-    model_config = ConfigDict(use_enum_values=True)
-
-    action: Literal[ComputerAction.SCROLL] = ComputerAction.SCROLL
-    scroll_x: int = Field(serialization_alias="scrollX")
-    scroll_y: int = Field(serialization_alias="scrollY")
-    keys: Optional[List[str]] = None
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )
@@ -229,6 +216,7 @@ ComputerActionParams = Union[
     PressKeysActionParams,
     MoveMouseActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,
@@ -273,6 +261,7 @@ class ComputerActionResponseDataCursorPosition(BaseModel):
 
 
 ComputerActionResponseData = Union[
+    ComputerActionResponseDataCursorPosition,
     ComputerActionResponseDataListWindows,
     ComputerActionResponseDataClipboardText,
 ]
@@ -288,17 +277,5 @@ class ComputerActionResponse(BaseModel):
     success: bool
     screenshot: Optional[str] = None
     data: Optional[ComputerActionResponseData] = None
-    error: Optional[str] = None
-    message: Optional[str] = None
-
-
-class CursorPositionActionResponse(BaseModel):
-    """Response from reading the desktop cursor position."""
-
-    model_config = ConfigDict(populate_by_alias=True)
-
-    success: bool
-    screenshot: Optional[str] = None
-    data: Optional[ComputerActionResponseDataCursorPosition] = None
     error: Optional[str] = None
     message: Optional[str] = None
