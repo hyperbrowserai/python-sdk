@@ -23,6 +23,7 @@ class ClickActionParams(TypedDict, total=False):
     y: Optional[int]
     button: ComputerActionMouseButton
     num_clicks: int
+    keys: List[str]
     return_screenshot: bool
 
 
@@ -31,6 +32,7 @@ class DragActionParams(TypedDict, total=False):
 
     action: Required[Literal["drag"]]
     path: Required[List[Coordinate]]
+    keys: List[str]
     return_screenshot: bool
 
 
@@ -82,14 +84,32 @@ class ScreenshotActionParams(TypedDict):
     action: Literal["screenshot"]
 
 
+class CursorPositionActionParams(TypedDict, total=False):
+    """Parameters for reading the desktop cursor position."""
+
+    action: Required[Literal["cursor_position"]]
+    return_screenshot: bool
+
+
 class ScrollActionParams(TypedDict, total=False):
     """Parameters for scrolling at a screen coordinate."""
 
     action: Required[Literal["scroll"]]
     x: Required[int]
     y: Required[int]
+    keys: List[str]
     scroll_x: Required[int]
     scroll_y: Required[int]
+    return_screenshot: bool
+
+
+class ScrollAtCursorActionParams(TypedDict, total=False):
+    """Parameters for scrolling without moving the desktop cursor."""
+
+    action: Required[Literal["scroll"]]
+    scroll_x: Required[int]
+    scroll_y: Required[int]
+    keys: List[str]
     return_screenshot: bool
 
 
@@ -129,7 +149,9 @@ ComputerActionParams: TypeAlias = Union[
     PressKeysActionParams,
     MoveMouseActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
+    ScrollAtCursorActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,
     MouseDownActionParams,
@@ -145,6 +167,7 @@ __all__ = [
     "ComputerActionMouseButton",
     "ComputerActionParams",
     "Coordinate",
+    "CursorPositionActionParams",
     "DragActionParams",
     "GetClipboardTextActionParams",
     "HoldKeyActionParams",
@@ -156,5 +179,6 @@ __all__ = [
     "PutSelectionTextActionParams",
     "ScreenshotActionParams",
     "ScrollActionParams",
+    "ScrollAtCursorActionParams",
     "TypeTextActionParams",
 ]

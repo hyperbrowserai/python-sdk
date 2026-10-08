@@ -14,6 +14,7 @@ class ComputerAction(str, Enum):
     MOVE_MOUSE = "move_mouse"
     PRESS_KEYS = "press_keys"
     SCREENSHOT = "screenshot"
+    CURSOR_POSITION = "cursor_position"
     SCROLL = "scroll"
     TYPE_TEXT = "type_text"
     GET_CLIPBOARD_TEXT = "get_clipboard_text"
@@ -43,6 +44,7 @@ class ClickActionParams(BaseModel):
     y: Optional[int] = Field(default=None)
     button: ComputerActionMouseButton = Field(default="left")
     num_clicks: int = Field(serialization_alias="numClicks", default=1)
+    keys: Optional[List[str]] = None
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )
@@ -55,6 +57,7 @@ class DragActionParams(BaseModel):
 
     action: Literal[ComputerAction.DRAG] = ComputerAction.DRAG
     path: List[Coordinate]
+    keys: Optional[List[str]] = None
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )
@@ -130,6 +133,17 @@ class ScreenshotActionParams(BaseModel):
     action: Literal[ComputerAction.SCREENSHOT] = ComputerAction.SCREENSHOT
 
 
+class CursorPositionActionParams(BaseModel):
+    """Parameters for reading the desktop cursor position."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.CURSOR_POSITION] = ComputerAction.CURSOR_POSITION
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
 class ScrollActionParams(BaseModel):
     """Parameters for scroll action."""
 
@@ -138,8 +152,23 @@ class ScrollActionParams(BaseModel):
     action: Literal[ComputerAction.SCROLL] = ComputerAction.SCROLL
     x: int
     y: int
+    keys: Optional[List[str]] = None
     scroll_x: int = Field(serialization_alias="scrollX")
     scroll_y: int = Field(serialization_alias="scrollY")
+    return_screenshot: bool = Field(
+        serialization_alias="returnScreenshot", default=False
+    )
+
+
+class ScrollAtCursorActionParams(BaseModel):
+    """Parameters for scrolling without moving the desktop cursor."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    action: Literal[ComputerAction.SCROLL] = ComputerAction.SCROLL
+    scroll_x: int = Field(serialization_alias="scrollX")
+    scroll_y: int = Field(serialization_alias="scrollY")
+    keys: Optional[List[str]] = None
     return_screenshot: bool = Field(
         serialization_alias="returnScreenshot", default=False
     )
@@ -201,7 +230,9 @@ ComputerActionParams = Union[
     PressKeysActionParams,
     MoveMouseActionParams,
     ScreenshotActionParams,
+    CursorPositionActionParams,
     ScrollActionParams,
+    ScrollAtCursorActionParams,
     TypeTextActionParams,
     HoldKeyActionParams,
     MouseDownActionParams,
@@ -237,7 +268,15 @@ class ComputerActionResponseDataListWindows(BaseModel):
     windows: List[ComputerActionWindow] = Field(default_factory=list)
 
 
+class ComputerActionResponseDataCursorPosition(BaseModel):
+    """Desktop cursor coordinates in physical screen pixels."""
+
+    x: int
+    y: int
+
+
 ComputerActionResponseData = Union[
+    ComputerActionResponseDataCursorPosition,
     ComputerActionResponseDataListWindows,
     ComputerActionResponseDataClipboardText,
 ]
