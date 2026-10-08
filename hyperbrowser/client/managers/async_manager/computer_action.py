@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Union, List, Optional
+from typing import Any, Dict, Union, List, Optional, Type, TypeVar
 
 from hyperbrowser.client._request import coerce_request, dump_request
 from hyperbrowser.models import (
@@ -13,6 +13,8 @@ from hyperbrowser.models import (
     MoveMouseActionParams,
     ScreenshotActionParams,
     CursorPositionActionParams,
+    CursorPositionActionResponse,
+    ScrollAtCursorActionParams,
     ScrollActionParams,
     TypeTextActionParams,
     Coordinate,
@@ -47,6 +49,10 @@ _ACTION_PARAM_MODELS = {
     ComputerAction.LIST_WINDOWS.value: ListWindowsActionParams,
 }
 
+_ResponseModel = TypeVar(
+    "_ResponseModel", ComputerActionResponse, CursorPositionActionResponse
+)
+
 
 def _action_param_model(params):
     for model in _ACTION_PARAM_MODELS.values():
@@ -73,23 +79,26 @@ class ComputerActionManager:
         session: Union[SessionDetail, str],
         params: Union[ComputerActionParamsDict, ComputerActionParams],
     ) -> ComputerActionResponse:
+        payload = dump_request(params, _action_param_model(params), name="params")
+        return await self._post_request(session, payload, ComputerActionResponse)
+
+    async def _post_request(
+        self,
+        session: Union[SessionDetail, str],
+        payload: Dict[str, Any],
+        response_model: Type[_ResponseModel],
+    ) -> _ResponseModel:
         if isinstance(session, str):
             session = await self._client.sessions.get(session)
 
         if not session.computer_action_endpoint:
             raise ValueError("Computer action endpoint not available for this session")
 
-        payload = dump_request(
-            params,
-            _action_param_model(params),
-            name="params",
-        )
-
         response = await self._client.transport.post(
             session.computer_action_endpoint,
             data=payload,
         )
-        return ComputerActionResponse(**response.data)
+        return response_model(**response.data)
 
     async def click(
         self,
@@ -131,9 +140,10 @@ class ComputerActionManager:
         self,
         session: Union[SessionDetail, str],
         return_screenshot: bool = False,
-    ) -> ComputerActionResponse:
+    ) -> CursorPositionActionResponse:
         params = CursorPositionActionParams(return_screenshot=return_screenshot)
-        return await self._execute_request(session, params)
+        payload = dump_request(params, CursorPositionActionParams, name="params")
+        return await self._post_request(session, payload, CursorPositionActionResponse)
 
     async def press_keys(
         self,
@@ -206,10 +216,10 @@ class ComputerActionManager:
     async def scroll(
         self,
         session: Union[SessionDetail, str],
-        x: Optional[int] = None,
-        y: Optional[int] = None,
-        scroll_x: int = 0,
-        scroll_y: int = 0,
+        x: int,
+        y: int,
+        scroll_x: int,
+        scroll_y: int,
         return_screenshot: bool = False,
         keys: Optional[List[str]] = None,
     ) -> ComputerActionResponse:
@@ -222,6 +232,23 @@ class ComputerActionManager:
             return_screenshot=return_screenshot,
         )
         return await self._execute_request(session, params)
+
+    async def scroll_at_cursor(
+        self,
+        session: Union[SessionDetail, str],
+        scroll_x: int = 0,
+        scroll_y: int = 0,
+        return_screenshot: bool = False,
+        keys: Optional[List[str]] = None,
+    ) -> ComputerActionResponse:
+        params = ScrollAtCursorActionParams(
+            scroll_x=scroll_x,
+            scroll_y=scroll_y,
+            keys=keys,
+            return_screenshot=return_screenshot,
+        )
+        payload = dump_request(params, ScrollAtCursorActionParams, name="params")
+        return await self._post_request(session, payload, ComputerActionResponse)
 
     async def get_clipboard_text(
         self,

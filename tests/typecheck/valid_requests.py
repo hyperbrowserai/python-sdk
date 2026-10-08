@@ -10,7 +10,13 @@ from hyperbrowser.models import (
     FetchParams as LegacyFetchParams,
     SandboxImageBuildListParams as LegacySandboxImageBuildListParams,
     VolumeListParams as LegacyVolumeListParams,
+    ScrollActionParams as LegacyScrollActionParams,
+    ComputerActionResponseData,
+    ComputerActionResponseDataListWindows,
+    ComputerActionResponseDataCursorPosition,
+    CursorPositionActionResponse,
 )
+from hyperbrowser.types import ScrollActionParams
 from hyperbrowser.tools import WebsiteExtractTool
 
 
@@ -379,10 +385,18 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
 
 def valid_sync_computer_actions(client: Hyperbrowser) -> None:
     client.computer_action.cursor_position("session-id", return_screenshot=True)
+    client.computer_action._execute_request("session-id", {"action": "cursor_position"})
     client.computer_action.click("session-id", 10, 20, keys=["Control_L"])
     client.computer_action.drag("session-id", [{"x": 1, "y": 2}], keys=["Shift_L"])
-    client.computer_action.scroll("session-id", scroll_y=1, keys=["Alt_L"])
-    client.computer_action._execute_request("session-id", {"action": "cursor_position"})
+    client.computer_action.scroll("session-id", 10, 20, 0, 1, keys=["Alt_L"])
+    client.computer_action.scroll_at_cursor("session-id", scroll_y=1, keys=["Alt_L"])
+    cursor: CursorPositionActionResponse = client.computer_action.cursor_position(
+        "session-id"
+    )
+    if cursor.data is not None:
+        x: int = cursor.data.x
+        y: int = cursor.data.y
+        print(x, y)
 
 
 def valid_sync_process_collection(client: Hyperbrowser) -> None:
@@ -395,14 +409,40 @@ def valid_sync_process_collection(client: Hyperbrowser) -> None:
 
 async def valid_async_computer_actions(client: AsyncHyperbrowser) -> None:
     await client.computer_action.cursor_position("session-id")
+    await client.computer_action._execute_request(
+        "session-id", {"action": "cursor_position"}
+    )
     await client.computer_action.click("session-id", keys=["Control_L"])
     await client.computer_action.drag(
         "session-id", [{"x": 1, "y": 2}], keys=["Shift_L"]
     )
-    await client.computer_action.scroll("session-id", scroll_y=1, keys=["Alt_L"])
-    await client.computer_action._execute_request(
-        "session-id", {"action": "cursor_position"}
+    await client.computer_action.scroll("session-id", 10, 20, 0, 1, keys=["Alt_L"])
+    await client.computer_action.scroll_at_cursor(
+        "session-id", scroll_y=1, keys=["Alt_L"]
     )
+    cursor: CursorPositionActionResponse = await client.computer_action.cursor_position(
+        "session-id"
+    )
+    if cursor.data is not None:
+        x: int = cursor.data.x
+        y: int = cursor.data.y
+        print(x, y)
+
+
+def existing_scroll_model_consumer(params: LegacyScrollActionParams) -> int:
+    return params.x + params.y
+
+
+def existing_scroll_dict_consumer(params: ScrollActionParams) -> int:
+    return params["x"] + params["y"]
+
+
+def shared_response_consumer(data: ComputerActionResponseData) -> str:
+    if isinstance(data, ComputerActionResponseDataCursorPosition):
+        return str(data.x)
+    if isinstance(data, ComputerActionResponseDataListWindows):
+        return data.active_window_id
+    return data.clipboard_text or ""
 
 
 async def valid_async_process_collection(client: AsyncHyperbrowser) -> None:
