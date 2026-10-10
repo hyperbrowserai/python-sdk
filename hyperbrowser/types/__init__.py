@@ -5,6 +5,11 @@ known request keys to their wire aliases while leaving user-owned mappings, such
 as JSON Schema objects, untouched.
 """
 
+from .webmcp import (
+    WebMCPInvokeParams,
+    WebMCPStartParams,
+    WebMCPResultParams,
+)
 from ._json import (
     JSONSchema,
     JSONSchemaInput,
@@ -178,6 +183,10 @@ from .web import (
 
 
 __all__ = [
+    "WebMCPInvokeParams",
+    "WebMCPStartParams",
+    "WebMCPResultParams",
+
     "JSONSchema",
     "JSONSchemaInput",
     "JSONSchemaObject",

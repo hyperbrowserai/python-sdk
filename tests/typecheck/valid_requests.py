@@ -466,3 +466,24 @@ async def valid_async_process_collection(client: AsyncHyperbrowser) -> None:
     )
     await process.wait(timeout_sec=10)
     await process.disconnect()
+
+
+def valid_webmcp_requests(client: Hyperbrowser) -> None:
+    from hyperbrowser.models import WebMCPInvokeParams, WebMCPStartParams, WebMCPResultParams
+    client.sessions.create({"enable_web_mcp": True})
+    tools = client.sessions.webmcp.list_tools("session")
+    tool = tools.tools[0]
+    client.sessions.webmcp.invoke("session", {"tool_ref": tool.tool_ref, "input": {"customKey": 1}})
+    client.sessions.webmcp.invoke("session", WebMCPInvokeParams(tool_ref=tool.tool_ref))
+    handle = client.sessions.webmcp.start("session", WebMCPStartParams(tool_ref=tool.tool_ref, timeout_seconds=600))
+    client.sessions.webmcp.get_result("session", handle.invocation_id, WebMCPResultParams(wait_seconds=30))
+    client.sessions.webmcp.cancel("session", handle.invocation_id)
+
+
+async def valid_async_webmcp_requests(client: AsyncHyperbrowser) -> None:
+    await client.sessions.create({"enable_web_mcp": True})
+    tools = await client.sessions.webmcp.list_tools("session")
+    await client.sessions.webmcp.invoke("session", {"tool_ref": tools.tools[0].tool_ref})
+    handle = await client.sessions.webmcp.start("session", {"tool_ref": tools.tools[0].tool_ref, "timeout_seconds": 600})
+    await client.sessions.webmcp.get_result("session", handle.invocation_id, {"wait_seconds": 30})
+    await client.sessions.webmcp.cancel("session", handle.invocation_id)

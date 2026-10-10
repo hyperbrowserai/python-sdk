@@ -55,7 +55,14 @@ class TransportStrategy(ABC):
         pass
 
     @abstractmethod
-    def get(self, url: str, params: Optional[dict] = None) -> APIResponse:
+    def get(
+        self,
+        url: str,
+        params: Optional[dict] = None,
+        follow_redirects: bool = False,
+        *,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         pass
 
     @abstractmethod

@@ -64,6 +64,7 @@ class AsyncTransport(TransportStrategy):
                     )
                 return APIResponse.from_status(response.status_code)
         except httpx.HTTPStatusError as e:
+            error_data = None
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
@@ -71,6 +72,13 @@ class AsyncTransport(TransportStrategy):
                 message = str(e)
             raise HyperbrowserError(
                 message,
+                code=(
+                    error_data.get("code")
+                    if isinstance(error_data, dict)
+                    and isinstance(error_data.get("code"), str)
+                    else None
+                ),
+                details=error_data,
                 status_code=response.status_code,
                 response=response,
                 original_error=e,
@@ -108,15 +116,23 @@ class AsyncTransport(TransportStrategy):
             )
 
     async def get(
-        self, url: str, params: Optional[dict] = None, follow_redirects: bool = False
+        self,
+        url: str,
+        params: Optional[dict] = None,
+        follow_redirects: bool = False,
+        *,
+        timeout: Optional[float] = None,
     ) -> APIResponse:
         if params:
             params = {k: v for k, v in params.items() if v is not None}
+        kwargs = {}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
         failed_attempt = 1
         while True:
             try:
                 response = await self.client.get(
-                    url, params=params, follow_redirects=follow_redirects
+                    url, params=params, follow_redirects=follow_redirects, **kwargs
                 )
                 return await self._handle_response(response)
             except BaseException as cause:

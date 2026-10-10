@@ -34,6 +34,40 @@ Profile names must match `^[A-Za-z0-9._-]+$`.
 
 `base_url` and `HYPERBROWSER_BASE_URL` accept either `https://host` or `https://host/api`. The client normalizes both to the same control-plane base URL.
 
+## WebMCP page tools
+
+Create a session with `{"enable_web_mcp": True}` (default: false), then navigate
+to a page that exposes WebMCP tools using Playwright. With that session open:
+
+```python
+discovery = client.sessions.webmcp.list_tools(session.id)
+# Select a tool using its name, source page/frame, and input schema.
+tool = next(tool for tool in discovery.tools if tool.name == "search")
+result = client.sessions.webmcp.invoke(session.id, {
+    "tool_ref": tool.tool_ref,
+    "input": {"query": "flights to Tokyo"},  # Match the selected tool's schema.
+})
+print(result.status, result.output)
+```
+
+For long-running tools or forms awaiting human submission, use
+`client.sessions.webmcp.start(session_id, params)`, then
+`client.sessions.webmcp.get_result(session_id, invocation_id, {"wait_seconds": 30})`
+until the status is terminal. `client.sessions.webmcp.cancel(session_id, invocation_id)`
+requests best-effort cancellation. Blocking invocation defaults to 60 seconds
+(maximum 120); `start` defaults to 300 seconds (maximum 3,600) via `timeout_seconds`.
+All five methods also work with `AsyncHyperbrowser` by adding `await`.
+
+Discover tools again after navigation. Invocations never automatically retry;
+losing a response can leave an unknown outcome. Handles are ephemeral and
+terminal results expire after 10 minutes or earlier eviction. Check result
+status and truncation metadata before using output. Tool input and output keys
+are not renamed. Request TypedDicts are available in `hyperbrowser.types`, and
+Pydantic request/response models in `hyperbrowser.models`.
+
+See the [WebMCP guide](https://hyperbrowser.ai/docs/sessions/webmcp) for complete
+examples, cancellation behavior, human submission, and limits.
+
 ## Usage
 
 Hyperbrowser 1.0 accepts plain dictionaries for request parameters. Method

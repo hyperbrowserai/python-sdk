@@ -1,4 +1,6 @@
 import warnings
+
+from .webmcp import WebMCPManager
 from collections.abc import Mapping
 from typing import IO, List, Optional, Union, overload
 
@@ -68,6 +70,7 @@ class SessionManager:
     def __init__(self, client):
         self._client = client
         self.event_logs = SessionEventLogsManager(client)
+        self.webmcp = WebMCPManager(client)
 
     async def create(
         self,
