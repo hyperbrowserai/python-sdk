@@ -3,6 +3,8 @@ from hyperbrowser.tools import WebsiteExtractTool
 
 
 def invalid_sync_requests(client: Hyperbrowser) -> None:
+    client.computer_action.click("session-id", keys="Shift_L")  # M,P
+    client.computer_action.scroll("session-id", keys=[123])  # M,P
     client.sessions.create({"made_up_option": True})  # M,P
     client.web.fetch({})  # M,P
     client.web.fetch({"url": 42})  # M,P
@@ -54,6 +56,9 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
 
 
 async def invalid_async_requests(client: AsyncHyperbrowser) -> None:
+    await client.computer_action.scroll("session-id", scroll_y=1)  # M,P
+    await client.computer_action.scroll_at_cursor("session-id", keys="Shift_L")  # M,P
+    await client.computer_action.drag("session-id", [], keys="Shift_L")  # M,P
     await client.sandboxes.create_image_build(
         {  # P
             "image_name": "custom",
