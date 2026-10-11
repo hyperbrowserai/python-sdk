@@ -10,6 +10,7 @@ from .managers.sync_manager.extension import ExtensionManager
 from .managers.sync_manager.extract import ExtractManager
 from .managers.sync_manager.profile import ProfileManager
 from .managers.sync_manager.sandbox import SandboxManager
+from .managers.sync_manager.secret import SecretManager
 from .managers.sync_manager.scrape import ScrapeManager
 from .managers.sync_manager.session import SessionManager
 from .managers.sync_manager.team import TeamManager
@@ -49,6 +50,7 @@ class Hyperbrowser(HyperbrowserBase):
         self.computer_action = ComputerActionManager(self)
         self.sandboxes = SandboxManager(self)
         self.volumes = VolumeManager(self)
+        self.secrets = SecretManager(self)
 
     def close(self) -> None:
         self.transport.close()

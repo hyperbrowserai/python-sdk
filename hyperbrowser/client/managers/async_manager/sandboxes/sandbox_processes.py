@@ -1,8 +1,8 @@
 import asyncio
 import base64
-from typing import AsyncIterator, Dict, Optional, Union
+from typing import AsyncIterator, Awaitable, Callable, Dict, List, Optional, Union
 
-from ...._request import coerce_request, dump_request
+from ...._request import coerce_request
 from .....models.sandbox import (
     SandboxExecParams,
     SandboxProcessExitEvent,
@@ -12,11 +12,19 @@ from .....models.sandbox import (
     SandboxProcessStdinParams,
     SandboxProcessSummary,
 )
+from .....exceptions import HyperbrowserError
+from .....models.secret import SandboxResolvedSecret
+from .....secrets_common import secret_process_failed_error, secret_wait_chunk_ms
 from .....types import (
     SandboxExecParams as SandboxExecParamsDict,
     SandboxProcessStdinParams as SandboxProcessStdinParamsDict,
 )
-from ...sandboxes.shared import _normalize_exec_params
+from ...sandboxes.shared import (
+    SecretReferences,
+    _normalize_exec_params,
+    _runtime_process_payload,
+    _secret_process_payload,
+)
 from ...sandboxes.process_output import (
     DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
     ProcessOutput,
@@ -35,6 +43,9 @@ class SandboxProcessHandle:
         self._collector = None
         self._events = None
         self._changed = asyncio.Event()
+        # The secret versions this process received, when it was started
+        # with secrets; None otherwise.
+        self.secrets: Optional[List[SandboxResolvedSecret]] = None
 
     @property
     def id(self) -> str:
@@ -260,8 +271,17 @@ class SandboxProcessHandle:
 
 
 class SandboxProcessesApi:
-    def __init__(self, transport: RuntimeTransport):
+    def __init__(
+        self,
+        transport: RuntimeTransport,
+        start_secret_process: Optional[
+            Callable[[Dict[str, object]], Awaitable[dict]]
+        ] = None,
+        sandbox_id: Optional[str] = None,
+    ):
         self._transport = transport
+        self._start_secret_process = start_secret_process
+        self._sandbox_id = sandbox_id
 
     async def exec(
         self,
@@ -273,6 +293,7 @@ class SandboxProcessesApi:
         timeout_sec: Optional[int] = None,
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
+        secrets: Optional[SecretReferences] = None,
     ) -> SandboxProcessResult:
         handle = await self.start(
             input,
@@ -282,7 +303,10 @@ class SandboxProcessesApi:
             timeout_sec=timeout_sec,
             run_as=run_as,
             max_output_bytes=max_output_bytes,
+            secrets=secrets,
         )
+        if handle.secrets is not None:
+            return await self._finish_secret_exec(handle)
         try:
             return await handle.wait()
         finally:
@@ -298,7 +322,14 @@ class SandboxProcessesApi:
         timeout_sec: Optional[int] = None,
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
+        secrets: Optional[SecretReferences] = None,
     ) -> SandboxProcessHandle:
+        """Start a process.
+
+        With ``secrets``, the start goes through the control API, which has the
+        platform decrypt them into the process environment; output is then
+        read with ``wait()`` rather than collected from the start.
+        """
         validate_output_limit(max_output_bytes)
         params = _normalize_exec_params(
             input,
@@ -307,11 +338,14 @@ class SandboxProcessesApi:
             timeout_ms=timeout_ms,
             timeout_sec=timeout_sec,
             run_as=run_as,
+            secrets=secrets,
         )
+        if params.secrets:
+            return await self._start_with_secrets(params)
         events = self._transport.stream_sse(
             "/sandbox/processes",
             method="POST",
-            json_body=dump_request(params, SandboxExecParams),
+            json_body=_runtime_process_payload(params),
         )
         try:
             started = await events.__anext__()
@@ -327,6 +361,63 @@ class SandboxProcessesApi:
         handle._output = ProcessOutput(handle.id, max_output_bytes)
         handle._collector = asyncio.create_task(handle._collect())
         return handle
+
+    async def _start_with_secrets(
+        self, params: SandboxExecParams
+    ) -> SandboxProcessHandle:
+        if self._start_secret_process is None:
+            raise HyperbrowserError(
+                "Starting a process with secrets needs a sandbox handle; use "
+                "client.sandboxes.get() and its processes API",
+                code="secrets_unsupported",
+            )
+        payload = await self._start_secret_process(_secret_process_payload(params))
+        handle = SandboxProcessHandle(
+            self._transport, SandboxProcessSummary(**payload["process"])
+        )
+        handle.secrets = [
+            SandboxResolvedSecret(**entry) for entry in payload.get("secrets") or []
+        ]
+        return handle
+
+    async def _finish_secret_exec(
+        self, handle: SandboxProcessHandle
+    ) -> SandboxProcessResult:
+        """Close stdin and wait for the result, as one-shot exec does.
+
+        The process may still be running with its secrets after a failure here,
+        so failures name it instead of looking like a safe retry.
+        """
+        sandbox_id = self._sandbox_id or ""
+        try:
+            await handle.write_stdin(eof=True)
+        except HyperbrowserError as error:
+            # 409: the command already exited, like a pipe whose reader quit
+            # early. Its result is still reported.
+            if error.status_code != 409:
+                raise secret_process_failed_error(
+                    sandbox_id, handle.id, "closing its stdin", error
+                )
+        except Exception as error:
+            raise secret_process_failed_error(
+                sandbox_id, handle.id, "closing its stdin", error
+            )
+        chunk_ms = secret_wait_chunk_ms(getattr(self._transport, "_timeout", None))
+        while True:
+            try:
+                return await handle.wait(timeout_ms=chunk_ms)
+            except HyperbrowserError as error:
+                # The command's own timeout is enforced in the sandbox, so an
+                # expired wait only means it is still running.
+                if error.status_code == 408:
+                    continue
+                raise secret_process_failed_error(
+                    sandbox_id, handle.id, "waiting for its result", error
+                )
+            except Exception as error:
+                raise secret_process_failed_error(
+                    sandbox_id, handle.id, "waiting for its result", error
+                )
 
     async def get(self, process_id: str) -> SandboxProcessHandle:
         payload = await self._transport.request_json(f"/sandbox/processes/{process_id}")

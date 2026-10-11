@@ -2,6 +2,8 @@ from typing import Dict, List, Literal, Optional, Union
 
 from typing_extensions import Required, TypeAlias, TypedDict
 
+from .secret import SecretReferenceInput
+
 
 SandboxStatus: TypeAlias = Literal["active", "closed", "error", "close-error"]
 SandboxRegion: TypeAlias = Literal[
@@ -97,6 +99,7 @@ class CreateSandboxFromImageParams(_CreateSandboxCommon, total=False):
     cpu: Optional[int]
     memory_mib: Optional[int]
     disk_mib: Optional[int]
+    secrets: Optional[Dict[str, SecretReferenceInput]]
 
 
 CreateSandboxParams: TypeAlias = Union[
@@ -249,6 +252,7 @@ class SandboxExecParams(TypedDict, total=False):
     timeout_sec: Optional[int]
     run_as: Optional[str]
     use_shell: Optional[bool]
+    secrets: Optional[Dict[str, SecretReferenceInput]]
 
 
 class SandboxProcessListParams(TypedDict, total=False):

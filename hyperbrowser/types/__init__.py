@@ -153,6 +153,13 @@ from .session import (
     UpdateSessionScreenParams,
     UpdateSessionSolveCaptchasParams,
 )
+from .secret import (
+    CreateSecretParams,
+    SecretListParams,
+    SecretReference,
+    SecretReferenceInput,
+    UpdateSecretParams,
+)
 from .volume import CreateVolumeParams, VolumeListParams
 from .web import (
     FetchBrowserLocationOptions,
@@ -186,7 +193,6 @@ __all__ = [
     "WebMCPInvokeParams",
     "WebMCPStartParams",
     "WebMCPResultParams",
-
     "JSONSchema",
     "JSONSchemaInput",
     "JSONSchemaObject",
@@ -322,6 +328,11 @@ __all__ = [
     "UpdateSessionProxyParams",
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
+    "CreateSecretParams",
+    "SecretListParams",
+    "SecretReference",
+    "SecretReferenceInput",
+    "UpdateSecretParams",
     "CreateVolumeParams",
     "VolumeListParams",
     "FetchBrowserLocationOptions",

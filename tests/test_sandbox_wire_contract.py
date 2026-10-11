@@ -1679,6 +1679,7 @@ def test_sync_sandbox_handle_exec_string_call_supports_run_as(monkeypatch):
                 "timeout_sec": None,
                 "run_as": "root",
                 "max_output_bytes": 64 * 1024 * 1024,
+                "secrets": None,
             },
         )
     ]

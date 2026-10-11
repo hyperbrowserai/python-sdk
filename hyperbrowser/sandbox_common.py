@@ -1,5 +1,6 @@
 import json
 import random
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -69,6 +70,37 @@ def get_retry_delay_seconds(failed_attempt: int) -> float:
     return random.uniform(maximum_delay / 2, maximum_delay)
 
 
+SERVER_ERROR_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")
+
+
+def error_payload_code(payload: Any) -> Optional[str]:
+    """Return the API's machine code from an error body.
+
+    Some routes send the code as ``error`` next to a message, for example
+    ``API_KEY_SCOPE_DENIED``.
+    """
+    if not isinstance(payload, dict):
+        return None
+    code = payload.get("code")
+    if isinstance(code, str) and code.strip():
+        return code
+    error = payload.get("error")
+    if (
+        payload.get("message")
+        and isinstance(error, str)
+        and SERVER_ERROR_CODE_PATTERN.match(error)
+    ):
+        return error
+    return None
+
+
+def error_payload_retryable(payload: Any, status_code: int) -> bool:
+    """Prefer the server's ``retryable`` flag over the status-code default."""
+    if isinstance(payload, dict) and isinstance(payload.get("retryable"), bool):
+        return payload["retryable"]
+    return status_code in RETRYABLE_STATUS_CODES
+
+
 def parse_error_payload(
     raw_text: str, fallback_message: str
 ) -> Tuple[str, Optional[str], Any]:
@@ -82,8 +114,7 @@ def parse_error_payload(
 
     if isinstance(parsed, dict):
         message = parsed.get("message") or parsed.get("error") or fallback_message
-        code = parsed.get("code") if isinstance(parsed.get("code"), str) else None
-        return message, code, parsed
+        return message, error_payload_code(parsed), parsed
 
     return fallback_message, None, parsed
 
@@ -106,7 +137,14 @@ def ensure_response_ok(
         response=response,
         code=code,
         request_id=get_request_id(response),
-        retryable=response.status_code in RETRYABLE_STATUS_CODES,
+        # The control API knows when a failure is safe to retry; vm-service's
+        # proxy marks its own gateway errors non-retryable whatever the cause,
+        # so runtime requests keep the status-code default.
+        retryable=(
+            error_payload_retryable(details, response.status_code)
+            if service == "control"
+            else response.status_code in RETRYABLE_STATUS_CODES
+        ),
         service=service,
         details=details,
     )
