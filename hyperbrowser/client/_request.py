@@ -1,12 +1,101 @@
+import difflib
+import warnings
 from collections.abc import Mapping
 from copy import deepcopy
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar, get_args, get_origin
 
 import jsonref
 from pydantic import BaseModel
 
 
 RequestModelT = TypeVar("RequestModelT", bound=BaseModel)
+
+
+def _is_open(annotation: Any) -> bool:
+    """True for annotations whose mapping values are user-owned data."""
+    return (
+        annotation is Any
+        or annotation is dict
+        or get_origin(annotation) in (dict, Mapping, type)
+    )
+
+
+def _nested_model(annotation: Any) -> Optional[Type[BaseModel]]:
+    """Return the single request model wrapped by an annotation, if any.
+
+    Unwraps Optional, List and similar containers. Returns None for open
+    mappings and for unions of several models, which are left unchecked.
+    """
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    if _is_open(annotation):
+        return None
+
+    found = set()
+    for arg in get_args(annotation):
+        if _is_open(arg):
+            # The field also accepts an open mapping or a class, so a mapping
+            # value may be user-owned data (e.g. a JSON Schema). Skip it.
+            return None
+        nested = _nested_model(arg)
+        if nested is not None:
+            found.add(nested)
+    return found.pop() if len(found) == 1 else None
+
+
+def _unknown_keys(model: Type[BaseModel], data: Mapping, path: str) -> List[str]:
+    """List keys in a request mapping that the model would silently drop."""
+    if model.model_config.get("extra") in ("allow", "forbid"):
+        # "allow" keeps extra keys and "forbid" already raises on them.
+        return []
+
+    config = model.model_config
+    by_name = config.get("populate_by_name") or config.get("validate_by_name")
+    by_alias = config.get("validate_by_alias", True)
+
+    # Keys pydantic accepts on input, and the key to suggest for each field.
+    accepted = {}
+    preferred = {}
+    for field_name, field in model.model_fields.items():
+        inputs = []
+        if field.alias is None or by_name:
+            inputs.append(field_name)
+        if by_alias:
+            inputs += [a for a in (field.alias, field.validation_alias) if a]
+        inputs = [a for a in inputs if isinstance(a, str)]
+        for input_key in inputs:
+            accepted[input_key] = field
+        if inputs:
+            for wire_name in (field_name, field.serialization_alias):
+                if isinstance(wire_name, str) and wire_name not in accepted:
+                    preferred[wire_name] = inputs[0]
+
+    problems = []
+    for key, item in data.items():
+        if not isinstance(key, str):
+            continue
+        field = accepted.get(key)
+        if field is None:
+            if key in preferred:
+                hint = f"use '{preferred[key]}'"
+            else:
+                close = difflib.get_close_matches(key, list(accepted), n=1)
+                hint = f"did you mean '{close[0]}'?" if close else "unknown option"
+            problems.append(f"'{path}{key}' ({hint})")
+            continue
+
+        nested = _nested_model(field.annotation)
+        if nested is None:
+            continue
+        if isinstance(item, Mapping):
+            problems.extend(_unknown_keys(nested, item, f"{path}{key}."))
+        elif isinstance(item, (list, tuple)):
+            for index, element in enumerate(item):
+                if isinstance(element, Mapping):
+                    problems.extend(
+                        _unknown_keys(nested, element, f"{path}{key}[{index}].")
+                    )
+    return problems
 
 
 def coerce_request(
@@ -19,6 +108,15 @@ def coerce_request(
     if isinstance(value, model):
         return value
     if isinstance(value, Mapping):
+        problems = _unknown_keys(model, value, "")
+        if problems:
+            warnings.warn(
+                f"{model.__name__} ignored unrecognized {name} keys: "
+                + ", ".join(problems)
+                + ". These options were not sent to the API.",
+                UserWarning,
+                stacklevel=4,
+            )
         return model.model_validate(dict(value))
     raise TypeError(
         f"{name} must be a {model.__name__} instance or mapping, "
