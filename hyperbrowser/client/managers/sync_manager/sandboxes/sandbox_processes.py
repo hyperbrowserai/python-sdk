@@ -1,6 +1,7 @@
 import base64
+import time
 import threading
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from ...._request import coerce_request
 from .....models.sandbox import (
@@ -14,7 +15,11 @@ from .....models.sandbox import (
 )
 from .....exceptions import HyperbrowserError
 from .....models.secret import SandboxResolvedSecret
-from .....secrets_common import secret_process_failed_error, secret_wait_chunk_ms
+from .....secrets_common import (
+    SecretProcessWait,
+    SecretProcessWaitContext,
+    secret_process_failed_error,
+)
 from .....types import (
     SandboxExecParams as SandboxExecParamsDict,
     SandboxProcessStdinParams as SandboxProcessStdinParamsDict,
@@ -36,9 +41,15 @@ DEFAULT_PROCESS_KILL_WAIT_SECONDS = 5.0
 
 
 class SandboxProcessHandle:
-    def __init__(self, transport: RuntimeTransport, summary: SandboxProcessSummary):
+    def __init__(
+        self,
+        transport: RuntimeTransport,
+        summary: SandboxProcessSummary,
+        secret_wait_context: Optional[SecretProcessWaitContext] = None,
+    ):
         self._transport = transport
         self._summary = summary
+        self._secret_wait_context = secret_wait_context
         self._output = None
         self._collector = None
         self._events = None
@@ -83,6 +94,51 @@ class SandboxProcessHandle:
                 if not ready:
                     raise TimeoutError("Timed out waiting for command output")
                 return self._collected_result()
+        if self._secret_wait_context is not None:
+            return self._wait_with_secrets(timeout_ms, timeout_sec)
+        return self._wait_once(timeout_ms, timeout_sec)
+
+    def _wait_with_secrets(
+        self, timeout_ms: Optional[int], timeout_sec: Optional[int]
+    ) -> SandboxProcessResult:
+        context = self._secret_wait_context
+        assert context is not None
+        wait = SecretProcessWait(context, timeout_ms, timeout_sec)
+        while True:
+            chunk_ms, request_timeout, _ = wait.request_budget()
+            started_at = time.monotonic()
+            try:
+                result = self._wait_once(chunk_ms, None, request_timeout, wait.deadline)
+                wait.remaining()
+                return result
+            except TimeoutError as error:
+                if wait.deadline is not None:
+                    raise
+                raise secret_process_failed_error(
+                    context.sandbox_id, self.id, "waiting for its result", error
+                )
+            except Exception as error:
+                # An explicit local deadline keeps TimeoutError semantics. It
+                # ends only this wait; callers can wait again on the handle.
+                wait.remaining()
+                if not isinstance(error, HyperbrowserError) or error.status_code != 408:
+                    raise secret_process_failed_error(
+                        context.sandbox_id, self.id, "waiting for its result", error
+                    )
+            time.sleep(wait.retry_delay(started_at))
+
+    def _wait_once(
+        self,
+        timeout_ms: Optional[int],
+        timeout_sec: Optional[int],
+        request_timeout: Optional[float] = None,
+        request_deadline: Optional[float] = None,
+    ) -> SandboxProcessResult:
+        request_options: Dict[str, Any] = {}
+        if request_timeout is not None:
+            request_options["request_timeout"] = request_timeout
+        if request_deadline is not None:
+            request_options["request_deadline"] = request_deadline
         payload = self._transport.request_json(
             f"/sandbox/processes/{self.id}/wait",
             method="POST",
@@ -91,6 +147,7 @@ class SandboxProcessHandle:
                 "timeout_sec": timeout_sec,
             },
             headers={"content-type": "application/json"},
+            **request_options,
         )
         result = SandboxProcessResult(**payload["result"])
         if result.output_truncated:
@@ -378,13 +435,23 @@ class SandboxProcessesApi:
                 code="secrets_unsupported",
             )
         payload = self._start_secret_process(_secret_process_payload(params))
-        handle = SandboxProcessHandle(
-            self._transport, SandboxProcessSummary(**payload["process"])
-        )
-        handle.secrets = [
-            SandboxResolvedSecret(**entry) for entry in payload.get("secrets") or []
-        ]
-        return handle
+        process_id = str(payload["process"]["id"])
+        try:
+            handle = SandboxProcessHandle(
+                self._transport,
+                SandboxProcessSummary(**payload["process"]),
+                SecretProcessWaitContext(
+                    self._sandbox_id or "", getattr(self._transport, "_timeout", None)
+                ),
+            )
+            handle.secrets = [
+                SandboxResolvedSecret(**entry) for entry in payload.get("secrets") or []
+            ]
+            return handle
+        except Exception as error:
+            raise secret_process_failed_error(
+                self._sandbox_id or "", process_id, "reading its start response", error
+            )
 
     def _finish_secret_exec(self, handle: SandboxProcessHandle) -> SandboxProcessResult:
         """Close stdin and wait for the result, as one-shot exec does.
@@ -406,22 +473,7 @@ class SandboxProcessesApi:
             raise secret_process_failed_error(
                 sandbox_id, handle.id, "closing its stdin", error
             )
-        chunk_ms = secret_wait_chunk_ms(getattr(self._transport, "_timeout", None))
-        while True:
-            try:
-                return handle.wait(timeout_ms=chunk_ms)
-            except HyperbrowserError as error:
-                # The command's own timeout is enforced in the sandbox, so an
-                # expired wait only means it is still running.
-                if error.status_code == 408:
-                    continue
-                raise secret_process_failed_error(
-                    sandbox_id, handle.id, "waiting for its result", error
-                )
-            except Exception as error:
-                raise secret_process_failed_error(
-                    sandbox_id, handle.id, "waiting for its result", error
-                )
+        return handle.wait()
 
     def get(self, process_id: str) -> SandboxProcessHandle:
         payload = self._transport.request_json(f"/sandbox/processes/{process_id}")

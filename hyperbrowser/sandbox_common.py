@@ -104,19 +104,28 @@ def error_payload_retryable(payload: Any, status_code: int) -> bool:
 def parse_error_payload(
     raw_text: str, fallback_message: str
 ) -> Tuple[str, Optional[str], Any]:
+    message, code, details, _ = _parse_error_payload(raw_text, fallback_message)
+    return message, code, details
+
+
+def _parse_error_payload(
+    raw_text: str, fallback_message: str
+) -> Tuple[str, Optional[str], Any, Optional[json.JSONDecodeError]]:
     if not raw_text:
-        return fallback_message, None, None
+        return fallback_message, None, None, json.JSONDecodeError(
+            "Empty response body", raw_text, 0
+        )
 
     try:
         parsed = json.loads(raw_text)
-    except json.JSONDecodeError:
-        return raw_text, None, raw_text
+    except json.JSONDecodeError as error:
+        return raw_text, None, raw_text, error
 
     if isinstance(parsed, dict):
         message = parsed.get("message") or parsed.get("error") or fallback_message
-        return message, error_payload_code(parsed), parsed
+        return message, error_payload_code(parsed), parsed, None
 
-    return fallback_message, None, parsed
+    return fallback_message, None, parsed, None
 
 
 def ensure_response_ok(
@@ -130,7 +139,7 @@ def ensure_response_ok(
     fallback = default_message or (
         f"Request failed: {response.status_code} {response.reason_phrase}"
     )
-    message, code, details = parse_error_payload(response.text, fallback)
+    message, code, details, decode_error = _parse_error_payload(response.text, fallback)
     raise HyperbrowserError(
         message,
         status_code=response.status_code,
@@ -147,6 +156,7 @@ def ensure_response_ok(
         ),
         service=service,
         details=details,
+        cause=decode_error,
     )
 
 

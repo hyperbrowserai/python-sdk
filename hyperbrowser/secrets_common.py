@@ -9,8 +9,10 @@ import base64
 import hashlib
 import json
 import os
+import time
 import uuid
-from typing import Any, Dict, Optional, Union
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Type, Union
 
 import httpx
 from cryptography.hazmat.primitives import hashes
@@ -203,6 +205,8 @@ def request_may_have_arrived(error: BaseException) -> bool:
     or its response couldn't be read. API errors and failures to connect are
     excluded."""
     if isinstance(error, HyperbrowserError):
+        if isinstance(error.cause, json.JSONDecodeError):
+            return True
         if error.status_code is not None:
             # An error status is the API's answer; a success status means the
             # response body couldn't be read.
@@ -261,4 +265,64 @@ def missing_process_id_error(sandbox_id: str) -> HyperbrowserError:
 def secret_wait_chunk_ms(runtime_timeout_seconds: Optional[float]) -> int:
     """Keep each runtime wait request well under the client's request timeout."""
     timeout = runtime_timeout_seconds or 30
-    return max(1_000, min(20_000, int(timeout * 1000 / 2)))
+    return max(1, min(20_000, int(timeout * 1000 / 2)))
+
+
+@dataclass(frozen=True)
+class SecretProcessWaitContext:
+    sandbox_id: str
+    runtime_timeout_seconds: Optional[float]
+
+
+class SecretProcessWait:
+    """One local wait deadline across bounded receiver requests."""
+
+    def __init__(
+        self,
+        context: SecretProcessWaitContext,
+        timeout_ms: Optional[int],
+        timeout_sec: Optional[int],
+        timeout_error: Type[Exception] = TimeoutError,
+    ):
+        timeout = None
+        if timeout_sec is not None and timeout_sec > 0:
+            timeout = timeout_sec
+        elif timeout_ms is not None and timeout_ms > 0:
+            timeout = timeout_ms / 1000
+        self.deadline = time.monotonic() + timeout if timeout is not None else None
+        self.chunk_ms = secret_wait_chunk_ms(context.runtime_timeout_seconds)
+        self.runtime_timeout_seconds = context.runtime_timeout_seconds
+        self.timeout_error = timeout_error
+
+    def remaining(self) -> Optional[float]:
+        if self.deadline is None:
+            return None
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise self.timeout_error("Timed out waiting for command output")
+        return remaining
+
+    def request_budget(self):
+        remaining = self.remaining()
+        if remaining is None:
+            return self.chunk_ms, None, None
+        request_timeout = remaining
+        if (
+            self.runtime_timeout_seconds is not None
+            and self.runtime_timeout_seconds > 0
+        ):
+            request_timeout = min(request_timeout, self.runtime_timeout_seconds)
+        # Zero selects the receiver's default 30-second wait. Keep a positive
+        # millisecond even when the local budget is below its wire precision.
+        return (
+            min(self.chunk_ms, max(1, int(remaining * 1000))),
+            request_timeout,
+            remaining,
+        )
+
+    def retry_delay(self, request_started_at: float) -> float:
+        # A receiver normally blocks for the chunk before replying 408. Pace
+        # immediate replies too, including sub-millisecond request budgets.
+        delay = max(0.0, 0.01 - (time.monotonic() - request_started_at))
+        remaining = self.remaining()
+        return min(delay, remaining) if remaining is not None else delay

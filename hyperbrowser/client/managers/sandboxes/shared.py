@@ -138,7 +138,7 @@ def _secret_process_payload(params: SandboxExecParams) -> Dict[str, object]:
             code="invalid_secret_reference",
         )
     timeout_ms = params.timeout_ms
-    if timeout_ms is None and params.timeout_sec is not None:
+    if params.timeout_sec is not None and params.timeout_sec > 0:
         timeout_ms = params.timeout_sec * 1000
     payload: Dict[str, object] = {
         "command": params.command,

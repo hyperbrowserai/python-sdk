@@ -319,8 +319,20 @@ Things to know:
   sandbox.
 - Limits: 100 secrets per team, 10 versions per secret, 32 secrets per process,
   and values of 1 byte to 32 KiB of UTF-8 without NUL bytes.
-- API keys need the `secrets.read`, `secrets.manage` or `secrets.use` scope for
-  reading, changing or using secrets, and the team needs the secrets feature.
+- Reading secrets needs `secrets.read`; delivering them to a sandbox needs
+  `secrets.use`. Creating a secret needs `secrets.manage`. Updating, rotating,
+  and deleting secrets or versions through the SDK need both `secrets.read`
+  and `secrets.manage`, since it resolves IDs and names through metadata reads.
+  `add_version()` also reads the secret's `encryptionContext` to encrypt its
+  value. The team needs the secrets feature.
+- Secret-started process handles wait indefinitely by default with `wait()` or
+  `result()`. A positive `wait(timeout_ms=...)` or `wait(timeout_sec=...)` limits
+  the total local wait and raises `TimeoutError` (`asyncio.TimeoutError` for
+  async handles); the process continues and the handle can be used to wait
+  again. The start's timeout limits the command's execution separately.
+  For strict cancellation timing, use the async client: blocking DNS, custom
+  transports or hooks, shared HTTP/2 control connections, and trickled headers
+  on a reused control connection can delay cancellation in the sync client.
 - A process start with secrets that times out raises an error with code
   `secret_process_outcome_unknown`: the command may be running, so check
   `sandbox.processes.list()` before retrying.

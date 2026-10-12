@@ -1,5 +1,7 @@
 import base64
 import json
+import asyncio
+import time
 
 import httpx
 import pytest
@@ -26,6 +28,7 @@ from hyperbrowser.models import (
     CreateSandboxParams,
     CreateSecretParams,
     SandboxDetail,
+    SandboxExecParams,
     SandboxSnapshotSummary,
     StartSandboxFromSnapshotParams,
 )
@@ -119,6 +122,8 @@ class ScriptedHTTPClient:
             route = route(params, json_body)
         if isinstance(route, BaseException):
             raise route
+        if isinstance(route, httpx.Response):
+            return route
         status, payload = route
         return httpx.Response(status, json=payload, request=httpx.Request(method, url))
 
@@ -460,8 +465,8 @@ class RuntimeScript:
         self.waits = list(waits)
         self.calls = []
 
-    def request_json(self, path, *, method="GET", json_body=None, **_):
-        self.calls.append({"path": path, "method": method, "json": json_body})
+    def request_json(self, path, *, method="GET", json_body=None, **kwargs):
+        self.calls.append({"path": path, "method": method, "json": json_body, **kwargs})
         if path.endswith("/stdin"):
             if self.stdin is not None:
                 raise self.stdin
@@ -471,6 +476,8 @@ class RuntimeScript:
             if isinstance(step, BaseException):
                 raise step
             return {"result": step}
+        if path.endswith("/proc_9") and method == "GET":
+            return {"process": AGENT_PROCESS}
         raise AssertionError(path)
 
     def stream_sse(self, *args, **kwargs):
@@ -739,3 +746,816 @@ def test_transport_errors_keep_server_codes_and_retryable_flags():
 
     assert error.value.code == "SECRETS_NOT_CONFIGURED"
     assert error.value.retryable is False
+
+
+@pytest.mark.parametrize("method", ["wait", "result"])
+def test_secret_started_handle_waits_indefinitely_in_short_runtime_chunks(method):
+    runtime = RuntimeScript(waits=[_status_error(408), _status_error(408), RESULT])
+    runtime._timeout = 0.5
+    api = SandboxProcessesApi(
+        runtime,
+        lambda payload: {"process": AGENT_PROCESS, "secrets": RESOLVED},
+        "sbx_123",
+    )
+    handle = api.start("node app.js", secrets={"API_KEY": "provider-key"})
+
+    assert getattr(handle, method)().stdout == "ok\n"
+    assert handle.status == "exited"
+    assert len(runtime.calls) == 3
+    assert all(call["json"]["timeoutMs"] == 250 for call in runtime.calls)
+    assert all(call["path"].endswith("/wait") for call in runtime.calls)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("method", ["wait", "result"])
+async def test_async_secret_started_handle_uses_bounded_waits(method):
+    runtime = AsyncRuntimeScript(waits=[_status_error(408), RESULT])
+    runtime._timeout = 0.5
+
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    handle = await AsyncSandboxProcessesApi(runtime, start, "sbx_123").start(
+        "node app.js", secrets={"API_KEY": "provider-key"}
+    )
+    assert (await getattr(handle, method)()).stdout == "ok\n"
+    assert handle.status == "exited"
+    assert [call["json"]["timeoutMs"] for call in runtime.calls] == [250, 250]
+
+
+class ClockedRuntimeScript(RuntimeScript):
+    def __init__(self, clock):
+        super().__init__()
+        self._timeout = 0.5
+        self.clock = clock
+        self.finished = False
+
+    def request_json(self, path, *, method="GET", json_body=None, **kwargs):
+        self.calls.append({"path": path, "method": method, "json": json_body, **kwargs})
+        assert path.endswith("/wait")
+        if self.finished:
+            return {"result": RESULT}
+        chunk_seconds = json_body["timeoutMs"] / 1000
+        assert 0 < chunk_seconds < self._timeout
+        assert chunk_seconds <= kwargs["request_timeout"]
+        self.clock[0] += chunk_seconds
+        raise _status_error(408)
+
+
+class AsyncClockedRuntimeScript(ClockedRuntimeScript):
+    async def request_json(self, path, **kwargs):
+        return super().request_json(path, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "timeouts, expected_seconds",
+    [({"timeout_ms": 500}, 0.5), ({"timeout_ms": 5, "timeout_sec": 1}, 1)],
+)
+def test_secret_handle_wait_deadline_is_total_and_handle_can_wait_again(
+    monkeypatch, timeouts, expected_seconds
+):
+    clock = [0.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    runtime = ClockedRuntimeScript(clock)
+    handle = SandboxProcessesApi(
+        runtime,
+        lambda payload: {"process": AGENT_PROCESS, "secrets": RESOLVED},
+        "sbx_123",
+    ).start("node app.js", secrets={"API_KEY": "provider-key"})
+
+    with pytest.raises(TimeoutError, match="Timed out waiting"):
+        handle.wait(**timeouts)
+
+    assert clock[0] == expected_seconds
+    assert len(runtime.calls) == int(expected_seconds / 0.25)
+    runtime.finished = True
+    assert handle.result().stdout == "ok\n"
+
+
+@pytest.mark.anyio
+async def test_async_secret_handle_total_deadline_and_handle_reuse(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    runtime = AsyncClockedRuntimeScript(clock)
+
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    handle = await AsyncSandboxProcessesApi(runtime, start, "sbx_123").start(
+        "node app.js", secrets={"API_KEY": "provider-key"}
+    )
+    with pytest.raises(asyncio.TimeoutError):
+        await handle.wait(timeout_ms=500)
+    assert clock[0] == 0.5
+    assert len(runtime.calls) == 2
+    runtime.finished = True
+    assert (await handle.result()).stdout == "ok\n"
+
+
+@pytest.mark.anyio
+async def test_async_local_wait_deadline_cancels_a_stalled_request():
+    cancelled = []
+
+    class StalledRuntime(AsyncRuntimeScript):
+        async def request_json(self, path, **kwargs):
+            try:
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                cancelled.append(path)
+                raise
+
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    handle = await AsyncSandboxProcessesApi(StalledRuntime(), start, "sbx_123").start(
+        "node app.js", secrets={"API_KEY": "provider-key"}
+    )
+    with pytest.raises(asyncio.TimeoutError):
+        await handle.wait(timeout_ms=10)
+    assert cancelled == ["/sandbox/processes/proc_9/wait"]
+
+
+def test_reattached_ordinary_handle_keeps_its_single_wait_request():
+    runtime = RuntimeScript(waits=[_status_error(408), RESULT])
+    handle = SandboxProcessesApi(runtime).get("proc_9")
+    with pytest.raises(HyperbrowserError) as error:
+        handle.wait(timeout_ms=123, timeout_sec=2)
+    assert error.value.status_code == 408
+    assert runtime.calls[-1]["json"] == {"timeoutMs": 123, "timeout_sec": 2}
+    assert len(runtime.waits) == 1
+
+
+@pytest.mark.anyio
+async def test_async_reattached_handle_keeps_its_single_wait_request():
+    runtime = AsyncRuntimeScript(waits=[_status_error(408), RESULT])
+    handle = await AsyncSandboxProcessesApi(runtime).get("proc_9")
+    with pytest.raises(HyperbrowserError) as error:
+        await handle.wait()
+    assert error.value.status_code == 408
+    assert runtime.calls[-1]["json"] == {"timeoutMs": None, "timeout_sec": None}
+    assert len(runtime.waits) == 1
+
+
+@pytest.mark.parametrize("request_type", [dict, SandboxExecParams])
+@pytest.mark.parametrize(
+    "fields, overrides, expected",
+    [
+        ({"timeout_ms": 0}, {"timeout_sec": 1}, 1000),
+        ({"timeout_ms": 2000, "timeout_sec": 1}, {}, 1000),
+        ({"timeout_ms": 2000, "timeout_sec": 0}, {}, 2000),
+        ({"timeout_ms": 0, "timeout_sec": -1}, {}, 0),
+        ({}, {}, None),
+    ],
+)
+def test_secret_execution_timeout_matches_receiver_precedence(
+    request_type, fields, overrides, expected
+):
+    starts = []
+
+    def start(payload):
+        starts.append(payload)
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    SandboxProcessesApi(RuntimeScript(), start, "sbx_123").start(
+        request_type(command="sleep 2", **fields),
+        secrets={"API_KEY": "provider-key"},
+        **overrides,
+    )
+    assert starts[0].get("timeoutMs") == expected
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("request_type", [dict, SandboxExecParams])
+async def test_async_secret_timeout_seconds_override_zero_ms(request_type):
+    starts = []
+
+    async def start(payload):
+        starts.append(payload)
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    await AsyncSandboxProcessesApi(AsyncRuntimeScript(), start, "sbx_123").start(
+        request_type(command="sleep 2", timeout_ms=0),
+        timeout_sec=1,
+        secrets={"API_KEY": "provider-key"},
+    )
+    assert starts[0]["timeoutMs"] == 1000
+
+
+@pytest.mark.parametrize("status", [200, 502, 503])
+@pytest.mark.parametrize("body", [b"<html>Gateway error</html>", b'{"message":', b""])
+def test_undecodable_secret_start_is_nonretryable_unknown_outcome(status, body):
+    response = httpx.Response(
+        status, content=body, request=httpx.Request("POST", "https://api.example.com")
+    )
+    manager, http = _sandbox_manager({("POST", "/sandbox/sbx_123/processes"): response})
+    with pytest.raises(HyperbrowserError) as error:
+        manager.start_secret_process("sbx_123", {"command": "x"})
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert error.value.details == {"sandboxId": "sbx_123"}
+    assert len(http.calls) == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("body", [b"<html>Gateway error</html>", b'{"message":'])
+async def test_async_undecodable_gateway_secret_start_has_unknown_outcome(body):
+    response = httpx.Response(
+        502, content=body, request=httpx.Request("POST", "https://api.example.com")
+    )
+    manager, http = _sandbox_manager(
+        {("POST", "/sandbox/sbx_123/processes"): response}, async_client=True
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        await manager.start_secret_process("sbx_123", {"command": "x"})
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert isinstance(error.value.cause.cause, json.JSONDecodeError)
+    assert len(http.calls) == 1
+
+
+@pytest.mark.parametrize("retryable", [True, False])
+def test_decoded_secret_start_error_keeps_server_retryable_flag(retryable):
+    manager, http = _sandbox_manager(
+        {
+            ("POST", "/sandbox/sbx_123/processes"): (
+                502,
+                {"code": "START_FAILED", "message": "x", "retryable": retryable},
+            )
+        }
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        manager.start_secret_process("sbx_123", {"command": "x"})
+    assert error.value.code == "START_FAILED"
+    assert error.value.retryable is retryable
+    assert len(http.calls) == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("stdin", [_status_error(409), _status_error(502)])
+async def test_async_secret_exec_closes_stdin_and_preserves_process_on_failure(stdin):
+    runtime = AsyncRuntimeScript(stdin=stdin, waits=[_status_error(502)])
+
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    with pytest.raises(HyperbrowserError) as error:
+        await AsyncSandboxProcessesApi(runtime, start, "sbx_123").exec(
+            "node app.js", secrets={"API_KEY": "provider-key"}
+        )
+    assert error.value.code == "secret_process_failed"
+    assert error.value.retryable is False
+    assert error.value.details == {"processId": "proc_9", "sandboxId": "sbx_123"}
+    assert len(runtime.calls) == (2 if stdin.status_code == 409 else 1)
+
+
+def test_secret_wait_handles_submillisecond_timeout_without_zero_or_busy_retry(
+    monkeypatch,
+):
+    clock = [0.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    pauses = []
+
+    def pause(seconds):
+        pauses.append(seconds)
+        clock[0] += seconds
+
+    monkeypatch.setattr(time, "sleep", pause)
+    runtime = RuntimeScript(waits=[_status_error(408)] * 4)
+    runtime._timeout = 0.0005
+    handle = SandboxProcessesApi(
+        runtime,
+        lambda payload: {"process": AGENT_PROCESS, "secrets": RESOLVED},
+        "sbx_123",
+    ).start("node app.js", secrets={"API_KEY": "provider-key"})
+    with pytest.raises(TimeoutError):
+        handle.wait(timeout_ms=1)
+    assert len(runtime.calls) == 1
+    assert runtime.calls[0]["json"]["timeoutMs"] == 1
+    assert runtime.calls[0]["request_timeout"] == 0.0005
+    assert pauses == [0.001]
+
+
+@pytest.mark.parametrize("method", ["wait", "result"])
+def test_secret_handle_wait_errors_retain_running_process_identifiers(method):
+    runtime = RuntimeScript(waits=[_status_error(502)])
+    handle = SandboxProcessesApi(
+        runtime,
+        lambda payload: {"process": AGENT_PROCESS, "secrets": RESOLVED},
+        "sbx_123",
+    ).start("node app.js", secrets={"API_KEY": "provider-key"})
+    with pytest.raises(HyperbrowserError) as error:
+        getattr(handle, method)()
+    assert error.value.code == "secret_process_failed"
+    assert error.value.details == {"processId": "proc_9", "sandboxId": "sbx_123"}
+    assert error.value.retryable is False
+
+
+@pytest.mark.parametrize("service", ["control", "runtime"])
+def test_malformed_http_error_preserves_generic_error_parsing(service):
+    response = httpx.Response(
+        502,
+        content=b"<html>Gateway error</html>",
+        headers={"x-request-id": "req_9"},
+        request=httpx.Request("POST", "https://api.example.com"),
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        ensure_response_ok(response, service)
+    assert error.value.status_code == 502
+    assert str(error.value).startswith("<html>Gateway error</html>")
+    assert error.value.details == "<html>Gateway error</html>"
+    assert error.value.code is None
+    assert error.value.retryable is True
+    assert error.value.request_id == "req_9"
+    assert isinstance(error.value.cause, json.JSONDecodeError)
+
+
+@pytest.mark.parametrize("trickle", ["headers", "body"])
+def test_sync_secret_wait_deadline_interrupts_trickled_http_response(trickle):
+    import socket
+    import threading
+
+    from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_transport import (
+        RuntimeTransport,
+    )
+    from hyperbrowser.sandbox_common import RuntimeConnection
+
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen()
+    listener.settimeout(2)
+    port = listener.getsockname()[1]
+    stop = threading.Event()
+    requests = []
+
+    def serve():
+        try:
+            connection, _ = listener.accept()
+            with connection:
+                connection.settimeout(2)
+                request = b""
+                while b"\r\n\r\n" not in request:
+                    request += connection.recv(4096)
+                requests.append(request)
+                body = json.dumps({"result": RESULT}).encode()
+                headers = (
+                    b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                    + b"Content-Length: "
+                    + str(len(body)).encode()
+                    + b"\r\nConnection: close\r\n\r\n"
+                )
+                if trickle == "headers":
+                    connection.sendall(headers[:-2])
+                    for _ in range(50):
+                        if stop.wait(0.025):
+                            return
+                        connection.sendall(b" ")
+                    connection.sendall(b"\r\n" + body)
+                else:
+                    connection.sendall(headers)
+                    for byte in body:
+                        connection.sendall(bytes([byte]))
+                        if stop.wait(0.025):
+                            return
+        except (OSError, TimeoutError):
+            pass
+
+    server = threading.Thread(target=serve)
+    server.start()
+    runtime = RuntimeTransport(
+        lambda force: RuntimeConnection("sbx_123", f"http://127.0.0.1:{port}", "token"),
+        timeout=2,
+    )
+    handle = SandboxProcessesApi(
+        runtime,
+        lambda payload: {"process": AGENT_PROCESS, "secrets": RESOLVED},
+        "sbx_123",
+    ).start("node app.js", secrets={"API_KEY": "provider-key"})
+    started_at = time.monotonic()
+    try:
+        with pytest.raises(TimeoutError):
+            handle.wait(timeout_ms=200)
+        elapsed = time.monotonic() - started_at
+        assert 0.15 <= elapsed < 0.45
+        assert len(requests) == 1
+        assert handle.status == "running"
+        # Timers are joined before wait returns, so no cancellation can leak
+        # into a subsequent call or another connection.
+        assert not any(isinstance(t, threading.Timer) for t in threading.enumerate())
+    finally:
+        stop.set()
+        listener.close()
+        server.join(timeout=3)
+    assert not server.is_alive()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"process": {"id": "proc_9"}, "secrets": RESOLVED},
+        {"process": AGENT_PROCESS, "secrets": [{"env": "API_KEY"}]},
+    ],
+)
+def test_secret_start_preserves_process_id_when_response_metadata_is_invalid(payload):
+    api = SandboxProcessesApi(RuntimeScript(), lambda body: payload, "sbx_123")
+    with pytest.raises(HyperbrowserError) as error:
+        api.start("node app.js", secrets={"API_KEY": "provider-key"})
+    assert error.value.code == "secret_process_failed"
+    assert error.value.details == {"processId": "proc_9", "sandboxId": "sbx_123"}
+    assert error.value.retryable is False
+
+
+@pytest.mark.anyio
+async def test_async_secret_start_keeps_process_id_on_invalid_metadata():
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": [{"env": "API_KEY"}]}
+
+    api = AsyncSandboxProcessesApi(AsyncRuntimeScript(), start, "sbx_123")
+    with pytest.raises(HyperbrowserError) as error:
+        await api.start("node app.js", secrets={"API_KEY": "provider-key"})
+    assert error.value.code == "secret_process_failed"
+    assert error.value.details == {"processId": "proc_9", "sandboxId": "sbx_123"}
+    assert error.value.retryable is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("retryable", [True, False])
+async def test_async_decoded_secret_start_error_keeps_server_retryable_flag(retryable):
+    manager, http = _sandbox_manager(
+        {
+            ("POST", "/sandbox/sbx_123/processes"): (
+                502,
+                {"code": "START_FAILED", "message": "x", "retryable": retryable},
+            )
+        },
+        async_client=True,
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        await manager.start_secret_process("sbx_123", {"command": "x"})
+    assert error.value.code == "START_FAILED"
+    assert error.value.retryable is retryable
+    assert len(http.calls) == 1
+
+
+@pytest.mark.parametrize(
+    "refresh, response_mode",
+    [
+        ("expired", "delayed_headers"),
+        ("401", "delayed_headers"),
+        ("expired", "trickled_body"),
+        ("401", "trickled_body"),
+        ("expired", "eager_hook"),
+    ],
+)
+def test_sync_secret_wait_bounds_sdk_control_token_refresh(refresh, response_mode):
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    from hyperbrowser import Hyperbrowser
+
+    stop = threading.Event()
+    requests = []
+    unrelated = []
+    unrelated_started = threading.Event()
+    unrelated_thread = None
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, *args):
+            pass
+
+        def respond(self, status, payload):
+            body = json.dumps(payload).encode()
+            self.send_response(status)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            self.wfile.flush()
+
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("content-length", "0")))
+            requests.append(("POST", self.path, dict(self.headers)))
+            if self.path == "/api/unrelated":
+                unrelated_started.set()
+                if not stop.wait(0.3):
+                    self.respond(200, {"success": True})
+            elif self.path == "/api/sandbox/sbx_123/processes":
+                self.respond(200, {"process": AGENT_PROCESS, "secrets": RESOLVED})
+            else:
+                self.respond(401, {"error": "expired"})
+
+        def do_GET(self):
+            requests.append(("GET", self.path, dict(self.headers)))
+            try:
+                if response_mode == "eager_hook":
+                    self.respond(200, SANDBOX_DETAIL_PAYLOAD)
+                elif response_mode == "delayed_headers":
+                    if not stop.wait(0.5):
+                        self.respond(200, SANDBOX_DETAIL_PAYLOAD)
+                else:
+                    body = json.dumps(SANDBOX_DETAIL_PAYLOAD).encode()
+                    self.send_response(200)
+                    self.send_header("content-type", "application/json")
+                    self.send_header("content-length", str(len(body)))
+                    self.end_headers()
+                    for byte in body:
+                        self.wfile.write(bytes([byte]))
+                        self.wfile.flush()
+                        if stop.wait(0.025):
+                            return
+            except OSError:
+                pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server_thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.01}
+    )
+    server_thread.start()
+    base_url = f"http://127.0.0.1:{server.server_port}"
+    client = Hyperbrowser(api_key="test-key", base_url=base_url)
+    client.transport.client.headers["x-client-setting"] = "preserved"
+    client.transport.client.cookies.set("sessionhint", "preserved")
+    if response_mode == "eager_hook":
+
+        def eager_hook(response):
+            nonlocal unrelated_thread
+            if response.request.method != "GET":
+                return
+            response.read()
+
+            def post_unrelated():
+                try:
+                    unrelated.append(
+                        client.transport.client.post(
+                            base_url + "/api/unrelated"
+                        ).status_code
+                    )
+                except Exception as error:
+                    unrelated.append(error)
+
+            unrelated_thread = threading.Thread(target=post_unrelated)
+            unrelated_thread.start()
+            assert unrelated_started.wait(2)
+            time.sleep(0.35)
+
+        client.transport.client.event_hooks["response"].append(eager_hook)
+    detail = SandboxDetail.model_validate(
+        {
+            **SANDBOX_DETAIL_PAYLOAD,
+            "runtime": {
+                "transport": "regional_proxy",
+                "host": base_url,
+                "baseUrl": base_url + "/sandbox/sbx_123",
+            },
+            "tokenExpiresAt": "2099-01-01T00:00:00Z"
+            if refresh == "401"
+            else "2000-01-01T00:00:00Z",
+        }
+    )
+    handle = client.sandboxes.attach(detail).processes.start(
+        "node app.js", secrets={"API_KEY": "provider-key"}
+    )
+    started_at = time.monotonic()
+    try:
+        with pytest.raises(TimeoutError):
+            handle.wait(timeout_ms=200)
+        elapsed = time.monotonic() - started_at
+        if response_mode == "eager_hook":
+            assert 0.3 <= elapsed < 0.8
+            assert unrelated == [200]
+        else:
+            assert 0.15 <= elapsed < 0.45
+        gets = [request for request in requests if request[0] == "GET"]
+        assert len(gets) == 1
+        assert gets[0][1] == "/api/sandbox/sbx_123"
+        assert gets[0][2]["x-api-key"] == "test-key"
+        assert gets[0][2]["x-client-setting"] == "preserved"
+        assert "sessionhint=preserved" in gets[0][2]["Cookie"]
+        assert len(
+            [request for request in requests if request[1].endswith("/wait")]
+        ) == (1 if refresh == "401" else 0)
+        assert not any(isinstance(t, threading.Timer) for t in threading.enumerate())
+        assert not client.transport.client.is_closed
+    finally:
+        stop.set()
+        if unrelated_thread is not None:
+            unrelated_thread.join(timeout=3)
+        client.close()
+        server.shutdown()
+        server.server_close()
+        server_thread.join(timeout=3)
+    assert not server_thread.is_alive()
+
+
+def test_deadline_refresh_preserves_custom_control_transport(monkeypatch):
+    from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_transport import (
+        RuntimeTransport,
+    )
+
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        if request.method == "POST":
+            return httpx.Response(
+                200, json={"process": AGENT_PROCESS, "secrets": RESOLVED}
+            )
+        return httpx.Response(
+            200,
+            json={**SANDBOX_DETAIL_PAYLOAD, "tokenExpiresAt": "2099-01-01T00:00:00Z"},
+        )
+
+    http = httpx.Client(
+        transport=httpx.MockTransport(respond), headers={"x-custom": "kept"}
+    )
+    manager = SandboxManager(FakeClient(http))
+    handle = manager.attach(SandboxDetail(**SANDBOX_DETAIL_PAYLOAD)).processes.start(
+        "node app.js", secrets={"API_KEY": "provider-key"}
+    )
+    runtime_calls = []
+
+    def runtime_send(self, connection, path, **kwargs):
+        runtime_calls.append((connection, kwargs))
+        return httpx.Response(200, json={"result": RESULT})
+
+    monkeypatch.setattr(RuntimeTransport, "_send", runtime_send)
+    try:
+        assert handle.wait(timeout_ms=500).stdout == "ok\n"
+        assert [request.method for request in calls] == ["POST", "GET"]
+        assert calls[-1].headers["x-custom"] == "kept"
+        assert 0 < calls[-1].extensions["timeout"]["read"] <= 0.5
+        assert runtime_calls[0][1]["request_deadline"] is not None
+        assert not http.is_closed
+    finally:
+        http.close()
+
+
+def test_shared_http2_deadline_does_not_shutdown_multiplexed_socket():
+    from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_transport import (
+        _RequestDeadline,
+    )
+
+    shutdowns = []
+
+    class Socket:
+        def shutdown(self, how):
+            shutdowns.append(how)
+
+    sock = Socket()
+
+    class TLS:
+        def selected_alpn_protocol(self):
+            return "h2"
+
+    class Stream:
+        def get_extra_info(self, key):
+            return {"socket": sock, "ssl_object": TLS()}.get(key)
+
+    budget = _RequestDeadline(time.monotonic() + 1, shared_connection=True)
+    try:
+        budget.capture_stream(Stream())
+        budget._expire()
+        assert shutdowns == []
+    finally:
+        budget.close()
+
+
+def test_deadline_cleanup_trace_never_raises_or_captures_released_socket():
+    from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_transport import (
+        _RequestDeadline,
+    )
+
+    shutdowns = []
+
+    class Stream:
+        def get_extra_info(self, key):
+            if key == "socket":
+                return self
+            return None
+
+        def shutdown(self, how):
+            shutdowns.append(how)
+
+    budget = _RequestDeadline(time.monotonic() + 1)
+    budget.capture_stream(Stream())
+    budget.trace("http11.receive_response_body.complete", {})
+    budget.deadline = time.monotonic() - 1
+    budget.trace("http11.response_closed.started", {})
+    budget.trace("http11.response_closed.complete", {})
+    budget.capture_stream(Stream())
+    budget._expire()
+    assert shutdowns == []
+
+
+@pytest.mark.parametrize("control_flow", [KeyboardInterrupt, SystemExit])
+@pytest.mark.parametrize("with_deadline", [False, True])
+def test_control_refresh_preserves_control_flow_after_deadline(
+    monkeypatch, control_flow, with_deadline
+):
+    clock = [0.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+
+    def interrupt(response):
+        clock[0] = 2.0
+        raise control_flow("stop")
+
+    http = httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={})),
+        event_hooks={"response": [interrupt]},
+    )
+    manager = SandboxManager(FakeClient(http))
+    try:
+        with pytest.raises(control_flow, match="stop"):
+            manager._request(
+                "GET",
+                "/sandbox/sbx_123",
+                request_deadline=1.0 if with_deadline else None,
+            )
+    finally:
+        http.close()
+
+
+@pytest.mark.parametrize("method", ["wait", "result", "exec"])
+def test_default_secret_wait_timeout_error_retains_process_identifiers(method):
+    runtime = RuntimeScript(waits=[TimeoutError("transport timed out")])
+    api = SandboxProcessesApi(
+        runtime,
+        lambda payload: {"process": AGENT_PROCESS, "secrets": RESOLVED},
+        "sbx_123",
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        if method == "exec":
+            api.exec("node app.js", secrets={"API_KEY": "provider-key"})
+        else:
+            handle = api.start("node app.js", secrets={"API_KEY": "provider-key"})
+            getattr(handle, method)()
+    assert error.value.code == "secret_process_failed"
+    assert error.value.details == {"processId": "proc_9", "sandboxId": "sbx_123"}
+    assert error.value.retryable is False
+    assert isinstance(error.value.cause, TimeoutError)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("method", ["wait", "result", "exec"])
+async def test_async_default_secret_wait_timeout_retains_identifiers(
+    monkeypatch, method
+):
+    class DistinctAsyncTimeoutError(Exception):
+        pass
+
+    monkeypatch.setattr(asyncio, "TimeoutError", DistinctAsyncTimeoutError)
+    runtime = AsyncRuntimeScript(
+        waits=[DistinctAsyncTimeoutError("transport timed out")]
+    )
+
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    api = AsyncSandboxProcessesApi(runtime, start, "sbx_123")
+    with pytest.raises(HyperbrowserError) as error:
+        if method == "exec":
+            await api.exec("node app.js", secrets={"API_KEY": "provider-key"})
+        else:
+            handle = await api.start("node app.js", secrets={"API_KEY": "provider-key"})
+            await getattr(handle, method)()
+    assert error.value.code == "secret_process_failed"
+    assert error.value.details == {"processId": "proc_9", "sandboxId": "sbx_123"}
+    assert error.value.retryable is False
+    assert isinstance(error.value.cause, DistinctAsyncTimeoutError)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "expiration", ["before_request", "receiver_timeout", "stalled_request"]
+)
+async def test_async_deadline_preserves_distinct_asyncio_timeout_error(
+    monkeypatch, expiration
+):
+    class DistinctAsyncTimeoutError(Exception):
+        pass
+
+    monkeypatch.setattr(asyncio, "TimeoutError", DistinctAsyncTimeoutError)
+    clock = [0.0]
+    runtime = AsyncClockedRuntimeScript(clock)
+    if expiration == "before_request":
+        clock_reads = iter([0.0, 1.0])
+        monkeypatch.setattr(time, "monotonic", lambda: next(clock_reads, 1.0))
+    elif expiration == "receiver_timeout":
+        monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    else:
+
+        class StalledRuntime(AsyncRuntimeScript):
+            async def request_json(self, path, **kwargs):
+                await asyncio.sleep(10)
+
+        runtime = StalledRuntime()
+
+    async def start(payload):
+        return {"process": AGENT_PROCESS, "secrets": RESOLVED}
+
+    handle = await AsyncSandboxProcessesApi(runtime, start, "sbx_123").start(
+        "node app.js", secrets={"API_KEY": "provider-key"}
+    )
+    with pytest.raises(DistinctAsyncTimeoutError):
+        await handle.wait(timeout_ms=10 if expiration == "stalled_request" else 500)
