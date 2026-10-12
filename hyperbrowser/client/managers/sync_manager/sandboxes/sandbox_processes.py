@@ -109,7 +109,7 @@ class SandboxProcessHandle:
             chunk_ms, request_timeout, _ = wait.request_budget()
             started_at = time.monotonic()
             try:
-                result = self._wait_once(chunk_ms, None, request_timeout, wait.deadline)
+                result = self._wait_once(chunk_ms, None, request_timeout)
                 wait.remaining()
                 return result
             except TimeoutError as error:
@@ -133,13 +133,10 @@ class SandboxProcessHandle:
         timeout_ms: Optional[int],
         timeout_sec: Optional[int],
         request_timeout: Optional[float] = None,
-        request_deadline: Optional[float] = None,
     ) -> SandboxProcessResult:
         request_options: Dict[str, Any] = {}
         if request_timeout is not None:
             request_options["request_timeout"] = request_timeout
-        if request_deadline is not None:
-            request_options["request_deadline"] = request_deadline
         payload = self._transport.request_json(
             f"/sandbox/processes/{self.id}/wait",
             method="POST",

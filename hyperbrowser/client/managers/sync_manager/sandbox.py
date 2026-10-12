@@ -2,8 +2,6 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, Union
 
-import httpx
-
 from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
@@ -115,7 +113,7 @@ from .sandboxes.sandbox_terminal import (
     SandboxTerminalConnection,
     SandboxTerminalHandle,
 )
-from .sandboxes.sandbox_transport import RuntimeTransport, _RequestDeadline
+from .sandboxes.sandbox_transport import RuntimeTransport
 
 __all__ = [
     "DEFAULT_PROCESS_KILL_WAIT_SECONDS",
@@ -144,7 +142,6 @@ class SandboxHandle:
             self._resolve_runtime_connection,
             service.runtime_timeout,
             service.runtime_proxy_override,
-            self._resolve_runtime_connection_with_deadline,
         )
         self.processes = SandboxProcessesApi(
             self._transport,
@@ -295,11 +292,6 @@ class SandboxHandle:
     def create_runtime_session(
         self, force_refresh: bool = False
     ) -> SandboxRuntimeSession:
-        return self._create_runtime_session(force_refresh)
-
-    def _create_runtime_session(
-        self, force_refresh: bool, deadline: Optional[float] = None
-    ) -> SandboxRuntimeSession:
         self._assert_runtime_available()
         if (
             not force_refresh
@@ -308,11 +300,7 @@ class SandboxHandle:
         ):
             return _copy_model(self._runtime_session)
 
-        detail = (
-            self._service.get_detail(self.id)
-            if deadline is None
-            else self._service._get_detail_with_deadline(self.id, deadline)
-        )
+        detail = self._service.get_detail(self.id)
         self._hydrate(detail)
         if self._runtime_session is None:
             raise HyperbrowserError(
@@ -377,16 +365,6 @@ class SandboxHandle:
 
     def _resolve_runtime_socket_info(self) -> RuntimeConnection:
         session = self.create_runtime_session()
-        return RuntimeConnection(
-            sandbox_id=self.id,
-            base_url=session.runtime.base_url,
-            token=session.token,
-        )
-
-    def _resolve_runtime_connection_with_deadline(
-        self, force_refresh: bool, deadline: float
-    ) -> RuntimeConnection:
-        session = self._create_runtime_session(force_refresh, deadline)
         return RuntimeConnection(
             sandbox_id=self.id,
             base_url=session.runtime.base_url,
@@ -1092,14 +1070,6 @@ class SandboxManager:
         payload = self._request("GET", f"/sandbox/{sandbox_id}")
         return SandboxDetail(**payload)
 
-    def _get_detail_with_deadline(
-        self, sandbox_id: str, deadline: float
-    ) -> SandboxDetail:
-        payload = self._request(
-            "GET", f"/sandbox/{sandbox_id}", request_deadline=deadline
-        )
-        return SandboxDetail(**payload)
-
     def attach(self, detail: SandboxDetail) -> SandboxHandle:
         return SandboxHandle(self, detail)
 
@@ -1203,38 +1173,22 @@ class SandboxManager:
         *,
         params: Optional[Dict[str, object]] = None,
         data: Optional[Dict[str, object]] = None,
-        request_deadline: Optional[float] = None,
     ):
         failed_attempt = 1
         while True:
             try:
-                request_params = {
-                    key: value
-                    for key, value in (params or {}).items()
-                    if value is not None
-                }
-                if request_deadline is None:
-                    response = self._client.transport.client.request(
-                        method,
-                        self._client._build_url(path),
-                        params=request_params,
-                        json=data,
-                    )
-                else:
-                    response = self._request_with_deadline(
-                        method, path, request_params, data, request_deadline
-                    )
+                response = self._client.transport.client.request(
+                    method,
+                    self._client._build_url(path),
+                    params={
+                        key: value
+                        for key, value in (params or {}).items()
+                        if value is not None
+                    },
+                    json=data,
+                )
                 ensure_response_ok(response, "control")
             except BaseException as cause:
-                if not isinstance(cause, Exception):
-                    raise
-                if (
-                    request_deadline is not None
-                    and time.monotonic() >= request_deadline
-                ):
-                    raise TimeoutError(
-                        "Timed out waiting for command output"
-                    ) from cause
                 error = normalize_network_error(
                     cause,
                     "control",
@@ -1243,39 +1197,8 @@ class SandboxManager:
                 )
                 if not should_retry_get(method, error, failed_attempt):
                     raise error
-                delay = get_retry_delay_seconds(failed_attempt)
-                if request_deadline is not None:
-                    delay = min(delay, max(0, request_deadline - time.monotonic()))
-                time.sleep(delay)
+                time.sleep(get_retry_delay_seconds(failed_attempt))
                 failed_attempt += 1
                 continue
 
             return parse_json_response(response, "control")
-
-    def _request_with_deadline(self, method, path, params, data, deadline):
-        budget = _RequestDeadline(deadline, shared_connection=True)
-        response = None
-        try:
-            client = self._client.transport.client
-            remaining = budget.remaining()
-            timeouts = {
-                key: min(value, remaining) if value is not None else remaining
-                for key, value in client.timeout.as_dict().items()
-            }
-            request = client.build_request(
-                method,
-                self._client._build_url(path),
-                params=params,
-                json=data,
-                timeout=httpx.Timeout(**timeouts),
-                extensions={"trace": budget.trace},
-            )
-            response = client.send(request, stream=True)
-            budget.capture_response(response)
-            response.read()
-            budget.remaining()
-            return response
-        finally:
-            budget.close()
-            if response is not None:
-                response.close()

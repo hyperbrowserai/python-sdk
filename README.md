@@ -331,9 +331,9 @@ Things to know:
   the total local wait and raises `TimeoutError` (`asyncio.TimeoutError` for
   async handles); the process continues and the handle can be used to wait
   again. The start's timeout limits the command's execution separately.
-  For strict cancellation timing, use the async client: blocking DNS, custom
-  transports or hooks, shared HTTP/2 control connections, and trickled headers
-  on a reused control connection can delay cancellation in the sync client.
+  The sync client checks the limit between requests and caps each request's
+  HTTP timeouts at the time left, so a slow response or a runtime token
+  refresh can overrun it; use the async client for a strict limit.
 - A process start with secrets that times out, or whose result the API can't
   confirm, raises a non-retryable error with code
   `secret_process_outcome_unknown`: the command may be running, so check
