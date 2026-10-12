@@ -118,6 +118,12 @@ def _normalize_exec_params(
         ).secrets
 
     normalized = params.model_copy(update=updates) if updates else params
+    if normalized.secrets and normalized.use_shell is not None:
+        # The control API's start has no such option; don't drop it silently.
+        raise HyperbrowserError(
+            "use_shell is not supported when starting a process with secrets",
+            code="secrets_unsupported",
+        )
     return _normalize_legacy_process_fields(normalized)
 
 

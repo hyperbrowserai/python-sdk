@@ -35,6 +35,7 @@ from hyperbrowser.models import (
 from hyperbrowser.sandbox_common import ensure_response_ok
 from hyperbrowser.secrets_common import (
     SecretsSealer,
+    looks_like_secret_id,
     request_may_have_arrived,
     secret_value_bytes,
     secrets_key_id,
@@ -1559,3 +1560,344 @@ async def test_async_deadline_preserves_distinct_asyncio_timeout_error(
     )
     with pytest.raises(DistinctAsyncTimeoutError):
         await handle.wait(timeout_ms=10 if expiration == "stalled_request" else 500)
+
+
+# --- ID shapes, create outcomes, and server error codes ---
+
+
+def test_only_hyphenated_uuids_look_like_secret_ids():
+    assert looks_like_secret_id(SECRET_ID)
+    assert looks_like_secret_id(SECRET_ID.upper())
+    for key in [
+        "a-bcdefabcdef-abcd-efab-cdefabcdefab",
+        "8a0c7a5e4d3b4a5e9b8f0b4c7e7d2a11",
+        "{8a0c7a5e-4d3b-4a5e-9b8f-0b4c7e7d2a1}",
+        "8a0c7a5e-4d3b-4a5e-9b8f-0b4c7e7d2a1g",
+    ]:
+        assert not looks_like_secret_id(key)
+
+
+def test_a_name_with_hyphens_in_other_places_goes_straight_to_the_name_search():
+    name = "a-bcdefabcdef-abcd-efab-cdefabcdefab"
+    http = ScriptedHTTPClient(
+        {
+            ("GET", "/secrets"): (
+                200,
+                {"secrets": [_secret(name=name)], "totalCount": 1},
+            ),
+            ("DELETE", f"/secrets/{SECRET_ID}"): (200, {"deleted": True}),
+        }
+    )
+
+    SecretManager(FakeClient(http)).delete(name)
+
+    assert [c["path"] for c in http.calls] == ["/secrets", f"/secrets/{SECRET_ID}"]
+
+
+CREATE_WITH_SECRETS = {"image_name": "node", "secrets": {"API_KEY": "provider-key"}}
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        httpx.ReadTimeout("timed out"),
+        httpx.RemoteProtocolError("connection closed"),
+        httpx.Response(200, content=b"{", request=httpx.Request("POST", "https://x")),
+        httpx.Response(
+            502,
+            content=b"<html>Bad gateway</html>",
+            request=httpx.Request("POST", "https://x"),
+        ),
+        (200, {"unexpected": True}),
+    ],
+)
+def test_a_create_with_secrets_that_may_have_arrived_has_an_unknown_outcome(outcome):
+    manager, http = _sandbox_manager({("POST", "/sandbox"): outcome})
+
+    with pytest.raises(HyperbrowserError) as error:
+        manager.create(CREATE_WITH_SECRETS)
+
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert "could not confirm the create result" in str(error.value).lower()
+    assert "list sandboxes before retrying" in str(error.value)
+    assert len(http.calls) == 1
+
+
+@pytest.mark.anyio
+async def test_async_create_with_secrets_that_timed_out_has_an_unknown_outcome():
+    manager, http = _sandbox_manager(
+        {("POST", "/sandbox"): httpx.ReadTimeout("timed out")}, async_client=True
+    )
+
+    with pytest.raises(HyperbrowserError) as error:
+        await manager.create(CREATE_WITH_SECRETS)
+
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert len(http.calls) == 1
+
+
+@pytest.mark.parametrize("async_client", [False, True])
+@pytest.mark.anyio
+async def test_create_errors_keep_their_codes_when_the_outcome_is_known(async_client):
+    rejected = (400, {"code": "SECRET_STARTUP_UNSUPPORTED", "message": "no cmd"})
+    for params, outcome, code in [
+        (CREATE_WITH_SECRETS, rejected, "SECRET_STARTUP_UNSUPPORTED"),
+        (CREATE_WITH_SECRETS, httpx.ConnectError("refused"), None),
+        ({"image_name": "node"}, httpx.ReadTimeout("timed out"), None),
+    ]:
+        manager, _ = _sandbox_manager({("POST", "/sandbox"): outcome}, async_client)
+        with pytest.raises(HyperbrowserError) as error:
+            result = manager.create(params)
+            if async_client:
+                await result
+        assert error.value.code == code
+
+
+@pytest.mark.parametrize("async_client", [False, True])
+@pytest.mark.anyio
+async def test_the_servers_unknown_process_outcome_uses_the_sdk_code(async_client):
+    body = {
+        "code": "SECRET_PROCESS_OUTCOME_UNKNOWN",
+        "message": "The sandbox host did not confirm the process start",
+        "retryable": False,
+    }
+    manager, http = _sandbox_manager(
+        {("POST", "/sandbox/sbx_123/processes"): (502, body)}, async_client
+    )
+
+    with pytest.raises(HyperbrowserError) as error:
+        result = manager.start_secret_process("sbx_123", {"command": "x"})
+        if async_client:
+            await result
+
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert error.value.status_code == 502
+    assert error.value.details == dict(body, sandboxId="sbx_123")
+    assert str(error.value).startswith(body["message"])
+    assert len(http.calls) == 1
+
+
+@pytest.mark.parametrize("async_client", [False, True])
+@pytest.mark.anyio
+async def test_a_started_process_may_report_its_id_as_process_id(async_client):
+    process = dict(AGENT_PROCESS)
+    process["processId"] = process.pop("id")
+    manager, _ = _sandbox_manager(
+        {
+            ("POST", "/sandbox/sbx_123/processes"): (
+                200,
+                {"process": process, "secrets": RESOLVED},
+            )
+        },
+        async_client,
+    )
+    sandbox = manager.attach(SandboxDetail(**SANDBOX_DETAIL_PAYLOAD))
+
+    handle = sandbox.processes.start("node app.js", secrets={"API_KEY": "k"})
+    if async_client:
+        handle = await handle
+
+    assert handle.id == "proc_9"
+    assert handle.secrets[0].env == "API_KEY"
+
+
+def test_the_processes_api_accepts_process_id_from_a_custom_start():
+    process = dict(AGENT_PROCESS)
+    process["processId"] = process.pop("id")
+    api = SandboxProcessesApi(
+        RuntimeScript(), lambda payload: {"process": process}, "sbx_123"
+    )
+
+    assert api.start("x", secrets={"API_KEY": "k"}).id == "proc_9"
+
+
+def test_control_error_messages_name_the_sandbox_and_the_secret():
+    with pytest.raises(HyperbrowserError) as error:
+        ensure_response_ok(
+            _error_response(
+                502,
+                {
+                    "code": "SECRET_STARTUP_FAILED",
+                    "message": "Stop it",
+                    "sandboxId": "sbx_1",
+                },
+            ),
+            "control",
+        )
+    assert error.value.args[0] == "Stop it (sandbox sbx_1)"
+    assert error.value.details["sandboxId"] == "sbx_1"
+
+    with pytest.raises(HyperbrowserError) as error:
+        ensure_response_ok(
+            _error_response(
+                422,
+                {
+                    "code": "SECRET_DECRYPT_FAILED",
+                    "message": "Could not open a secret",
+                    "details": {"env": "API_KEY", "secretId": SECRET_ID, "version": 2},
+                },
+            ),
+            "control",
+        )
+    assert error.value.args[0] == (
+        f"Could not open a secret (API_KEY: secret {SECRET_ID}, version 2)"
+    )
+
+    # Context is only added to a message the body sent, and only for control.
+    with pytest.raises(HyperbrowserError) as error:
+        ensure_response_ok(_error_response(500, {"sandboxId": "sbx_1"}), "control")
+    assert "sbx_1" not in error.value.args[0]
+    with pytest.raises(HyperbrowserError) as error:
+        ensure_response_ok(
+            _error_response(500, {"message": "m", "sandboxId": "sbx_1"}), "runtime"
+        )
+    assert error.value.args[0] == "m"
+
+
+@pytest.mark.parametrize("transport_type", ["sync", "async"])
+@pytest.mark.anyio
+async def test_transport_error_messages_name_the_sandbox(transport_type):
+    from hyperbrowser.transport.async_transport import AsyncTransport
+    from hyperbrowser.transport.sync import SyncTransport
+
+    def respond(request):
+        return httpx.Response(
+            502, json={"code": "X_Y", "message": "failed", "sandboxId": "sbx_1"}
+        )
+
+    if transport_type == "sync":
+        transport = SyncTransport("key")
+        transport.client = httpx.Client(transport=httpx.MockTransport(respond))
+        call = transport.post
+    else:
+        transport = AsyncTransport("key")
+        transport.client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+        call = transport.post
+
+    with pytest.raises(HyperbrowserError) as error:
+        result = call("https://api.example.com/api/sandbox")
+        if transport_type == "async":
+            await result
+
+    assert error.value.args[0] == "failed (sandbox sbx_1)"
+
+
+def test_secrets_not_configured_is_not_retried():
+    http = ScriptedHTTPClient(
+        {
+            ("GET", "/secrets/public-key"): (
+                503,
+                {"code": "SECRETS_NOT_CONFIGURED", "message": "Not configured"},
+            )
+        }
+    )
+
+    with pytest.raises(HyperbrowserError) as error:
+        SecretManager(FakeClient(http)).get_public_key()
+
+    assert error.value.code == "SECRETS_NOT_CONFIGURED"
+    assert error.value.retryable is False
+    assert len(http.calls) == 1
+
+
+@pytest.mark.parametrize("transport_type", ["sync", "async"])
+@pytest.mark.anyio
+async def test_transport_does_not_retry_secrets_not_configured(transport_type):
+    from hyperbrowser.transport.async_transport import AsyncTransport
+    from hyperbrowser.transport.sync import SyncTransport
+
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(
+            503, json={"error": "SECRETS_NOT_CONFIGURED", "message": "Not configured"}
+        )
+
+    if transport_type == "sync":
+        transport = SyncTransport("key")
+        transport.client = httpx.Client(transport=httpx.MockTransport(respond))
+    else:
+        transport = AsyncTransport("key")
+        transport.client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+
+    with pytest.raises(HyperbrowserError) as error:
+        result = transport.get("https://api.example.com/api/secrets/public-key")
+        if transport_type == "async":
+            await result
+
+    assert error.value.retryable is False
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("api_type", ["sync", "async"])
+@pytest.mark.anyio
+async def test_use_shell_is_rejected_for_starts_with_secrets(api_type):
+    if api_type == "sync":
+        api = SandboxProcessesApi(RuntimeScript(), lambda payload: {}, "sbx_123")
+    else:
+        api = AsyncSandboxProcessesApi(AsyncRuntimeScript(), None, "sbx_123")
+
+    with pytest.raises(HyperbrowserError, match="use_shell") as error:
+        result = api.start(
+            {"command": "echo $API_KEY", "use_shell": True},
+            secrets={"API_KEY": "provider-key"},
+        )
+        if api_type == "async":
+            await result
+    assert error.value.code == "secrets_unsupported"
+
+
+def test_secret_names_env_names_and_versions_are_checked_locally():
+    for name in ["", "-leading", "has space", "a" * 129]:
+        with pytest.raises(ValueError, match="Invalid secret name"):
+            CreateSecretParams(name=name)
+    assert CreateSecretParams(name="a" * 128).name == "a" * 128
+
+    for env in ["1ABC", "API-KEY", ""]:
+        with pytest.raises(ValueError, match="environment variable name"):
+            SandboxExecParams(command="x", secrets={env: "provider-key"})
+        with pytest.raises(ValueError, match="environment variable name"):
+            CreateSandboxParams(image_name="node", secrets={env: "provider-key"})
+    with pytest.raises(ValueError, match="Invalid secret name"):
+        SandboxExecParams(command="x", secrets={"API_KEY": "bad name"})
+
+    for version in [0, -1, 2**31]:
+        with pytest.raises(ValueError, match="Invalid secret version"):
+            SandboxExecParams(
+                command="x", secrets={"A": {"name": "k", "version": version}}
+            )
+    reference = SandboxExecParams(
+        command="x", secrets={"A": {"name": "k", "version": 2**31 - 1}}
+    ).secrets
+    assert reference is not None and reference["A"].version == 2**31 - 1
+
+
+def test_list_pages_and_version_numbers_are_checked_before_any_request():
+    http = ScriptedHTTPClient({})
+    manager = SecretManager(FakeClient(http))
+
+    for params in [{"limit": 0}, {"limit": 101}, {"page": 0}]:
+        with pytest.raises(ValueError):
+            manager.list(params)
+    for version in [0, 2**31, "1"]:
+        with pytest.raises(HyperbrowserError) as error:
+            manager.delete_version("provider-key", version)
+        assert error.value.code == "invalid_secret_version"
+    assert http.calls == []
+
+
+@pytest.mark.anyio
+async def test_async_version_numbers_are_checked_before_any_request():
+    http = AsyncScriptedHTTPClient({})
+    manager = AsyncSecretManager(FakeClient(http))
+
+    with pytest.raises(HyperbrowserError) as error:
+        await manager.delete_version("provider-key", 0)
+    assert error.value.code == "invalid_secret_version"
+    with pytest.raises(ValueError):
+        await manager.list({"limit": 101})
+    assert http.calls == []

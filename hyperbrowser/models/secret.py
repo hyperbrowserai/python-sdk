@@ -1,7 +1,31 @@
+import re
 from datetime import datetime
 from typing import List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# The server's rules for secret names, the environment variables secrets are
+# delivered to, and version numbers.
+SECRET_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
+SECRET_ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+MAX_SECRET_VERSION = 2**31 - 1
+
+
+def validate_secret_name(name: str) -> str:
+    if not SECRET_NAME_PATTERN.match(name):
+        raise ValueError(
+            f"Invalid secret name {name!r}: names are 1-128 letters, digits, "
+            "'_' or '-', starting with a letter or digit"
+        )
+    return name
+
+
+def validate_secret_version(version: int) -> int:
+    if isinstance(version, bool) or not 1 <= version <= MAX_SECRET_VERSION:
+        raise ValueError(
+            f"Invalid secret version {version!r}: expected 1 to {MAX_SECRET_VERSION}"
+        )
+    return version
 
 
 class SecretBaseModel(BaseModel):
@@ -17,14 +41,33 @@ class SecretReference(SecretBaseModel):
     name: str
     version: Optional[Union[int, Literal["latest"]]] = None
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        return validate_secret_name(value)
+
+    @field_validator("version")
+    @classmethod
+    def validate_version(cls, value):
+        if isinstance(value, int):
+            validate_secret_version(value)
+        return value
+
 
 SecretReferenceInput = Union[str, SecretReference]
 
 
 def normalize_secret_references(value):
-    """Accept a plain secret name as shorthand for ``{"name": name}``."""
+    """Accept a plain secret name as shorthand for ``{"name": name}``, and
+    check the environment variable names."""
     if not isinstance(value, dict):
         return value
+    for env in value:
+        if not isinstance(env, str) or not SECRET_ENV_NAME_PATTERN.match(env):
+            raise ValueError(
+                f"Invalid environment variable name {env!r} for a secret: "
+                "expected letters, digits and '_', not starting with a digit"
+            )
     return {
         env: {"name": reference} if isinstance(reference, str) else reference
         for env, reference in value.items()
@@ -37,14 +80,19 @@ class CreateSecretParams(SecretBaseModel):
     # Encrypted locally and uploaded as the first version; never sent as is.
     value: Optional[Union[str, bytes]] = Field(default=None, exclude=True)
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        return validate_secret_name(value)
+
 
 class UpdateSecretParams(SecretBaseModel):
     description: str
 
 
 class SecretListParams(SecretBaseModel):
-    page: Optional[int] = None
-    limit: Optional[int] = None
+    page: Optional[int] = Field(default=None, ge=1)
+    limit: Optional[int] = Field(default=None, ge=1, le=100)
     search: Optional[str] = None
 
 

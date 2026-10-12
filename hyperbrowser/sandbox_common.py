@@ -14,6 +14,18 @@ GET_RETRY_MAX_ATTEMPTS = 3
 GET_RETRY_INITIAL_DELAY_SECONDS = 0.25
 GET_RETRY_MAX_DELAY_SECONDS = 1.0
 RUNTIME_SESSION_REFRESH_BUFFER_MS = 60_000
+# Codes that retrying can't fix when the server sends no retryable flag. The
+# server sends SECRETS_NOT_CONFIGURED as a 503 without one.
+NON_RETRYABLE_ERROR_CODES = frozenset(
+    {
+        "SECRETS_ADMIN_REQUIRED",
+        "SECRETS_NOT_CONFIGURED",
+        "SECRET_KEY_UNAVAILABLE",
+        "SECRET_DECRYPT_FAILED",
+        "SECRET_ENVELOPE_INVALID",
+        "SECRET_VALUE_INVALID",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -95,10 +107,40 @@ def error_payload_code(payload: Any) -> Optional[str]:
 
 
 def error_payload_retryable(payload: Any, status_code: int) -> bool:
-    """Prefer the server's ``retryable`` flag over the status-code default."""
+    """Prefer the server's ``retryable`` flag over the status-code default.
+
+    Without a flag, codes that retrying can't fix are not retryable.
+    """
     if isinstance(payload, dict) and isinstance(payload.get("retryable"), bool):
         return payload["retryable"]
+    if error_payload_code(payload) in NON_RETRYABLE_ERROR_CODES:
+        return False
     return status_code in RETRYABLE_STATUS_CODES
+
+
+def error_payload_message(payload: Any, message: str) -> str:
+    """Add the context a control API error body names to its message.
+
+    A failed create may leave a sandbox to stop, and a secret error names
+    which of several secrets could not be used. Only messages the body sent
+    get context.
+    """
+    if not isinstance(payload, dict) or not (
+        payload.get("message") or payload.get("error")
+    ):
+        return message
+    sandbox_id = payload.get("sandboxId")
+    if isinstance(sandbox_id, str) and sandbox_id.strip():
+        message = f"{message} (sandbox {sandbox_id.strip()})"
+    secret = payload.get("details")
+    if isinstance(secret, dict):
+        env = secret.get("env")
+        if isinstance(env, str) and env.strip():
+            message = (
+                f"{message} ({env.strip()}: secret {secret.get('secretId')}, "
+                f"version {secret.get('version')})"
+            )
+    return message
 
 
 def parse_error_payload(
@@ -140,6 +182,8 @@ def ensure_response_ok(
         f"Request failed: {response.status_code} {response.reason_phrase}"
     )
     message, code, details, decode_error = _parse_error_payload(response.text, fallback)
+    if service == "control":
+        message = error_payload_message(details, message)
     raise HyperbrowserError(
         message,
         status_code=response.status_code,

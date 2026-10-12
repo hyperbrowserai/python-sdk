@@ -318,7 +318,8 @@ Things to know:
 - Deleting a secret or version doesn't revoke a value already delivered to a
   sandbox.
 - Limits: 100 secrets per team, 10 versions per secret, 32 secrets per process,
-  and values of 1 byte to 32 KiB of UTF-8 without NUL bytes.
+  and values of 1 byte to 32 KiB of UTF-8 without NUL bytes. Names are 1-128
+  letters, digits, `_` or `-`, starting with a letter or digit.
 - Reading secrets needs `secrets.read`; delivering them to a sandbox needs
   `secrets.use`. Creating a secret needs `secrets.manage`. Updating, rotating,
   and deleting secrets or versions through the SDK need both `secrets.read`
@@ -333,9 +334,28 @@ Things to know:
   For strict cancellation timing, use the async client: blocking DNS, custom
   transports or hooks, shared HTTP/2 control connections, and trickled headers
   on a reused control connection can delay cancellation in the sync client.
-- A process start with secrets that times out raises an error with code
+- A process start with secrets that times out, or whose result the API can't
+  confirm, raises a non-retryable error with code
   `secret_process_outcome_unknown`: the command may be running, so check
-  `sandbox.processes.list()` before retrying.
+  `sandbox.processes.list()` before retrying. When the API reported the
+  unknown outcome itself, its response body, including its own code
+  (`SECRET_PROCESS_OUTCOME_UNKNOWN`), is in the error's `details`.
+- `client.sandboxes.create()` with `secrets` raises the same
+  `secret_process_outcome_unknown` error when the create may have reached the
+  API but its result is unknown (a timeout, a dropped connection, or an
+  unreadable response): a sandbox may be running its startup command with the
+  secrets, so list sandboxes before retrying.
+- Error codes from the API:
+  - `SECRETS_ADMIN_REQUIRED` (403): the request used an `hx auth login`
+    session of a team member who isn't an owner or admin. API keys are
+    governed by their scopes instead.
+  - `SECRETS_FEATURE_DISABLED` (403): the team doesn't have the secrets
+    feature.
+  - `SECRETS_NOT_CONFIGURED` (503): the platform has no secrets key
+    configured. It isn't retried.
+  - `SECRET_STARTUP_UNSUPPORTED` (400): the image has no startup command to
+    deliver `secrets` to. Create the sandbox without them, then pass them to
+    `sandbox.exec()` or `sandbox.processes.start()`.
 
 ### List sandboxes with filters
 

@@ -26,6 +26,7 @@ from ....sandbox_common import (
 from ....secrets_common import (
     SECRET_NAME_LOOKUP_LIMIT,
     SecretsSealer,
+    check_secret_version,
     is_not_found,
     looks_like_secret_id,
     secret_not_found_error,
@@ -128,6 +129,7 @@ class SecretManager:
 
     def delete_version(self, secret: str, version: int) -> SecretVersionDeleteResult:
         """Delete one version. The latest version can't be deleted."""
+        check_secret_version(version)
         secret_id = self._resolve(secret)[0].id
         payload = self._request("DELETE", f"/secrets/{secret_id}/versions/{version}")
         return SecretVersionDeleteResult(**payload)

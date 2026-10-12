@@ -9,8 +9,8 @@ import base64
 import hashlib
 import json
 import os
+import re
 import time
-import uuid
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Type, Union
 
@@ -20,13 +20,17 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from .exceptions import HyperbrowserError
-from .models.secret import SecretsPublicKey
+from .models.secret import SecretsPublicKey, validate_secret_version
 
 # The largest secret value the platform accepts.
 MAX_SECRET_VALUE_BYTES = 32 * 1024
 # The same key policy the server and the sandbox hosts enforce.
 MIN_SECRETS_KEY_BITS = 3072
 SECRETS_KEY_EXPONENT = 65537
+# The server's ID check: a hyphenated UUID, without braces or a urn: prefix.
+SECRET_ID_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+)
 # Name lookups read one page of search results, which covers every secret
 # while teams are limited to 100.
 SECRET_NAME_LOOKUP_LIMIT = 100
@@ -161,13 +165,15 @@ class SecretsSealer:
 def looks_like_secret_id(key: str) -> bool:
     """Whether a key is shaped like a secret ID. Names may be too, so a
     UUID-shaped key that isn't an ID is looked up as a name."""
-    if len(key) != 36:
-        return False
+    return SECRET_ID_PATTERN.match(key) is not None
+
+
+def check_secret_version(version: int) -> int:
+    """Check a version number before it is used in a request path."""
     try:
-        uuid.UUID(key)
-    except ValueError:
-        return False
-    return True
+        return validate_secret_version(version)
+    except (TypeError, ValueError) as error:
+        raise HyperbrowserError(str(error), code="invalid_secret_version") from None
 
 
 def secret_not_found_error(key: str) -> HyperbrowserError:
@@ -232,6 +238,59 @@ def secret_process_outcome_unknown_error(
         cause=cause,
         original_error=cause if isinstance(cause, Exception) else None,
     )
+
+
+def secret_process_start_error(
+    sandbox_id: str, error: HyperbrowserError
+) -> HyperbrowserError:
+    """Report a failed process start with secrets.
+
+    A start that may have reached the API, or that the API reports as
+    unconfirmed, may be running with the secrets, so it must not look
+    retryable.
+    """
+    if request_may_have_arrived(error):
+        return secret_process_outcome_unknown_error(sandbox_id, error)
+    if error.code == "SECRET_PROCESS_OUTCOME_UNKNOWN":
+        # The server's body, including its code, stays in the details.
+        details = dict(error.details) if isinstance(error.details, dict) else {}
+        details["sandboxId"] = sandbox_id
+        return HyperbrowserError(
+            error.args[0],
+            status_code=error.status_code,
+            response=error.response,
+            code="secret_process_outcome_unknown",
+            request_id=error.request_id,
+            retryable=False,
+            service="control",
+            details=details,
+            cause=error,
+            original_error=error,
+        )
+    return error
+
+
+def sandbox_create_outcome_unknown_error(cause: BaseException) -> HyperbrowserError:
+    """A create with startup secrets whose result is unknown: a sandbox may
+    be running its startup command with the secrets."""
+    # A response that fails validation describes every field; one line is enough.
+    detail = (str(cause).splitlines() or [type(cause).__name__])[0]
+    return HyperbrowserError(
+        f"Could not confirm the create result: {detail}; a sandbox may have "
+        "been created with the secrets, so list sandboxes before retrying",
+        code="secret_process_outcome_unknown",
+        retryable=False,
+        service="control",
+        cause=cause,
+        original_error=cause if isinstance(cause, Exception) else None,
+    )
+
+
+def secret_process_id(process: Any) -> str:
+    """A started process's ID; the receiver may send it as ``processId``."""
+    if not isinstance(process, dict):
+        return ""
+    return str(process.get("id") or process.get("processId") or "").strip()
 
 
 def secret_process_failed_error(

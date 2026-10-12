@@ -7,6 +7,7 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.sandbox_common import (
     RETRYABLE_STATUS_CODES,
     error_payload_code,
+    error_payload_message,
     error_payload_retryable,
     get_request_id,
     get_retry_delay_seconds,
@@ -48,6 +49,7 @@ class SyncTransport(TransportStrategy):
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
+                message = error_payload_message(error_data, message)
             except Exception:
                 message = str(e)
             raise HyperbrowserError(

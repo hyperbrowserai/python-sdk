@@ -44,7 +44,9 @@ from ....models.session import BasicResponse
 from ....secrets_common import (
     missing_process_id_error,
     request_may_have_arrived,
-    secret_process_outcome_unknown_error,
+    sandbox_create_outcome_unknown_error,
+    secret_process_id,
+    secret_process_start_error,
 )
 from ....types import (
     CompleteSandboxImageBuildParams as CompleteSandboxImageBuildParamsDict,
@@ -1163,26 +1165,28 @@ class SandboxManager:
                 "POST", f"/sandbox/{sandbox_id}/processes", data=payload
             )
         except HyperbrowserError as error:
-            # A start that timed out, or whose response couldn't be read, may
-            # be running with the secrets, so it must not look retryable.
-            if request_may_have_arrived(error):
-                raise secret_process_outcome_unknown_error(sandbox_id, error)
-            raise
+            raise secret_process_start_error(sandbox_id, error)
         process = response.get("process") if isinstance(response, dict) else None
-        if not isinstance(process, dict) or not str(process.get("id") or "").strip():
+        process_id = secret_process_id(process)
+        if not process_id:
             raise missing_process_id_error(sandbox_id)
-        return response
+        return dict(response, process=dict(process, id=process_id))
 
     async def _create_detail(
         self,
         params: Union[CreateSandboxParamsDict, CreateSandboxParams],
     ) -> SandboxDetail:
-        payload = await self._request(
-            "POST",
-            "/sandbox",
-            data=dump_request(params, CreateSandboxParams),
-        )
-        return SandboxDetail(**payload)
+        normalized = coerce_request(params, CreateSandboxParams)
+        data = dump_request(normalized, CreateSandboxParams)
+        try:
+            payload = await self._request("POST", "/sandbox", data=data)
+            return SandboxDetail(**payload)
+        except Exception as error:
+            # A create that may have reached the API may be running its
+            # startup command with the secrets, so it must not look retryable.
+            if normalized.secrets and request_may_have_arrived(error):
+                raise sandbox_create_outcome_unknown_error(error)
+            raise
 
     async def _request(
         self,

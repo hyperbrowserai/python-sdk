@@ -19,6 +19,7 @@ from .....secrets_common import (
     SecretProcessWait,
     SecretProcessWaitContext,
     secret_process_failed_error,
+    secret_process_id,
 )
 from .....types import (
     SandboxExecParams as SandboxExecParamsDict,
@@ -435,11 +436,11 @@ class SandboxProcessesApi:
                 code="secrets_unsupported",
             )
         payload = self._start_secret_process(_secret_process_payload(params))
-        process_id = str(payload["process"]["id"])
+        process_id = secret_process_id(payload["process"])
         try:
             handle = SandboxProcessHandle(
                 self._transport,
-                SandboxProcessSummary(**payload["process"]),
+                SandboxProcessSummary(**dict(payload["process"], id=process_id)),
                 SecretProcessWaitContext(
                     self._sandbox_id or "", getattr(self._transport, "_timeout", None)
                 ),
