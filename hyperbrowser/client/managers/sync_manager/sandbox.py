@@ -39,6 +39,13 @@ from ....models.sandbox import (
     StartSandboxFromSnapshotParams,
 )
 from ....models.session import BasicResponse
+from ....secrets_common import (
+    missing_process_id_error,
+    request_may_have_arrived,
+    sandbox_create_outcome_unknown_error,
+    secret_process_id,
+    secret_process_start_error,
+)
 from ....types import (
     CompleteSandboxImageBuildParams as CompleteSandboxImageBuildParamsDict,
     CreateSandboxImageBuildParams as CreateSandboxImageBuildParamsDict,
@@ -70,6 +77,7 @@ from ..sandboxes.image_resolution import (
     completed_image_id,
 )
 from ..sandboxes.shared import (
+    SecretReferences,
     _build_sandbox_exposed_url,
     _copy_model,
     _expires_within_buffer,
@@ -135,7 +143,11 @@ class SandboxHandle:
             service.runtime_timeout,
             service.runtime_proxy_override,
         )
-        self.processes = SandboxProcessesApi(self._transport)
+        self.processes = SandboxProcessesApi(
+            self._transport,
+            self._start_secret_process,
+            detail.id,
+        )
         self.files = SandboxFilesApi(
             self._transport,
             self._resolve_runtime_socket_info,
@@ -310,7 +322,16 @@ class SandboxHandle:
         timeout_sec: Optional[int] = None,
         run_as: Optional[str] = None,
         max_output_bytes: int = 64 * 1024 * 1024,
+        secrets: Optional[SecretReferences] = None,
     ):
+        """Run a command to completion.
+
+        ``secrets`` maps environment variable names to stored secrets (a name,
+        or ``{"name": ..., "version": N}``). Anything else running as the
+        same user, or as root, in the sandbox can read a process's
+        environment, and the sandbox and its later snapshots are marked as
+        containing secrets.
+        """
         return self.processes.exec(
             input,
             cwd=cwd,
@@ -319,7 +340,11 @@ class SandboxHandle:
             timeout_sec=timeout_sec,
             run_as=run_as,
             max_output_bytes=max_output_bytes,
+            secrets=secrets,
         )
+
+    def _start_secret_process(self, payload: Dict[str, object]) -> dict:
+        return self._service.start_secret_process(self.id, payload)
 
     def get_process(self, process_id: str) -> SandboxProcessHandle:
         return self.processes.get(process_id)
@@ -1107,16 +1132,42 @@ class SandboxManager:
         )
         return SandboxUnexposeResult(**payload)
 
+    def start_secret_process(self, sandbox_id: str, payload: Dict[str, object]) -> dict:
+        """Start a sandbox process with secrets through the control API.
+
+        Returns the raw ``{"process": ..., "secrets": [...]}`` response. Prefer
+        ``sandbox.exec(..., secrets=...)`` or ``sandbox.processes.start``.
+        """
+        try:
+            response = self._request(
+                "POST", f"/sandbox/{sandbox_id}/processes", data=payload
+            )
+        except HyperbrowserError as error:
+            raise secret_process_start_error(sandbox_id, error)
+        process = response.get("process") if isinstance(response, dict) else None
+        process_id = secret_process_id(process)
+        if not process_id:
+            raise missing_process_id_error(sandbox_id)
+        return dict(response, process=dict(process, id=process_id))
+
     def _create_detail(
         self,
         params: Union[CreateSandboxParamsDict, CreateSandboxParams],
     ) -> SandboxDetail:
-        payload = self._request(
-            "POST",
-            "/sandbox",
-            data=dump_request(params, CreateSandboxParams),
-        )
-        return SandboxDetail(**payload)
+        normalized = coerce_request(params, CreateSandboxParams)
+        data = dump_request(normalized, CreateSandboxParams)
+        try:
+            payload = self._request("POST", "/sandbox", data=data)
+            detail = SandboxDetail(**payload)
+            if normalized.secrets and not detail.id.strip():
+                raise ValueError("The API accepted the create but returned no sandbox ID")
+            return detail
+        except Exception as error:
+            # A create that may have reached the API may be running its
+            # startup command with the secrets, so it must not look retryable.
+            if normalized.secrets and request_may_have_arrived(error):
+                raise sandbox_create_outcome_unknown_error(error)
+            raise
 
     def _request(
         self,

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Union
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
-from ..._request import coerce_request
+from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
 from ....models.sandbox import (
     SandboxExecParams,
@@ -21,10 +21,16 @@ from ....sandbox_common import (
     parse_error_payload,
     runtime_base_url_session_id,
 )
+from ....models.secret import SecretReference
 from ....types import (
+    SecretReference as SecretReferenceDict,
     SandboxExecParams as SandboxExecParamsDict,
     SandboxFileWriteEntry as SandboxFileWriteEntryDict,
 )
+
+# Environment variable name to secret: a name, or a reference as a mapping or
+# model. A missing version means the latest.
+SecretReferences = Dict[str, Union[str, SecretReferenceDict, SecretReference]]
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
 # The receiver sends process SSE keepalives every 15 seconds.
@@ -87,6 +93,7 @@ def _normalize_exec_params(
     timeout_ms: Optional[int] = None,
     timeout_sec: Optional[int] = None,
     run_as: Optional[str] = None,
+    secrets: Optional[SecretReferences] = None,
 ) -> SandboxExecParams:
     if isinstance(input, str):
         params = SandboxExecParams(command=input)
@@ -104,9 +111,53 @@ def _normalize_exec_params(
         updates["timeout_sec"] = timeout_sec
     if run_as is not None:
         updates["run_as"] = run_as
+    if secrets is not None:
+        # Validated through the model so plain names become references.
+        updates["secrets"] = SandboxExecParams.model_validate(
+            {"command": params.command, "secrets": secrets}
+        ).secrets
 
     normalized = params.model_copy(update=updates) if updates else params
+    if normalized.secrets and normalized.use_shell is not None:
+        # The control API's start has no such option; don't drop it silently.
+        raise HyperbrowserError(
+            "use_shell is not supported when starting a process with secrets",
+            code="secrets_unsupported",
+        )
     return _normalize_legacy_process_fields(normalized)
+
+
+def _runtime_process_payload(params: SandboxExecParams) -> Dict[str, object]:
+    """The runtime start payload; secrets only go through the control API."""
+    return dump_request(params.model_copy(update={"secrets": None}), SandboxExecParams)
+
+
+def _secret_process_payload(params: SandboxExecParams) -> Dict[str, object]:
+    """The control API's process start payload, which accepts only these fields."""
+    secrets = params.secrets or {}
+    env = params.env or {}
+    overlap = sorted(set(env) & set(secrets))
+    if overlap:
+        raise HyperbrowserError(
+            "Each environment variable must come from either env or secrets, "
+            f"not both: {', '.join(overlap)}",
+            code="invalid_secret_reference",
+        )
+    timeout_ms = params.timeout_ms
+    if params.timeout_sec is not None and params.timeout_sec > 0:
+        timeout_ms = params.timeout_sec * 1000
+    payload: Dict[str, object] = {
+        "command": params.command,
+        "cwd": params.cwd,
+        "env": params.env,
+        "timeoutMs": timeout_ms,
+        "runAs": params.run_as,
+        "secrets": {
+            name: reference.model_dump(exclude_none=True)
+            for name, reference in secrets.items()
+        },
+    }
+    return {key: value for key, value in payload.items() if value is not None}
 
 
 def _resolve_sandbox_runtime_session_host(runtime, base_url) -> str:

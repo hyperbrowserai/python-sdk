@@ -252,6 +252,22 @@ from .profile import (
     ProfileListResponse,
     ProfileResponse,
 )
+from .secret import (
+    CreateSecretParams,
+    SandboxResolvedSecret,
+    Secret,
+    SecretDeleteResult,
+    SecretDetail,
+    SecretJWK,
+    SecretListParams,
+    SecretListResponse,
+    SecretReference,
+    SecretReferenceInput,
+    SecretsPublicKey,
+    SecretVersion,
+    SecretVersionDeleteResult,
+    UpdateSecretParams,
+)
 from .volume import (
     CreateVolumeParams,
     Volume,
@@ -467,7 +483,6 @@ __all__ = [
     "WebMCPInvokeResult",
     "WebMCPInvocationError",
     "WebMCPInvocation",
-
     # consts
     "ISO639_1",
     "POLLING_ATTEMPTS",
@@ -628,6 +643,21 @@ __all__ = [
     "ProfileListParams",
     "ProfileListResponse",
     "ProfileResponse",
+    # secret
+    "CreateSecretParams",
+    "SandboxResolvedSecret",
+    "Secret",
+    "SecretDeleteResult",
+    "SecretDetail",
+    "SecretJWK",
+    "SecretListParams",
+    "SecretListResponse",
+    "SecretReference",
+    "SecretReferenceInput",
+    "SecretsPublicKey",
+    "SecretVersion",
+    "SecretVersionDeleteResult",
+    "UpdateSecretParams",
     # volume
     "CreateVolumeParams",
     "Volume",

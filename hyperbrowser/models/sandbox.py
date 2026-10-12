@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from ._parsers import _parse_optional_int
+from .secret import SecretReference, normalize_secret_references
 from .session import SessionLaunchState, SessionStatus
 
 SandboxStatus = SessionStatus
@@ -161,6 +162,9 @@ class Sandbox(SandboxBaseModel):
         alias="exposedPorts",
     )
     network: Optional[SandboxNetworkPolicy] = None
+    # Secrets were delivered into the sandbox, or it was restored from a
+    # snapshot that may hold them.
+    contains_secrets: bool = Field(default=False, alias="containsSecrets")
 
     @field_validator(
         "end_time",
@@ -239,6 +243,14 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
     disk_mib: Optional[int] = Field(
         default=None, ge=1, serialization_alias="diskSizeMiB"
     )
+    # Environment variable name to secret, delivered to the image's startup
+    # command only.
+    secrets: Optional[Dict[str, SecretReference]] = None
+
+    @field_validator("secrets", mode="before")
+    @classmethod
+    def normalize_secrets(cls, value):
+        return normalize_secret_references(value)
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -258,6 +270,11 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
         ):
             raise ValueError(
                 "cpu, memory_mib, and disk_mib are only supported for image launches"
+            )
+        if self.snapshot_name and self.secrets:
+            raise ValueError(
+                "secrets are only supported for image launches; snapshots don't "
+                "run a startup command"
             )
         return self
 
@@ -332,6 +349,8 @@ class SandboxSnapshotSummary(SandboxBaseModel):
     compatibility_tag: Optional[str] = Field(default=None, alias="compatibilityTag")
     metadata: Dict[str, object]
     uploaded: bool
+    # The snapshot's memory may hold secrets.
+    contains_secrets: bool = Field(default=False, alias="containsSecrets")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 
@@ -565,6 +584,14 @@ class SandboxExecParams(SandboxBaseModel):
     timeout_sec: Optional[int] = None
     run_as: Optional[str] = Field(default=None, serialization_alias="runAs")
     use_shell: Optional[bool] = Field(default=None, serialization_alias="useShell")
+    # Environment variable name to secret. A start with secrets goes through
+    # the control API, which has the platform decrypt them in the sandbox.
+    secrets: Optional[Dict[str, SecretReference]] = None
+
+    @field_validator("secrets", mode="before")
+    @classmethod
+    def normalize_secrets(cls, value):
+        return normalize_secret_references(value)
 
 
 class SandboxProcessSummary(SandboxBaseModel):

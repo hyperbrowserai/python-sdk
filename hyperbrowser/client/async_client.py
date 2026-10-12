@@ -10,6 +10,7 @@ from .managers.async_manager.extension import ExtensionManager
 from .managers.async_manager.extract import ExtractManager
 from .managers.async_manager.profile import ProfileManager
 from .managers.async_manager.sandbox import SandboxManager
+from .managers.async_manager.secret import SecretManager
 from .managers.async_manager.scrape import ScrapeManager
 from .managers.async_manager.session import SessionManager
 from .managers.async_manager.team import TeamManager
@@ -49,6 +50,7 @@ class AsyncHyperbrowser(HyperbrowserBase):
         self.computer_action = ComputerActionManager(self)
         self.sandboxes = SandboxManager(self)
         self.volumes = VolumeManager(self)
+        self.secrets = SecretManager(self)
 
     async def close(self) -> None:
         await self.transport.close()

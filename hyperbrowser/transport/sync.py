@@ -6,6 +6,9 @@ from typing import Optional
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.sandbox_common import (
     RETRYABLE_STATUS_CODES,
+    error_payload_code,
+    error_payload_message,
+    error_payload_retryable,
     get_request_id,
     get_retry_delay_seconds,
     is_retryable_network_error,
@@ -46,22 +49,18 @@ class SyncTransport(TransportStrategy):
             try:
                 error_data = response.json()
                 message = error_data.get("message") or error_data.get("error") or str(e)
+                message = error_payload_message(error_data, message)
             except Exception:
                 message = str(e)
             raise HyperbrowserError(
                 message,
-                code=(
-                    error_data.get("code")
-                    if isinstance(error_data, dict)
-                    and isinstance(error_data.get("code"), str)
-                    else None
-                ),
+                code=error_payload_code(error_data),
                 details=error_data,
                 status_code=response.status_code,
                 response=response,
                 original_error=e,
                 request_id=get_request_id(response),
-                retryable=response.status_code in RETRYABLE_STATUS_CODES,
+                retryable=error_payload_retryable(error_data, response.status_code),
                 service="control",
             )
         except httpx.RequestError as e:

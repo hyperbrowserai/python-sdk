@@ -10,6 +10,8 @@ from hyperbrowser.models import (
     FetchParams as LegacyFetchParams,
     SandboxImageBuildListParams as LegacySandboxImageBuildListParams,
     VolumeListParams as LegacyVolumeListParams,
+    CreateSecretParams as LegacyCreateSecretParams,
+    SecretReference as LegacySecretReference,
     ScrollActionParams as LegacyScrollActionParams,
     ScrollAtCursorActionParams as LegacyScrollAtCursorActionParams,
     ComputerActionResponseData,
@@ -238,6 +240,29 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.volumes.list({"page": 0, "limit": -1})
     client.volumes.list(LegacyVolumeListParams(page=0, limit=-1))
     client.volumes.delete("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
+    client.secrets.list({"search": "provider", "limit": 100})
+    client.secrets.create({"name": "provider-key", "value": b"value"})
+    client.secrets.create(LegacyCreateSecretParams(name="provider-key", value="v"))
+    client.secrets.update("provider-key", {"description": "rotated"})
+    client.secrets.add_version("provider-key", "next value")
+    client.secrets.delete_version("provider-key", 1)
+    client.sandboxes.create(
+        {
+            "image_name": "node",
+            "secrets": {
+                "API_KEY": "provider-key",
+                "OTHER": {"name": "o", "version": 2},
+            },
+        }
+    )
+    sandbox = client.sandboxes.get("sandbox_123")
+    sandbox.exec(
+        "node app.js",
+        secrets={
+            "API_KEY": {"name": "provider-key", "version": "latest"},
+            "OTHER": LegacySecretReference(name="o", version=2),
+        },
+    )
 
     client.sessions.create(LegacyCreateSessionParams(use_stealth=True, region="us"))
     client.web.fetch(LegacyFetchParams(url="https://example.com"))
@@ -379,6 +404,10 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.sandboxes.list_image_builds({"status": "verifying", "limit": -1})
     await client.volumes.list({"page": 0, "limit": -1})
     await client.volumes.delete("2d6f01cf-c5d7-4c61-ae9e-0264f1c8063d")
+    await client.secrets.create({"name": "provider-key", "description": "d"})
+    await client.secrets.get("provider-key")
+    async_sandbox = await client.sandboxes.get("sandbox_123")
+    await async_sandbox.processes.start("node app.js", secrets={"API_KEY": "k"})
 
     await client.sessions.create(LegacyCreateSessionParams(use_proxy=True, region="us"))
     await client.web.fetch(LegacyFetchParams(url="https://example.com"))
@@ -469,21 +498,38 @@ async def valid_async_process_collection(client: AsyncHyperbrowser) -> None:
 
 
 def valid_webmcp_requests(client: Hyperbrowser) -> None:
-    from hyperbrowser.models import WebMCPInvokeParams, WebMCPStartParams, WebMCPResultParams
+    from hyperbrowser.models import (
+        WebMCPInvokeParams,
+        WebMCPStartParams,
+        WebMCPResultParams,
+    )
+
     client.sessions.create({"enable_web_mcp": True})
     tools = client.sessions.webmcp.list_tools("session")
     tool = tools.tools[0]
-    client.sessions.webmcp.invoke("session", {"tool_ref": tool.tool_ref, "input": {"customKey": 1}})
+    client.sessions.webmcp.invoke(
+        "session", {"tool_ref": tool.tool_ref, "input": {"customKey": 1}}
+    )
     client.sessions.webmcp.invoke("session", WebMCPInvokeParams(tool_ref=tool.tool_ref))
-    handle = client.sessions.webmcp.start("session", WebMCPStartParams(tool_ref=tool.tool_ref, timeout_seconds=600))
-    client.sessions.webmcp.get_result("session", handle.invocation_id, WebMCPResultParams(wait_seconds=30))
+    handle = client.sessions.webmcp.start(
+        "session", WebMCPStartParams(tool_ref=tool.tool_ref, timeout_seconds=600)
+    )
+    client.sessions.webmcp.get_result(
+        "session", handle.invocation_id, WebMCPResultParams(wait_seconds=30)
+    )
     client.sessions.webmcp.cancel("session", handle.invocation_id)
 
 
 async def valid_async_webmcp_requests(client: AsyncHyperbrowser) -> None:
     await client.sessions.create({"enable_web_mcp": True})
     tools = await client.sessions.webmcp.list_tools("session")
-    await client.sessions.webmcp.invoke("session", {"tool_ref": tools.tools[0].tool_ref})
-    handle = await client.sessions.webmcp.start("session", {"tool_ref": tools.tools[0].tool_ref, "timeout_seconds": 600})
-    await client.sessions.webmcp.get_result("session", handle.invocation_id, {"wait_seconds": 30})
+    await client.sessions.webmcp.invoke(
+        "session", {"tool_ref": tools.tools[0].tool_ref}
+    )
+    handle = await client.sessions.webmcp.start(
+        "session", {"tool_ref": tools.tools[0].tool_ref, "timeout_seconds": 600}
+    )
+    await client.sessions.webmcp.get_result(
+        "session", handle.invocation_id, {"wait_seconds": 30}
+    )
     await client.sessions.webmcp.cancel("session", handle.invocation_id)

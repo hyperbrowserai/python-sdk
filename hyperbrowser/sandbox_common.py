@@ -1,5 +1,6 @@
 import json
 import random
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -13,6 +14,18 @@ GET_RETRY_MAX_ATTEMPTS = 3
 GET_RETRY_INITIAL_DELAY_SECONDS = 0.25
 GET_RETRY_MAX_DELAY_SECONDS = 1.0
 RUNTIME_SESSION_REFRESH_BUFFER_MS = 60_000
+# Codes that retrying can't fix when the server sends no retryable flag. The
+# server sends SECRETS_NOT_CONFIGURED as a 503 without one.
+NON_RETRYABLE_ERROR_CODES = frozenset(
+    {
+        "SECRETS_ADMIN_REQUIRED",
+        "SECRETS_NOT_CONFIGURED",
+        "SECRET_KEY_UNAVAILABLE",
+        "SECRET_DECRYPT_FAILED",
+        "SECRET_ENVELOPE_INVALID",
+        "SECRET_VALUE_INVALID",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -69,23 +82,92 @@ def get_retry_delay_seconds(failed_attempt: int) -> float:
     return random.uniform(maximum_delay / 2, maximum_delay)
 
 
+SERVER_ERROR_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")
+
+
+def error_payload_code(payload: Any) -> Optional[str]:
+    """Return the API's machine code from an error body.
+
+    Some routes send the code as ``error`` next to a message, for example
+    ``API_KEY_SCOPE_DENIED``.
+    """
+    if not isinstance(payload, dict):
+        return None
+    code = payload.get("code")
+    if isinstance(code, str) and code.strip():
+        return code
+    error = payload.get("error")
+    if (
+        payload.get("message")
+        and isinstance(error, str)
+        and SERVER_ERROR_CODE_PATTERN.match(error)
+    ):
+        return error
+    return None
+
+
+def error_payload_retryable(payload: Any, status_code: int) -> bool:
+    """Prefer the server's ``retryable`` flag over the status-code default.
+
+    Without a flag, codes that retrying can't fix are not retryable.
+    """
+    if isinstance(payload, dict) and isinstance(payload.get("retryable"), bool):
+        return payload["retryable"]
+    if error_payload_code(payload) in NON_RETRYABLE_ERROR_CODES:
+        return False
+    return status_code in RETRYABLE_STATUS_CODES
+
+
+def error_payload_message(payload: Any, message: str) -> str:
+    """Add the context a control API error body names to its message.
+
+    A failed create may leave a sandbox to stop, and a secret error names
+    which of several secrets could not be used. Only messages the body sent
+    get context.
+    """
+    if not isinstance(payload, dict) or not (
+        payload.get("message") or payload.get("error")
+    ):
+        return message
+    sandbox_id = payload.get("sandboxId")
+    if isinstance(sandbox_id, str) and sandbox_id.strip():
+        message = f"{message} (sandbox {sandbox_id.strip()})"
+    secret = payload.get("details")
+    if isinstance(secret, dict):
+        env = secret.get("env")
+        if isinstance(env, str) and env.strip():
+            message = (
+                f"{message} ({env.strip()}: secret {secret.get('secretId')}, "
+                f"version {secret.get('version')})"
+            )
+    return message
+
+
 def parse_error_payload(
     raw_text: str, fallback_message: str
 ) -> Tuple[str, Optional[str], Any]:
+    message, code, details, _ = _parse_error_payload(raw_text, fallback_message)
+    return message, code, details
+
+
+def _parse_error_payload(
+    raw_text: str, fallback_message: str
+) -> Tuple[str, Optional[str], Any, Optional[json.JSONDecodeError]]:
     if not raw_text:
-        return fallback_message, None, None
+        return fallback_message, None, None, json.JSONDecodeError(
+            "Empty response body", raw_text, 0
+        )
 
     try:
         parsed = json.loads(raw_text)
-    except json.JSONDecodeError:
-        return raw_text, None, raw_text
+    except json.JSONDecodeError as error:
+        return raw_text, None, raw_text, error
 
     if isinstance(parsed, dict):
         message = parsed.get("message") or parsed.get("error") or fallback_message
-        code = parsed.get("code") if isinstance(parsed.get("code"), str) else None
-        return message, code, parsed
+        return message, error_payload_code(parsed), parsed, None
 
-    return fallback_message, None, parsed
+    return fallback_message, None, parsed, None
 
 
 def ensure_response_ok(
@@ -99,16 +181,26 @@ def ensure_response_ok(
     fallback = default_message or (
         f"Request failed: {response.status_code} {response.reason_phrase}"
     )
-    message, code, details = parse_error_payload(response.text, fallback)
+    message, code, details, decode_error = _parse_error_payload(response.text, fallback)
+    if service == "control":
+        message = error_payload_message(details, message)
     raise HyperbrowserError(
         message,
         status_code=response.status_code,
         response=response,
         code=code,
         request_id=get_request_id(response),
-        retryable=response.status_code in RETRYABLE_STATUS_CODES,
+        # The control API knows when a failure is safe to retry; vm-service's
+        # proxy marks its own gateway errors non-retryable whatever the cause,
+        # so runtime requests keep the status-code default.
+        retryable=(
+            error_payload_retryable(details, response.status_code)
+            if service == "control"
+            else response.status_code in RETRYABLE_STATUS_CODES
+        ),
         service=service,
         details=details,
+        cause=decode_error,
     )
 
 

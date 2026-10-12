@@ -261,6 +261,104 @@ client.volumes.delete(same_volume.id)
 client.close()
 ```
 
+### Manage secrets and pass them to sandbox processes
+
+Secrets hold values such as API keys for sandbox processes. Values are
+encrypted on your machine to the platform's public key before upload, and the
+API never returns them. Methods that take a secret accept its ID or exact name.
+
+```python
+from pathlib import Path
+
+from hyperbrowser import Hyperbrowser
+
+client = Hyperbrowser(api_key="test-key")
+
+# Values are str or bytes and are stored byte-for-byte, trailing newlines included.
+client.secrets.create(
+    {
+        "name": "provider-key",
+        "description": "Provider API key",
+        "value": Path("provider-key.txt").read_bytes(),
+    }
+)
+client.secrets.add_version("provider-key", "rotated-value")  # becomes version 2
+detail = client.secrets.get("provider-key")  # metadata and versions, never the value
+client.secrets.list({"search": "provider"})
+
+sandbox = client.sandboxes.create(
+    {
+        "image_name": "node",
+        # Delivered to the image's startup command (image launches only).
+        "secrets": {"API_KEY": "provider-key"},
+    }
+)
+
+# A plain name uses the latest version; {"name": ..., "version": N} pins one.
+result = sandbox.exec(
+    "node app.js",
+    secrets={"API_KEY": {"name": "provider-key", "version": 2}},
+)
+process = sandbox.processes.start("node worker.js", secrets={"API_KEY": "provider-key"})
+print(process.secrets)  # the version each variable received
+
+client.secrets.delete_version("provider-key", 1)
+client.secrets.delete("provider-key")
+client.close()
+```
+
+Things to know:
+
+- A secret is set only in the environment of the process it was passed to.
+  Anything else running as the same user, or as root, in the sandbox can read
+  that environment.
+- A sandbox that has received secrets, and snapshots taken of it, report
+  `contains_secrets=True`. Restoring such a snapshot needs the same access as
+  passing secrets.
+- Deleting a secret or version doesn't revoke a value already delivered to a
+  sandbox.
+- Limits: 100 secrets per team, 10 versions per secret, 32 secrets per process,
+  and values of 1 byte to 32 KiB of UTF-8 without NUL bytes. Names are 1-128
+  letters, digits, `_` or `-`, starting with a letter or digit.
+- Reading secrets needs `secrets.read`; delivering them to a sandbox needs
+  `secrets.use`. Creating a secret needs `secrets.manage`. Updating, rotating,
+  and deleting secrets or versions through the SDK need both `secrets.read`
+  and `secrets.manage`, since it resolves IDs and names through metadata reads.
+  `add_version()` also reads the secret's `encryptionContext` to encrypt its
+  value. The team needs the secrets feature.
+- Secret-started process handles wait indefinitely by default with `wait()` or
+  `result()`. A positive `wait(timeout_ms=...)` or `wait(timeout_sec=...)` limits
+  the total local wait and raises `TimeoutError` (`asyncio.TimeoutError` for
+  async handles); the process continues and the handle can be used to wait
+  again. The start's timeout limits the command's execution separately.
+  The sync client checks the limit between requests and caps each request's
+  HTTP timeouts at the time left, so a slow response or a runtime token
+  refresh can overrun it; use the async client for a strict limit.
+  Secret process output comes from the receiver's retained output, so
+  `max_output_bytes` does not apply; incomplete retained output raises an error.
+- A process start with secrets that times out, or whose result the API can't
+  confirm, raises a non-retryable error with code
+  `secret_process_outcome_unknown`: the command may be running, so check
+  `sandbox.processes.list()` before retrying. When the API reported the
+  unknown outcome itself, its response body, including its own code
+  (`SECRET_PROCESS_OUTCOME_UNKNOWN`), is in the error's `details`.
+- `client.sandboxes.create()` with `secrets` raises the same
+  `secret_process_outcome_unknown` error when the create may have reached the
+  API but its result is unknown (a timeout, a dropped connection, or an
+  unreadable response): a sandbox may be running its startup command with the
+  secrets, so list sandboxes before retrying.
+- Error codes from the API:
+  - `SECRETS_ADMIN_REQUIRED` (403): the request used an `hx auth login`
+    session of a team member who isn't an owner or admin. API keys are
+    governed by their scopes instead.
+  - `SECRETS_FEATURE_DISABLED` (403): the team doesn't have the secrets
+    feature.
+  - `SECRETS_NOT_CONFIGURED` (503): the platform has no secrets key
+    configured. It isn't retried.
+  - `SECRET_STARTUP_UNSUPPORTED` (400): the image has no startup command to
+    deliver `secrets` to. Create the sandbox without them, then pass them to
+    `sandbox.exec()` or `sandbox.processes.start()`.
+
 ### List sandboxes with filters
 
 ```python

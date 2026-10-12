@@ -41,6 +41,7 @@ class RuntimeTransport:
         json_body: Optional[Dict[str, object]] = None,
         content: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
+        request_timeout: Optional[float] = None,
     ):
         response = self._request(
             path,
@@ -49,6 +50,7 @@ class RuntimeTransport:
             json_body=json_body,
             content=content,
             headers=headers,
+            request_timeout=request_timeout,
         )
         return parse_json_response(response, "runtime")
 
@@ -184,6 +186,7 @@ class RuntimeTransport:
         content: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
         allow_refresh: bool = True,
+        request_timeout: Optional[float] = None,
     ) -> httpx.Response:
         connection = self._resolve_connection(False)
         response = self._send(
@@ -194,6 +197,7 @@ class RuntimeTransport:
             json_body=json_body,
             content=content,
             headers=headers,
+            request_timeout=request_timeout,
         )
 
         if response.status_code == 401 and allow_refresh:
@@ -213,6 +217,7 @@ class RuntimeTransport:
                 json_body=json_body,
                 content=content,
                 headers=headers,
+                request_timeout=request_timeout,
             )
             return ensure_response_ok(retry, "runtime")
 
@@ -309,6 +314,7 @@ class RuntimeTransport:
         json_body: Optional[Dict[str, object]],
         content: Optional[Any],
         headers: Optional[Dict[str, str]],
+        request_timeout: Optional[float] = None,
     ) -> httpx.Response:
         request_path = _build_query_path(path, params)
         target = resolve_runtime_transport_target(
@@ -317,7 +323,9 @@ class RuntimeTransport:
             self._runtime_proxy_override,
         )
         merged_headers = build_headers(connection.token, headers, target.host_header)
-        client = httpx.Client(timeout=self._timeout)
+        client = httpx.Client(
+            timeout=self._timeout if request_timeout is None else request_timeout
+        )
 
         try:
             response = client.request(

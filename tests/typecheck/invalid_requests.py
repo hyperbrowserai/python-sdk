@@ -15,6 +15,8 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
         }
     )
     client.sandboxes.create({"image_name": "node", "cpu": "four"})  # M,P
+    client.secrets.create({"description": "missing name"})  # M,P
+    client.sandboxes.create({"image_name": "node", "secrets": {"A": 1}})  # M,P
     client.sandboxes.create_image_build(
         {  # P
             "image_name": "custom_node",
