@@ -334,6 +334,8 @@ Things to know:
   The sync client checks the limit between requests and caps each request's
   HTTP timeouts at the time left, so a slow response or a runtime token
   refresh can overrun it; use the async client for a strict limit.
+  Secret process output comes from the receiver's retained output, so
+  `max_output_bytes` does not apply; incomplete retained output raises an error.
 - A process start with secrets that times out, or whose result the API can't
   confirm, raises a non-retryable error with code
   `secret_process_outcome_unknown`: the command may be running, so check

@@ -626,6 +626,23 @@ def test_a_start_without_a_process_id_is_an_unknown_outcome():
     assert error.value.code == "secret_process_outcome_unknown"
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("async_client", [False, True])
+@pytest.mark.parametrize("process_id", [42, True, " "])
+async def test_invalid_process_ids_are_unknown_outcomes(async_client, process_id):
+    manager, http = _sandbox_manager(
+        {("POST", "/sandbox/sbx_123/processes"): (200, {"process": {"id": process_id}})},
+        async_client=async_client,
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        result = manager.start_secret_process("sbx_123", {"command": "x"})
+        if async_client:
+            await result
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert len(http.calls) == 1
+
+
 def test_a_timed_out_start_is_an_unknown_outcome_but_a_refused_one_is_not():
     timed_out = httpx.ReadTimeout("timed out")
     manager, _ = _sandbox_manager({("POST", "/sandbox/sbx_123/processes"): timed_out})
@@ -1238,6 +1255,23 @@ def test_a_name_with_hyphens_in_other_places_goes_straight_to_the_name_search():
 CREATE_WITH_SECRETS = {"image_name": "node", "secrets": {"API_KEY": "provider-key"}}
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("async_client", [False, True])
+@pytest.mark.parametrize("sandbox_id", ["", " "])
+async def test_empty_sandbox_ids_are_unknown_outcomes(async_client, sandbox_id):
+    manager, http = _sandbox_manager(
+        {("POST", "/sandbox"): (200, dict(SANDBOX_DETAIL_PAYLOAD, id=sandbox_id))},
+        async_client=async_client,
+    )
+    with pytest.raises(HyperbrowserError) as error:
+        result = manager.create(CREATE_WITH_SECRETS)
+        if async_client:
+            await result
+    assert error.value.code == "secret_process_outcome_unknown"
+    assert error.value.retryable is False
+    assert len(http.calls) == 1
+
+
 @pytest.mark.parametrize(
     "outcome",
     [
@@ -1493,12 +1527,12 @@ async def test_use_shell_is_rejected_for_starts_with_secrets(api_type):
 
 
 def test_secret_names_env_names_and_versions_are_checked_locally():
-    for name in ["", "-leading", "has space", "a" * 129]:
+    for name in ["", "-leading", "has space", "a" * 129, "name\n"]:
         with pytest.raises(ValueError, match="Invalid secret name"):
             CreateSecretParams(name=name)
     assert CreateSecretParams(name="a" * 128).name == "a" * 128
 
-    for env in ["1ABC", "API-KEY", ""]:
+    for env in ["1ABC", "API-KEY", "", "__proto__", "KEY\n"]:
         with pytest.raises(ValueError, match="environment variable name"):
             SandboxExecParams(command="x", secrets={env: "provider-key"})
         with pytest.raises(ValueError, match="environment variable name"):
@@ -1506,7 +1540,7 @@ def test_secret_names_env_names_and_versions_are_checked_locally():
     with pytest.raises(ValueError, match="Invalid secret name"):
         SandboxExecParams(command="x", secrets={"API_KEY": "bad name"})
 
-    for version in [0, -1, 2**31]:
+    for version in [0, -1, 2**31, True, 1.0, "1"]:
         with pytest.raises(ValueError, match="Invalid secret version"):
             SandboxExecParams(
                 command="x", secrets={"A": {"name": "k", "version": version}}
@@ -1524,7 +1558,7 @@ def test_list_pages_and_version_numbers_are_checked_before_any_request():
     for params in [{"limit": 0}, {"limit": 101}, {"page": 0}]:
         with pytest.raises(ValueError):
             manager.list(params)
-    for version in [0, 2**31, "1"]:
+    for version in [0, 2**31, "1", True, 1.0, 1.5]:
         with pytest.raises(HyperbrowserError) as error:
             manager.delete_version("provider-key", version)
         assert error.value.code == "invalid_secret_version"
@@ -1542,3 +1576,35 @@ async def test_async_version_numbers_are_checked_before_any_request():
     with pytest.raises(ValueError):
         await manager.list({"limit": 101})
     assert http.calls == []
+
+
+def test_secret_request_repr_does_not_expose_the_value():
+    params = CreateSecretParams(name="key", value="dummy-sensitive-value")
+    assert "dummy-sensitive-value" not in repr(params)
+    assert "dummy-sensitive-value" not in str(params)
+    assert "value" not in params.model_dump()
+    assert params.value == "dummy-sensitive-value"
+
+
+def test_secret_request_validation_message_does_not_expose_the_value():
+    with pytest.raises(ValueError) as error:
+        CreateSecretParams.model_validate({"value": "dummy-sensitive-value"})
+    assert "dummy-sensitive-value" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "model,params",
+    [
+        (CreateSandboxParams, {"image_name": "node"}),
+        (SandboxExecParams, {"command": "x"}),
+    ],
+)
+def test_secret_bindings_enforce_the_limit_and_omit_empty_maps(model, params):
+    from hyperbrowser.client._request import dump_request
+
+    assert "secrets" not in dump_request(dict(params, secrets={}), model)
+    assert (
+        len(model(**params, secrets={f"KEY_{i}": "k" for i in range(32)}).secrets) == 32
+    )
+    with pytest.raises(ValueError, match="32"):
+        model(**params, secrets={f"KEY_{i}": "k" for i in range(33)})

@@ -9,10 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 SECRET_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
 SECRET_ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MAX_SECRET_VERSION = 2**31 - 1
+MAX_SECRET_BINDINGS = 32
 
 
 def validate_secret_name(name: str) -> str:
-    if not SECRET_NAME_PATTERN.match(name):
+    if not SECRET_NAME_PATTERN.fullmatch(name):
         raise ValueError(
             f"Invalid secret name {name!r}: names are 1-128 letters, digits, "
             "'_' or '-', starting with a letter or digit"
@@ -21,7 +22,11 @@ def validate_secret_name(name: str) -> str:
 
 
 def validate_secret_version(version: int) -> int:
-    if isinstance(version, bool) or not 1 <= version <= MAX_SECRET_VERSION:
+    if (
+        not isinstance(version, int)
+        or isinstance(version, bool)
+        or not 1 <= version <= MAX_SECRET_VERSION
+    ):
         raise ValueError(
             f"Invalid secret version {version!r}: expected 1 to {MAX_SECRET_VERSION}"
         )
@@ -46,10 +51,10 @@ class SecretReference(SecretBaseModel):
     def validate_name(cls, value):
         return validate_secret_name(value)
 
-    @field_validator("version")
+    @field_validator("version", mode="before")
     @classmethod
     def validate_version(cls, value):
-        if isinstance(value, int):
+        if value is not None and value != "latest":
             validate_secret_version(value)
         return value
 
@@ -62,8 +67,18 @@ def normalize_secret_references(value):
     check the environment variable names."""
     if not isinstance(value, dict):
         return value
+    if not value:
+        return None
+    if len(value) > MAX_SECRET_BINDINGS:
+        raise ValueError(
+            f"At most {MAX_SECRET_BINDINGS} secrets can be delivered at once"
+        )
     for env in value:
-        if not isinstance(env, str) or not SECRET_ENV_NAME_PATTERN.match(env):
+        if (
+            not isinstance(env, str)
+            or not SECRET_ENV_NAME_PATTERN.fullmatch(env)
+            or env == "__proto__"
+        ):
             raise ValueError(
                 f"Invalid environment variable name {env!r} for a secret: "
                 "expected letters, digits and '_', not starting with a digit"
@@ -75,10 +90,12 @@ def normalize_secret_references(value):
 
 
 class CreateSecretParams(SecretBaseModel):
+    model_config = ConfigDict(populate_by_name=True, hide_input_in_errors=True)
+
     name: str
     description: Optional[str] = None
     # Encrypted locally and uploaded as the first version; never sent as is.
-    value: Optional[Union[str, bytes]] = Field(default=None, exclude=True)
+    value: Optional[Union[str, bytes]] = Field(default=None, exclude=True, repr=False)
 
     @field_validator("name")
     @classmethod

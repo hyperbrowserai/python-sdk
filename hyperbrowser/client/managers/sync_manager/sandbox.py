@@ -1158,7 +1158,10 @@ class SandboxManager:
         data = dump_request(normalized, CreateSandboxParams)
         try:
             payload = self._request("POST", "/sandbox", data=data)
-            return SandboxDetail(**payload)
+            detail = SandboxDetail(**payload)
+            if normalized.secrets and not detail.id.strip():
+                raise ValueError("The API accepted the create but returned no sandbox ID")
+            return detail
         except Exception as error:
             # A create that may have reached the API may be running its
             # startup command with the secrets, so it must not look retryable.

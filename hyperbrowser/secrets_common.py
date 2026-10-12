@@ -290,7 +290,8 @@ def secret_process_id(process: Any) -> str:
     """A started process's ID; the receiver may send it as ``processId``."""
     if not isinstance(process, dict):
         return ""
-    return str(process.get("id") or process.get("processId") or "").strip()
+    process_id = process.get("id") or process.get("processId")
+    return process_id.strip() if isinstance(process_id, str) else ""
 
 
 def secret_process_failed_error(
