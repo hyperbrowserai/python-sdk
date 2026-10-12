@@ -149,10 +149,11 @@ def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_
     }
 
 
-def test_meta_computer_use_serializes_for_mapping_and_legacy_model():
+@pytest.mark.parametrize("llm", ["muse-spark-1.3", "muse-wonder-1.0"])
+def test_meta_computer_use_serializes_for_mapping_and_legacy_model(llm):
     mapping = {
         "task": "Complete the task",
-        "llm": "muse-spark-1.3",
+        "llm": llm,
         "reasoning_effort": "max",
         "use_custom_api_keys": True,
         "api_keys": {"meta": "meta-key"},
@@ -160,7 +161,7 @@ def test_meta_computer_use_serializes_for_mapping_and_legacy_model():
     }
     legacy = StartMetaComputerUseTaskParams(
         task="Complete the task",
-        llm="muse-spark-1.3",
+        llm=llm,
         reasoning_effort="max",
         use_custom_api_keys=True,
         api_keys=MetaComputerUseApiKeys(meta="meta-key"),
@@ -173,7 +174,7 @@ def test_meta_computer_use_serializes_for_mapping_and_legacy_model():
     )
     assert dump_request(mapping, StartMetaComputerUseTaskParams) == {
         "task": "Complete the task",
-        "llm": "muse-spark-1.3",
+        "llm": llm,
         "reasoningEffort": "max",
         "useCustomApiKeys": True,
         "apiKeys": {"meta": "meta-key"},
