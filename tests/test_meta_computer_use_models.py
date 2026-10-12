@@ -1,7 +1,12 @@
+import pytest
+
 from hyperbrowser.models.agents.meta_computer_use import MetaComputerUseTaskResponse
 
 
-def test_meta_computer_use_task_response_parses_responses_style_step_payload() -> None:
+@pytest.mark.parametrize("llm", ["muse-spark-1.3", "muse-wonder-1.0"])
+def test_meta_computer_use_task_response_parses_responses_style_step_payload(
+    llm,
+) -> None:
     payload = {
         "jobId": "job-123",
         "status": "completed",
@@ -12,13 +17,13 @@ def test_meta_computer_use_task_response_parses_responses_style_step_payload() -
                     "completed_at": 1788743511,
                     "output_text": (
                         "Second sentence in the Ecology section "
-                        '(Population subsection) of the Dog Wikipedia page:\n\n'
+                        "(Population subsection) of the Dog Wikipedia page:\n\n"
                         '"In 2020, the estimated global dog population was '
                         'between 700 million and 1 billion."'
                     ),
                     "error": None,
                     "incomplete_details": None,
-                    "model": "muse-spark-1.3",
+                    "model": llm,
                     "output": [
                         {
                             "type": "reasoning",
@@ -54,7 +59,7 @@ def test_meta_computer_use_task_response_parses_responses_style_step_payload() -
                     "output_text": "",
                     "error": {"code": "ERR", "message": "something failed"},
                     "incomplete_details": {"reason": "timeout"},
-                    "model": "muse-spark-1.3",
+                    "model": llm,
                     "output": [
                         {
                             "type": "function_call",
@@ -78,7 +83,7 @@ def test_meta_computer_use_task_response_parses_responses_style_step_payload() -
     assert final_step.completed_at == 1788743511
     assert final_step.error is None
     assert final_step.incomplete_details is None
-    assert final_step.model == "muse-spark-1.3"
+    assert final_step.model == llm
     assert final_step.reasoning is not None
     assert final_step.reasoning.effort == "medium"
     assert final_step.reasoning.summary == "concise"
