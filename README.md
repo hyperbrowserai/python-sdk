@@ -109,6 +109,235 @@ and cannot be combined with `allow_internet_access=False`, `allow_out`, or
 `deny_out`. See the
 [proxy routes guide](https://hyperbrowser.ai/docs/sessions/proxy-routes).
 
+## Fill credentials into browser sessions
+
+A credential is a secret of type `"credential"` that holds a website login,
+such as a username and password. Its value is encrypted on your machine like
+any other secret value, and the platform types it into pages of a browser
+session; after upload, neither the API, your code, nor an LLM sees it again.
+
+```python
+from playwright.sync_api import sync_playwright
+
+from hyperbrowser import Hyperbrowser
+
+client = Hyperbrowser(api_key="test-key")
+
+# Field names (here "username" and "password") are what a fill refers to.
+client.secrets.create_credential(
+    "github",
+    {"username": "ada@example.com", "password": "correct horse battery staple"},
+    allowed_origins=["https://github.com"],
+    description="GitHub login",
+)
+
+# Credentials can only be attached when the session is created.
+session = client.sessions.create({"credentials": ["github"]})
+
+with sync_playwright() as p:
+    browser = p.chromium.connect_over_cdp(session.ws_endpoint)
+    page = browser.contexts[0].pages[0]
+    page.goto("https://github.com/login")
+
+    result = client.sessions.credentials.fill(
+        session.id,
+        {
+            "credential": "github",
+            "fields": [
+                {"field": "username", "selector": "#login_field"},
+                {"field": "password", "selector": "#password"},
+            ],
+        },
+    )
+    if all(field.outcome == "filled" for field in result.fields):
+        # Fill only types. Submitting is up to you.
+        page.click("input[type=submit]")
+
+client.sessions.stop(session.id)
+```
+
+`fill()` returns the filled page's `page_id` and `origin`, the credential
+`version`, and an outcome per field. Values are never returned.
+
+| Outcome | Meaning |
+| --- | --- |
+| `filled` | The input now holds exactly the stored value. |
+| `not_found` | No input matched the selector. |
+| `ambiguous` | Several visible inputs matched the selector. |
+| `not_editable` | The input is disabled, read-only, hidden, or not a text input. |
+| `not_accepted` | The page didn't keep the value, for example because of `maxlength`. |
+| `not_populated` | The stored credential has no such field. |
+
+Things to know:
+
+- A credential can be filled only on its allowed origins
+  (`scheme://host[:port]`; `https://*.example.com` matches any subdomain but
+  not `example.com` itself). Change them with
+  `client.secrets.set_allowed_origins("github", [...])`; `None` clears them,
+  after which the credential can't be filled. `client.secrets.update()` takes
+  `{"metadata": {"browser": None}}` too: each metadata member sent replaces the
+  stored one and `None` removes it.
+- Credential values map 1-64 character field names (letters, digits, `_`, `.`
+  and `-`) to non-empty strings, up to 32 KiB of JSON in total. They are
+  checked before anything is sent; rotate one with
+  `client.secrets.add_version("github", {...})`. `client.secrets.list({"type":
+  "credential"})` lists only credentials.
+- A fill takes 1-16 fields, each at most once. Without `page_id` it picks the
+  only tab, else the single tab on an allowed origin, else the single visible
+  tab. Under Playwright every tab reports as visible, so with several tabs on
+  allowed origins pass the tab's CDP target ID as `page_id`:
+  `page.context.new_cdp_session(page).send("Target.getTargetInfo")["targetInfo"]["targetId"]`.
+  For a login form in an iframe, pass `"frame": {"url": "https://login.example.com/"}`
+  (a URL prefix).
+- Fill is safe to retry and never retried automatically. It waits at least
+  30 seconds for the API (the client timeout when longer).
+- Attaching credentials needs an API key with `secrets.use`; filling also needs
+  `browser-sessions.update`. The team needs the secrets feature. Sessions with
+  credentials run as Firecracker browsers with Chrome's password manager off.
+- Fills are recorded in the session's event log as `credential_filled` and
+  `credential_fill_refused`.
+- Errors are raised as `HyperbrowserError` with the API's `code`, `retryable`,
+  and `status_code`. `details` holds the API's response body, so the
+  candidate tabs of an ambiguous fill are in `error.details["details"]["pages"]`
+  (each with `pageId`, `url` and `title`). Error codes from the API:
+  - `CREDENTIAL_PAGE_AMBIGUOUS` (409): several tabs could be the target; pass
+    one's `pageId` as `page_id`. `CREDENTIAL_FRAME_AMBIGUOUS` (409) is the same
+    for frames.
+  - `CREDENTIAL_ORIGIN_NOT_ALLOWED` (403): the page's origin (in `details`)
+    isn't allowed; nothing was typed.
+  - `CREDENTIAL_NOT_ATTACHED` (403): the credential wasn't attached when the
+    session was created.
+  - `CREDENTIAL_NOT_READY` (409): the credential has no allowed origins or no
+    value.
+  - `CREDENTIAL_PAGE_NOT_FOUND`, `CREDENTIAL_FRAME_NOT_FOUND` (404),
+    `SECRET_NOT_FOUND` (404), `SECRET_TYPE_MISMATCH` (400, a plain secret was
+    named), `SESSION_NOT_ACTIVE` (409).
+  - `CREDENTIAL_FILL_TIMEOUT` (503/504, retryable) and
+    `CREDENTIAL_FILL_FAILED` (500/502, retryable as flagged).
+  - `CREDENTIALS_UNSUPPORTED_RUNTIME` (400) and `CREDENTIAL_FILL_UNSUPPORTED`
+    (501): the session's browser can't fill credentials.
+  - Locally, invalid fill requests raise `invalid_request` and invalid values
+    raise `invalid_secret_value`, before any request.
+
+### Use with LLM SDKs
+
+`CredentialFillTool` lets a model fill a credential by name while your
+application binds the session ID. The model chooses only the credential, the
+fields with their CSS selectors, and optionally a `page_id` or `frame_url`; it
+never sees the values. `runnable()` returns JSON text for the model: the fill
+result, or `{"error": {"code", "message", "retryable", "details"}}` when the
+fill fails, so the model can react (for example by choosing a `page_id`).
+Give the model your other browser tools too, since it must submit the form
+itself. `async_runnable()` does the same with `AsyncHyperbrowser`.
+
+OpenAI (Chat Completions):
+
+```python
+import json
+
+from openai import OpenAI
+
+from hyperbrowser.tools import CredentialFillTool
+
+openai_client = OpenAI()
+tools = [CredentialFillTool.openai_tool_definition]  # plus your browser tools
+messages = [{"role": "user", "content": "Sign in to GitHub with the credential named github."}]
+while True:
+    response = openai_client.chat.completions.create(
+        model="gpt-4.1", messages=messages, tools=tools
+    )
+    message = response.choices[0].message
+    messages.append(message)
+    if not message.tool_calls:
+        break
+    for call in message.tool_calls:
+        if call.function.name == "fill_credential":
+            output = CredentialFillTool.runnable(
+                client, session.id, json.loads(call.function.arguments)
+            )
+        else:
+            output = run_browser_tool(call)  # your click/press/navigate tools
+        messages.append({"role": "tool", "tool_call_id": call.id, "content": output})
+```
+
+Anthropic (Messages):
+
+```python
+import anthropic
+
+from hyperbrowser.tools import CredentialFillTool
+
+anthropic_client = anthropic.Anthropic()
+tools = [CredentialFillTool.anthropic_tool_definition]  # plus your browser tools
+messages = [{"role": "user", "content": "Sign in to GitHub with the credential named github."}]
+while True:
+    response = anthropic_client.messages.create(
+        model="claude-sonnet-4-5", max_tokens=1024, tools=tools, messages=messages
+    )
+    messages.append({"role": "assistant", "content": response.content})
+    if response.stop_reason != "tool_use":
+        break
+    results = []
+    for block in response.content:
+        if block.type != "tool_use":
+            continue
+        if block.name == "fill_credential":
+            output = CredentialFillTool.runnable(client, session.id, block.input)
+        else:
+            output = run_browser_tool(block)
+        results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
+    messages.append({"role": "user", "content": results})
+```
+
+Gemini (google-genai):
+
+```python
+from google import genai
+from google.genai import types
+
+from hyperbrowser.tools import CredentialFillTool
+
+gemini = genai.Client()
+config = types.GenerateContentConfig(
+    tools=[
+        types.Tool(function_declarations=[CredentialFillTool.gemini_tool_definition])
+    ]  # plus your browser tools
+)
+contents = [
+    types.Content(
+        role="user",
+        parts=[types.Part.from_text(text="Sign in to GitHub with the credential named github.")],
+    )
+]
+while True:
+    response = gemini.models.generate_content(
+        model="gemini-2.5-flash", contents=contents, config=config
+    )
+    contents.append(response.candidates[0].content)
+    if not response.function_calls:
+        break
+    parts = []
+    for call in response.function_calls:
+        if call.name == "fill_credential":
+            output = CredentialFillTool.runnable(client, session.id, call.args or {})
+        else:
+            output = run_browser_tool(call)
+        parts.append(
+            types.Part.from_function_response(name=call.name, response={"result": output})
+        )
+    contents.append(types.Content(role="user", parts=parts))
+```
+
+## Tools for LLM function calling
+
+`hyperbrowser.tools` has ready-made tools: `WebsiteScrapeTool`,
+`WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`,
+`BrowserUseTool` and `CredentialFillTool`. Each has `openai_tool_definition`
+(a strict Chat Completions function tool), `anthropic_tool_definition`,
+`gemini_tool_definition` (a function declaration dict for google-genai), and
+`runnable()` / `async_runnable()` to run the model's input and return text for
+the model.
+
 ## Usage
 
 Hyperbrowser 1.0 accepts plain dictionaries for request parameters. Method

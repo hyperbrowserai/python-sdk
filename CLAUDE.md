@@ -69,9 +69,9 @@ Response and legacy models are re-exported from
 
 ### Pre-built Tools
 
-`hyperbrowser/tools/` contains ready-to-use tool definitions for OpenAI and Anthropic function calling:
-- `WebsiteScrapeTool`, `WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`, `BrowserUseTool`
-- Each has `openai_tool_definition`, `anthropic_tool_definition`, plus sync/async runnable methods
+`hyperbrowser/tools/` contains ready-to-use tool definitions for OpenAI, Anthropic and Gemini function calling:
+- `WebsiteScrapeTool`, `WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`, `BrowserUseTool`, `CredentialFillTool`
+- Each has `openai_tool_definition`, `anthropic_tool_definition`, `gemini_tool_definition` (converted from the JSON schema by `tools/gemini.py`), plus sync/async runnable methods
 
 ## Key Patterns
 
