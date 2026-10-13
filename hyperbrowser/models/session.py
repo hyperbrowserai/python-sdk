@@ -62,6 +62,21 @@ class SessionProfile(BaseModel):
     )
 
 
+class SessionWebBotAuth(BaseModel):
+    """
+    How a session signs its requests with Web Bot Auth.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    signature_agent: str = Field(alias="signatureAgent")
+    """The identity the session signs as, e.g. "https://www.hyperbrowser.ai"."""
+    only_domains: Optional[List[str]] = Field(default=None, alias="onlyDomains")
+    """Present when signing is limited to these hostnames and their subdomains."""
+
+
 class UpdateSessionProfileParams(BaseModel):
     """
     Parameters for updating session profile persistence settings.
@@ -130,6 +145,8 @@ class SessionLaunchState(BaseModel):
     )
 
     enable_web_mcp: Optional[bool] = Field(default=None, alias="enableWebMcp")
+    web_bot_auth: Optional[SessionWebBotAuth] = Field(default=None, alias="webBotAuth")
+    """Present only for a session that signs its requests with Web Bot Auth."""
 
     use_ultra_stealth: Optional[bool] = Field(default=None, alias="useUltraStealth")
     use_stealth: Optional[bool] = Field(default=None, alias="useStealth")
@@ -404,6 +421,40 @@ class StartSessionFromSnapshotParams(BaseModel):
     snapshot_id: str = Field(serialization_alias="snapshotId")
 
 
+class WebBotAuthParams(BaseModel):
+    """
+    Limits Web Bot Auth signing to some hosts.
+    """
+
+    # An unknown key (such as "onlyDomains") is an error rather than dropped:
+    # dropping it would sign requests to every host.
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    only_domains: Optional[List[str]] = Field(
+        default=None, serialization_alias="onlyDomains"
+    )
+    """Sign only requests to these hostnames (e.g. "example.com") and their
+    subdomains. No scheme, port or path; at most 50.
+    """
+
+
+class ProxyRoute(BaseModel):
+    """
+    Sends traffic for matching hosts through the session's proxy or straight out.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    match: Union[str, List[str]]
+    """A hostname, "*.example.com" (subdomains, not example.com itself) or "*"
+    (every host), or a list of them.
+    """
+    proxy: Literal["direct", "default"]
+    """Where the traffic goes: "direct" sends it straight out of the browser's
+    machine, and "default" sends it through the session's proxy.
+    """
+
+
 class CreateSessionParams(BaseModel):
     """
     Parameters for creating a new browser session.
@@ -416,6 +467,24 @@ class CreateSessionParams(BaseModel):
     enable_web_mcp: Optional[bool] = Field(
         default=None, serialization_alias="enableWebMcp"
     )
+    web_bot_auth: Optional[Union[bool, WebBotAuthParams]] = Field(
+        default=None, serialization_alias="webBotAuth"
+    )
+    """Sign the session's requests with Web Bot Auth so websites can verify they
+    come from Hyperbrowser. Pass WebBotAuthParams(only_domains=[...]) to sign only
+    for those hosts. Requires Web Bot Auth to be enabled for your team; works for
+    sessions and agent tasks, and cannot be combined with use_ultra_stealth or
+    start_from_snapshot.
+    """
+    proxy_routes: Optional[List[ProxyRoute]] = Field(
+        default=None, serialization_alias="proxyRoutes"
+    )
+    """Choose, per host, whether the session's traffic goes through its proxy or
+    straight out. The first route that matches a host decides; hosts that no
+    route matches use the proxy. Requires use_proxy and proxy routes to be
+    enabled for your team, only applies when creating a session, and cannot be
+    combined with allow_internet_access=False, allow_out or deny_out.
+    """
 
     use_ultra_stealth: bool = Field(
         default=False, serialization_alias="useUltraStealth"

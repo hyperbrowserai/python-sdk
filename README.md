@@ -68,6 +68,47 @@ Pydantic request/response models in `hyperbrowser.models`.
 See the [WebMCP guide](https://hyperbrowser.ai/docs/sessions/webmcp) for complete
 examples, cancellation behavior, human submission, and limits.
 
+## Web Bot Auth
+
+A session can sign its requests with Web Bot Auth so websites can verify that they
+come from Hyperbrowser. Web Bot Auth is enabled for teams on request.
+
+```python
+session = client.sessions.create({"web_bot_auth": True})
+print(session.launch_state.web_bot_auth.signature_agent)  # https://www.hyperbrowser.ai
+
+# Sign only requests to these hosts and their subdomains:
+client.sessions.create({"web_bot_auth": {"only_domains": ["example.com"]}})
+```
+
+Agent tasks accept `web_bot_auth` in `session_options`; scrape, crawl, and extract
+jobs do not. It cannot be combined with `use_ultra_stealth` or
+`start_from_snapshot`. See the
+[Web Bot Auth guide](https://hyperbrowser.ai/docs/sessions/web-bot-auth).
+
+## Proxy routes
+
+`proxy_routes` sends some hosts' traffic straight out instead of through the
+session's proxy, or the other way round. The first route that matches a host
+decides; hosts that no route matches use the proxy. Proxy routes require
+`use_proxy` and are enabled for teams on request.
+
+```python
+session = client.sessions.create({
+    "use_proxy": True,
+    "proxy_routes": [
+        {"match": "api.example.com", "proxy": "default"},  # stays on the proxy
+        {"match": ["*.example.com", "cdn.example.net"], "proxy": "direct"},
+    ],
+})
+```
+
+A pattern is a hostname, `*.example.com` (its subdomains, not `example.com`
+itself), or `*` (every host). Proxy routes only apply to `client.sessions.create`
+and cannot be combined with `allow_internet_access=False`, `allow_out`, or
+`deny_out`. See the
+[proxy routes guide](https://hyperbrowser.ai/docs/sessions/proxy-routes).
+
 ## Usage
 
 Hyperbrowser 1.0 accepts plain dictionaries for request parameters. Method
