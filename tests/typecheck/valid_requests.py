@@ -20,7 +20,7 @@ from hyperbrowser.models import (
     ComputerActionResponse,
 )
 from hyperbrowser.types import ScrollActionParams
-from hyperbrowser.tools import WebsiteExtractTool
+from hyperbrowser.tools import CredentialFillTool, WebsiteExtractTool
 
 
 class ProductResult(BaseModel):
@@ -644,6 +644,8 @@ def valid_credential_requests(client: Hyperbrowser) -> None:
             frame=CredentialFillFrame(url="https://login.github.com/"),
         ),
     )
+    text: str = CredentialFillTool.runnable(client, session.id, {"credential": "x"})
+    print(text, CredentialFillTool.gemini_tool_definition["name"])
 
 
 async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
@@ -656,3 +658,7 @@ async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
         {"credential": "github", "fields": [{"field": "u", "selector": "#u"}]},
     )
     print(result.fields)
+    text: str = await CredentialFillTool.async_runnable(
+        client, session.id, {"credential": "x"}
+    )
+    print(text)

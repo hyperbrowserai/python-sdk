@@ -187,3 +187,84 @@ BROWSER_USE_SCHEMA = {
     ],
     "additionalProperties": False,
 }
+
+FILL_CREDENTIAL_DESCRIPTION = (
+    "Fill a stored login credential into the browser session's page by typing "
+    "its values into the inputs you select. A credential is a saved login (for "
+    "example a username and password) that you refer to by name; you never see "
+    "its values, and they never appear in this tool's input or output. This tool "
+    "only types: it does NOT submit the form. After a fill, click the login "
+    "button or press Enter with your other browser tools.\n\n"
+    "The result is JSON with the origin and pageId of the page that was filled, "
+    "and an outcome for each field:\n"
+    "- filled: the input now holds the value.\n"
+    "- not_found: no input matched the selector. Look at the page again and fix "
+    "the selector; the form may not have loaded yet, or it may be inside an "
+    "iframe (pass frame_url).\n"
+    "- ambiguous: several visible inputs matched. Use a more specific selector.\n"
+    "- not_editable: the input is disabled, read-only, hidden or not a text "
+    "input. Select the real input, or reveal it first (some sites show the "
+    "password input only after the username step).\n"
+    "- not_accepted: the page did not keep the value (for example a length "
+    "limit). Check that you selected the right input.\n"
+    "- not_populated: the stored credential has no such field. Check the field "
+    "name; common ones are username, email and password.\n"
+    "Filling again is safe. Errors come back as JSON with a code, for example "
+    '{"error": {"code": "CREDENTIAL_PAGE_AMBIGUOUS", "message": "...", '
+    '"retryable": false, "details": {"pages": [...]}}}. On '
+    "CREDENTIAL_PAGE_AMBIGUOUS, call again with page_id set to the pageId of the "
+    "tab that shows the login form. CREDENTIAL_ORIGIN_NOT_ALLOWED means the "
+    "credential may not be used on this site; do not retry it there. When "
+    "retryable is true, the same call may succeed if you try again."
+)
+
+FILL_CREDENTIAL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "credential": {
+            "type": "string",
+            "description": "The name of the stored credential to fill, as you were "
+            "told it. You cannot see its values; refer to it only by name.",
+        },
+        "fields": {
+            "type": "array",
+            "description": "The inputs to fill: one entry per credential field, "
+            "each field at most once.",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "description": "The credential field to type: a key of "
+                        'the stored login such as "username", "email" or '
+                        '"password".',
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "A CSS selector matching exactly one "
+                        'visible input on the page, such as "#login_field" or '
+                        "\"input[name='password']\".",
+                    },
+                },
+                "required": ["field", "selector"],
+                "additionalProperties": False,
+            },
+        },
+        "page_id": {
+            "type": ["string", "null"],
+            "description": "The browser tab to fill. Use null unless a previous "
+            "call failed with CREDENTIAL_PAGE_AMBIGUOUS; then pass the pageId of "
+            "the tab showing the login form, from that error's details.pages.",
+        },
+        "frame_url": {
+            "type": ["string", "null"],
+            "description": "For a login form inside an iframe: the start of the "
+            'iframe\'s URL, such as "https://login.example.com/". Use null when '
+            "the form is in the page itself.",
+        },
+    },
+    "required": ["credential", "fields", "page_id", "frame_url"],
+    "additionalProperties": False,
+}

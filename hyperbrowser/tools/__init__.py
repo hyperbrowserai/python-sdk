@@ -1,7 +1,9 @@
 import json
-from typing import cast
+from typing import Any, Dict, Mapping, cast
 
 from hyperbrowser import Hyperbrowser, AsyncHyperbrowser
+from hyperbrowser.exceptions import HyperbrowserError
+from hyperbrowser.models.credential import CredentialFillResult
 from hyperbrowser.types import (
     StartBrowserUseTaskParams,
     StartCrawlJobParams,
@@ -13,6 +15,7 @@ from hyperbrowser.types import (
 from .openai import (
     BROWSER_USE_TOOL_OPENAI,
     EXTRACT_TOOL_OPENAI,
+    FILL_CREDENTIAL_TOOL_OPENAI,
     SCRAPE_TOOL_OPENAI,
     SCREENSHOT_TOOL_OPENAI,
     CRAWL_TOOL_OPENAI,
@@ -20,15 +23,25 @@ from .openai import (
 from .anthropic import (
     BROWSER_USE_TOOL_ANTHROPIC,
     EXTRACT_TOOL_ANTHROPIC,
+    FILL_CREDENTIAL_TOOL_ANTHROPIC,
     SCRAPE_TOOL_ANTHROPIC,
     SCREENSHOT_TOOL_ANTHROPIC,
     CRAWL_TOOL_ANTHROPIC,
+)
+from .gemini import (
+    BROWSER_USE_TOOL_GEMINI,
+    CRAWL_TOOL_GEMINI,
+    EXTRACT_TOOL_GEMINI,
+    FILL_CREDENTIAL_TOOL_GEMINI,
+    SCRAPE_TOOL_GEMINI,
+    SCREENSHOT_TOOL_GEMINI,
 )
 
 
 class WebsiteScrapeTool:
     openai_tool_definition = SCRAPE_TOOL_OPENAI
     anthropic_tool_definition = SCRAPE_TOOL_ANTHROPIC
+    gemini_tool_definition = SCRAPE_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartScrapeJobParams) -> str:
@@ -46,6 +59,7 @@ class WebsiteScrapeTool:
 class WebsiteScreenshotTool:
     openai_tool_definition = SCREENSHOT_TOOL_OPENAI
     anthropic_tool_definition = SCREENSHOT_TOOL_ANTHROPIC
+    gemini_tool_definition = SCREENSHOT_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartScrapeJobParams) -> str:
@@ -63,6 +77,7 @@ class WebsiteScreenshotTool:
 class WebsiteCrawlTool:
     openai_tool_definition = CRAWL_TOOL_OPENAI
     anthropic_tool_definition = CRAWL_TOOL_ANTHROPIC
+    gemini_tool_definition = CRAWL_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartCrawlJobParams) -> str:
@@ -102,6 +117,7 @@ def _normalize_extract_tool_params(
 class WebsiteExtractTool:
     openai_tool_definition = EXTRACT_TOOL_OPENAI
     anthropic_tool_definition = EXTRACT_TOOL_ANTHROPIC
+    gemini_tool_definition = EXTRACT_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: WebsiteExtractToolParams) -> str:
@@ -121,6 +137,7 @@ class WebsiteExtractTool:
 class BrowserUseTool:
     openai_tool_definition = BROWSER_USE_TOOL_OPENAI
     anthropic_tool_definition = BROWSER_USE_TOOL_ANTHROPIC
+    gemini_tool_definition = BROWSER_USE_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartBrowserUseTaskParams) -> str:
@@ -135,7 +152,87 @@ class BrowserUseTool:
         return resp.data.final_result if resp.data and resp.data.final_result else ""
 
 
+def _fill_credential_request(params: Mapping[str, Any]) -> Dict[str, Any]:
+    """Map the model's tool input to a fill request; null means absent."""
+    request: Dict[str, Any] = {
+        "credential": params.get("credential"),
+        "fields": params.get("fields"),
+    }
+    page_id = params.get("page_id", params.get("pageId"))
+    if page_id is not None and page_id != "":
+        request["page_id"] = page_id
+    frame_url = params.get("frame_url", params.get("frameUrl"))
+    if frame_url is not None and frame_url != "":
+        request["frame"] = {"url": frame_url}
+    return request
+
+
+def _fill_credential_result_text(result: CredentialFillResult) -> str:
+    return json.dumps(result.model_dump(by_alias=True), separators=(",", ":"))
+
+
+def _fill_credential_error_text(error: HyperbrowserError) -> str:
+    details = error.details
+    if error.status_code is not None and isinstance(details, dict):
+        # API errors keep the whole response body; the model needs only the
+        # details the server added, such as the candidate pages.
+        details = details.get("details")
+    return json.dumps(
+        {
+            "error": {
+                "code": error.code,
+                "message": error.args[0] if error.args else str(error),
+                "retryable": error.retryable,
+                "details": details,
+            }
+        },
+        separators=(",", ":"),
+        default=str,
+    )
+
+
+class CredentialFillTool:
+    """Let a model fill a stored login credential into a browser session.
+
+    The model chooses the credential by name and the inputs to fill; it never
+    sees the values. The application binds the session::
+
+        result = CredentialFillTool.runnable(hb, session.id, tool_input)
+
+    The result is JSON text for the model. API and validation errors are
+    returned as ``{"error": {"code", "message", "retryable", "details"}}``
+    instead of raised, so the model can react; other exceptions propagate.
+    """
+
+    openai_tool_definition = FILL_CREDENTIAL_TOOL_OPENAI
+    anthropic_tool_definition = FILL_CREDENTIAL_TOOL_ANTHROPIC
+    gemini_tool_definition = FILL_CREDENTIAL_TOOL_GEMINI
+
+    @staticmethod
+    def runnable(hb: Hyperbrowser, session_id: str, params: Mapping[str, Any]) -> str:
+        try:
+            result = hb.sessions.credentials.fill(
+                session_id, cast(Any, _fill_credential_request(params))
+            )
+        except HyperbrowserError as error:
+            return _fill_credential_error_text(error)
+        return _fill_credential_result_text(result)
+
+    @staticmethod
+    async def async_runnable(
+        hb: AsyncHyperbrowser, session_id: str, params: Mapping[str, Any]
+    ) -> str:
+        try:
+            result = await hb.sessions.credentials.fill(
+                session_id, cast(Any, _fill_credential_request(params))
+            )
+        except HyperbrowserError as error:
+            return _fill_credential_error_text(error)
+        return _fill_credential_result_text(result)
+
+
 __all__ = [
+    "CredentialFillTool",
     "WebsiteScrapeTool",
     "WebsiteScreenshotTool",
     "WebsiteCrawlTool",
