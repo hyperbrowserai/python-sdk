@@ -202,7 +202,8 @@ class Secret(SecretBaseModel):
     id: str
     name: str
     description: str = ""
-    type: SecretType = "secret"
+    # One of SecretType; kept as str so types the API adds later still parse.
+    type: str = "secret"
     metadata: SecretMetadata = Field(default_factory=SecretMetadata)
     encryption_context: str = Field(alias="encryptionContext")
     latest_version: Optional[int] = Field(default=None, alias="latestVersion")

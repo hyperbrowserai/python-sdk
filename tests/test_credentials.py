@@ -362,6 +362,39 @@ def test_list_filters_by_type():
         manager.list({"type": "password"})
 
 
+def test_secret_types_added_later_still_parse():
+    future = dict(_secret(), type="future_type", metadata={"future": {"x": 1}})
+    http = ScriptedHTTPClient(
+        {
+            ("GET", "/secrets"): (200, {"secrets": [future], "totalCount": 1}),
+            ("GET", f"/secrets/{SECRET_ID}"): (200, dict(future, versions=[])),
+        }
+    )
+    manager = SecretManager(FakeClient(http))
+
+    assert manager.list().secrets[0].type == "future_type"
+    assert manager.get(SECRET_ID).type == "future_type"
+    assert manager.get("provider-key").type == "future_type"
+    # Requests still only take the known types.
+    with pytest.raises(ValueError):
+        CreateSecretParams(name="provider-key", type="future_type")
+
+
+@pytest.mark.anyio
+async def test_async_secret_types_added_later_still_parse():
+    future = dict(_secret(), type="future_type")
+    http = AsyncScriptedHTTPClient(
+        {
+            ("GET", "/secrets"): (200, {"secrets": [future], "totalCount": 1}),
+            ("GET", f"/secrets/{SECRET_ID}"): (200, dict(future, versions=[])),
+        }
+    )
+    manager = AsyncSecretManager(FakeClient(http))
+
+    assert (await manager.list()).secrets[0].type == "future_type"
+    assert (await manager.get("provider-key")).type == "future_type"
+
+
 @pytest.mark.anyio
 async def test_async_credentials_round_trip(private_key):
     routes = _create_routes(private_key)

@@ -244,7 +244,7 @@ tools = [CredentialFillTool.openai_tool_definition]  # plus your browser tools
 messages = [{"role": "user", "content": "Sign in to GitHub with the credential named github."}]
 while True:
     response = openai_client.chat.completions.create(
-        model="gpt-4.1", messages=messages, tools=tools
+        model="gpt-5", messages=messages, tools=tools
     )
     message = response.choices[0].message
     messages.append(message)
@@ -272,7 +272,7 @@ tools = [CredentialFillTool.anthropic_tool_definition]  # plus your browser tool
 messages = [{"role": "user", "content": "Sign in to GitHub with the credential named github."}]
 while True:
     response = anthropic_client.messages.create(
-        model="claude-sonnet-4-5", max_tokens=1024, tools=tools, messages=messages
+        model="claude-sonnet-5-5", max_tokens=1024, tools=tools, messages=messages
     )
     messages.append({"role": "assistant", "content": response.content})
     if response.stop_reason != "tool_use":
@@ -311,7 +311,7 @@ contents = [
 ]
 while True:
     response = gemini.models.generate_content(
-        model="gemini-2.5-flash", contents=contents, config=config
+        model="gemini-3.5-flash", contents=contents, config=config
     )
     contents.append(response.candidates[0].content)
     if not response.function_calls:
