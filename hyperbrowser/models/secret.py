@@ -1,8 +1,9 @@
 import re
+from collections.abc import Mapping as MappingABC
 from datetime import datetime
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Mapping, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # The server's rules for secret names, the environment variables secrets are
 # delivered to, and version numbers.
@@ -89,28 +90,99 @@ def normalize_secret_references(value):
     }
 
 
+# A plain secret holds one string; a credential holds a website login (an
+# object of strings such as {"username": ..., "password": ...}) that browser
+# sessions fill into pages. The type is fixed when the secret is created.
+SecretType = Literal["secret", "credential"]
+
+# A secret value: str or bytes for a plain secret, or a mapping of field names
+# to strings for a credential.
+SecretValue = Union[str, bytes, Mapping[str, str]]
+
+
+class CredentialBrowserMetadata(SecretBaseModel):
+    """Where a credential may be filled.
+
+    Origins are ``scheme://host[:port]``; a leading ``*.`` matches any
+    subdomain. The server normalizes and checks them.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    allowed_origins: List[str] = Field(alias="allowedOrigins")
+
+
+class SecretMetadata(SecretBaseModel):
+    """Metadata stored with a secret. Credentials use ``browser``.
+
+    Members the SDK doesn't know are kept. In an update, each member sent
+    replaces the stored one and ``None`` removes it.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    browser: Optional[CredentialBrowserMetadata] = None
+
+
+def _check_secret_value_shape(value):
+    # Contents are checked by the secrets manager, which knows the secret's
+    # type; this only keeps unusable types out of the request model.
+    if value is None or isinstance(value, (str, bytes)):
+        return value
+    if isinstance(value, bytearray):
+        return bytes(value)
+    if isinstance(value, MappingABC):
+        return dict(value)
+    raise ValueError(
+        "secret value must be str or bytes, or a mapping of field names to "
+        "strings for a credential"
+    )
+
+
 class CreateSecretParams(SecretBaseModel):
     model_config = ConfigDict(populate_by_name=True, hide_input_in_errors=True)
 
     name: str
     description: Optional[str] = None
+    # Omitted means "secret".
+    type: Optional[SecretType] = None
+    metadata: Optional[SecretMetadata] = None
     # Encrypted locally and uploaded as the first version; never sent as is.
-    value: Optional[Union[str, bytes]] = Field(default=None, exclude=True, repr=False)
+    value: Optional[SecretValue] = Field(default=None, exclude=True, repr=False)
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, value):
         return validate_secret_name(value)
 
+    @field_validator("value", mode="plain")
+    @classmethod
+    def validate_value(cls, value):
+        return _check_secret_value_shape(value)
+
 
 class UpdateSecretParams(SecretBaseModel):
-    description: str
+    """A description, metadata, or both.
+
+    Metadata is merged by top-level member: each member sent replaces the
+    stored one, ``None`` removes it, and members not sent are kept.
+    """
+
+    description: Optional[str] = None
+    metadata: Optional[SecretMetadata] = None
+
+    @model_validator(mode="after")
+    def require_a_change(self):
+        if self.description is None and self.metadata is None:
+            raise ValueError("Update a secret's description, metadata, or both")
+        return self
 
 
 class SecretListParams(SecretBaseModel):
     page: Optional[int] = Field(default=None, ge=1)
     limit: Optional[int] = Field(default=None, ge=1, le=100)
     search: Optional[str] = None
+    type: Optional[SecretType] = None
 
 
 class SecretJWK(SecretBaseModel):
@@ -130,10 +202,19 @@ class Secret(SecretBaseModel):
     id: str
     name: str
     description: str = ""
+    type: SecretType = "secret"
+    metadata: SecretMetadata = Field(default_factory=SecretMetadata)
     encryption_context: str = Field(alias="encryptionContext")
     latest_version: Optional[int] = Field(default=None, alias="latestVersion")
     created_at: Optional[datetime] = Field(default=None, alias="createdAt")
     updated_at: Optional[datetime] = Field(default=None, alias="updatedAt")
+
+    @field_validator("type", "metadata", mode="before")
+    @classmethod
+    def default_when_null(cls, value, info):
+        if value is not None:
+            return value
+        return "secret" if info.field_name == "type" else {}
 
 
 class SecretVersion(SecretBaseModel):

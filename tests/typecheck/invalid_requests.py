@@ -116,3 +116,20 @@ def invalid_web_bot_auth_and_proxy_routes_requests(client: Hyperbrowser) -> None
     client.sessions.create({"web_bot_auth": "yes"})  # M,P
     client.sessions.create({"proxy_routes": [{"match": "a.com"}]})  # M,P
     client.sessions.create({"proxy_routes": [{"match": "*", "proxy": "up"}]})  # M,P
+
+
+def invalid_credential_requests(client: Hyperbrowser) -> None:
+    client.secrets.create({"name": "github", "type": "password"})  # M,P
+    client.secrets.create({"name": "github", "value": {"username": 1}})  # M,P
+    client.secrets.list({"type": "login"})  # M,P
+    client.secrets.update("github", {"metadata": {"browser": {"allowedOrigins": []}}})  # M,P
+    client.secrets.create_credential("github", "password", ["https://x.io"])  # M,P
+    client.sessions.create({"credentials": "github"})  # M,P
+    client.sessions.credentials.fill("s", {"credential": "github"})  # M,P
+    client.sessions.credentials.fill("s", {"credential": "c", "fields": [{"field": "u"}]})  # M,P
+    client.sessions.credentials.fill("s", {"credential": "c", "fields": [], "pageId": "p"})  # M,P
+
+
+async def invalid_async_credential_requests(client: AsyncHyperbrowser) -> None:
+    await client.secrets.add_version("github", {"username": None})  # M,P
+    await client.sessions.credentials.fill("s", {"credential": "c", "fields": [], "frame": "u"})  # M,P

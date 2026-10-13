@@ -11,16 +11,23 @@ import json
 import os
 import re
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Sequence, Type, Union
 
 import httpx
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from .client._request import coerce_request
+from .credentials_common import CREDENTIAL_FIELD_PATTERN
 from .exceptions import HyperbrowserError
-from .models.secret import SecretsPublicKey, validate_secret_version
+from .models.secret import (
+    SecretsPublicKey,
+    UpdateSecretParams,
+    validate_secret_version,
+)
 
 # The largest secret value the platform accepts.
 MAX_SECRET_VALUE_BYTES = 32 * 1024
@@ -54,7 +61,12 @@ def secret_value_bytes(value: Union[str, bytes, bytearray]) -> bytes:
     Values are used byte-for-byte, including trailing newlines.
     """
     if isinstance(value, str):
-        data = value.encode("utf-8")
+        try:
+            data = value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise HyperbrowserError(
+                "Secret value must be valid UTF-8", code="invalid_secret_value"
+            ) from None
     elif isinstance(value, (bytes, bytearray)):
         data = bytes(value)
     else:
@@ -79,6 +91,108 @@ def secret_value_bytes(value: Union[str, bytes, bytearray]) -> bytes:
             "Secret value must not contain NUL bytes", code="invalid_secret_value"
         )
     return data
+
+
+def _invalid_value(message: str) -> HyperbrowserError:
+    return HyperbrowserError(message, code="invalid_secret_value")
+
+
+def credential_value_bytes(value: Any) -> bytes:
+    """Return a credential value's bytes: its compact UTF-8 JSON.
+
+    A credential value maps field names (such as ``"username"``) to non-empty
+    strings. Field names match ``^[a-zA-Z0-9_.-]{1,64}$``, and the JSON follows
+    the same size and UTF-8 rules as plain secret values. Errors name fields,
+    never values.
+    """
+    if not isinstance(value, Mapping):
+        raise _invalid_value(
+            "Credential value must be a mapping of field names to strings, "
+            f"got {type(value).__name__}"
+        )
+    if not value:
+        raise _invalid_value("Credential value must have at least one field")
+    fields: Dict[str, str] = {}
+    for field, field_value in value.items():
+        if not isinstance(field, str) or not CREDENTIAL_FIELD_PATTERN.fullmatch(field):
+            raise _invalid_value(
+                "Credential field names must be 1-64 letters, digits, '_', '.' "
+                "or '-'"
+            )
+        if not isinstance(field_value, str):
+            raise _invalid_value(
+                f'Credential field "{field}" must be a string, '
+                f"got {type(field_value).__name__}"
+            )
+        if not field_value:
+            raise _invalid_value(f'Credential field "{field}" is empty')
+        if "\x00" in field_value:
+            raise _invalid_value(
+                f'Credential field "{field}" must not contain NUL characters'
+            )
+        fields[field] = field_value
+    serialized = json.dumps(fields, separators=(",", ":"), ensure_ascii=False)
+    return secret_value_bytes(serialized)
+
+
+def secret_payload_bytes(secret_type: str, value: Any) -> bytes:
+    """Check a value against its secret's type and return the bytes to encrypt.
+
+    Credentials take a mapping of field names to strings; plain secrets take
+    str or bytes.
+    """
+    if secret_type == "credential":
+        if not isinstance(value, Mapping):
+            raise _invalid_value(
+                "A credential's value must be a mapping of field names to "
+                'strings, such as {"username": ..., "password": ...}, got '
+                f"{type(value).__name__}"
+            )
+        return credential_value_bytes(value)
+    if isinstance(value, Mapping):
+        raise _invalid_value(
+            "Only credentials take a mapping value; a plain secret's value is "
+            "str or bytes"
+        )
+    if not isinstance(value, (str, bytes, bytearray)):
+        raise _invalid_value(
+            f"Secret value must be str or bytes, got {type(value).__name__}"
+        )
+    return secret_value_bytes(value)
+
+
+def check_secret_value(value: Any) -> None:
+    """Check a value's contents before its secret's type is known."""
+    secret_payload_bytes(
+        "credential" if isinstance(value, Mapping) else "secret", value
+    )
+
+
+def browser_metadata(allowed_origins: Optional[Sequence[str]]) -> Dict[str, Any]:
+    """Credential metadata allowing fills on ``allowed_origins``; ``None``
+    clears the browser metadata in an update. The server checks the origins."""
+    if allowed_origins is None:
+        return {"browser": None}
+    if isinstance(allowed_origins, (str, bytes)) or not all(
+        isinstance(origin, str) for origin in allowed_origins
+    ):
+        raise HyperbrowserError(
+            "allowed_origins must be a list of origins such as "
+            '["https://example.com"]',
+            code="invalid_secret_metadata",
+        )
+    return {"browser": {"allowed_origins": list(allowed_origins)}}
+
+
+def update_secret_body(params: Any) -> Dict[str, Any]:
+    """Serialize a secret update.
+
+    Fields left out are not sent. Inside ``metadata``, a member set to
+    ``None`` is sent as ``null``, which removes it.
+    """
+    normalized = coerce_request(params, UpdateSecretParams)
+    body = normalized.model_dump(by_alias=True, exclude_unset=True)
+    return {key: value for key, value in body.items() if value is not None}
 
 
 def secrets_key_id(public_key: rsa.RSAPublicKey) -> str:

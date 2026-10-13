@@ -253,6 +253,17 @@ class Session(BaseModel):
         return value
 
 
+class SessionCredential(BaseModel):
+    """A credential attached to a session at creation."""
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str
+    name: str
+
+
 class SessionDetail(Session):
     """
     Detailed session information including websocket endpoint.
@@ -270,6 +281,9 @@ class SessionDetail(Session):
     live_url: str = Field(alias="liveUrl")
     live_domain: Optional[str] = Field(alias="liveDomain", default=None)
     token: str = Field(alias="token")
+    credentials: Optional[List[SessionCredential]] = Field(
+        default=None, alias="credentials"
+    )
 
 
 class SessionGetParams(BaseModel):
@@ -602,6 +616,12 @@ class CreateSessionParams(BaseModel):
         default=None,
         serialization_alias="startFromSnapshot",
     )
+    credentials: Optional[List[str]] = Field(
+        default=None, serialization_alias="credentials"
+    )
+    """Names of credentials (up to 20) that ``sessions.credentials.fill()``
+    may fill into this session's pages. Credentials can only be attached when
+    the session is created."""
 
 
 class CreateSessionSnapshotResponse(BaseModel):

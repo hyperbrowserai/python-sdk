@@ -1,5 +1,6 @@
 import warnings
 
+from .session_credentials import SessionCredentialsManager
 from .webmcp import WebMCPManager
 from collections.abc import Mapping
 from typing import IO, List, Optional, Union, overload
@@ -71,6 +72,7 @@ class SessionManager:
         self._client = client
         self.event_logs = SessionEventLogsManager(client)
         self.webmcp = WebMCPManager(client)
+        self.credentials = SessionCredentialsManager(client)
 
     async def create(
         self,

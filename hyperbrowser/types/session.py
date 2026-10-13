@@ -184,6 +184,7 @@ class CreateSessionParams(TypedDict, total=False):
     disable_post_quantum_key_agreement: Optional[bool]
     browser_memory_size: Optional[BrowserMemorySize]
     start_from_snapshot: Optional[StartSessionFromSnapshotParams]
+    credentials: Optional[List[str]]
 
 
 class UpdateSessionSolveCaptchasParams(TypedDict, total=False):

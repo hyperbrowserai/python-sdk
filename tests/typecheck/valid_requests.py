@@ -582,3 +582,77 @@ async def valid_async_web_bot_auth_and_proxy_routes_requests(
     await client.sessions.create(
         {"use_proxy": True, "proxy_routes": [{"match": "*", "proxy": "direct"}]}
     )
+
+
+def valid_credential_requests(client: Hyperbrowser) -> None:
+    from hyperbrowser.models import (
+        CredentialFillField,
+        CredentialFillFrame,
+        FillCredentialParams,
+        SecretMetadata,
+        UpdateSecretParams,
+    )
+
+    secret = client.secrets.create_credential(
+        "github",
+        {"username": "ada", "password": "pw"},
+        ["https://github.com"],
+        description="GitHub login",
+    )
+    kind: str = secret.type
+    origins = secret.metadata.browser.allowed_origins if secret.metadata.browser else []
+    client.secrets.create(
+        {
+            "name": "github",
+            "type": "credential",
+            "metadata": {"browser": {"allowed_origins": origins}},
+            "value": {"username": "ada"},
+        }
+    )
+    client.secrets.create(
+        LegacyCreateSecretParams(name="github", type="credential", value={"u": "a"})
+    )
+    client.secrets.add_version("github", {"username": "ada", "password": "pw2"})
+    client.secrets.set_allowed_origins("github", ["https://github.com"])
+    client.secrets.set_allowed_origins("github", None)
+    client.secrets.update("github", {"metadata": {"browser": None}})
+    client.secrets.update(
+        "github", UpdateSecretParams(metadata=SecretMetadata(browser=None))
+    )
+    client.secrets.list({"type": "credential"})
+
+    session = client.sessions.create({"credentials": [kind]})
+    for attached in session.credentials or []:
+        print(attached.id, attached.name)
+    client.sessions.create(LegacyCreateSessionParams(credentials=["github"]))
+    result = client.sessions.credentials.fill(
+        session.id,
+        {
+            "credential": "github",
+            "fields": [{"field": "username", "selector": "#login"}],
+            "page_id": "PAGE",
+            "frame": {"url": "https://login.github.com/"},
+        },
+    )
+    outcomes = [(field.field, field.outcome) for field in result.fields]
+    print(result.version, result.page_id, result.origin, outcomes)
+    client.sessions.credentials.fill(
+        session.id,
+        FillCredentialParams(
+            credential="github",
+            fields=[CredentialFillField(field="password", selector="#pw")],
+            frame=CredentialFillFrame(url="https://login.github.com/"),
+        ),
+    )
+
+
+async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
+    await client.secrets.create_credential("github", {"u": "a"}, ["https://x.io"])
+    await client.secrets.set_allowed_origins("github", None)
+    await client.secrets.add_version("github", {"username": "ada"})
+    session = await client.sessions.create({"credentials": ["github"]})
+    result = await client.sessions.credentials.fill(
+        session.id,
+        {"credential": "github", "fields": [{"field": "u", "selector": "#u"}]},
+    )
+    print(result.fields)

@@ -5,6 +5,11 @@ known request keys to their wire aliases while leaving user-owned mappings, such
 as JSON Schema objects, untouched.
 """
 
+from .credential import (
+    CredentialFillField,
+    CredentialFillFrame,
+    FillCredentialParams,
+)
 from .webmcp import (
     WebMCPInvokeParams,
     WebMCPStartParams,
@@ -157,9 +162,13 @@ from .session import (
 )
 from .secret import (
     CreateSecretParams,
+    CredentialBrowserMetadata,
     SecretListParams,
+    SecretMetadata,
     SecretReference,
     SecretReferenceInput,
+    SecretType,
+    SecretValue,
     UpdateSecretParams,
 )
 from .volume import CreateVolumeParams, VolumeListParams
@@ -192,6 +201,9 @@ from .web import (
 
 
 __all__ = [
+    "CredentialFillField",
+    "CredentialFillFrame",
+    "FillCredentialParams",
     "WebMCPInvokeParams",
     "WebMCPStartParams",
     "WebMCPResultParams",
@@ -333,9 +345,13 @@ __all__ = [
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
     "CreateSecretParams",
+    "CredentialBrowserMetadata",
     "SecretListParams",
+    "SecretMetadata",
     "SecretReference",
     "SecretReferenceInput",
+    "SecretType",
+    "SecretValue",
     "UpdateSecretParams",
     "CreateVolumeParams",
     "VolumeListParams",

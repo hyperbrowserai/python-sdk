@@ -1,3 +1,11 @@
+from .credential import (
+    CredentialFieldResult,
+    CredentialFillField,
+    CredentialFillFrame,
+    CredentialFillOutcome,
+    CredentialFillResult,
+    FillCredentialParams,
+)
 from .webmcp import (
     WebMCPAnnotations,
     WebMCPFrame,
@@ -256,6 +264,7 @@ from .profile import (
 )
 from .secret import (
     CreateSecretParams,
+    CredentialBrowserMetadata,
     SandboxResolvedSecret,
     Secret,
     SecretDeleteResult,
@@ -263,9 +272,12 @@ from .secret import (
     SecretJWK,
     SecretListParams,
     SecretListResponse,
+    SecretMetadata,
     SecretReference,
     SecretReferenceInput,
     SecretsPublicKey,
+    SecretType,
+    SecretValue,
     SecretVersion,
     SecretVersionDeleteResult,
     UpdateSecretParams,
@@ -332,6 +344,7 @@ from .session import (
     GetSessionVideoRecordingUrlResponse,
     ScreenConfig,
     Session,
+    SessionCredential,
     SessionDetail,
     SessionGetParams,
     SessionListParams,
@@ -475,6 +488,12 @@ from .sandbox import (
 from .team import TeamCreditInfo
 
 __all__ = [
+    "CredentialFieldResult",
+    "CredentialFillField",
+    "CredentialFillFrame",
+    "CredentialFillOutcome",
+    "CredentialFillResult",
+    "FillCredentialParams",
     "WebMCPAnnotations",
     "WebMCPFrame",
     "WebMCPSource",
@@ -652,6 +671,7 @@ __all__ = [
     "ProfileResponse",
     # secret
     "CreateSecretParams",
+    "CredentialBrowserMetadata",
     "SandboxResolvedSecret",
     "Secret",
     "SecretDeleteResult",
@@ -659,9 +679,12 @@ __all__ = [
     "SecretJWK",
     "SecretListParams",
     "SecretListResponse",
+    "SecretMetadata",
     "SecretReference",
     "SecretReferenceInput",
     "SecretsPublicKey",
+    "SecretType",
+    "SecretValue",
     "SecretVersion",
     "SecretVersionDeleteResult",
     "UpdateSecretParams",
@@ -698,6 +721,7 @@ __all__ = [
     "GetSessionVideoRecordingUrlResponse",
     "ScreenConfig",
     "Session",
+    "SessionCredential",
     "SessionDetail",
     "SessionGetParams",
     "SessionListParams",
