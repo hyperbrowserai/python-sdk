@@ -37,6 +37,7 @@ from .....types import (
     SandboxFileWriteEntry as SandboxFileWriteEntryDict,
 )
 from ...sandboxes.shared import (
+    SYNC_WEBSOCKET_CONNECT_OPTIONS,
     DEFAULT_WATCH_TIMEOUT_MS,
     _encode_batch_write_entry,
     _copy_model,
@@ -142,7 +143,7 @@ class SandboxFileWatchHandle:
             self._runtime_proxy_override,
         )
         headers = build_headers(connection.token, host_header=target.host_header)
-        connect_kwargs = {}
+        connect_kwargs: Dict[str, Any] = dict(SYNC_WEBSOCKET_CONNECT_OPTIONS)
         if target.connect_host is not None and target.connect_port is not None:
             connect_kwargs["sock"] = socket.create_connection(
                 (target.connect_host, target.connect_port),

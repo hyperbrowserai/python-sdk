@@ -1,7 +1,7 @@
 import base64
 import json
 import socket
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlencode
 
 from websockets.exceptions import ConnectionClosed
@@ -20,6 +20,7 @@ from .....types import (
     SandboxTerminalCreateParams as SandboxTerminalCreateParamsDict,
 )
 from ...sandboxes.shared import (
+    SYNC_WEBSOCKET_CONNECT_OPTIONS,
     _copy_model,
     _normalize_terminal_output_chunk,
     _normalize_terminal_status,
@@ -182,7 +183,7 @@ class SandboxTerminalHandle:
             self._runtime_proxy_override,
         )
         headers = build_headers(connection.token, host_header=target.host_header)
-        connect_kwargs = {}
+        connect_kwargs: Dict[str, Any] = dict(SYNC_WEBSOCKET_CONNECT_OPTIONS)
         if target.connect_host is not None and target.connect_port is not None:
             connect_kwargs["sock"] = socket.create_connection(
                 (target.connect_host, target.connect_port),

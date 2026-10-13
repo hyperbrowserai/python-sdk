@@ -1,10 +1,13 @@
 import base64
 import collections.abc
+import inspect
 import posixpath
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Union
 from urllib.parse import urlencode, urlsplit, urlunsplit
+
+from websockets.sync.client import connect as _sync_ws_connect
 
 from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
@@ -222,6 +225,15 @@ def _build_query_path(path: str, params: Optional[Dict[str, object]] = None) -> 
         return path
 
     return f"{path}?{urlencode(filtered)}"
+
+
+# websockets 17.1 deprecates calling the synchronous connect() outside a with block unless it is
+# passed legacy=True; earlier releases take no such argument.
+SYNC_WEBSOCKET_CONNECT_OPTIONS: Dict[str, bool] = (
+    {"legacy": True}
+    if "legacy" in inspect.signature(_sync_ws_connect).parameters
+    else {}
+)
 
 
 def _normalize_websocket_error(error: BaseException) -> HyperbrowserError:
