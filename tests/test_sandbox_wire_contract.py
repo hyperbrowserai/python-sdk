@@ -1,7 +1,14 @@
+import inspect
 import io
+import threading
+import warnings
+
 import httpx
 import pytest
 from types import SimpleNamespace
+
+from websockets.sync.client import connect as sync_ws_connect
+from websockets.sync.server import serve as sync_ws_serve
 import hyperbrowser.client.managers.async_manager.sandboxes.sandbox_terminal as async_terminal_module
 import hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal as sync_terminal_module
 
@@ -33,7 +40,10 @@ from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_processes impor
 from hyperbrowser.client.managers.sync_manager.sandboxes.sandbox_terminal import (
     SandboxTerminalApi,
 )
-from hyperbrowser.client.managers.sandboxes.shared import _build_sandbox_exposed_url
+from hyperbrowser.client.managers.sandboxes.shared import (
+    SYNC_WEBSOCKET_CONNECT_OPTIONS,
+    _build_sandbox_exposed_url,
+)
 from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     CompleteSandboxImageBuildParams,
@@ -2230,6 +2240,7 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
 
     def fake_connect(url, additional_headers=None, open_timeout=None, **kwargs):
         captured["url"] = url
+        captured["kwargs"] = kwargs
         return object()
 
     monkeypatch.setattr(
@@ -2255,6 +2266,33 @@ def test_sync_terminal_attach_includes_cursor(monkeypatch):
 
     assert "cursor=7" in captured["path"]
     assert "cursor=7" in captured["url"]
+    assert captured["kwargs"].items() >= SYNC_WEBSOCKET_CONNECT_OPTIONS.items()
+
+
+def test_sync_websocket_connect_options_connect_without_a_deprecation_warning():
+    supports_legacy = "legacy" in inspect.signature(sync_ws_connect).parameters
+    assert SYNC_WEBSOCKET_CONNECT_OPTIONS == (
+        {"legacy": True} if supports_legacy else {}
+    )
+
+    def echo(websocket):
+        for message in websocket:
+            websocket.send(message)
+
+    with sync_ws_serve(echo, "127.0.0.1", 0) as server:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        port = server.socket.getsockname()[1]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            websocket = sync_ws_connect(
+                f"ws://127.0.0.1:{port}", **SYNC_WEBSOCKET_CONNECT_OPTIONS
+            )
+            try:
+                websocket.send("ping")
+                assert websocket.recv() == "ping"
+            finally:
+                websocket.close()
+        server.shutdown()
 
 
 @pytest.mark.anyio
