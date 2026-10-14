@@ -51,6 +51,13 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
         builder_scratch_mib="64g",  # M,P
     )
     client.sandboxes.start_from_snapshot({"image_name": "node"})  # M,P
+    client.agents.gemini_computer_use.start(
+        {  # P
+            "task": "Complete the task",
+            "llm": "gemini-4-argon",
+            "reasoning_effort": "xhigh",  # M
+        }
+    )
     WebsiteExtractTool.runnable(
         client,
         {"urls": ["https://example.com"], "unknown": True},  # M,P

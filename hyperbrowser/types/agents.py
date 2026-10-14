@@ -10,6 +10,7 @@ from hyperbrowser.models.consts import (
     CuaLlm,
     CuaReasoningEffort,
     GeminiComputerUseLlm,
+    GeminiComputerUseReasoningEffort,
     GrokComputerUseLlm,
     GrokReasoningEffort,
     MetaComputerUseLlm,
@@ -92,6 +93,7 @@ class StartGeminiComputerUseTaskParams(TypedDict, total=False):
 
     task: Required[str]
     llm: Optional[GeminiComputerUseLlm]
+    reasoning_effort: Optional[GeminiComputerUseReasoningEffort]
     session_id: Optional[str]
     max_failures: Optional[int]
     max_steps: Optional[int]

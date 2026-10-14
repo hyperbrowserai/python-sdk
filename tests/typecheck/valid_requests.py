@@ -125,6 +125,13 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             "reasoning_effort": "xhigh",
         }
     )
+    client.agents.gemini_computer_use.start(
+        {
+            "task": "Complete the task",
+            "llm": "gemini-4-argon",
+            "reasoning_effort": "high",
+        }
+    )
     client.agents.jev_computer_use.start(
         {
             "task": "Find the order",
@@ -329,6 +336,13 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
             "task": "Complete the task",
             "llm": "claude-sonnet-5-5",
             "reasoning_effort": "max",
+        }
+    )
+    await client.agents.gemini_computer_use.start(
+        {
+            "task": "Complete the task",
+            "llm": "gemini-3.6-flash",
+            "reasoning_effort": "minimal",
         }
     )
     await client.agents.jev_computer_use.start(
