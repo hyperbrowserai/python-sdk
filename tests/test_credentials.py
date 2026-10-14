@@ -198,6 +198,10 @@ GOOD_SEEDS = [
     f"otpauth://totp/x?secret={SEED}&digits=6%zz",
     "\ufeff\u3000" + SEED + "\u00a0\u0085",
     "\u0131" + SEED[1:],
+    # The platform skips line breaks, as Go's base32 decoder does.
+    SEED[:13] + "\n" + SEED[13:],
+    SEED[:16] + "\r\n" + SEED[16:],
+    f"otpauth://totp/x?secret={SEED[:16]}%0A{SEED[16:]}",
 ]
 BAD_SEEDS = [
     ("", "empty"),
@@ -236,7 +240,6 @@ BAD_SEEDS = [
     ("\x1c" + SEED, "not base32"),
     (SEED[:-1] + "\u00df", "not base32"),
     ("\ufb00AAAAAA", "not base32"),
-    ("JBSWY3DP\nEHPK3PXP", "not base32"),
 ]
 
 

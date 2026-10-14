@@ -213,7 +213,7 @@ Things to know:
   metadata member sent replaces the stored one and `None` removes it.
 - Secret types are `secret` (the default), `totp` and `op_token`, fixed at
   creation; `client.secrets.list({"type": "totp"})` filters by type. TOTP
-  values are checked locally before upload: a base32 seed (spaces, hyphens,
+  values are checked locally before upload: a base32 seed (spaces, hyphens, line breaks,
   lowercase and trailing `=` are fine) or an `otpauth://totp/` URI with
   `algorithm` SHA1/SHA256/SHA512, `digits` 6 or 8 and `period` 1-300. Seeds
   shorter than 10 bytes (16 characters) are accepted but weak. The platform

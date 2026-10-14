@@ -122,12 +122,13 @@ def _invalid_totp(reason: str) -> HyperbrowserError:
 
 
 def _check_totp_base32(seed: str) -> None:
-    # Spaces, hyphens, lowercase and trailing "=" padding are accepted, as
-    # sites show seeds in all of these forms. Characters are uppercased one
+    # Spaces, hyphens, line breaks, lowercase and trailing "=" padding are
+    # accepted, as sites show seeds in all of these forms and the platform
+    # skips them too. Characters are uppercased one
     # at a time, as Go does, so "ß" can't turn into "SS".
     normalized = "".join(
         upper if len(upper) == 1 else char
-        for char in seed.replace(" ", "").replace("-", "")
+        for char in re.sub(r"[ \r\n-]", "", seed)
         for upper in [char.upper()]
     ).rstrip("=")
     if not normalized:
