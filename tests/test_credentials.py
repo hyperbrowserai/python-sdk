@@ -272,7 +272,7 @@ def test_short_totp_seeds_pass_without_warnings():
         check_totp_seed("MY")
 
 
-def test_op_tokens_take_any_string_but_never_allowed_origins(private_key):
+def test_op_tokens_take_any_string_and_use_the_token_context(private_key):
     created = _typed("op_token", name="op-token")
     http = ScriptedHTTPClient(_create_routes(private_key, created))
     manager = SecretManager(FakeClient(http))
@@ -283,19 +283,6 @@ def test_op_tokens_take_any_string_but_never_allowed_origins(private_key):
         header, value = _open(private_key, http.calls[-1]["json"]["envelope"])
         assert header["ctx"] == OP_TOKEN_CONTEXT and value == token.encode()
 
-    http.calls.clear()
-    for params in [
-        {"name": "op-token", "type": "op_token", "allowed_origins": ORIGINS},
-        {
-            "name": "op-token",
-            "type": "op_token",
-            "metadata": {"browser": {"allowed_origins": ORIGINS}},
-        },
-    ]:
-        with pytest.raises(ValueError, match="op_token"):
-            manager.create(params)
-    assert http.calls == []
-
 
 def test_updates_refuse_allowed_origins_on_an_op_token():
     http = ScriptedHTTPClient(
@@ -303,15 +290,22 @@ def test_updates_refuse_allowed_origins_on_an_op_token():
             ("GET", "/secrets"): (
                 200,
                 {"secrets": [_typed("op_token", name="op-token")], "totalCount": 1},
-            )
+            ),
+            ("PATCH", f"/secrets/{SECRET_ID}"): (
+                400,
+                {
+                    "code": "SECRET_METADATA_INVALID",
+                    "message": "op_token cannot have browser metadata",
+                },
+            ),
         }
     )
     manager = SecretManager(FakeClient(http))
 
     with pytest.raises(HyperbrowserError) as error:
         manager.set_allowed_origins("op-token", ORIGINS)
-    assert error.value.code == "invalid_secret_metadata"
-    assert all(call["method"] == "GET" for call in http.calls)
+    assert error.value.code == "SECRET_METADATA_INVALID"
+    assert http.calls[-1]["method"] == "PATCH"
 
 
 def test_values_stay_out_of_reprs_and_dumps():
@@ -387,66 +381,6 @@ def test_set_allowed_origins_replaces_or_clears_the_browser_metadata():
         assert error.value.code == "invalid_secret_metadata"
 
 
-BAD_ORIGINS = [
-    "http://example.com",
-    "https://*.com",
-    "http://*.localhost",
-    "https://*.10.0.0.1",
-    "https://*.[::1]",
-    "https://example.com/login",
-    "https://example.com?x=1",
-    "https://example.com#top",
-    "example.com",
-    "ftp://example.com",
-    "https://example.com:65536",
-    "https://-example.com",
-    "https://exa_mple.com",
-    "https://" + "a" * 64 + ".com",
-    "https://[::g]",
-    "https://" + "a" * 505 + ".com",
-    "",
-    # The server trims as JavaScript does, which keeps these.
-    "https://example.com\x1c",
-    "https://example.com\x85",
-    # Node's isIPv6 takes only these characters in a zone.
-    "https://[fe80::1%e_th]",
-    "https://[fe80::1%]",
-]
-
-
-@pytest.mark.parametrize("origin", BAD_ORIGINS)
-def test_secrets_refuse_origins_the_server_would(private_key, origin):
-    http = ScriptedHTTPClient(
-        {
-            ("GET", "/secrets"): (200, {"secrets": [_typed("totp")], "totalCount": 1}),
-            **_create_routes(private_key, _typed("secret")),
-        }
-    )
-    manager = SecretManager(FakeClient(http))
-
-    for params in [
-        {"name": "github-password", "allowed_origins": [origin]},
-        {
-            "name": "github-password",
-            "metadata": {
-                "browser": {"allowed_origins": ["https://github.com", origin]}
-            },
-        },
-    ]:
-        with pytest.raises(ValueError, match="origin"):
-            manager.create(params)
-    for update in [
-        lambda: manager.set_allowed_origins("github-otp", [origin]),
-        lambda: manager.update(
-            "github-otp", {"metadata": {"browser": {"allowed_origins": [origin]}}}
-        ),
-    ]:
-        with pytest.raises(HyperbrowserError) as error:
-            update()
-        assert error.value.code == "invalid_secret_metadata"
-    assert http.calls == []
-
-
 def test_secrets_take_origins_the_server_accepts(private_key):
     origins = [
         "https://github.com",
@@ -470,12 +404,6 @@ def test_secrets_take_origins_the_server_accepts(private_key):
     assert http.calls[-1]["json"]["metadata"] == {
         "browser": {"allowedOrigins": origins}
     }
-    for count in [0, 21]:
-        with pytest.raises(ValueError, match="1 to 20"):
-            CreateSecretParams(
-                name="github-password",
-                allowed_origins=[f"https://a{i}.github.com" for i in range(count)],
-            )
 
 
 def test_update_sends_only_the_members_given():
@@ -717,29 +645,6 @@ def test_sessions_attach_secrets_and_vaults_at_creation(sdk):
     assert session.credentials is None
 
 
-@pytest.mark.parametrize(
-    "credentials",
-    [
-        ["bad name"],
-        [{"vault": "a", "secret": "b"}],
-        [{"vault": "-a"}],
-        [{"login": "a"}],
-        ["s"] * 21,
-        ["s"] * 20 + [{"one_password": "op-token"}],
-        [{"one_password": "bad name"}],
-        [{"one_password": "op-token", "vault": "v"}],
-        # Keys are snake_case, as everywhere else in the SDK.
-        [{"onePassword": "op-token"}],
-        "github",
-    ],
-)
-def test_invalid_session_credentials_fail_before_http(sdk, credentials):
-    client, call, calls, outcomes = sdk
-    with pytest.raises(ValueError):
-        call(client.sessions.create, {"credentials": credentials})
-    assert not calls
-
-
 def test_vault_fills_post_fields_and_parse_per_input_results(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, FILL_RESULT)
@@ -853,44 +758,6 @@ def test_fill_errors_keep_code_retryable_and_details(sdk):
 
 
 ONE = [{"selector": "#p"}]
-
-
-@pytest.mark.parametrize(
-    "params",
-    [
-        {"fields": ONE},
-        {"credential": "c", "vault": "v", "fields": ONE},
-        {"credential": "", "fields": ONE},
-        {"credential": "c" * 256, "fields": ONE},
-        {"credential": "c", "fields": [{"selector": "#p", "field": "PASSWORD"}]},
-        {"vault": "v", "fields": ONE},
-        {"vault": "bad name", "fields": [{"selector": "#p", "field": "P"}]},
-        {"vault": "v", "fields": [{"selector": "#p", "field": "1PASSWORD"}]},
-        {"vault": "v", "fields": [{"selector": "#p", "field": "__proto__"}]},
-        {"credential": "c", "fields": []},
-        {"credential": "c", "fields": [{"selector": f"#f{i}"} for i in range(17)]},
-        {"credential": "c", "fields": [{"selector": "#p"}, {"selector": "#p"}]},
-        {"credential": "c", "fields": [{"selector": " "}]},
-        {"credential": "c", "fields": [{"selector": "é" * 513}]},
-        {"credential": "c", "fields": [{}]},
-        {"credential": "c", "fields": ONE, "page_id": "p", "page_url": "https://x"},
-        {"credential": "c", "fields": ONE, "page_id": ""},
-        {"credential": "c", "fields": ONE, "page_id": "p" * 129},
-        {"credential": "c", "fields": ONE, "page_url": "u" * 2049},
-        {"credential": "c", "fields": ONE, "frame_url": ""},
-        {"credential": "c", "fields": ONE, "frame_url": "u" * 2049},
-        {"credential": "c", "fields": ONE, "frame": {"url": "https://x"}},
-        {"credential": "c"},
-        {"credential": "c", "fields": "#p"},
-        "github",
-    ],
-)
-def test_invalid_fill_requests_fail_before_http(sdk, params):
-    client, call, calls, outcomes = sdk
-    with pytest.raises(HyperbrowserError) as raised:
-        call(client.sessions.credentials.fill, "s", params)
-    assert raised.value.code == "invalid_request"
-    assert not calls
 
 
 def test_fill_limits_are_inclusive(sdk):
@@ -1099,107 +966,6 @@ def _op(**changes):
     return dict(OP_SOURCE, **changes)
 
 
-@pytest.mark.parametrize(
-    "params",
-    [
-        # Exactly one source.
-        {"credential": "c", "one_password": OP_SOURCE, "fields": OP_ONE},
-        {"vault": "v", "one_password": OP_SOURCE, "fields": OP_ONE},
-        # ref on every field with one_password, and on none without.
-        {"one_password": OP_SOURCE, "fields": [{"selector": "#p"}]},
-        {"one_password": OP_SOURCE, "fields": OP_ONE + [{"selector": "#q"}]},
-        {"credential": "c", "fields": OP_ONE},
-        {"vault": "v", "fields": [{"selector": "#p", "field": "P", "ref": OP_REF}]},
-        # No vault entry with one_password.
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": "#p", "field": "P", "ref": OP_REF}],
-        },
-        # Allowed origins, checked as the server normalizes them.
-        {"one_password": _op(allowed_origins=["http://example.com"]), "fields": OP_ONE},
-        {"one_password": _op(allowed_origins=["https://*.com"]), "fields": OP_ONE},
-        {"one_password": _op(allowed_origins=["https://*.1.2.3"]), "fields": OP_ONE},
-        {
-            "one_password": _op(allowed_origins=["https://x.com/login"]),
-            "fields": OP_ONE,
-        },
-        {"one_password": _op(allowed_origins=["ftp://x.com"]), "fields": OP_ONE},
-        {
-            "one_password": _op(allowed_origins=["https://x.com:65536"]),
-            "fields": OP_ONE,
-        },
-        {"one_password": _op(allowed_origins=["https://-x.com"]), "fields": OP_ONE},
-        {"one_password": _op(allowed_origins=["https://[nope]"]), "fields": OP_ONE},
-        {"one_password": _op(allowed_origins=[]), "fields": OP_ONE},
-        {
-            "one_password": _op(
-                allowed_origins=[f"https://a{i}.example.com" for i in range(21)]
-            ),
-            "fields": OP_ONE,
-        },
-        {"one_password": _op(allowed_origins="https://x.com"), "fields": OP_ONE},
-        {"one_password": _op(allowed_origins=[1]), "fields": OP_ONE},
-        {"one_password": {"token": "op-token", "vault": "v"}, "fields": OP_ONE},
-        # The token's name and the 1Password parts.
-        {"one_password": _op(token="bad name"), "fields": OP_ONE},
-        {"one_password": _op(vault=""), "fields": OP_ONE},
-        {"one_password": _op(vault="a/b"), "fields": OP_ONE},
-        {"one_password": _op(vault=".."), "fields": OP_ONE},
-        {"one_password": _op(vault="v" * 257), "fields": OP_ONE},
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": "#p", "ref": {"item": ".", "field": "f"}}],
-        },
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": "#p", "ref": {"item": "i\u200b", "field": "f"}}],
-        },
-        {
-            "one_password": OP_SOURCE,
-            "fields": [
-                {"selector": "#p", "ref": {"item": "i", "section": "a?b", "field": "f"}}
-            ],
-        },
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": "#p", "ref": {"item": "i", "field": "f?Attr=x"}}],
-        },
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": "#p", "ref": {"item": "i"}}],
-        },
-        # op://<vault>/<item>/<field> is at most 512 bytes: this is 513.
-        {
-            "one_password": _op(vault="v" * 200),
-            "fields": [
-                {"selector": "#p", "ref": {"item": "i" * 200, "field": "f" * 106}}
-            ],
-        },
-        # Strict objects: unknown keys fail.
-        {"one_password": _op(allowedOrigins=["https://x.com"]), "fields": OP_ONE},
-        {"one_password": _op(fields={}), "fields": OP_ONE},
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": "#p", "ref": dict(OP_REF, vault="v")}],
-        },
-        {"onePassword": OP_SOURCE, "fields": OP_ONE},
-        # The usual field rules.
-        {"one_password": OP_SOURCE, "fields": OP_ONE + OP_ONE},
-        {"one_password": OP_SOURCE, "fields": []},
-        {
-            "one_password": OP_SOURCE,
-            "fields": [{"selector": f"#f{i}", "ref": OP_REF} for i in range(17)],
-        },
-    ],
-)
-def test_invalid_onepassword_fills_fail_before_http(sdk, params):
-    client, call, calls, outcomes = sdk
-    with pytest.raises(HyperbrowserError) as raised:
-        call(client.sessions.credentials.fill, "s", params)
-    assert raised.value.code == "invalid_request"
-    assert not calls
-
-
 def test_onepassword_fill_limits_are_inclusive(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, OP_RESULT)
@@ -1222,14 +988,6 @@ def test_onepassword_fill_limits_are_inclusive(sdk):
     assert len(body["onePassword"]["allowedOrigins"][0]) == 512
     assert len(body["onePassword"]["allowedOrigins"]) == 20
     assert len(body["fields"]) == 16
-
-    with pytest.raises(HyperbrowserError):
-        call(
-            client.sessions.credentials.fill,
-            "s",
-            {"one_password": _op(allowed_origins=[origins[0] + "a"]), "fields": OP_ONE},
-        )
-    assert len(calls) == 1
 
 
 @pytest.mark.parametrize(
@@ -1254,3 +1012,48 @@ def test_onepassword_fill_origins_the_server_accepts_pass(sdk, origin):
     )
     # Sent as given: the server normalizes it.
     assert json.loads(calls[0].content)["onePassword"]["allowedOrigins"] == [origin]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"fields": [{"selector": "#p"}]},
+        {"credential": "c", "vault": "v", "fields": []},
+        {"vault": "v", "fields": [{"selector": "#p"}]},
+        {
+            "credential": "c",
+            "fields": [{"selector": "#p"}],
+            "page_id": "A",
+            "page_url": "https://x",
+        },
+        {"one_password": _op(allowed_origins=["http://example.com"]), "fields": OP_ONE},
+        {"one_password": _op(vault="a/b"), "fields": OP_ONE},
+    ],
+)
+def test_fill_policy_errors_come_from_the_api(sdk, params):
+    client, call, calls, outcomes = sdk
+    refused = {"error": "Invalid body: server validation failed"}
+    respond(outcomes, refused, 400)
+    with pytest.raises(HyperbrowserError) as error:
+        call(client.sessions.credentials.fill, "s", params)
+    assert error.value.status_code == 400
+    assert error.value.retryable is False
+    assert error.value.details == refused
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        "fill",
+        {"credential": "c"},
+        {"credential": "c", "fields": [{}]},
+        {"credential": "c", "fields": ONE, "page_urll": "https://x"},
+    ],
+)
+def test_fill_shape_errors_still_fail_locally(sdk, params):
+    client, call, calls, outcomes = sdk
+    with pytest.raises(HyperbrowserError) as error:
+        call(client.sessions.credentials.fill, "s", params)
+    assert error.value.code == "invalid_request"
+    assert not calls

@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from hyperbrowser.models.secret import validate_secret_name
 from hyperbrowser.models.consts import (
     ISO639_1,
     Country,
@@ -265,20 +264,12 @@ class SessionCredential(BaseModel):
     name: str
 
 
-MAX_SESSION_CREDENTIALS = 20
-
-
 class SessionCredentialSecret(BaseModel):
     """Attaches a secret, by name, to a new session."""
 
     model_config = ConfigDict(extra="forbid")
 
     secret: str
-
-    @field_validator("secret")
-    @classmethod
-    def validate_secret(cls, value):
-        return validate_secret_name(value)
 
 
 class SessionCredentialVault(BaseModel):
@@ -287,11 +278,6 @@ class SessionCredentialVault(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     vault: str
-
-    @field_validator("vault")
-    @classmethod
-    def validate_vault(cls, value):
-        return validate_secret_name(value)
 
 
 class SessionCredentialOnePassword(BaseModel):
@@ -302,11 +288,6 @@ class SessionCredentialOnePassword(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     one_password: str = Field(serialization_alias="onePassword")
-
-    @field_validator("one_password")
-    @classmethod
-    def validate_one_password(cls, value):
-        return validate_secret_name(value)
 
 
 # A plain secret name is shorthand for SessionCredentialSecret.
@@ -679,19 +660,6 @@ class CreateSessionParams(BaseModel):
     A vault attaches the secrets its entries hold now; an op_token lets fills
     type the 1Password fields it can read. Secrets need allowed origins to be
     filled, and can only be attached when the session is created."""
-
-    @field_validator("credentials", mode="before")
-    @classmethod
-    def validate_credentials(cls, value):
-        if isinstance(value, (list, tuple)):
-            if len(value) > MAX_SESSION_CREDENTIALS:
-                raise ValueError(
-                    f"At most {MAX_SESSION_CREDENTIALS} credentials can be attached"
-                )
-            for item in value:
-                if isinstance(item, str):
-                    validate_secret_name(item)
-        return value
 
 
 class CreateSessionSnapshotResponse(BaseModel):

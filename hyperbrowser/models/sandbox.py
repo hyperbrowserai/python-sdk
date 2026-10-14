@@ -16,8 +16,6 @@ from .secret import (
     SandboxResolvedSecret,
     SecretReference,
     normalize_secret_references,
-    onepassword_clashes,
-    validate_secret_name,
 )
 from .session import SessionLaunchState, SessionStatus
 
@@ -272,11 +270,6 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
     def normalize_secrets(cls, value):
         return normalize_secret_references(value)
 
-    @field_validator("vault")
-    @classmethod
-    def validate_vault(cls, value):
-        return None if value is None else validate_secret_name(value)
-
     @model_validator(mode="after")
     def validate_launch_source(self):
         if self.snapshot_id and not self.snapshot_name:
@@ -303,9 +296,6 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
                 "secrets, vault and one_password are only supported for image "
                 "launches; snapshots don't run a startup command"
             )
-        clash = onepassword_clashes(self.one_password, secrets=self.secrets)
-        if clash:
-            raise ValueError(clash)
         return self
 
 
@@ -631,11 +621,6 @@ class SandboxExecParams(SandboxBaseModel):
     @classmethod
     def normalize_secrets(cls, value):
         return normalize_secret_references(value)
-
-    @field_validator("vault")
-    @classmethod
-    def validate_vault(cls, value):
-        return None if value is None else validate_secret_name(value)
 
     @property
     def uses_secrets(self) -> bool:

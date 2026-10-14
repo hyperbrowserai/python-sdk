@@ -141,42 +141,6 @@ def test_entries_read_from_a_vault_can_be_sent_back(sdk):
     }
 
 
-@pytest.mark.parametrize(
-    "params,message",
-    [
-        ({"name": "bad name"}, "Invalid secret name"),
-        ({"name": "v", "entries": {"1PASS": {"name": "s"}}}, "vault entry"),
-        ({"name": "v", "entries": {"__proto__": {"name": "s"}}}, "vault entry"),
-        ({"name": "v", "entries": {"P" * 257: {"name": "s"}}}, "vault entry"),
-        ({"name": "v", "entries": {"P": {"name": "bad name"}}}, "secret name"),
-        ({"name": "v", "entries": {"P": {"name": "s", "version": 0}}}, "version"),
-        ({"name": "v", "entries": {"P": {"name": "s", "version": "next"}}}, "version"),
-        (
-            {"name": "v", "entries": {f"E{i}": {"name": "s"} for i in range(33)}},
-            "at most 32",
-        ),
-        # Vaults hold stored secrets only: 1Password fields and sources are gone.
-        ({"name": "v", "entries": {"P": {"item": "i", "field": "f"}}}, "name"),
-        (
-            {"name": "v", "entries": {"P": {"name": "s", "item": "i"}}},
-            "Extra inputs",
-        ),
-        (
-            {
-                "name": "op",
-                "source": {"type": "1password", "token_secret": "t", "vault": "E"},
-            },
-            "Extra inputs",
-        ),
-    ],
-)
-def test_invalid_vaults_fail_before_http(sdk, params, message):
-    client, call, calls, outcomes = sdk
-    with pytest.raises(ValueError, match=message):
-        call(client.vaults.create, params)
-    assert not calls
-
-
 def test_update_distinguishes_left_out_replaced_and_removed(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, {"vaults": [STORED_VAULT], "totalCount": 1})
@@ -217,9 +181,6 @@ def test_update_distinguishes_left_out_replaced_and_removed(sdk):
     }
 
     for bad in [
-        {},
-        {"description": None},
-        {"entries": {"1X": None}},
         {"source": {"vault": "Platform"}},
         {"entries": {"P": {"item": "i", "field": "f"}}},
     ]:
@@ -339,8 +300,6 @@ def test_sandbox_create_sends_a_vault_and_keeps_the_startup_bindings():
     }
     with pytest.raises(ValueError, match="only supported for image launches"):
         CreateSandboxParams(snapshot_name="snap", vault="github-login")
-    with pytest.raises(ValueError):
-        CreateSandboxParams(image_name="node", vault="bad name")
 
     manager, http = _sandbox_manager(
         {
@@ -396,8 +355,6 @@ def test_process_starts_with_a_vault_go_through_the_control_api():
         "vault": "github-login",
     }
 
-    with pytest.raises(ValueError):
-        api.start("node app.js", vault="bad name")
     with pytest.raises(HyperbrowserError, match="use_shell"):
         api.start({"command": "x", "use_shell": True}, vault="github-login")
     assert len(starts) == 2
@@ -420,3 +377,34 @@ async def test_async_sandbox_handles_route_vault_starts_to_the_control_api():
 
     assert http.calls[0]["json"] == {"command": "node app.js", "vault": "prod-db"}
     assert handle.secrets is not None and handle.secrets[1].secret_type == "totp"
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"name": "bad name"},
+        {"name": "v", "entries": {"1BAD": {"name": "s", "version": 0}}},
+    ],
+)
+def test_vault_policy_errors_come_from_the_api(sdk, params):
+    client, call, calls, outcomes = sdk
+    respond(outcomes, {"error": "Invalid vault request"}, 400)
+    with pytest.raises(HyperbrowserError) as error:
+        call(client.vaults.create, params)
+    assert error.value.status_code == 400
+    assert len(calls) == 1
+    assert _body(calls[0]) == params
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"name": "v", "source": {}},
+        {"name": "v", "entries": {"A": {"item": "i", "field": "f"}}},
+    ],
+)
+def test_vault_unknown_members_and_missing_names_fail_locally(sdk, params):
+    client, call, calls, outcomes = sdk
+    with pytest.raises(ValueError):
+        call(client.vaults.create, params)
+    assert not calls

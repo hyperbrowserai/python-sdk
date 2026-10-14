@@ -28,20 +28,12 @@ from .anthropic import (
     SCREENSHOT_TOOL_ANTHROPIC,
     CRAWL_TOOL_ANTHROPIC,
 )
-from .gemini import (
-    BROWSER_USE_TOOL_GEMINI,
-    CRAWL_TOOL_GEMINI,
-    EXTRACT_TOOL_GEMINI,
-    FILL_CREDENTIAL_TOOL_GEMINI,
-    SCRAPE_TOOL_GEMINI,
-    SCREENSHOT_TOOL_GEMINI,
-)
+from .gemini import FILL_CREDENTIAL_TOOL_GEMINI
 
 
 class WebsiteScrapeTool:
     openai_tool_definition = SCRAPE_TOOL_OPENAI
     anthropic_tool_definition = SCRAPE_TOOL_ANTHROPIC
-    gemini_tool_definition = SCRAPE_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartScrapeJobParams) -> str:
@@ -59,7 +51,6 @@ class WebsiteScrapeTool:
 class WebsiteScreenshotTool:
     openai_tool_definition = SCREENSHOT_TOOL_OPENAI
     anthropic_tool_definition = SCREENSHOT_TOOL_ANTHROPIC
-    gemini_tool_definition = SCREENSHOT_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartScrapeJobParams) -> str:
@@ -77,7 +68,6 @@ class WebsiteScreenshotTool:
 class WebsiteCrawlTool:
     openai_tool_definition = CRAWL_TOOL_OPENAI
     anthropic_tool_definition = CRAWL_TOOL_ANTHROPIC
-    gemini_tool_definition = CRAWL_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartCrawlJobParams) -> str:
@@ -117,7 +107,6 @@ def _normalize_extract_tool_params(
 class WebsiteExtractTool:
     openai_tool_definition = EXTRACT_TOOL_OPENAI
     anthropic_tool_definition = EXTRACT_TOOL_ANTHROPIC
-    gemini_tool_definition = EXTRACT_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: WebsiteExtractToolParams) -> str:
@@ -137,7 +126,6 @@ class WebsiteExtractTool:
 class BrowserUseTool:
     openai_tool_definition = BROWSER_USE_TOOL_OPENAI
     anthropic_tool_definition = BROWSER_USE_TOOL_ANTHROPIC
-    gemini_tool_definition = BROWSER_USE_TOOL_GEMINI
 
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartBrowserUseTaskParams) -> str:

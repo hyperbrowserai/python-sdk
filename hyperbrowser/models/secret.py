@@ -1,6 +1,4 @@
-import ipaddress
 import re
-import unicodedata
 from datetime import datetime
 from typing import Dict, List, Literal, Optional, Union
 
@@ -84,55 +82,6 @@ def normalize_secret_references(value):
     }
 
 
-MAX_ONEPASSWORD_NAME_LENGTH = 256
-MAX_ONEPASSWORD_REFERENCE_BYTES = 512
-# Characters 1Password names can't hold in an op:// reference: control,
-# format, line separator and paragraph separator characters.
-_ONEPASSWORD_FORBIDDEN_CATEGORIES = frozenset({"Cc", "Cf", "Zl", "Zp"})
-# A field may end with a query, such as ?attribute=otp or ?ssh-format=openssh.
-_ONEPASSWORD_QUERY_PATTERN = re.compile(
-    r"\?[a-z-]+=[A-Za-z0-9_-]+(?:&[a-z-]+=[A-Za-z0-9_-]+)*"
-)
-
-
-def _utf16_length(value: str) -> int:
-    # The server counts string lengths in UTF-16 code units.
-    return len(value.encode("utf-16-le", "surrogatepass")) // 2
-
-
-def validate_onepassword_name(value: str, what: str, query: bool = False) -> str:
-    """Check a 1Password vault, item, section or field name (or ID) for an
-    ``op://`` reference. A field may end with a query such as
-    ``?attribute=otp``."""
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{what} must be a non-empty 1Password name or ID")
-    if _utf16_length(value) > MAX_ONEPASSWORD_NAME_LENGTH:
-        raise ValueError(
-            f"{what} is longer than {MAX_ONEPASSWORD_NAME_LENGTH} characters"
-        )
-    name, mark, params = value.partition("?") if query else (value, "", "")
-    if mark and not _ONEPASSWORD_QUERY_PATTERN.fullmatch(mark + params):
-        raise ValueError(
-            f"{what} has an invalid query; expected ?key=value pairs such as "
-            "?attribute=otp"
-        )
-    if (
-        not name
-        or name in (".", "..")
-        or "/" in name
-        or "?" in name
-        or any(
-            unicodedata.category(char) in _ONEPASSWORD_FORBIDDEN_CATEGORIES
-            for char in name
-        )
-    ):
-        raise ValueError(
-            f"{what} must be a 1Password name or ID without '/' or '?', control "
-            "characters, or a name of '.' or '..'"
-        )
-    return value
-
-
 def validate_secret_env_name(env, what: str = "a secret") -> str:
     if (
         not isinstance(env, str)
@@ -161,36 +110,11 @@ class OnePasswordField(SecretBaseModel):
     section: Optional[str] = None
     field: str
 
-    @field_validator("item")
-    @classmethod
-    def validate_item(cls, value):
-        return validate_onepassword_name(value, "item")
-
-    @field_validator("section")
-    @classmethod
-    def validate_section(cls, value):
-        return None if value is None else validate_onepassword_name(value, "section")
-
-    @field_validator("field")
-    @classmethod
-    def validate_field(cls, value):
-        return validate_onepassword_name(value, "field", query=True)
-
-
-def onepassword_reference(vault: str, field: OnePasswordField) -> str:
-    """The ``op://vault/item/[section/]field`` reference the platform builds."""
-    parts = [vault, field.item] + ([field.section] if field.section else [])
-    return "op://" + "/".join(parts + [field.field])
-
 
 class OnePasswordSource(SecretBaseModel):
-    """Environment variables from fields of one 1Password vault.
+    """Environment variables read from one 1Password vault at process start.
 
-    ``token`` names an ``op_token`` secret holding a 1Password service account
-    token (its latest version signs in); ``vault`` is the 1Password vault's
-    name or ID; ``fields`` maps each environment variable to the field it
-    takes. Nothing is stored: the sandbox resolves the fields when the
-    process starts.
+    The API validates names, reference sizes, limits and source conflicts.
     """
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
@@ -198,63 +122,6 @@ class OnePasswordSource(SecretBaseModel):
     token: str
     vault: str
     fields: Dict[str, OnePasswordField]
-
-    @field_validator("token")
-    @classmethod
-    def validate_token(cls, value):
-        return validate_secret_name(value)
-
-    @field_validator("vault")
-    @classmethod
-    def validate_vault(cls, value):
-        return validate_onepassword_name(value, "The 1Password vault")
-
-    @field_validator("fields", mode="before")
-    @classmethod
-    def validate_fields(cls, value):
-        if not isinstance(value, dict):
-            return value
-        if not 1 <= len(value) <= MAX_SECRET_BINDINGS:
-            raise ValueError(
-                f"one_password takes 1 to {MAX_SECRET_BINDINGS} fields; "
-                f"got {len(value)}"
-            )
-        for env in value:
-            validate_secret_env_name(env, "a 1Password field")
-        return value
-
-    @model_validator(mode="after")
-    def check_reference_sizes(self):
-        for env, field in self.fields.items():
-            size = len(
-                onepassword_reference(self.vault, field).encode(
-                    "utf-8", "surrogatepass"
-                )
-            )
-            if size > MAX_ONEPASSWORD_REFERENCE_BYTES:
-                raise ValueError(
-                    f"{env}: the 1Password reference is {size} bytes; at most "
-                    f"{MAX_ONEPASSWORD_REFERENCE_BYTES} are allowed"
-                )
-        return self
-
-
-def onepassword_clashes(
-    one_password: Optional[OnePasswordSource], **sources
-) -> Optional[str]:
-    """Describe a variable ``one_password`` shares with another source of the
-    request (``secrets`` or ``env``), or return ``None``. Clashes with a vault
-    are only known to the server."""
-    if one_password is None:
-        return None
-    for name, variables in sources.items():
-        for env in one_password.fields:
-            if variables and env in variables:
-                return (
-                    f"{env} is set by {name} and by one_password; a 1Password "
-                    "field's variable must come from it alone"
-                )
-    return None
 
 
 # What a secret's value is; fixed when the secret is created.
@@ -268,104 +135,6 @@ SecretType = Literal["secret", "totp", "op_token"]
 
 # A secret value, encrypted locally before upload.
 SecretValue = Union[str, bytes]
-
-
-MAX_ALLOWED_ORIGINS = 20
-MAX_ALLOWED_ORIGIN_LENGTH = 512
-# The server's form for allowed origins: scheme://host[:port], where the host
-# may start with "*." to match any subdomain. ASCII only, as in JavaScript
-# without the u flag: no Unicode case folding or digits.
-_ALLOWED_ORIGIN_PATTERN = re.compile(
-    r"([a-z]+)://(\*\.)?([^/:?#]+|\[[^\]]+\])(?::([0-9]{1,5}))?/?",
-    re.IGNORECASE | re.ASCII,
-)
-_ORIGIN_HOST_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)", re.ASCII)
-_LOCAL_ORIGIN_HOSTS = frozenset({"localhost", "127.0.0.1", "[::1]"})
-# What JavaScript's trim() removes, which the server trims origins with. Unlike
-# Python's strip(), it removes a byte-order mark and keeps \x1c-\x1f and \x85.
-_JS_WHITESPACE = "".join(
-    chr(code)
-    for code in [0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x20, 0xA0, 0x1680]
-    + list(range(0x2000, 0x200B))
-    + [0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]
-)
-# The zone ID Node's isIPv6 accepts after an address, as in fe80::1%eth0.
-_IPV6_ZONE = re.compile(r"[0-9a-zA-Z.:-]+", re.ASCII)
-
-
-def _is_ipv6(address: str) -> bool:
-    """Whether Node's isIPv6 accepts ``address``. Python 3.8 knows no zone
-    IDs, and later versions accept zones Node refuses, so the zone is
-    checked here."""
-    address, mark, zone = address.partition("%")
-    if mark and not _IPV6_ZONE.fullmatch(zone):
-        return False
-    try:
-        ipaddress.IPv6Address(address)
-    except ValueError:
-        return False
-    return True
-
-
-def validate_allowed_origin(entry) -> str:
-    """Check an allowed origin as the server normalizes one, returning it
-    unchanged: ``scheme://host[:port]`` with no path, https only (http for
-    localhost, 127.0.0.1 and [::1]), and a ``*.`` wildcard only on a
-    registrable domain."""
-    if not isinstance(entry, str):
-        raise ValueError(
-            f"Allowed origin {entry!r} must be a string such as https://example.com"
-        )
-    if _utf16_length(entry) > MAX_ALLOWED_ORIGIN_LENGTH:
-        raise ValueError(
-            f"Allowed origin {entry[:64]!r} is longer than "
-            f"{MAX_ALLOWED_ORIGIN_LENGTH} characters"
-        )
-
-    def reject(reason: str) -> ValueError:
-        return ValueError(f"Allowed origin {entry!r} {reason}")
-
-    match = _ALLOWED_ORIGIN_PATTERN.fullmatch(entry.strip(_JS_WHITESPACE))
-    if not match:
-        raise reject("must be scheme://host[:port] with no path")
-    scheme, wildcard, host, port = match.groups()
-    scheme = scheme.lower()
-    host = host.lower()
-    if scheme not in ("https", "http"):
-        raise reject("must use https")
-    if scheme == "http" and (wildcard or host not in _LOCAL_ORIGIN_HOSTS):
-        raise reject("must use https unless it is localhost")
-    if port and int(port) > 65535:
-        raise reject("has an invalid port")
-    if not host.startswith("["):
-        labels = host.split(".")
-        if not all(_ORIGIN_HOST_LABEL.fullmatch(label) for label in labels):
-            raise reject("has an invalid host")
-        # "*.com" would cover a whole public suffix.
-        if wildcard and len(labels) < 2:
-            raise reject("wildcard must name a registrable domain")
-        # No top-level domain is numeric, so this is (part of) an IPv4 address.
-        if wildcard and labels[-1].isdigit():
-            raise reject("cannot use a wildcard with an IP address")
-    elif wildcard:
-        raise reject("cannot use a wildcard with an IP address")
-    elif not _is_ipv6(host[1:-1]):
-        raise reject("has an invalid host")
-    return entry
-
-
-def validate_allowed_origins(origins) -> List[str]:
-    """Check a list of 1 to 20 allowed origins (see validate_allowed_origin)."""
-    if isinstance(origins, (str, bytes)) or not isinstance(origins, (list, tuple)):
-        raise ValueError(
-            'allowed_origins must be a list of origins such as ["https://example.com"]'
-        )
-    if not 1 <= len(origins) <= MAX_ALLOWED_ORIGINS:
-        raise ValueError(
-            f"allowed_origins takes 1 to {MAX_ALLOWED_ORIGINS} origins; "
-            f"got {len(origins)}"
-        )
-    return [validate_allowed_origin(origin) for origin in origins]
 
 
 class SecretBrowserMetadata(SecretBaseModel):
@@ -452,13 +221,6 @@ class CreateSecretParams(SecretBaseModel):
                     )
                 }
             )
-        if self.metadata is not None and self.metadata.browser is not None:
-            if self.type == "op_token":
-                raise ValueError(
-                    "An op_token secret can't have allowed origins: it is never "
-                    "typed into browser pages"
-                )
-            validate_allowed_origins(self.metadata.browser.allowed_origins)
         return self
 
 

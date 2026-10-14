@@ -14,7 +14,6 @@ from hyperbrowser.models import (
     OnePasswordField,
     OnePasswordSource,
     SandboxDetail,
-    SandboxExecParams,
     SandboxResolvedSecret,
 )
 from tests.test_sandbox_wire_contract import SANDBOX_DETAIL_PAYLOAD
@@ -244,98 +243,41 @@ def test_names_allow_what_the_server_allows():
     )
 
 
-INVALID_SOURCES = [
-    (_with_field(item="."), "item"),
-    (_with_field(item=".."), "item"),
-    (_with_field(item="a?b"), "item"),
-    (_with_field(item="a/b"), "item"),
-    (_with_field(field="."), "field"),
-    (_with_field(field="..?attribute=otp"), "field"),
-    (_with_field(field="otp?Attr=x"), "query"),
-    (_with_field(field="otp?attribute"), "query"),
-    (_with_field(field="otp?a=b&c"), "query"),
-    (_with_field(field="otp?a=b?c"), "query"),
-    (_with_field(item="i" * 257), "longer than 256"),
-    # 193 characters, but 257 UTF-16 units.
-    (_with_field(item="\U0001f600" * 64 + "e" * 129), "longer than 256"),
-    (_with_field(item="a​b"), "item"),
-    (_with_field(section="a b"), "section"),
-    (_with_field(item="a\nb"), "item"),
-    (_with_field(section=""), "section"),
-    (
-        dict(
-            SOURCE,
-            vault="V",
-            fields={"X": {"item": "i" * 250, "section": "s" * 250, "field": "ffff"}},
-        ),
-        "513 bytes",
-    ),
-    (dict(SOURCE, fields={}), "1 to 32 fields"),
-    (
-        dict(SOURCE, fields={f"E{i}": {"item": "i", "field": "f"} for i in range(33)}),
-        "1 to 32 fields",
-    ),
-    (dict(SOURCE, fields={"1X": {"item": "i", "field": "f"}}), "environment"),
-    (dict(SOURCE, fields={"__proto__": {"item": "i", "field": "f"}}), "environment"),
-    (dict(SOURCE, token="bad name"), "secret name"),
-    (dict(SOURCE, vault="a/b"), "1Password vault"),
-    (_with_field(label="x"), "Extra inputs"),
-    (dict(SOURCE, tokenSecret="op-token"), "Extra inputs"),
-    ({"token": "op-token", "vault": "V"}, "fields"),
-]
-
-
-@pytest.mark.parametrize("source,message", INVALID_SOURCES)
 @pytest.mark.parametrize("async_client", [False, True], ids=["sync", "async"])
 @pytest.mark.anyio
-async def test_invalid_sources_fail_before_any_request(async_client, source, message):
-    manager, http = _sandbox_manager({}, async_client=async_client)
-    with pytest.raises(ValueError, match=message):
-        result = manager.create({"image_name": "node", "one_password": source})
-        if async_client:
-            await result
-
-    api_type = AsyncSandboxProcessesApi if async_client else SandboxProcessesApi
-    api = api_type(RuntimeScript(), None, "sbx_123")
-    with pytest.raises(ValueError, match=message):
-        result = api.start("node app.js", one_password=source)
-        if async_client:
-            await result
-    with pytest.raises(ValueError, match=message):
-        SandboxExecParams(command="x", one_password=source)
-    assert http.calls == []
-
-
-def test_a_variable_from_one_password_may_not_come_from_secrets_or_env():
-    with pytest.raises(ValueError, match="SC_USER is set by secrets and by one_pass"):
-        CreateSandboxParams(
-            image_name="node", one_password=SOURCE, secrets={"SC_USER": "user"}
-        )
-
-    api = SandboxProcessesApi(RuntimeScript(), None, "sbx_123")
-    with pytest.raises(HyperbrowserError, match="SC_OTP is set by secrets") as error:
-        api.start("node app.js", one_password=SOURCE, secrets={"SC_OTP": "otp"})
-    assert error.value.code == "invalid_secret_reference"
-    with pytest.raises(HyperbrowserError, match="SC_USER is set by env"):
-        api.start(
-            {"command": "node app.js", "env": {"SC_USER": "x"}}, one_password=SOURCE
-        )
-
-    # Only the server knows a vault's entries, so a vault clash is its to refuse.
-    starts = []
-    api = SandboxProcessesApi(
-        RuntimeScript(),
-        lambda payload: starts.append(payload) or {"process": AGENT_PROCESS},
-        "sbx_123",
+async def test_source_conflicts_are_rejected_by_the_control_api(async_client):
+    manager, http = _sandbox_manager(
+        {
+            ("POST", "/sandbox"): (
+                400,
+                {
+                    "code": "SECRET_SOURCES_INVALID",
+                    "message": "SC_USER is set by secrets and by onePassword",
+                },
+            )
+        },
+        async_client=async_client,
     )
-    api.start("node app.js", one_password=SOURCE, vault="github-login")
-    assert starts == [
-        {"command": "node app.js", "vault": "github-login", "onePassword": WIRE}
-    ]
+    with pytest.raises(HyperbrowserError) as error:
+        result = manager.create(
+            {
+                "image_name": "node",
+                "one_password": SOURCE,
+                "secrets": {"SC_USER": "user"},
+            }
+        )
+        if async_client:
+            await result
+    assert error.value.code == "SECRET_SOURCES_INVALID"
+    assert error.value.retryable is False
+    assert len(http.calls) == 1
+    assert http.calls[0]["json"]["onePassword"] == WIRE
+    assert http.calls[0]["json"]["secrets"] == {"SC_USER": {"name": "user"}}
 
 
-@pytest.mark.anyio
-async def test_async_clashes_fail_before_any_request():
-    api = AsyncSandboxProcessesApi(AsyncRuntimeScript(), None, "sbx_123")
-    with pytest.raises(HyperbrowserError, match="SC_USER is set by env"):
-        await api.start("node app.js", env={"SC_USER": "x"}, one_password=SOURCE)
+@pytest.mark.parametrize(
+    "source", [dict(SOURCE, tokenSecret="op-token"), _with_field(label="extra")]
+)
+def test_unknown_source_members_fail_locally(source):
+    with pytest.raises(ValueError):
+        OnePasswordSource.model_validate(source)

@@ -3,14 +3,9 @@
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from .secret import (
-    OnePasswordField,
-    validate_allowed_origins,
-    validate_onepassword_name,
-    validate_secret_name,
-)
+from .secret import OnePasswordField
 
 # What a fill did with each requested input. New outcomes may be added, so
 # results keep any string the server sends.
@@ -61,21 +56,6 @@ class OnePasswordFillSource(BaseModel):
     token: str
     vault: str
     allowed_origins: List[str] = Field(serialization_alias="allowedOrigins")
-
-    @field_validator("token")
-    @classmethod
-    def validate_token(cls, value):
-        return validate_secret_name(value)
-
-    @field_validator("vault")
-    @classmethod
-    def validate_vault(cls, value):
-        return validate_onepassword_name(value, "The 1Password vault")
-
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def validate_allowed_origins(cls, value):
-        return validate_allowed_origins(value)
 
 
 class FillCredentialParams(BaseModel):

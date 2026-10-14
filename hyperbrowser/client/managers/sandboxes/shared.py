@@ -24,7 +24,7 @@ from ....sandbox_common import (
     parse_error_payload,
     runtime_base_url_session_id,
 )
-from ....models.secret import OnePasswordSource, SecretReference, onepassword_clashes
+from ....models.secret import OnePasswordSource, SecretReference
 from ....types import (
     OnePasswordSource as OnePasswordSourceDict,
     SecretReference as SecretReferenceDict,
@@ -134,11 +134,6 @@ def _normalize_exec_params(
         ).one_password
 
     normalized = params.model_copy(update=updates) if updates else params
-    clash = onepassword_clashes(
-        normalized.one_password, secrets=normalized.secrets, env=normalized.env
-    )
-    if clash:
-        raise HyperbrowserError(clash, code="invalid_secret_reference")
     if normalized.uses_secrets and normalized.use_shell is not None:
         # The control API's start has no such option; don't drop it silently.
         raise HyperbrowserError(

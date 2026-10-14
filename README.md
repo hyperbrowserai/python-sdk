@@ -206,7 +206,7 @@ Things to know:
   A secret takes 1-20 of at most 512 characters, https only (http for
   `localhost`, `127.0.0.1` and `[::1]`), with no path and `*.` only on a
   registrable domain such as `example.com`, never `*.com` or an IP address.
-  They are checked locally, as the API would, before any request.
+  The API validates and normalizes them.
   Change them with `client.secrets.set_allowed_origins("github-password",
   [...])`; `None` clears them, after which it can't be filled.
   `client.secrets.update()` takes `{"metadata": {"browser": None}}` too: each
@@ -279,8 +279,10 @@ Things to know:
     sent to 1Password. `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
     `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable. Each has the
     token's `tokenSecretId` and `tokenVersion` in `details`.
-  - Locally, invalid fill requests raise `invalid_request` and invalid values
-    raise `invalid_secret_value`, before any request.
+  - Local fill shape errors raise `invalid_request`; invalid secret values
+    raise `invalid_secret_value` before upload. Fill, origin, vault-entry and
+    1Password policy errors come from the API. Inspect the status, code (when
+    supplied) and details; schema errors may have no machine code.
 
 ### Fill from 1Password
 
@@ -332,7 +334,8 @@ for field in result.fields:
 - The result has no top-level `version`; each input's `secret_id` and
   `version` are the op_token's, and `reference` is the `op://` reference it
   was typed from.
-- All of this is checked locally before any request.
+- The API validates these rules. Request models still reject unknown members
+  and invalid shapes locally.
 
 ### Use with LLM SDKs
 
@@ -451,10 +454,10 @@ while True:
 `hyperbrowser.tools` has ready-made tools: `WebsiteScrapeTool`,
 `WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`,
 `BrowserUseTool` and `CredentialFillTool`. Each has `openai_tool_definition`
-(a strict Chat Completions function tool), `anthropic_tool_definition`,
-`gemini_tool_definition` (a function declaration dict for google-genai), and
+(a strict Chat Completions function tool), `anthropic_tool_definition`, and
 `runnable()` / `async_runnable()` to run the model's input and return text for
-the model.
+the model. `CredentialFillTool` also provides `gemini_tool_definition`, a
+function declaration dict for google-genai.
 
 ## Usage
 
@@ -741,9 +744,8 @@ like environment variables. A field may end with a query such as
 `?attribute=otp`, `?attribute=totp` or `?ssh-format=openssh`. Vaults, items,
 sections and fields are 1-256 characters (UTF-16 code units) without `/`, `?` or control characters, and
 not `.` or `..`; the whole `op://` reference is at most 512 bytes. These are
-checked locally before any request, as is a variable that `secrets` or `env`
-also sets: a variable from 1Password must come from it alone. The server also
-refuses one that the request's `vault` holds.
+checked by the API, as is a variable that `secrets`, `env` or the request's
+`vault` also sets: a variable from 1Password must come from it alone.
 
 Things to know:
 

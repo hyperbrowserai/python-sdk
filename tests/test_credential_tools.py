@@ -13,7 +13,6 @@ from hyperbrowser.tools import (
     WebsiteScrapeTool,
     WebsiteScreenshotTool,
 )
-from hyperbrowser.tools.gemini import to_gemini_schema
 from tests.test_credentials import FIELDS, FILL_RESULT, mock_clients, respond
 
 
@@ -101,8 +100,8 @@ def test_openai_schemas_are_strict_mode_compatible(tool):
             assert set(member["required"]) == set(member["properties"])
 
 
-@pytest.mark.parametrize("tool", TOOLS, ids=lambda tool: tool.__name__)
-def test_gemini_declarations_use_the_openapi_subset(tool):
+def test_gemini_declarations_use_the_openapi_subset():
+    tool = CredentialFillTool
     declaration = tool.gemini_tool_definition
     assert declaration["name"] == tool.openai_tool_definition["function"]["name"]
     assert "additionalProperties" not in json.dumps(declaration)
@@ -127,13 +126,6 @@ def test_gemini_schema_conversion():
         "page_url",
         "frame_url",
     ]
-
-    with pytest.raises(ValueError, match="type union"):
-        to_gemini_schema({"type": ["string", "number"]})
-    assert to_gemini_schema({"type": "object", "$schema": "x", "anyOf": []}) == {
-        "type": "object",
-        "anyOf": [],
-    }
 
 
 TOOL_INPUT = {
@@ -253,14 +245,16 @@ def test_tool_runner_returns_errors_as_json(sdk):
             ],
         ),
     ]:
+        respond(outcomes, {"error": "Invalid body: server validation failed"}, 400)
         error = json.loads(call(runner, client, "s", bad))
-        assert error["error"]["code"] == "invalid_request"
+        assert error["error"]["message"] == "Invalid body: server validation failed"
+        assert error["error"]["retryable"] is False
         assert error["error"]["details"] is None
     # Input that isn't an object, as a model may send, is an error too.
     for bad in [None, "fill it", ["github-login"]]:
         error = json.loads(call(runner, client, "s", bad))
         assert error["error"]["code"] == "invalid_request"
-    assert len(calls) == 1
+    assert len(calls) == 7
 
 
 def test_tool_runner_lets_other_exceptions_propagate(monkeypatch):

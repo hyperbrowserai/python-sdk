@@ -28,7 +28,6 @@ from ....secrets_common import (
     SECRET_NAME_LOOKUP_LIMIT,
     SecretsSealer,
     browser_metadata,
-    check_secret_metadata,
     check_secret_version,
     is_not_found,
     looks_like_secret_id,
@@ -125,7 +124,6 @@ class SecretManager:
         """
         body = update_secret_body(params)
         resolved = (await self._resolve(secret))[0]
-        check_secret_metadata(resolved.type, body.get("metadata"))
         payload = await self._request("PATCH", f"/secrets/{resolved.id}", data=body)
         return Secret(**payload)
 
