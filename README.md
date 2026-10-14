@@ -217,11 +217,13 @@ Things to know:
   secret delivered to a sandbox holds the code current at process start.
 - A fill takes `credential` or `vault`, and 1-16 fields with unique
   selectors; `field` is required with a vault and left out without one.
-  Without `page_id` or `page_url`, a session with one tab fills that tab (on
-  another site the fill is refused with `CREDENTIAL_ORIGIN_NOT_ALLOWED`).
-  With several tabs, those matching `page_url` and the allowed origins of the
-  secrets being filled are candidates: the only one, else the single visible
-  one, is filled. Under Playwright every tab reports as visible, so pass
+  Without `page_id`, fill considers the tabs whose URL starts with `page_url`
+  (all tabs when it's not given). If one is left, that's the target. If several
+  are left, it prefers the tabs on an origin every secret allows, then the
+  visible one among them; if more than one still qualifies, it fails with
+  `CREDENTIAL_PAGE_AMBIGUOUS`. The chosen tab's origin is then checked: on any
+  other origin nothing is typed and the fill fails with
+  `CREDENTIAL_ORIGIN_NOT_ALLOWED`. Under Playwright every tab reports as visible, so pass
   `page_url` (a URL prefix) or the tab's CDP target ID as `page_id`:
   `page.context.new_cdp_session(page).send("Target.getTargetInfo")["targetInfo"]["targetId"]`.
   For a login form in an iframe, pass `frame_url` (a URL prefix).
