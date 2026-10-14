@@ -24,8 +24,9 @@ from ....sandbox_common import (
     parse_error_payload,
     runtime_base_url_session_id,
 )
-from ....models.secret import SecretReference
+from ....models.secret import OnePasswordSource, SecretReference, onepassword_clashes
 from ....types import (
+    OnePasswordSource as OnePasswordSourceDict,
     SecretReference as SecretReferenceDict,
     SandboxExecParams as SandboxExecParamsDict,
     SandboxFileWriteEntry as SandboxFileWriteEntryDict,
@@ -34,6 +35,8 @@ from ....types import (
 # Environment variable name to secret: a name, or a reference as a mapping or
 # model. A missing version means the latest.
 SecretReferences = Dict[str, Union[str, SecretReferenceDict, SecretReference]]
+# Fields of a 1Password vault, as a mapping or model.
+OnePasswordSourceInput = Union[OnePasswordSourceDict, OnePasswordSource]
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
 # The receiver sends process SSE keepalives every 15 seconds.
@@ -98,6 +101,7 @@ def _normalize_exec_params(
     run_as: Optional[str] = None,
     secrets: Optional[SecretReferences] = None,
     vault: Optional[str] = None,
+    one_password: Optional[OnePasswordSourceInput] = None,
 ) -> SandboxExecParams:
     if isinstance(input, str):
         params = SandboxExecParams(command=input)
@@ -124,8 +128,17 @@ def _normalize_exec_params(
         updates["vault"] = SandboxExecParams.model_validate(
             {"command": params.command, "vault": vault}
         ).vault
+    if one_password is not None:
+        updates["one_password"] = SandboxExecParams.model_validate(
+            {"command": params.command, "one_password": one_password}
+        ).one_password
 
     normalized = params.model_copy(update=updates) if updates else params
+    clash = onepassword_clashes(
+        normalized.one_password, secrets=normalized.secrets, env=normalized.env
+    )
+    if clash:
+        raise HyperbrowserError(clash, code="invalid_secret_reference")
     if normalized.uses_secrets and normalized.use_shell is not None:
         # The control API's start has no such option; don't drop it silently.
         raise HyperbrowserError(
@@ -138,7 +151,10 @@ def _normalize_exec_params(
 def _runtime_process_payload(params: SandboxExecParams) -> Dict[str, object]:
     """The runtime start payload; secrets only go through the control API."""
     return dump_request(
-        params.model_copy(update={"secrets": None, "vault": None}), SandboxExecParams
+        params.model_copy(
+            update={"secrets": None, "vault": None, "one_password": None}
+        ),
+        SandboxExecParams,
     )
 
 
@@ -162,14 +178,17 @@ def _secret_process_payload(params: SandboxExecParams) -> Dict[str, object]:
         "env": params.env,
         "timeoutMs": timeout_ms,
         "runAs": params.run_as,
-        # A vault alone needs no secrets member.
+        # A vault or one_password alone needs no secrets member.
         "secrets": {
             name: reference.model_dump(exclude_none=True)
             for name, reference in secrets.items()
         }
-        if secrets or params.vault is None
+        if secrets or (params.vault is None and params.one_password is None)
         else None,
         "vault": params.vault,
+        "onePassword": params.one_password.model_dump(exclude_none=True)
+        if params.one_password is not None
+        else None,
     }
     return {key: value for key, value in payload.items() if value is not None}
 

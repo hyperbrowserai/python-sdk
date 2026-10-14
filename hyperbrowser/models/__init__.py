@@ -263,6 +263,8 @@ from .profile import (
 )
 from .secret import (
     CreateSecretParams,
+    OnePasswordField,
+    OnePasswordSource,
     SandboxResolvedSecret,
     Secret,
     SecretBindingSource,
@@ -491,23 +493,13 @@ from .sandbox import (
 from .team import TeamCreditInfo
 from .vault import (
     CreateVaultParams,
-    OnePasswordEntry,
-    OnePasswordSourceUpdate,
-    OnePasswordVaultSource,
     StoredEntry,
-    StoredVaultSource,
     UpdateVaultParams,
     Vault,
     VaultDeleteResult,
     VaultEntry,
-    VaultEntryInput,
     VaultListParams,
     VaultListResponse,
-    VaultOnePasswordEntry,
-    VaultSource,
-    VaultSourceInput,
-    VaultStoredEntry,
-    VaultTokenSecret,
 )
 
 __all__ = [
@@ -693,25 +685,17 @@ __all__ = [
     "ProfileResponse",
     # vault
     "CreateVaultParams",
-    "OnePasswordEntry",
-    "OnePasswordSourceUpdate",
-    "OnePasswordVaultSource",
     "StoredEntry",
-    "StoredVaultSource",
     "UpdateVaultParams",
     "Vault",
     "VaultDeleteResult",
     "VaultEntry",
-    "VaultEntryInput",
     "VaultListParams",
     "VaultListResponse",
-    "VaultOnePasswordEntry",
-    "VaultSource",
-    "VaultSourceInput",
-    "VaultStoredEntry",
-    "VaultTokenSecret",
     # secret
     "CreateSecretParams",
+    "OnePasswordField",
+    "OnePasswordSource",
     "SandboxResolvedSecret",
     "Secret",
     "SecretBindingSource",

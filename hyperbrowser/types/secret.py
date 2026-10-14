@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 from typing_extensions import Required, TypeAlias, TypedDict
 
@@ -12,6 +12,24 @@ class SecretReference(TypedDict, total=False):
 
 # A plain secret name is shorthand for {"name": name}.
 SecretReferenceInput: TypeAlias = Union[str, SecretReference]
+
+
+class OnePasswordField(TypedDict, total=False):
+    """A field of an item in the request's 1Password vault, by name or ID.
+    ``field`` may end with a query such as ``?attribute=totp``."""
+
+    item: Required[str]
+    section: Optional[str]
+    field: Required[str]
+
+
+class OnePasswordSource(TypedDict):
+    """Environment variables from fields of one 1Password vault, signed in to
+    with the ``op_token`` secret named ``token``."""
+
+    token: str
+    vault: str
+    fields: Dict[str, OnePasswordField]
 
 
 # What a secret's value is; fixed when the secret is created. "secret" is an
@@ -70,6 +88,8 @@ class SecretListParams(TypedDict, total=False):
 
 __all__ = [
     "CreateSecretParams",
+    "OnePasswordField",
+    "OnePasswordSource",
     "SecretBrowserMetadata",
     "SecretListParams",
     "SecretMetadata",

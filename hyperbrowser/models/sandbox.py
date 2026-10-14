@@ -12,9 +12,11 @@ from pydantic import (
 
 from ._parsers import _parse_optional_int
 from .secret import (
+    OnePasswordSource,
     SandboxResolvedSecret,
     SecretReference,
     normalize_secret_references,
+    onepassword_clashes,
     validate_secret_name,
 )
 from .session import SessionLaunchState, SessionStatus
@@ -259,6 +261,11 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
     # A vault, by name, whose entries are delivered to the startup command;
     # ``secrets`` are merged over it.
     vault: Optional[str] = None
+    # Fields of a 1Password vault, delivered to the startup command. A
+    # variable here may not also come from ``vault`` or ``secrets``.
+    one_password: Optional[OnePasswordSource] = Field(
+        default=None, serialization_alias="onePassword"
+    )
 
     @field_validator("secrets", mode="before")
     @classmethod
@@ -289,11 +296,16 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
             raise ValueError(
                 "cpu, memory_mib, and disk_mib are only supported for image launches"
             )
-        if self.snapshot_name and (self.secrets or self.vault is not None):
+        if self.snapshot_name and (
+            self.secrets or self.vault is not None or self.one_password is not None
+        ):
             raise ValueError(
-                "secrets and vault are only supported for image launches; "
-                "snapshots don't run a startup command"
+                "secrets, vault and one_password are only supported for image "
+                "launches; snapshots don't run a startup command"
             )
+        clash = onepassword_clashes(self.one_password, secrets=self.secrets)
+        if clash:
+            raise ValueError(clash)
         return self
 
 
@@ -608,6 +620,12 @@ class SandboxExecParams(SandboxBaseModel):
     # A vault, by name, whose entries become environment variables; ``secrets``
     # are merged over it. Starts through the control API like ``secrets``.
     vault: Optional[str] = None
+    # Fields of a 1Password vault as environment variables, resolved in the
+    # sandbox at start. A variable here may not also come from ``vault``,
+    # ``secrets`` or ``env``. Starts through the control API like ``secrets``.
+    one_password: Optional[OnePasswordSource] = Field(
+        default=None, serialization_alias="onePassword"
+    )
 
     @field_validator("secrets", mode="before")
     @classmethod
@@ -622,7 +640,11 @@ class SandboxExecParams(SandboxBaseModel):
     @property
     def uses_secrets(self) -> bool:
         """Whether the start delivers secrets, so goes through the control API."""
-        return bool(self.secrets) or self.vault is not None
+        return (
+            bool(self.secrets)
+            or self.vault is not None
+            or self.one_password is not None
+        )
 
 
 class SandboxProcessSummary(SandboxBaseModel):

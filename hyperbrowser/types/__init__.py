@@ -11,15 +11,9 @@ from .credential import (
 )
 from .vault import (
     CreateVaultParams,
-    OnePasswordEntry,
-    OnePasswordSourceUpdate,
-    OnePasswordVaultSource,
     StoredEntry,
-    StoredVaultSource,
     UpdateVaultParams,
-    VaultEntryInput,
     VaultListParams,
-    VaultSourceInput,
 )
 from .webmcp import (
     WebMCPInvokeParams,
@@ -176,6 +170,8 @@ from .session import (
 )
 from .secret import (
     CreateSecretParams,
+    OnePasswordField,
+    OnePasswordSource,
     SecretBrowserMetadata,
     SecretListParams,
     SecretMetadata,
@@ -218,15 +214,9 @@ __all__ = [
     "CredentialFillField",
     "FillCredentialParams",
     "CreateVaultParams",
-    "OnePasswordEntry",
-    "OnePasswordSourceUpdate",
-    "OnePasswordVaultSource",
     "StoredEntry",
-    "StoredVaultSource",
     "UpdateVaultParams",
-    "VaultEntryInput",
     "VaultListParams",
-    "VaultSourceInput",
     "WebMCPInvokeParams",
     "WebMCPStartParams",
     "WebMCPResultParams",
@@ -371,6 +361,8 @@ __all__ = [
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
     "CreateSecretParams",
+    "OnePasswordField",
+    "OnePasswordSource",
     "SecretBrowserMetadata",
     "SecretListParams",
     "SecretMetadata",

@@ -126,7 +126,9 @@ def invalid_credential_requests(client: Hyperbrowser) -> None:
     client.secrets.create({"name": "github", "allowed_origins": "https://x.io"})  # M,P
     client.vaults.create({"name": "v", "entries": {"A": {"version": 1}}})  # M,P
     client.vaults.create({"name": "v", "source": {"type": "1password"}})  # M,P
-    client.vaults.update("v", {"source": {"type": "stored"}})  # M,P
+    client.vaults.update("v", {"entries": {"A": {"item": "i", "field": "f"}}})  # M,P
+    client.sandboxes.create({"image_name": "node", "one_password": {"token": "t", "vault": "v"}})  # M,P
+    client.sandboxes.create({"image_name": "node", "onePassword": {"token": "t", "vault": "v", "fields": {}}})  # M,P
     client.sessions.create({"credentials": "github"})  # M,P
     client.sessions.create({"credentials": [{"login": "github"}]})  # M,P
     client.sessions.credentials.fill("s", {"credential": "github"})  # M,P
@@ -138,3 +140,5 @@ async def invalid_async_credential_requests(client: AsyncHyperbrowser) -> None:
     await client.secrets.add_version("github", {"username": "a"})  # M,P
     await client.sessions.credentials.fill("s", {"credential": "c", "fields": [], "frame": "u"})  # M,P
     await client.vaults.create({"entries": {}})  # M,P
+    sandbox = await client.sandboxes.get("s")
+    await sandbox.exec("x", one_password={"token": "t", "vault": "v", "fields": {"A": {"item": "i"}}})  # M,P

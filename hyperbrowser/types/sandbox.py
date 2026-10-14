@@ -2,7 +2,7 @@ from typing import Dict, List, Literal, Optional, Union
 
 from typing_extensions import Required, TypeAlias, TypedDict
 
-from .secret import SecretReferenceInput
+from .secret import OnePasswordSource, SecretReferenceInput
 
 
 SandboxStatus: TypeAlias = Literal["active", "closed", "error", "close-error"]
@@ -101,6 +101,7 @@ class CreateSandboxFromImageParams(_CreateSandboxCommon, total=False):
     disk_mib: Optional[int]
     secrets: Optional[Dict[str, SecretReferenceInput]]
     vault: Optional[str]
+    one_password: Optional[OnePasswordSource]
 
 
 CreateSandboxParams: TypeAlias = Union[
@@ -255,6 +256,7 @@ class SandboxExecParams(TypedDict, total=False):
     use_shell: Optional[bool]
     secrets: Optional[Dict[str, SecretReferenceInput]]
     vault: Optional[str]
+    one_password: Optional[OnePasswordSource]
 
 
 class SandboxProcessListParams(TypedDict, total=False):

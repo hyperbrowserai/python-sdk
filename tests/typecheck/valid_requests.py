@@ -589,13 +589,13 @@ def valid_credential_requests(client: Hyperbrowser) -> None:
     from hyperbrowser.models import (
         CredentialFillField,
         FillCredentialParams,
-        OnePasswordEntry,
-        OnePasswordVaultSource,
+        OnePasswordField,
+        OnePasswordSource,
         SecretMetadata,
         StoredEntry,
         UpdateSecretParams,
         UpdateVaultParams,
-        VaultStoredEntry,
+        VaultEntry,
     )
 
     secret = client.secrets.create(
@@ -640,51 +640,75 @@ def valid_credential_requests(client: Hyperbrowser) -> None:
         }
     )
     for env, entry in vault.entries.items():
-        if isinstance(entry, VaultStoredEntry):
-            print(env, entry.name, entry.secret_id, entry.version)
-        else:
-            print(env, entry.item, entry.section, entry.field, entry.reference)
-    source_type: str = vault.source.type
-    client.vaults.create(
-        {
-            "name": "prod-db",
-            "source": {
-                "type": "1password",
-                "token_secret": "op-token",
-                "vault": "Engineering",
-            },
-            "entries": {
-                "DB_PASS": {"item": "Postgres", "section": "prod", "field": "password"}
-            },
-        }
-    )
+        stored: VaultEntry = entry
+        print(env, stored.name, stored.secret_id, stored.version)
     client.vaults.create(
         LegacyCreateVaultParams(
-            name="prod-db",
-            source=OnePasswordVaultSource(
-                type="1password", token_secret="op-token", vault="Eng"
-            ),
-            entries={"DB": OnePasswordEntry(item="Postgres", field="password")},
+            name="github-otp",
+            entries={"OTP": StoredEntry(name="github-otp", version="latest")},
         )
     )
     client.vaults.update("github-login", {"entries": {"OTP": None}})
-    client.vaults.update("prod-db", {"source": {"vault": "Platform"}})
     client.vaults.update(
         "github-login",
         UpdateVaultParams(entries={"OTP": StoredEntry(name="github-otp"), "X": None}),
     )
     listing = client.vaults.list({"search": "git", "limit": 10})
-    print(listing.total_count, client.vaults.get("github-login").id, source_type)
+    print(listing.total_count, client.vaults.get("github-login").id)
     client.vaults.delete("github-login")
 
     sandbox = client.sandboxes.create(
-        {"image_name": "node", "vault": "github-login", "secrets": {"A": "b"}}
+        {
+            "image_name": "node",
+            "vault": "github-login",
+            "secrets": {"A": "b"},
+            "one_password": {
+                "token": "op-token",
+                "vault": "Engineering",
+                "fields": {
+                    "DB_PASS": {
+                        "item": "Postgres",
+                        "section": "prod",
+                        "field": "password",
+                    },
+                    "DB_OTP": {"item": "Postgres", "field": "otp?attribute=totp"},
+                },
+            },
+        }
     )
     print(sandbox.startup_secrets)
     handle = sandbox.processes.start("node app.js", vault="prod-db")
     for binding in handle.secrets or []:
+        source_type = binding.source.type if binding.source else None
         print(binding.env, binding.name, binding.reference, binding.token_secret)
+        print(source_type)
     sandbox.exec("node app.js", vault="prod-db", secrets={"A": "b"})
+    sandbox.exec(
+        "node app.js",
+        one_password={
+            "token": "op-token",
+            "vault": "Engineering",
+            "fields": {"DB_PASS": {"item": "Postgres", "field": "password"}},
+        },
+    )
+    sandbox.processes.start(
+        {
+            "command": "node app.js",
+            "one_password": {
+                "token": "t",
+                "vault": "v",
+                "fields": {"A": {"item": "i", "field": "f"}},
+            },
+        }
+    )
+    sandbox.processes.start(
+        "node app.js",
+        one_password=OnePasswordSource(
+            token="op-token",
+            vault="Engineering",
+            fields={"DB_PASS": OnePasswordField(item="Postgres", field="password")},
+        ),
+    )
 
     session = client.sessions.create(
         {"credentials": [kind, {"secret": "github-otp"}, {"vault": "github-login"}]}
@@ -740,6 +764,14 @@ async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
     print(result.fields)
     sandbox = await client.sandboxes.create({"image_name": "node", "vault": "v"})
     await sandbox.processes.start("node app.js", vault="v")
+    await sandbox.exec(
+        "node app.js",
+        one_password={
+            "token": "t",
+            "vault": "v",
+            "fields": {"A": {"item": "i", "field": "f"}},
+        },
+    )
     text: str = await CredentialFillTool.async_runnable(
         client, session.id, {"credential": "x"}
     )

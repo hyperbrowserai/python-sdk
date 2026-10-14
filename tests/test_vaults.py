@@ -11,15 +11,12 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     CreateSandboxParams,
     CreateVaultParams,
-    OnePasswordEntry,
-    OnePasswordVaultSource,
     SandboxDetail,
     SandboxResolvedSecret,
     StoredEntry,
     UpdateVaultParams,
     Vault,
-    VaultOnePasswordEntry,
-    VaultStoredEntry,
+    VaultEntry,
 )
 from tests.test_credentials import mock_clients, respond
 from tests.test_sandbox_wire_contract import SANDBOX_DETAIL_PAYLOAD
@@ -36,30 +33,9 @@ STORED_VAULT = {
     "id": VAULT_ID,
     "name": "github-login",
     "description": "",
-    "source": {"type": "stored"},
     "entries": {
         "PASSWORD": {"name": "github-password", "secretId": SECRET_ID, "version": 3},
         "USERNAME": {"name": "github-username", "secretId": SECRET_ID, "version": None},
-    },
-    "createdAt": "2026-10-01T00:00:00Z",
-    "updatedAt": "2026-10-01T00:00:00Z",
-}
-ONEPASSWORD_VAULT = {
-    "id": VAULT_ID,
-    "name": "prod-db",
-    "description": "",
-    "source": {
-        "type": "1password",
-        "tokenSecret": {"name": "op-token", "secretId": TOKEN_ID},
-        "vault": "Engineering",
-    },
-    "entries": {
-        "DB_PASS": {
-            "item": "Postgres",
-            "section": "prod",
-            "field": "password",
-            "reference": "op://Engineering/Postgres/prod/password",
-        }
     },
     "createdAt": "2026-10-01T00:00:00Z",
     "updatedAt": "2026-10-01T00:00:00Z",
@@ -78,52 +54,39 @@ def _body(request):
 # --- models ---
 
 
-def test_vaults_parse_both_sources_and_entry_kinds():
-    stored = Vault.model_validate(STORED_VAULT)
-    assert stored.source.type == "stored"
-    password = stored.entries["PASSWORD"]
-    assert isinstance(password, VaultStoredEntry)
+def test_vaults_parse_stored_entries():
+    vault = Vault.model_validate(STORED_VAULT)
+    password = vault.entries["PASSWORD"]
+    assert isinstance(password, VaultEntry)
     assert isinstance(password, StoredEntry)
     assert (password.name, password.secret_id, password.version) == (
         "github-password",
         SECRET_ID,
         3,
     )
-    username = stored.entries["USERNAME"]
+    username = vault.entries["USERNAME"]
     assert isinstance(username, StoredEntry) and username.version is None
-
-    linked = Vault.model_validate(ONEPASSWORD_VAULT)
-    assert linked.source.type == "1password"
-    assert linked.source.vault == "Engineering"
-    assert linked.source.token_secret is not None
-    assert linked.source.token_secret.name == "op-token"
-    assert linked.source.token_secret.secret_id == TOKEN_ID
-    entry = linked.entries["DB_PASS"]
-    assert isinstance(entry, VaultOnePasswordEntry)
-    assert (entry.item, entry.section, entry.field) == ("Postgres", "prod", "password")
-    assert entry.reference == "op://Engineering/Postgres/prod/password"
+    assert Vault.model_validate(dict(STORED_VAULT, entries=None)).entries == {}
 
 
-def test_vaults_from_apis_without_sources_or_with_new_ones_parse():
-    legacy = dict(STORED_VAULT)
-    del legacy["source"]
-    assert Vault.model_validate(legacy).source.type == "stored"
-    assert Vault.model_validate(dict(legacy, source=None, entries=None)).entries == {}
-
-    future = Vault.model_validate(
-        dict(STORED_VAULT, source={"type": "keychain", "account": "x"}, entries={})
-    )
-    assert future.source.type == "keychain"
-    assert future.source.model_dump()["account"] == "x"
+def test_a_stray_source_in_a_vault_response_is_ignored():
+    for source in [
+        {"type": "stored"},
+        {"type": "1password", "tokenSecret": {"name": "op-token"}, "vault": "Eng"},
+        None,
+    ]:
+        vault = Vault.model_validate(dict(STORED_VAULT, source=source))
+        assert vault.name == "github-login"
+        assert not hasattr(vault, "source")
 
 
 # --- requests ---
 
 
-def test_create_sends_stored_and_1password_vaults(sdk):
+def test_create_sends_entries_without_a_source(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, STORED_VAULT, 201)
-    respond(outcomes, ONEPASSWORD_VAULT, 201)
+    respond(outcomes, STORED_VAULT, 201)
 
     vault = call(
         client.vaults.create,
@@ -152,31 +115,13 @@ def test_create_sends_stored_and_1password_vaults(sdk):
     call(
         client.vaults.create,
         CreateVaultParams(
-            name="prod-db",
-            source=OnePasswordVaultSource(
-                type="1password", token_secret="op-token", vault="Engineering"
-            ),
-            entries={
-                "DB_PASS": OnePasswordEntry(
-                    item="Postgres", section="prod", field="password"
-                ),
-                "DB_OTP": OnePasswordEntry(
-                    item="Postgres", field="one-time password?attribute=otp"
-                ),
-            },
+            name="github-otp",
+            entries={"OTP": StoredEntry(name="github-otp", version=2)},
         ),
     )
     assert _body(calls[1]) == {
-        "name": "prod-db",
-        "source": {
-            "type": "1password",
-            "tokenSecret": "op-token",
-            "vault": "Engineering",
-        },
-        "entries": {
-            "DB_PASS": {"item": "Postgres", "section": "prod", "field": "password"},
-            "DB_OTP": {"item": "Postgres", "field": "one-time password?attribute=otp"},
-        },
+        "name": "github-otp",
+        "entries": {"OTP": {"name": "github-otp", "version": 2}},
     }
 
 
@@ -196,21 +141,13 @@ def test_entries_read_from_a_vault_can_be_sent_back(sdk):
     }
 
 
-def _onepassword(entries):
-    return {
-        "name": "op",
-        "source": {"type": "1password", "token_secret": "op-token", "vault": "Eng"},
-        "entries": entries,
-    }
-
-
 @pytest.mark.parametrize(
     "params,message",
     [
         ({"name": "bad name"}, "Invalid secret name"),
-        ({"name": "v", "entries": {"1PASS": {"name": "s"}}}, "entry name"),
-        ({"name": "v", "entries": {"__proto__": {"name": "s"}}}, "entry name"),
-        ({"name": "v", "entries": {"P" * 257: {"name": "s"}}}, "entry name"),
+        ({"name": "v", "entries": {"1PASS": {"name": "s"}}}, "vault entry"),
+        ({"name": "v", "entries": {"__proto__": {"name": "s"}}}, "vault entry"),
+        ({"name": "v", "entries": {"P" * 257: {"name": "s"}}}, "vault entry"),
         ({"name": "v", "entries": {"P": {"name": "bad name"}}}, "secret name"),
         ({"name": "v", "entries": {"P": {"name": "s", "version": 0}}}, "version"),
         ({"name": "v", "entries": {"P": {"name": "s", "version": "next"}}}, "version"),
@@ -218,33 +155,19 @@ def _onepassword(entries):
             {"name": "v", "entries": {f"E{i}": {"name": "s"} for i in range(33)}},
             "at most 32",
         ),
-        ({"name": "v", "entries": {"P": {"item": "i", "field": "f"}}}, "stored vault"),
-        (_onepassword({"P": {"name": "s"}}), "1Password vault"),
-        (_onepassword({"P": {"item": "a/b", "field": "f"}}), "item"),
-        (_onepassword({"P": {"item": "a?b", "field": "f"}}), "item"),
-        (_onepassword({"P": {"item": "..", "field": "f"}}), "item"),
-        (_onepassword({"P": {"item": "a​b", "field": "f"}}), "item"),
-        (_onepassword({"P": {"item": "a\nb", "field": "f"}}), "item"),
-        (_onepassword({"P": {"item": "i" * 257, "field": "f"}}), "longer"),
-        (_onepassword({"P": {"item": "i", "section": "", "field": "f"}}), "section"),
-        (_onepassword({"P": {"item": "i", "field": "."}}), "field"),
-        (_onepassword({"P": {"item": "i", "field": "f?"}}), "query"),
-        (_onepassword({"P": {"item": "i", "field": "f?Attr=otp"}}), "query"),
-        (_onepassword({"P": {"item": "i", "field": "f?a=b&c"}}), "query"),
-        (_onepassword({"P": {"item": "i", "field": "f?a=b?c"}}), "query"),
-        (_onepassword({"P": {"item": "i" * 250, "field": "f" * 256}}), "512 bytes"),
+        # Vaults hold stored secrets only: 1Password fields and sources are gone.
+        ({"name": "v", "entries": {"P": {"item": "i", "field": "f"}}}, "name"),
         (
-            {"name": "op", "source": {"type": "1password", "vault": "Eng"}},
-            "token_secret",
+            {"name": "v", "entries": {"P": {"name": "s", "item": "i"}}},
+            "Extra inputs",
         ),
         (
             {
                 "name": "op",
-                "source": {"type": "1password", "token_secret": "t", "vault": "a/b"},
+                "source": {"type": "1password", "token_secret": "t", "vault": "E"},
             },
-            "1Password vault",
+            "Extra inputs",
         ),
-        ({"name": "op", "source": {"type": "keychain"}}, "type"),
     ],
 )
 def test_invalid_vaults_fail_before_http(sdk, params, message):
@@ -254,25 +177,12 @@ def test_invalid_vaults_fail_before_http(sdk, params, message):
     assert not calls
 
 
-def test_1password_names_allow_what_the_server_allows():
-    CreateVaultParams.model_validate(
-        _onepassword(
-            {
-                "A": {"item": "My Login (old)", "field": "password"},
-                "B": {"item": "x" * 256, "section": "Ünïcødé ✓", "field": "f"},
-                "C": {"item": "i", "field": "otp?attribute=otp&ssh-format=openssh"},
-                "D": {"item": "...", "field": ".hidden"},
-            }
-        )
-    )
-
-
 def test_update_distinguishes_left_out_replaced_and_removed(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, {"vaults": [STORED_VAULT], "totalCount": 1})
     respond(outcomes, STORED_VAULT)
-    respond(outcomes, ONEPASSWORD_VAULT)
-    respond(outcomes, ONEPASSWORD_VAULT)
+    respond(outcomes, STORED_VAULT)
+    respond(outcomes, STORED_VAULT)
 
     call(
         client.vaults.update,
@@ -295,15 +205,24 @@ def test_update_distinguishes_left_out_replaced_and_removed(sdk):
         client.vaults.update,
         VAULT_ID,
         UpdateVaultParams(
-            description="Prod",
-            source={"vault": "Platform"},  # type: ignore[arg-type]
+            description="GitHub",
+            entries={"OTP": StoredEntry(name="github-otp", version="latest")},
         ),
     )
     assert calls[2].url.path == f"/api/vaults/{VAULT_ID}"
     assert calls[3].method == "PATCH"
-    assert _body(calls[3]) == {"description": "Prod", "source": {"vault": "Platform"}}
+    assert _body(calls[3]) == {
+        "description": "GitHub",
+        "entries": {"OTP": {"name": "github-otp", "version": "latest"}},
+    }
 
-    for bad in [{}, {"description": None}, {"source": {}}, {"entries": {"1X": None}}]:
+    for bad in [
+        {},
+        {"description": None},
+        {"entries": {"1X": None}},
+        {"source": {"vault": "Platform"}},
+        {"entries": {"P": {"item": "i", "field": "f"}}},
+    ]:
         with pytest.raises(ValueError):
             call(client.vaults.update, VAULT_ID, bad)
     assert len(calls) == 4
@@ -314,7 +233,7 @@ def test_list_get_and_delete_resolve_names_and_ids(sdk):
     listing = {"vaults": [STORED_VAULT], "totalCount": 1, "page": 1, "perPage": 20}
     respond(outcomes, listing)
     respond(outcomes, listing)
-    respond(outcomes, ONEPASSWORD_VAULT)
+    respond(outcomes, dict(STORED_VAULT, name="prod-db"))
     respond(outcomes, STORED_VAULT)
     respond(outcomes, {"deleted": True, "id": VAULT_ID, "name": "github-login"})
     respond(outcomes, {"code": "VAULT_NOT_FOUND", "message": "Vault not found"}, 404)
@@ -352,17 +271,14 @@ def test_vault_errors_keep_the_server_code(sdk):
         outcomes,
         {
             "code": "SECRET_TYPE_MISMATCH",
-            "message": "a 1Password vault's token must be an op_token secret",
+            "message": 'Secret "op-token" is an op_token; vault entries take stored secrets',
         },
         409,
     )
     with pytest.raises(HyperbrowserError) as error:
         call(
             client.vaults.create,
-            {
-                "name": "op",
-                "source": {"type": "1password", "token_secret": "pw", "vault": "Eng"},
-            },
+            {"name": "op", "entries": {"TOKEN": {"name": "op-token"}}},
         )
     assert error.value.code == "SECRET_TYPE_MISMATCH"
     assert error.value.status_code == 409
@@ -393,7 +309,7 @@ BINDINGS = [
         "env": "DB_PASS",
         "reference": "op://Engineering/Postgres/prod/password",
         "tokenSecret": "op-token",
-        "source": {"type": "vault", "name": "prod-db"},
+        "source": {"type": "onePassword"},
     },
 ]
 
@@ -408,6 +324,8 @@ def test_bindings_describe_stored_totp_and_1password_variables():
     assert (linked.name, linked.secret_id, linked.version) == (None, None, None)
     assert linked.reference == "op://Engineering/Postgres/prod/password"
     assert linked.token_secret == "op-token"
+    assert linked.source is not None and linked.source.type == "onePassword"
+    assert linked.source.name is None and linked.overrides == []
 
 
 def test_sandbox_create_sends_a_vault_and_keeps_the_startup_bindings():

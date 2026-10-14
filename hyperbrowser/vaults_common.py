@@ -4,28 +4,16 @@ from typing import Any, Dict
 
 from .client._request import coerce_request
 from .exceptions import HyperbrowserError
-from .models.vault import (
-    CreateVaultParams,
-    OnePasswordEntry,
-    StoredEntry,
-    UpdateVaultParams,
-)
+from .models.vault import CreateVaultParams, StoredEntry, UpdateVaultParams
 
 
-def _entry_body(entry: Any) -> Dict[str, Any]:
+def _entry_body(entry: StoredEntry) -> Dict[str, Any]:
     # Only the request members: entries read from a vault also carry
-    # secretId or reference, which the API doesn't take.
-    if isinstance(entry, OnePasswordEntry):
-        body: Dict[str, Any] = {"item": entry.item, "field": entry.field}
-        if entry.section is not None:
-            body["section"] = entry.section
-        return body
-    if isinstance(entry, StoredEntry):
-        body = {"name": entry.name}
-        if entry.version is not None:
-            body["version"] = entry.version
-        return body
-    raise TypeError(f"Unsupported vault entry {type(entry).__name__}")
+    # secretId, which the API doesn't take.
+    body: Dict[str, Any] = {"name": entry.name}
+    if entry.version is not None:
+        body["version"] = entry.version
+    return body
 
 
 def create_vault_body(params: Any) -> Dict[str, Any]:
@@ -34,8 +22,6 @@ def create_vault_body(params: Any) -> Dict[str, Any]:
     body: Dict[str, Any] = {"name": request.name}
     if request.description is not None:
         body["description"] = request.description
-    if request.source is not None:
-        body["source"] = request.source.model_dump(by_alias=True, exclude_none=True)
     if request.entries is not None:
         body["entries"] = {
             env: _entry_body(entry) for env, entry in request.entries.items()
@@ -53,8 +39,6 @@ def update_vault_body(params: Any) -> Dict[str, Any]:
     body: Dict[str, Any] = {}
     if request.description is not None:
         body["description"] = request.description
-    if request.source is not None:
-        body["source"] = request.source.model_dump(by_alias=True, exclude_none=True)
     if request.entries is not None:
         body["entries"] = {
             env: None if entry is None else _entry_body(entry)

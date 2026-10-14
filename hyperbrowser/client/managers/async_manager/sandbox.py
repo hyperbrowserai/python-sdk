@@ -80,6 +80,7 @@ from ..sandboxes.image_resolution import (
     completed_image_id,
 )
 from ..sandboxes.shared import (
+    OnePasswordSourceInput,
     SecretReferences,
     _build_sandbox_exposed_url,
     _copy_model,
@@ -337,15 +338,19 @@ class SandboxHandle:
         max_output_bytes: int = 64 * 1024 * 1024,
         secrets: Optional[SecretReferences] = None,
         vault: Optional[str] = None,
+        one_password: Optional[OnePasswordSourceInput] = None,
     ):
         """Run a command to completion.
 
         ``secrets`` maps environment variable names to stored secrets (a name,
         or ``{"name": ..., "version": N}``). ``vault`` names a vault whose
-        entries become variables too; ``secrets`` win on a clash. Anything
-        else running as the same user, or as root, in the sandbox can read a
-        process's environment, and the sandbox and its later snapshots are
-        marked as containing secrets.
+        entries become variables too; ``secrets`` win on a clash.
+        ``one_password`` sets variables from fields of a 1Password vault
+        (``{"token": op_token_secret, "vault": ..., "fields": {ENV: {"item",
+        "section", "field"}}}``); those variables may come from nothing else.
+        Anything else running as the same user, or as root, in the sandbox can
+        read a process's environment, and the sandbox and its later snapshots
+        are marked as containing secrets.
         """
         return await self.processes.exec(
             input,
@@ -357,6 +362,7 @@ class SandboxHandle:
             max_output_bytes=max_output_bytes,
             secrets=secrets,
             vault=vault,
+            one_password=one_password,
         )
 
     async def _start_secret_process(self, payload: Dict[str, object]) -> dict:
@@ -1186,7 +1192,11 @@ class SandboxManager:
     ) -> SandboxDetail:
         normalized = coerce_request(params, CreateSandboxParams)
         data = dump_request(normalized, CreateSandboxParams)
-        delivers_secrets = bool(normalized.secrets) or normalized.vault is not None
+        delivers_secrets = (
+            bool(normalized.secrets)
+            or normalized.vault is not None
+            or normalized.one_password is not None
+        )
         try:
             payload = await self._request("POST", "/sandbox", data=data)
             detail = SandboxDetail(**payload)

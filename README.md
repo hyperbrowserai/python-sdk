@@ -246,8 +246,7 @@ Things to know:
     session was created, or a vault entry now points at another secret.
   - `CREDENTIAL_NOT_READY` (409): the secret has no allowed origins or no
     value.
-  - `SECRET_TYPE_MISMATCH` (409): an `op_token` can't be filled.
-    `VAULT_SOURCE_INVALID` (400): a 1Password vault can't be filled.
+  - `SECRET_TYPE_MISMATCH` (409): an `op_token` can't be attached or filled.
   - `SECRET_VALUE_INVALID` (422): the stored value is unusable, such as a bad
     TOTP seed; add a new version.
   - `CREDENTIAL_PAGE_NOT_FOUND`, `CREDENTIAL_FRAME_NOT_FOUND`,
@@ -629,27 +628,45 @@ client.secrets.delete("provider-key")
 client.close()
 ```
 
-A vault can take its values from 1Password instead. Store a 1Password
+Values can also come straight from a 1Password vault. Store a 1Password
 service account token (it starts with `ops_`) as an `op_token` secret: it is
 only used to sign in to 1Password, never set as a variable or typed into a
-browser, and can't have allowed origins.
+browser, and can't have allowed origins. Then name the fields each variable
+takes with `one_password` when creating a sandbox or starting a process.
+Nothing about them is stored: the sandbox reads the fields when the process
+starts.
 
 ```python
 client.secrets.create(
     {"name": "op-token", "type": "op_token", "value": Path("op-token.txt").read_text().strip()}
 )
-client.vaults.create(
-    {
-        "name": "prod-db",
-        "source": {"type": "1password", "token_secret": "op-token", "vault": "Engineering"},
-        # Items, sections and fields by name or ID: op://Engineering/Postgres/prod/password
-        "entries": {"DB_PASS": {"item": "Postgres", "section": "prod", "field": "password"}},
-    }
-)
-sandbox.exec("psql -c 'select 1'", vault="prod-db")
-# An entry set to None is removed; entries not given are kept.
-client.vaults.update("prod-db", {"entries": {"DB_PASS": None}})
+one_password = {
+    "token": "op-token",  # the op_token secret's name; its latest version signs in
+    "vault": "Engineering",  # the 1Password vault's name or ID
+    # Items, sections and fields by name or ID: op://Engineering/Postgres/prod/password
+    "fields": {
+        "DB_PASS": {"item": "Postgres", "section": "prod", "field": "password"},
+        "DB_OTP": {"item": "Postgres", "field": "one-time password?attribute=totp"},
+    },
+}
+
+# Delivered to the image's startup command (image launches only).
+sandbox = client.sandboxes.create({"image_name": "node", "one_password": one_password})
+print(sandbox.startup_secrets)  # each with its op:// reference and token_secret
+
+result = sandbox.exec("psql -c 'select 1'", one_password=one_password)
+process = sandbox.processes.start("node worker.js", one_password=one_password)
+print(process.secrets)  # source.type is "onePassword" for these variables
 ```
+
+`one_password` takes one token and vault per request and 1-32 fields, named
+like environment variables. A field may end with a query such as
+`?attribute=otp`, `?attribute=totp` or `?ssh-format=openssh`. Vaults, items,
+sections and fields are 1-256 characters (UTF-16 code units) without `/`, `?` or control characters, and
+not `.` or `..`; the whole `op://` reference is at most 512 bytes. These are
+checked locally before any request, as is a variable that `secrets` or `env`
+also sets: a variable from 1Password must come from it alone. The server also
+refuses one that the request's `vault` holds.
 
 Things to know:
 
@@ -686,18 +703,17 @@ Things to know:
   `sandbox.processes.list()` before retrying. When the API reported the
   unknown outcome itself, its response body, including its own code
   (`SECRET_PROCESS_OUTCOME_UNKNOWN`), is in the error's `details`.
-- `client.sandboxes.create()` with `secrets` raises the same
+- `client.sandboxes.create()` with `secrets`, `vault` or `one_password`
+  raises the same
   `secret_process_outcome_unknown` error when the create may have reached the
   API but its result is unknown (a timeout, a dropped connection, or an
   unreadable response): a sandbox may be running its startup command with the
   secrets, so list sandboxes before retrying.
-- Vaults hold up to 32 entries, named like environment variables; a team has
-  up to 100. A vault's source is fixed at creation; `update()` changes a
-  1Password vault's `token_secret` or `vault` with `{"source": {...}}`.
-  Methods that take a vault accept its ID or exact name, and vaults need the
-  same scopes as secrets. A vault and
-  `secrets` together deliver at most 32 variables, and a process's `env` may
-  not set one of them.
+- Vaults hold up to 32 stored secrets, named like environment variables; a
+  team has up to 100. Methods that take a vault accept its ID or exact name,
+  and vaults need the same scopes as secrets. A vault, `secrets` and
+  `one_password` together deliver at most 32 variables, and a process's `env`
+  may not set one of them.
 - Error codes from the API:
   - `SECRETS_ADMIN_REQUIRED` (403): the request used an `hx auth login`
     session of a team member who isn't an owner or admin. API keys are
@@ -707,26 +723,26 @@ Things to know:
   - `SECRETS_NOT_CONFIGURED` (503): the platform has no secrets key
     configured. It isn't retried.
   - `SECRET_STARTUP_UNSUPPORTED` (400): the image has no startup command to
-    deliver `secrets` to. Create the sandbox without them, then pass them to
+    deliver `secrets`, a `vault` or `one_password` to. Create the sandbox without them, then pass them to
     `sandbox.exec()` or `sandbox.processes.start()`.
   - `VAULT_NOT_FOUND` (404), `VAULT_NAME_TAKEN`, `VAULT_LIMIT_REACHED`,
-    `VAULT_ENTRY_LIMIT_REACHED` (409), `VAULT_ENTRY_INVALID` (400: a bad
-    entry, including one of the wrong kind for the vault's source; the message
-    starts with the variable), and `VAULT_SOURCE_INVALID` (400: a source change
-    on a stored vault, or a 1Password vault used in a browser session).
-  - `SECRET_IN_USE` (409): a vault uses the secret, as an entry or as its
-    1Password token; `SECRET_VERSION_IN_USE` (409): a vault pins the version.
+    `VAULT_ENTRY_LIMIT_REACHED` (409).
+  - `SECRET_IN_USE` (409): a vault uses the secret as an entry;
+    `SECRET_VERSION_IN_USE` (409): a vault pins the version. Only vaults
+    hold secrets, so an `op_token` can always be deleted.
   - `SECRET_TYPE_MISMATCH` (409): an `op_token` used as a variable or vault
-    entry, or another type used as a 1Password vault's token.
+    entry, or another type named as `one_password`'s `token`.
   - `SECRET_SOURCES_INVALID` (400): for example `env` sets a variable that
-    `vault` or `secrets` also sets.
+    `vault` or `secrets` also sets, a `one_password` variable is also set by
+    `vault`, `secrets` or `env`, or the sources deliver more than 32
+    variables.
   - `SECRET_VALUE_INVALID` (422): a stored value is unusable, such as a bad
     TOTP seed; fix it by adding a new version.
   - `SECRET_TOTP_UNSUPPORTED` and `SECRET_ONEPASSWORD_UNSUPPORTED` (501): the
     sandbox's host predates TOTP or 1Password, so nothing started. Retryable
     on sandbox create, which may land on a newer host; not on a process start.
   - `SECRET_ONEPASSWORD_REFERENCE_FAILED` (422, `details` names the
-    variables) and `SECRET_ONEPASSWORD_AUTH_FAILED` (422): fix the entries or
+    variables) and `SECRET_ONEPASSWORD_AUTH_FAILED` (422): fix the fields or
     the token. `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
     `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable.
   - `retryable` is the API's flag when it sends one.

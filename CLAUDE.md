@@ -53,7 +53,7 @@ client.extensions   # Browser extension management
 client.team         # Team/credit info
 client.computer_action  # Low-level computer actions
 client.secrets      # Encrypted secrets (secret, totp, op_token)
-client.vaults       # Named sets of secrets or 1Password fields
+client.vaults       # Named sets of stored secrets
 ```
 
 Each manager lives in `client/managers/sync_manager/` or `client/managers/async_manager/` with identical method signatures.

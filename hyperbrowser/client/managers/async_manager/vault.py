@@ -28,7 +28,7 @@ from .secret import SecretManager
 
 class VaultManager:
     """Manage vaults: named sets of environment variables whose values come
-    from stored secrets or from a 1Password vault.
+    from stored secrets.
 
     Pass a vault by name as ``vault`` when creating a sandbox or starting a
     process, or as ``{"vault": name}`` in a browser session's
@@ -57,11 +57,8 @@ class VaultManager:
     ) -> Vault:
         """Create a vault.
 
-        ``source`` defaults to ``{"type": "stored"}``, whose entries are
-        ``{"name": secret, "version": N}`` (version optional). A 1Password
-        vault, ``{"type": "1password", "token_secret": op_token_secret,
-        "vault": name_or_id}``, takes ``{"item", "section", "field"}`` entries.
-        The source type can't change later.
+        ``entries`` maps environment variable names to
+        ``{"name": secret, "version": N}`` (version optional).
         """
         body = create_vault_body(params)
         return Vault(**await self._control._request("POST", "/vaults", data=body))
@@ -74,11 +71,10 @@ class VaultManager:
         vault: str,
         params: Union[UpdateVaultParamsDict, UpdateVaultParams],
     ) -> Vault:
-        """Update a vault's description, entries or 1Password settings.
+        """Update a vault's description, entries, or both.
 
         Each entry given replaces that variable and an entry set to ``None``
-        removes it; entries not given are kept. ``source`` takes
-        ``token_secret`` and/or ``vault``, for 1Password vaults only.
+        removes it; entries not given are kept.
         """
         body = update_vault_body(params)
         vault_id = (await self._resolve(vault))[1]

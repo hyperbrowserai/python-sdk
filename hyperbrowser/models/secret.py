@@ -1,6 +1,7 @@
 import re
+import unicodedata
 from datetime import datetime
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -10,6 +11,7 @@ SECRET_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
 SECRET_ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MAX_SECRET_VERSION = 2**31 - 1
 MAX_SECRET_BINDINGS = 32
+MAX_SECRET_ENV_NAME_LENGTH = 256
 
 
 def validate_secret_name(name: str) -> str:
@@ -89,12 +91,186 @@ def normalize_secret_references(value):
     }
 
 
+MAX_ONEPASSWORD_NAME_LENGTH = 256
+MAX_ONEPASSWORD_REFERENCE_BYTES = 512
+# Characters 1Password names can't hold in an op:// reference: control,
+# format, line separator and paragraph separator characters.
+_ONEPASSWORD_FORBIDDEN_CATEGORIES = frozenset({"Cc", "Cf", "Zl", "Zp"})
+# A field may end with a query, such as ?attribute=otp or ?ssh-format=openssh.
+_ONEPASSWORD_QUERY_PATTERN = re.compile(
+    r"\?[a-z-]+=[A-Za-z0-9_-]+(?:&[a-z-]+=[A-Za-z0-9_-]+)*"
+)
+
+
+def _utf16_length(value: str) -> int:
+    # The server counts string lengths in UTF-16 code units.
+    return len(value.encode("utf-16-le", "surrogatepass")) // 2
+
+
+def validate_onepassword_name(value: str, what: str, query: bool = False) -> str:
+    """Check a 1Password vault, item, section or field name (or ID) for an
+    ``op://`` reference. A field may end with a query such as
+    ``?attribute=otp``."""
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{what} must be a non-empty 1Password name or ID")
+    if _utf16_length(value) > MAX_ONEPASSWORD_NAME_LENGTH:
+        raise ValueError(
+            f"{what} is longer than {MAX_ONEPASSWORD_NAME_LENGTH} characters"
+        )
+    name, mark, params = value.partition("?") if query else (value, "", "")
+    if mark and not _ONEPASSWORD_QUERY_PATTERN.fullmatch(mark + params):
+        raise ValueError(
+            f"{what} has an invalid query; expected ?key=value pairs such as "
+            "?attribute=otp"
+        )
+    if (
+        not name
+        or name in (".", "..")
+        or "/" in name
+        or "?" in name
+        or any(
+            unicodedata.category(char) in _ONEPASSWORD_FORBIDDEN_CATEGORIES
+            for char in name
+        )
+    ):
+        raise ValueError(
+            f"{what} must be a 1Password name or ID without '/' or '?', control "
+            "characters, or a name of '.' or '..'"
+        )
+    return value
+
+
+def validate_secret_env_name(env, what: str = "a secret") -> str:
+    if (
+        not isinstance(env, str)
+        or not SECRET_ENV_NAME_PATTERN.fullmatch(env)
+        or len(env) > MAX_SECRET_ENV_NAME_LENGTH
+        or env == "__proto__"
+    ):
+        raise ValueError(
+            f"Invalid environment variable name {env!r} for {what}: expected "
+            f"up to {MAX_SECRET_ENV_NAME_LENGTH} letters, digits and '_', not "
+            "starting with a digit"
+        )
+    return env
+
+
+class OnePasswordField(SecretBaseModel):
+    """A field of an item in the request's 1Password vault.
+
+    ``item``, ``section`` and ``field`` are names or IDs; ``field`` may end
+    with a query such as ``?attribute=otp`` or ``?attribute=totp``.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    item: str
+    section: Optional[str] = None
+    field: str
+
+    @field_validator("item")
+    @classmethod
+    def validate_item(cls, value):
+        return validate_onepassword_name(value, "item")
+
+    @field_validator("section")
+    @classmethod
+    def validate_section(cls, value):
+        return None if value is None else validate_onepassword_name(value, "section")
+
+    @field_validator("field")
+    @classmethod
+    def validate_field(cls, value):
+        return validate_onepassword_name(value, "field", query=True)
+
+
+def onepassword_reference(vault: str, field: OnePasswordField) -> str:
+    """The ``op://vault/item/[section/]field`` reference the platform builds."""
+    parts = [vault, field.item] + ([field.section] if field.section else [])
+    return "op://" + "/".join(parts + [field.field])
+
+
+class OnePasswordSource(SecretBaseModel):
+    """Environment variables from fields of one 1Password vault.
+
+    ``token`` names an ``op_token`` secret holding a 1Password service account
+    token (its latest version signs in); ``vault`` is the 1Password vault's
+    name or ID; ``fields`` maps each environment variable to the field it
+    takes. Nothing is stored: the sandbox resolves the fields when the
+    process starts.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    token: str
+    vault: str
+    fields: Dict[str, OnePasswordField]
+
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, value):
+        return validate_secret_name(value)
+
+    @field_validator("vault")
+    @classmethod
+    def validate_vault(cls, value):
+        return validate_onepassword_name(value, "The 1Password vault")
+
+    @field_validator("fields", mode="before")
+    @classmethod
+    def validate_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+        if not 1 <= len(value) <= MAX_SECRET_BINDINGS:
+            raise ValueError(
+                f"one_password takes 1 to {MAX_SECRET_BINDINGS} fields; "
+                f"got {len(value)}"
+            )
+        for env in value:
+            validate_secret_env_name(env, "a 1Password field")
+        return value
+
+    @model_validator(mode="after")
+    def check_reference_sizes(self):
+        for env, field in self.fields.items():
+            size = len(
+                onepassword_reference(self.vault, field).encode(
+                    "utf-8", "surrogatepass"
+                )
+            )
+            if size > MAX_ONEPASSWORD_REFERENCE_BYTES:
+                raise ValueError(
+                    f"{env}: the 1Password reference is {size} bytes; at most "
+                    f"{MAX_ONEPASSWORD_REFERENCE_BYTES} are allowed"
+                )
+        return self
+
+
+def onepassword_clashes(
+    one_password: Optional[OnePasswordSource], **sources
+) -> Optional[str]:
+    """Describe a variable ``one_password`` shares with another source of the
+    request (``secrets`` or ``env``), or return ``None``. Clashes with a vault
+    are only known to the server."""
+    if one_password is None:
+        return None
+    for name, variables in sources.items():
+        for env in one_password.fields:
+            if variables and env in variables:
+                return (
+                    f"{env} is set by {name} and by one_password; a 1Password "
+                    "field's variable must come from it alone"
+                )
+    return None
+
+
 # What a secret's value is; fixed when the secret is created.
 #   secret    an opaque string: an environment variable, and typed into pages
 #             on its allowed origins
 #   totp      a TOTP seed (base32 or an otpauth://totp/ URI): delivered and
 #             typed as the code that is current at the time
-#   op_token  a 1Password service account token, used only by 1Password vaults
+#   op_token  a 1Password service account token, used only to sign in for
+#             one_password fields
 SecretType = Literal["secret", "totp", "op_token"]
 
 # A secret value, encrypted locally before upload.
@@ -284,7 +460,8 @@ class SecretVersionDeleteResult(SecretBaseModel):
 
 class SecretBindingSource(SecretBaseModel):
     """Where a delivered variable came from: ``type`` is ``"vault"`` (with the
-    vault's ``name``) or ``"secrets"`` (the request's own ``secrets``)."""
+    vault's ``name``), ``"secrets"`` (the request's own ``secrets``) or
+    ``"onePassword"`` (the request's ``one_password``)."""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -297,10 +474,11 @@ class SandboxResolvedSecret(SecretBaseModel):
 
     A stored secret sets ``name``, ``secret_id`` and ``version``, and
     ``secret_type="totp"`` when the variable holds the code current at
-    process start. A 1Password vault entry sets ``reference`` (its
+    process start. A ``one_password`` field sets ``reference`` (its
     ``op://`` reference) and ``token_secret`` (the name of the op_token
-    secret used to sign in) instead. ``source`` is where the variable came
-    from, and ``overrides`` lists earlier sources it replaced.
+    secret used to sign in) instead, and never overrides another source.
+    ``source`` is where the variable came from, and ``overrides`` lists
+    earlier sources it replaced.
     """
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
