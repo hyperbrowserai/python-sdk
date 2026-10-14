@@ -240,6 +240,10 @@ def test_tool_runner_returns_errors_as_json(sdk):
         error = json.loads(call(runner, client, "s", bad))
         assert error["error"]["code"] == "invalid_request"
         assert error["error"]["details"] is None
+    # Input that isn't an object, as a model may send, is an error too.
+    for bad in [None, "fill it", ["github-login"]]:
+        error = json.loads(call(runner, client, "s", bad))
+        assert error["error"]["code"] == "invalid_request"
     assert len(calls) == 1
 
 

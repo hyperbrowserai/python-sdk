@@ -156,8 +156,11 @@ def _present(value: Any) -> bool:
     return value is not None and value != ""
 
 
-def _fill_credential_request(params: Mapping[str, Any]) -> Dict[str, Any]:
+def _fill_credential_request(params: Any) -> Dict[str, Any]:
     """Map the model's tool input to a fill request; null means absent."""
+    if not isinstance(params, Mapping):
+        # Fails validation, so the model gets an invalid_request error.
+        params = {}
     request: Dict[str, Any] = {}
     for key in ("credential", "vault"):
         if _present(params.get(key)):

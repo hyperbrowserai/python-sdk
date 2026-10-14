@@ -13,7 +13,7 @@ import re
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence, Type, Union
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import unquote_plus, urlsplit
 
 import httpx
 from cryptography.hazmat.primitives import hashes
@@ -100,10 +100,16 @@ def _invalid_value(message: str) -> HyperbrowserError:
 TOTP_ALGORITHMS = ("SHA1", "SHA256", "SHA512")
 TOTP_DIGITS = (6, 8)
 MAX_TOTP_PERIOD_SECONDS = 300
-_BASE32_PATTERN = re.compile(r"^[A-Z2-7]+$")
-_ASCII_INTEGER_PATTERN = re.compile(r"^[+-]?[0-9]+$")
+_BASE32_PATTERN = re.compile(r"[A-Z2-7]+")
+_ASCII_INTEGER_PATTERN = re.compile(r"[+-]?[0-9]+")
 _URI_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 _SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+# A "%" that doesn't start an escape, which Go's url.Parse refuses.
+_BAD_ESCAPE_PATTERN = re.compile(r"%(?![0-9A-Fa-f]{2})")
+# What Go's url.Parse allows in userinfo besides letters and digits.
+_USERINFO_PATTERN = re.compile(r"[A-Za-z0-9\-._:~!$&'()*+,;=%@]*")
+# Go's unicode.IsSpace, which vm-service trims seeds with.
+_GO_SPACE = "\t\n\v\f\r \x85\xa0        " "        　"
 
 
 def _invalid_totp(reason: str) -> HyperbrowserError:
@@ -116,11 +122,16 @@ def _invalid_totp(reason: str) -> HyperbrowserError:
 
 def _check_totp_base32(seed: str) -> None:
     # Spaces, hyphens, lowercase and trailing "=" padding are accepted, as
-    # sites show seeds in all of these forms.
-    normalized = seed.replace(" ", "").replace("-", "").upper().rstrip("=")
+    # sites show seeds in all of these forms. Characters are uppercased one
+    # at a time, as Go does, so "ß" can't turn into "SS".
+    normalized = "".join(
+        upper if len(upper) == 1 else char
+        for char in seed.replace(" ", "").replace("-", "")
+        for upper in [char.upper()]
+    ).rstrip("=")
     if not normalized:
         raise _invalid_totp("the seed is empty")
-    if not _BASE32_PATTERN.match(normalized):
+    if not _BASE32_PATTERN.fullmatch(normalized):
         raise _invalid_totp("the seed is not base32")
     # Lengths of 1, 3 or 6 (mod 8) leave characters that don't make a whole
     # byte; the platform would drop them and generate wrong codes, so the
@@ -131,35 +142,56 @@ def _check_totp_base32(seed: str) -> None:
         )
 
 
+def _query_params(query: str) -> Dict[str, str]:
+    """The first value of each query parameter, as Go's url.ParseQuery reads
+    them: pairs with a ";" or an invalid escape are skipped."""
+    params: Dict[str, str] = {}
+    for pair in query.split("&"):
+        if not pair or ";" in pair:
+            continue
+        key, _, value = pair.partition("=")
+        if _BAD_ESCAPE_PATTERN.search(key) or _BAD_ESCAPE_PATTERN.search(value):
+            continue
+        params.setdefault(unquote_plus(key), unquote_plus(value))
+    return params
+
+
 def _totp_uri_seed(uri: str) -> str:
     if _URI_CONTROL_PATTERN.search(uri):
         raise _invalid_totp("the URI contains control characters")
-    parsed = urlsplit(uri)
-    host = parsed.netloc.lower()
-    if host == "hotp":
+    try:
+        parsed = urlsplit(uri)
+    except ValueError:
+        raise _invalid_totp("the URI is malformed") from None
+    userinfo, at, host = parsed.netloc.rpartition("@")
+    if (
+        _BAD_ESCAPE_PATTERN.search(parsed.path)
+        or _BAD_ESCAPE_PATTERN.search(parsed.fragment)
+        or (at and not _USERINFO_PATTERN.fullmatch(userinfo))
+        or _BAD_ESCAPE_PATTERN.search(userinfo)
+    ):
+        raise _invalid_totp("the URI is malformed")
+    if host.lower() == "hotp":
         raise _invalid_totp("HOTP (counter-based) codes are not supported")
-    if host != "totp":
+    if host.lower() != "totp":
         raise _invalid_totp("the URI must start with otpauth://totp/")
-    query = parse_qs(parsed.query, keep_blank_values=True)
+    query = _query_params(parsed.query)
 
-    def param(name: str) -> str:
-        return query.get(name, [""])[0]
-
-    algorithm = param("algorithm")
+    algorithm = query.get("algorithm", "")
     if algorithm and algorithm.upper() not in TOTP_ALGORITHMS:
         raise _invalid_totp("algorithm must be SHA1, SHA256 or SHA512")
-    digits = param("digits")
+    digits = query.get("digits", "")
     if digits and (
-        not _ASCII_INTEGER_PATTERN.match(digits) or int(digits) not in TOTP_DIGITS
+        not _ASCII_INTEGER_PATTERN.fullmatch(digits) or int(digits) not in TOTP_DIGITS
     ):
         raise _invalid_totp("digits must be 6 or 8")
-    period = param("period")
+    period = query.get("period", "")
     if period and (
-        not _ASCII_INTEGER_PATTERN.match(period)
+        not _ASCII_INTEGER_PATTERN.fullmatch(period)
         or not 1 <= int(period) <= MAX_TOTP_PERIOD_SECONDS
     ):
         raise _invalid_totp("period must be 1 to 300 seconds")
-    seed = param("secret")
+    seed = query.get("secret", "")
     if not seed:
         raise _invalid_totp("the URI has no secret parameter")
     return seed
@@ -174,9 +206,9 @@ def check_totp_seed(value: str) -> None:
     characters) are accepted, though they are weaker than sites usually
     issue. Errors never include the value.
     """
-    text = value.strip()
-    if text.startswith("\ufeff"):
-        text = text[1:].strip()
+    # As vm-service: one leading byte-order mark, then surrounding spaces.
+    text = value[1:] if value.startswith("﻿") else value
+    text = text.strip(_GO_SPACE)
     if text.lower().startswith("otpauth://"):
         text = _totp_uri_seed(text)
     elif _SCHEME_PATTERN.match(text):

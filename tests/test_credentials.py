@@ -186,6 +186,14 @@ GOOD_SEEDS = [
     f"otpauth://totp/GitHub:ada?secret={SEED}&issuer=GitHub",
     f"OTPAUTH://TOTP/x?secret={SEED}&algorithm=sha512&digits=8&period=300",
     f"otpauth://totp/x?secret={SEED}&algorithm=SHA256&digits=6&period=1",
+    # Accepted by vm-service's parser (Go's url.Parse), so accepted here too.
+    f"otpauth://user@totp/x?secret={SEED}",
+    f"otpauth://@totp/x?secret={SEED}",
+    f"otpauth://totp/Acme%20Corp:alice%40x.com?secret={SEED}",
+    f"otpauth://totp/x?issuer=50%off&secret={SEED}",
+    f"otpauth://totp/x?secret={SEED}&digits=6%zz",
+    "\ufeff\u3000" + SEED + "\u00a0\u0085",
+    "\u0131" + SEED[1:],
 ]
 BAD_SEEDS = [
     ("", "empty"),
@@ -212,6 +220,19 @@ BAD_SEEDS = [
     (f"otpauth://totp/x?secret={SEED}&period=0", "period"),
     (f"otpauth://totp/x?secret={SEED}&period=301", "period"),
     (f"otpauth://totp/x?secret={SEED}&period=1_0", "period"),
+    (f"otpauth://totp/x?secret={SEED}&digits=6%0A", "digits"),
+    (f"otpauth://totp/x?secret={SEED}&period=30%0A", "period"),
+    (f"otpauth://totp/50%off:alice?secret={SEED}", "malformed"),
+    (f"otpauth://totp/x%2?secret={SEED}", "malformed"),
+    (f"otpauth://totp/x?secret={SEED}#50%off", "malformed"),
+    (f"otpauth://us er@totp/x?secret={SEED}", "malformed"),
+    (f"otpauth://totp@/x?secret={SEED}", "otpauth://totp/"),
+    (f"otpauth://totp:80/x?secret={SEED}", "otpauth://totp/"),
+    ("  \ufeff" + SEED, "not base32"),
+    ("\x1c" + SEED, "not base32"),
+    (SEED[:-1] + "\u00df", "not base32"),
+    ("\ufb00AAAAAA", "not base32"),
+    ("JBSWY3DP\nEHPK3PXP", "not base32"),
 ]
 
 
