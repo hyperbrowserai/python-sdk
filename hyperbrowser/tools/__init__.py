@@ -162,6 +162,9 @@ def _fill_credential_request(params: Any) -> Dict[str, Any]:
         # Fails validation, so the model gets an invalid_request error.
         params = {}
     request: Dict[str, Any] = {}
+    # Never one_password: a 1Password fill names the origins its values may
+    # be typed on, and a model must not choose those. Apps call
+    # sessions.credentials.fill() directly for 1Password.
     for key in ("credential", "vault"):
         if _present(params.get(key)):
             request[key] = params.get(key)
@@ -224,6 +227,10 @@ class CredentialFillTool:
     The result is JSON text for the model. API and validation errors are
     returned as ``{"error": {"code", "message", "retryable", "details"}}``
     instead of raised, so the model can react; other exceptions propagate.
+
+    1Password fills aren't offered: their request names the allowed origins,
+    which a model shouldn't choose. Call ``sessions.credentials.fill()`` with
+    ``one_password`` directly.
     """
 
     openai_tool_definition = FILL_CREDENTIAL_TOOL_OPENAI

@@ -25,6 +25,7 @@ from .exceptions import HyperbrowserError
 from .models.secret import (
     SecretsPublicKey,
     UpdateSecretParams,
+    validate_allowed_origins,
     validate_secret_version,
 )
 
@@ -236,7 +237,8 @@ def secret_payload_bytes(secret_type: Optional[str], value: Any) -> bytes:
 
 def browser_metadata(allowed_origins: Optional[Sequence[str]]) -> Dict[str, Any]:
     """Metadata allowing fills on ``allowed_origins``; ``None`` clears the
-    browser metadata in an update. The server checks the origins."""
+    browser metadata in an update. The origins are checked when the update
+    is serialized."""
     if allowed_origins is None:
         return {"browser": None}
     if isinstance(allowed_origins, (str, bytes)) or not all(
@@ -264,6 +266,18 @@ def check_secret_metadata(secret_type: Optional[str], metadata: Any) -> None:
         )
 
 
+def check_browser_origins(metadata: Any) -> None:
+    """Refuse allowed origins the server would refuse (see
+    ``validate_allowed_origin``) in serialized browser metadata."""
+    browser = metadata.get("browser") if isinstance(metadata, dict) else None
+    if not isinstance(browser, dict):
+        return
+    try:
+        validate_allowed_origins(browser.get("allowedOrigins"))
+    except ValueError as error:
+        raise HyperbrowserError(str(error), code="invalid_secret_metadata") from None
+
+
 def update_secret_body(params: Any) -> Dict[str, Any]:
     """Serialize a secret update.
 
@@ -272,6 +286,7 @@ def update_secret_body(params: Any) -> Dict[str, Any]:
     """
     normalized = coerce_request(params, UpdateSecretParams)
     body = normalized.model_dump(by_alias=True, exclude_unset=True)
+    check_browser_origins(body.get("metadata"))
     return {key: value for key, value in body.items() if value is not None}
 
 

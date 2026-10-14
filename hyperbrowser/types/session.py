@@ -141,9 +141,19 @@ class SessionCredentialVault(TypedDict):
     vault: str
 
 
+class SessionCredentialOnePassword(TypedDict):
+    """Attaches an ``op_token`` secret, by name, to a new session so fills
+    may type 1Password fields it can read. Sent as ``{"onePassword": name}``."""
+
+    one_password: str
+
+
 # A plain secret name is shorthand for {"secret": name}.
 SessionCredentialInput: TypeAlias = Union[
-    str, SessionCredentialSecret, SessionCredentialVault
+    str,
+    SessionCredentialSecret,
+    SessionCredentialVault,
+    SessionCredentialOnePassword,
 ]
 
 
@@ -224,6 +234,7 @@ class SessionEventLogListParams(TypedDict, total=False):
 
 __all__ = [
     "SessionCredentialInput",
+    "SessionCredentialOnePassword",
     "SessionCredentialSecret",
     "SessionCredentialVault",
     "BrowserDevice",

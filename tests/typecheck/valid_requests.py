@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -590,8 +590,10 @@ def valid_credential_requests(client: Hyperbrowser) -> None:
         CredentialFillField,
         FillCredentialParams,
         OnePasswordField,
+        OnePasswordFillSource,
         OnePasswordSource,
         SecretMetadata,
+        SessionCredentialOnePassword,
         StoredEntry,
         UpdateSecretParams,
         UpdateVaultParams,
@@ -741,6 +743,50 @@ def valid_credential_requests(client: Hyperbrowser) -> None:
             page_id="PAGE",
         ),
     )
+    client.sessions.create(
+        {"credentials": [{"one_password": "op-token"}, {"secret": "github-otp"}]}
+    )
+    filled = client.sessions.credentials.fill(
+        session.id,
+        {
+            "one_password": {
+                "token": "op-token",
+                "vault": "Engineering",
+                "allowed_origins": ["https://github.com"],
+            },
+            "fields": [
+                {"selector": "#login", "ref": {"item": "GitHub", "field": "username"}},
+                {
+                    "selector": "#otp",
+                    "ref": {"item": "GitHub", "section": "2FA", "field": "otp"},
+                },
+            ],
+            "page_url": "https://github.com/login",
+        },
+    )
+    references: List[Optional[str]] = [field.reference for field in filled.fields]
+    print(filled.version, references)
+    client.sessions.credentials.fill(
+        session.id,
+        FillCredentialParams(
+            one_password=OnePasswordFillSource(
+                token="op-token",
+                vault="Engineering",
+                allowed_origins=["https://github.com"],
+            ),
+            fields=[
+                CredentialFillField(
+                    selector="#pw",
+                    ref=OnePasswordField(item="GitHub", field="password"),
+                )
+            ],
+        ),
+    )
+    client.sessions.create(
+        LegacyCreateSessionParams(
+            credentials=[SessionCredentialOnePassword(one_password="op-token")]
+        )
+    )
     text: str = CredentialFillTool.runnable(client, session.id, {"vault": "x"})
     print(text, CredentialFillTool.gemini_tool_definition["name"])
 
@@ -762,6 +808,17 @@ async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
         {"vault": "github-login", "fields": [{"field": "OTP", "selector": "#otp"}]},
     )
     print(result.fields)
+    await client.sessions.credentials.fill(
+        session.id,
+        {
+            "one_password": {
+                "token": "op-token",
+                "vault": "v",
+                "allowed_origins": ["https://*.example.com"],
+            },
+            "fields": [{"selector": "#otp", "ref": {"item": "i", "field": "otp"}}],
+        },
+    )
     sandbox = await client.sandboxes.create({"image_name": "node", "vault": "v"})
     await sandbox.processes.start("node app.js", vault="v")
     await sandbox.exec(

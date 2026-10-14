@@ -14,7 +14,7 @@ from hyperbrowser.types.credential import (
 class SessionCredentialsManager:
     """Fill secrets attached to a session into its pages.
 
-    Attach secrets or vaults with
+    Attach secrets, vaults or op_token secrets (for 1Password fields) with
     ``sessions.create({"credentials": [...]})``.
     """
 
@@ -26,14 +26,16 @@ class SessionCredentialsManager:
         session_id: str,
         params: Union[FillCredentialParamsDict, FillCredentialParams],
     ) -> CredentialFillResult:
-        """Type a secret, or a vault's entries, into the inputs matching each
-        selector.
+        """Type a secret, a vault's entries, or 1Password fields into the
+        inputs matching each selector.
 
         Pass ``credential`` (a secret's name or ID) with
-        ``[{"selector": ...}]``, or ``vault`` with
-        ``[{"field": ENTRY, "selector": ...}]``. A TOTP secret types the code
-        that is current at fill time. Fill never submits: click the login
-        button or press Enter afterwards. It is safe to retry. Values are
+        ``[{"selector": ...}]``, ``vault`` with
+        ``[{"field": ENTRY, "selector": ...}]``, or ``one_password``
+        (``{"token", "vault", "allowed_origins"}``) with
+        ``[{"ref": {"item", "section", "field"}, "selector": ...}]``. A
+        TOTP secret types the code that is current at fill time. Fill never
+        submits: click the login button or press Enter afterwards. It is safe to retry. Values are
         never returned; each input reports an outcome such as ``filled`` or
         ``not_found``. When several tabs could be the target, the API fails
         with ``CREDENTIAL_PAGE_AMBIGUOUS`` and lists them in

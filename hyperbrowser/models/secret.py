@@ -1,3 +1,4 @@
+import ipaddress
 import re
 import unicodedata
 from datetime import datetime
@@ -277,6 +278,83 @@ SecretType = Literal["secret", "totp", "op_token"]
 SecretValue = Union[str, bytes]
 
 
+MAX_ALLOWED_ORIGINS = 20
+MAX_ALLOWED_ORIGIN_LENGTH = 512
+# The server's form for allowed origins: scheme://host[:port], where the host
+# may start with "*." to match any subdomain. ASCII only, as in JavaScript
+# without the u flag: no Unicode case folding or digits.
+_ALLOWED_ORIGIN_PATTERN = re.compile(
+    r"([a-z]+)://(\*\.)?([^/:?#]+|\[[^\]]+\])(?::([0-9]{1,5}))?/?",
+    re.IGNORECASE | re.ASCII,
+)
+_ORIGIN_HOST_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)", re.ASCII)
+_LOCAL_ORIGIN_HOSTS = frozenset({"localhost", "127.0.0.1", "[::1]"})
+
+
+def validate_allowed_origin(entry) -> str:
+    """Check an allowed origin as the server normalizes one, returning it
+    unchanged: ``scheme://host[:port]`` with no path, https only (http for
+    localhost, 127.0.0.1 and [::1]), and a ``*.`` wildcard only on a
+    registrable domain."""
+    if not isinstance(entry, str):
+        raise ValueError(
+            f"Allowed origin {entry!r} must be a string such as https://example.com"
+        )
+    if _utf16_length(entry) > MAX_ALLOWED_ORIGIN_LENGTH:
+        raise ValueError(
+            f"Allowed origin {entry[:64]!r} is longer than "
+            f"{MAX_ALLOWED_ORIGIN_LENGTH} characters"
+        )
+
+    def reject(reason: str) -> ValueError:
+        return ValueError(f"Allowed origin {entry!r} {reason}")
+
+    match = _ALLOWED_ORIGIN_PATTERN.fullmatch(entry.strip())
+    if not match:
+        raise reject("must be scheme://host[:port] with no path")
+    scheme, wildcard, host, port = match.groups()
+    scheme = scheme.lower()
+    host = host.lower()
+    if scheme not in ("https", "http"):
+        raise reject("must use https")
+    if scheme == "http" and (wildcard or host not in _LOCAL_ORIGIN_HOSTS):
+        raise reject("must use https unless it is localhost")
+    if port and int(port) > 65535:
+        raise reject("has an invalid port")
+    if not host.startswith("["):
+        labels = host.split(".")
+        if not all(_ORIGIN_HOST_LABEL.fullmatch(label) for label in labels):
+            raise reject("has an invalid host")
+        # "*.com" would cover a whole public suffix.
+        if wildcard and len(labels) < 2:
+            raise reject("wildcard must name a registrable domain")
+        # No top-level domain is numeric, so this is (part of) an IPv4 address.
+        if wildcard and labels[-1].isdigit():
+            raise reject("cannot use a wildcard with an IP address")
+    elif wildcard:
+        raise reject("cannot use a wildcard with an IP address")
+    else:
+        try:
+            ipaddress.IPv6Address(host[1:-1])
+        except ValueError:
+            raise reject("has an invalid host") from None
+    return entry
+
+
+def validate_allowed_origins(origins) -> List[str]:
+    """Check a list of 1 to 20 allowed origins (see validate_allowed_origin)."""
+    if isinstance(origins, (str, bytes)) or not isinstance(origins, (list, tuple)):
+        raise ValueError(
+            'allowed_origins must be a list of origins such as ["https://example.com"]'
+        )
+    if not 1 <= len(origins) <= MAX_ALLOWED_ORIGINS:
+        raise ValueError(
+            f"allowed_origins takes 1 to {MAX_ALLOWED_ORIGINS} origins; "
+            f"got {len(origins)}"
+        )
+    return [validate_allowed_origin(origin) for origin in origins]
+
+
 class SecretBrowserMetadata(SecretBaseModel):
     """Where a secret may be typed into browser pages.
 
@@ -361,15 +439,13 @@ class CreateSecretParams(SecretBaseModel):
                     )
                 }
             )
-        if (
-            self.type == "op_token"
-            and self.metadata is not None
-            and self.metadata.browser is not None
-        ):
-            raise ValueError(
-                "An op_token secret can't have allowed origins: it is never "
-                "typed into browser pages"
-            )
+        if self.metadata is not None and self.metadata.browser is not None:
+            if self.type == "op_token":
+                raise ValueError(
+                    "An op_token secret can't have allowed origins: it is never "
+                    "typed into browser pages"
+                )
+            validate_allowed_origins(self.metadata.browser.allowed_origins)
         return self
 
 

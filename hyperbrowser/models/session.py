@@ -294,8 +294,28 @@ class SessionCredentialVault(BaseModel):
         return validate_secret_name(value)
 
 
+class SessionCredentialOnePassword(BaseModel):
+    """Attaches an ``op_token`` secret, by name, to a new session: fills may
+    then type 1Password fields it can read (``one_password`` in
+    ``sessions.credentials.fill()``). Sent as ``{"onePassword": name}``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    one_password: str = Field(serialization_alias="onePassword")
+
+    @field_validator("one_password")
+    @classmethod
+    def validate_one_password(cls, value):
+        return validate_secret_name(value)
+
+
 # A plain secret name is shorthand for SessionCredentialSecret.
-SessionCredentialInput = Union[str, SessionCredentialSecret, SessionCredentialVault]
+SessionCredentialInput = Union[
+    str,
+    SessionCredentialSecret,
+    SessionCredentialVault,
+    SessionCredentialOnePassword,
+]
 
 
 class SessionDetail(Session):
@@ -653,11 +673,12 @@ class CreateSessionParams(BaseModel):
     credentials: Optional[List[SessionCredentialInput]] = Field(
         default=None, serialization_alias="credentials"
     )
-    """Up to 20 secrets (by name, or ``{"secret": name}``) or vaults
-    (``{"vault": name}``) that ``sessions.credentials.fill()`` may type into
-    this session's pages. A vault attaches the secrets its entries hold now.
-    Secrets need allowed origins to be filled, and can only be attached when
-    the session is created."""
+    """Up to 20 secrets (by name, or ``{"secret": name}``), vaults
+    (``{"vault": name}``) or op_token secrets (``{"one_password": name}``)
+    that ``sessions.credentials.fill()`` may type into this session's pages.
+    A vault attaches the secrets its entries hold now; an op_token lets fills
+    type the 1Password fields it can read. Secrets need allowed origins to be
+    filled, and can only be attached when the session is created."""
 
     @field_validator("credentials", mode="before")
     @classmethod

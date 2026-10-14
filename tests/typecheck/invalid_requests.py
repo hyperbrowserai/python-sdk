@@ -134,6 +134,10 @@ def invalid_credential_requests(client: Hyperbrowser) -> None:
     client.sessions.credentials.fill("s", {"credential": "github"})  # M,P
     client.sessions.credentials.fill("s", {"vault": "v", "fields": [{"field": "U"}]})  # M,P
     client.sessions.credentials.fill("s", {"credential": "c", "fields": [], "pageId": "p"})  # M,P
+    client.sessions.create({"credentials": [{"onePassword": "op-token"}]})  # M,P
+    client.sessions.credentials.fill("s", {"one_password": {"token": "t", "vault": "v"}, "fields": []})  # M,P
+    client.sessions.credentials.fill("s", {"one_password": {"token": "t", "vault": "v", "allowedOrigins": []}, "fields": []})  # M,P
+    client.sessions.credentials.fill("s", {"credential": "c", "fields": [{"selector": "input", "ref": {"item": "i"}}]})  # M,P
 
 
 async def invalid_async_credential_requests(client: AsyncHyperbrowser) -> None:

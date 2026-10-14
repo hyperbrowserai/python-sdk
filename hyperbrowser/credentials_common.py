@@ -6,8 +6,13 @@ from pydantic import ValidationError
 
 from .client._request import coerce_request
 from .exceptions import HyperbrowserError
-from .models.credential import FillCredentialParams
-from .models.secret import SECRET_ENV_NAME_PATTERN, SECRET_NAME_PATTERN
+from .models.credential import CredentialFillField, FillCredentialParams
+from .models.secret import (
+    MAX_ONEPASSWORD_REFERENCE_BYTES,
+    SECRET_ENV_NAME_PATTERN,
+    SECRET_NAME_PATTERN,
+    onepassword_reference,
+)
 from .models.vault import MAX_VAULT_ENV_NAME_LENGTH
 
 MAX_CREDENTIAL_FILL_FIELDS = 16
@@ -32,6 +37,25 @@ def _check_bytes(value: Any, name: str, limit: int) -> None:
         raise _invalid(f"{name} must be 1 to {limit} bytes when set")
 
 
+def _check_onepassword_field(vault: str, entry: CredentialFillField) -> None:
+    if entry.field is not None:
+        raise _invalid(
+            "field names a vault entry; with one_password each field takes "
+            "ref (the 1Password field) instead"
+        )
+    if entry.ref is None:
+        raise _invalid(
+            f"The field for {entry.selector!r} needs ref: the 1Password field "
+            "to type"
+        )
+    size = _utf8_length(onepassword_reference(vault, entry.ref))
+    if size > MAX_ONEPASSWORD_REFERENCE_BYTES:
+        raise _invalid(
+            f"The 1Password reference for {entry.selector!r} is {size} bytes; "
+            f"at most {MAX_ONEPASSWORD_REFERENCE_BYTES} are allowed"
+        )
+
+
 def fill_credential_payload(params: Any) -> Dict[str, Any]:
     """Check a fill request locally and return its JSON body.
 
@@ -50,10 +74,12 @@ def fill_credential_payload(params: Any) -> Dict[str, Any]:
     except TypeError as error:
         raise _invalid(str(error)) from None
 
-    if (request.credential is None) == (request.vault is None):
+    sources = [request.credential, request.vault, request.one_password]
+    if sum(source is not None for source in sources) != 1:
         raise _invalid(
-            "Pass exactly one of credential (a secret attached to the session) "
-            "and vault (a vault attached to the session)"
+            "Pass exactly one of credential (a secret attached to the session), "
+            "vault (a vault attached to the session) and one_password (1Password "
+            "fields read with an op_token attached to the session)"
         )
     if request.credential is not None and not (
         request.credential.strip()
@@ -82,6 +108,13 @@ def fill_credential_payload(params: Any) -> Dict[str, Any]:
         if entry.selector in selectors:
             raise _invalid(f"The selector {entry.selector!r} is listed more than once")
         selectors.add(entry.selector)
+        if request.one_password is not None:
+            _check_onepassword_field(request.one_password.vault, entry)
+            continue
+        if entry.ref is not None:
+            raise _invalid(
+                "ref names a 1Password field; pass it only with one_password"
+            )
         if request.vault is None:
             if entry.field is not None:
                 raise _invalid(

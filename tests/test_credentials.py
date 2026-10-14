@@ -17,9 +17,13 @@ from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models import (
     CreateSecretParams,
     CreateSessionParams,
+    CredentialFillField,
     FillCredentialParams,
+    OnePasswordField,
+    OnePasswordFillSource,
     Secret,
     SecretMetadata,
+    SessionCredentialOnePassword,
     SessionCredentialVault,
     UpdateSecretParams,
 )
@@ -380,6 +384,87 @@ def test_set_allowed_origins_replaces_or_clears_the_browser_metadata():
         assert error.value.code == "invalid_secret_metadata"
 
 
+BAD_ORIGINS = [
+    "http://example.com",
+    "https://*.com",
+    "http://*.localhost",
+    "https://*.10.0.0.1",
+    "https://*.[::1]",
+    "https://example.com/login",
+    "https://example.com?x=1",
+    "https://example.com#top",
+    "example.com",
+    "ftp://example.com",
+    "https://example.com:65536",
+    "https://-example.com",
+    "https://exa_mple.com",
+    "https://" + "a" * 64 + ".com",
+    "https://[::g]",
+    "https://" + "a" * 505 + ".com",
+    "",
+]
+
+
+@pytest.mark.parametrize("origin", BAD_ORIGINS)
+def test_secrets_refuse_origins_the_server_would(private_key, origin):
+    http = ScriptedHTTPClient(
+        {
+            ("GET", "/secrets"): (200, {"secrets": [_typed("totp")], "totalCount": 1}),
+            **_create_routes(private_key, _typed("secret")),
+        }
+    )
+    manager = SecretManager(FakeClient(http))
+
+    for params in [
+        {"name": "github-password", "allowed_origins": [origin]},
+        {
+            "name": "github-password",
+            "metadata": {
+                "browser": {"allowed_origins": ["https://github.com", origin]}
+            },
+        },
+    ]:
+        with pytest.raises(ValueError, match="origin"):
+            manager.create(params)
+    for update in [
+        lambda: manager.set_allowed_origins("github-otp", [origin]),
+        lambda: manager.update(
+            "github-otp", {"metadata": {"browser": {"allowed_origins": [origin]}}}
+        ),
+    ]:
+        with pytest.raises(HyperbrowserError) as error:
+            update()
+        assert error.value.code == "invalid_secret_metadata"
+    assert http.calls == []
+
+
+def test_secrets_take_origins_the_server_accepts(private_key):
+    origins = [
+        "https://github.com",
+        "https://*.github.com",
+        "HTTPS://GitHub.com:443/",
+        "http://localhost:3000",
+        "http://127.0.0.1",
+        "http://[::1]:8080",
+        "https://[2001:db8::1]",
+        "https://10.0.0.1:8443",
+    ]
+    http = ScriptedHTTPClient(_create_routes(private_key, _typed("secret")))
+    SecretManager(FakeClient(http)).create(
+        {"name": "github-password", "allowed_origins": origins}
+    )
+    # Sent as given: the server normalizes them.
+    assert http.calls[-1]["json"]["metadata"] == {
+        "browser": {"allowedOrigins": origins}
+    }
+    for count in [0, 21]:
+        with pytest.raises(ValueError, match="1 to 20"):
+            CreateSecretParams(
+                name="github-password",
+                allowed_origins=[f"https://a{i}.github.com" for i in range(count)],
+            )
+
+
 def test_update_sends_only_the_members_given():
     http = ScriptedHTTPClient(
         {
@@ -627,6 +712,11 @@ def test_sessions_attach_secrets_and_vaults_at_creation(sdk):
         [{"vault": "-a"}],
         [{"login": "a"}],
         ["s"] * 21,
+        ["s"] * 20 + [{"one_password": "op-token"}],
+        [{"one_password": "bad name"}],
+        [{"one_password": "op-token", "vault": "v"}],
+        # Keys are snake_case, as everywhere else in the SDK.
+        [{"onePassword": "op-token"}],
         "github",
     ],
 )
@@ -817,3 +907,337 @@ def test_fill_limits_are_inclusive(sdk):
         {"credential": "c" * 255, "fields": ONE, "page_url": "u" * 2048},
     )
     assert len(calls) == 2
+
+
+# --- 1Password fills ---
+
+OP_SOURCE = {
+    "token": "op-token",
+    "vault": "Dev Vault for Testing",
+    "allowed_origins": ["https://www.scrapingcourse.com"],
+}
+OP_FIELDS = [
+    {
+        "selector": "#email",
+        "ref": {"item": "scrapingcourse login", "field": "username"},
+    },
+    {
+        "selector": "#otp",
+        "ref": {
+            "item": "scrapingcourse login",
+            "section": "Security",
+            "field": "otp?attribute=totp",
+        },
+    },
+]
+OP_REFERENCES = [
+    "op://Dev Vault for Testing/scrapingcourse login/username",
+    "op://Dev Vault for Testing/scrapingcourse login/Security/otp?attribute=totp",
+]
+OP_BODY = {
+    "onePassword": {
+        "token": "op-token",
+        "vault": "Dev Vault for Testing",
+        "allowedOrigins": ["https://www.scrapingcourse.com"],
+    },
+    "fields": OP_FIELDS,
+}
+# No top-level version: each input has the op_token's.
+OP_RESULT = {
+    "pageId": "PAGE1",
+    "origin": "https://www.scrapingcourse.com",
+    "fields": [
+        {
+            "selector": field["selector"],
+            "outcome": "filled",
+            "secretId": SECRET_ID,
+            "version": 2,
+            "reference": reference,
+        }
+        for field, reference in zip(OP_FIELDS, OP_REFERENCES)
+    ],
+}
+
+
+def test_sessions_attach_op_tokens_for_onepassword_fills(sdk):
+    client, call, calls, outcomes = sdk
+    respond(outcomes, SESSION)
+    respond(outcomes, SESSION)
+
+    call(
+        client.sessions.create,
+        {"credentials": [{"one_password": "op-token"}, {"vault": "github-login"}]},
+    )
+    assert json.loads(calls[0].content)["credentials"] == [
+        {"onePassword": "op-token"},
+        {"vault": "github-login"},
+    ]
+    call(
+        client.sessions.create,
+        CreateSessionParams(
+            credentials=["s"] * 19
+            + [SessionCredentialOnePassword(one_password="op-token")]
+        ),
+    )
+    assert json.loads(calls[1].content)["credentials"][-1] == {
+        "onePassword": "op-token"
+    }
+
+
+def test_onepassword_fills_post_refs_and_parse_references(sdk):
+    client, call, calls, outcomes = sdk
+    respond(outcomes, OP_RESULT)
+
+    result = call(
+        client.sessions.credentials.fill,
+        "s",
+        {
+            "one_password": OP_SOURCE,
+            "fields": OP_FIELDS,
+            "page_url": "https://www.scrapingcourse.com/login",
+        },
+    )
+    assert json.loads(calls[0].content) == dict(
+        OP_BODY, pageUrl="https://www.scrapingcourse.com/login"
+    )
+    assert result.version is None
+    assert result.origin == "https://www.scrapingcourse.com"
+    assert [(f.selector, f.reference, f.version) for f in result.fields] == [
+        ("#email", OP_REFERENCES[0], 2),
+        ("#otp", OP_REFERENCES[1], 2),
+    ]
+    assert result.fields[0].secret_id == SECRET_ID
+    assert result.fields[0].field is None
+    assert result.fields[0].expires_at is None
+
+
+def test_onepassword_fill_models_serialize_like_dicts(sdk):
+    client, call, calls, outcomes = sdk
+    respond(outcomes, OP_RESULT)
+
+    call(
+        client.sessions.credentials.fill,
+        "s",
+        FillCredentialParams(
+            one_password=OnePasswordFillSource(
+                token="op-token",
+                vault="Dev Vault for Testing",
+                allowed_origins=["https://www.scrapingcourse.com"],
+            ),
+            fields=[
+                CredentialFillField(
+                    selector="#email",
+                    ref=OnePasswordField(item="scrapingcourse login", field="username"),
+                ),
+                CredentialFillField(
+                    selector="#otp",
+                    ref=OnePasswordField(
+                        item="scrapingcourse login",
+                        section="Security",
+                        field="otp?attribute=totp",
+                    ),
+                ),
+            ],
+            frame_url="https://www.scrapingcourse.com/",
+        ),
+    )
+    assert json.loads(calls[0].content) == dict(
+        OP_BODY, frame={"url": "https://www.scrapingcourse.com/"}
+    )
+
+
+def test_onepassword_reference_failures_name_the_selectors(sdk):
+    client, call, calls, outcomes = sdk
+    details = {
+        "selectors": ["#otp"],
+        "reason": "field not found",
+        "reasons": {"#otp": "field not found"},
+        "tokenSecretId": SECRET_ID,
+        "tokenVersion": 2,
+    }
+    respond(
+        outcomes,
+        {
+            "code": "SECRET_ONEPASSWORD_REFERENCE_FAILED",
+            "message": "A 1Password field could not be read; nothing was filled",
+            "retryable": False,
+            "details": details,
+        },
+        422,
+    )
+
+    with pytest.raises(HyperbrowserError) as raised:
+        call(
+            client.sessions.credentials.fill,
+            "s",
+            {"one_password": OP_SOURCE, "fields": OP_FIELDS},
+        )
+    assert raised.value.code == "SECRET_ONEPASSWORD_REFERENCE_FAILED"
+    assert raised.value.status_code == 422
+    assert raised.value.retryable is False
+    assert raised.value.details["details"] == details
+
+
+OP_REF = {"item": "i", "field": "f"}
+OP_ONE = [{"selector": "#p", "ref": OP_REF}]
+
+
+def _op(**changes):
+    return dict(OP_SOURCE, **changes)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        # Exactly one source.
+        {"credential": "c", "one_password": OP_SOURCE, "fields": OP_ONE},
+        {"vault": "v", "one_password": OP_SOURCE, "fields": OP_ONE},
+        # ref on every field with one_password, and on none without.
+        {"one_password": OP_SOURCE, "fields": [{"selector": "#p"}]},
+        {"one_password": OP_SOURCE, "fields": OP_ONE + [{"selector": "#q"}]},
+        {"credential": "c", "fields": OP_ONE},
+        {"vault": "v", "fields": [{"selector": "#p", "field": "P", "ref": OP_REF}]},
+        # No vault entry with one_password.
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": "#p", "field": "P", "ref": OP_REF}],
+        },
+        # Allowed origins, checked as the server normalizes them.
+        {"one_password": _op(allowed_origins=["http://example.com"]), "fields": OP_ONE},
+        {"one_password": _op(allowed_origins=["https://*.com"]), "fields": OP_ONE},
+        {"one_password": _op(allowed_origins=["https://*.1.2.3"]), "fields": OP_ONE},
+        {
+            "one_password": _op(allowed_origins=["https://x.com/login"]),
+            "fields": OP_ONE,
+        },
+        {"one_password": _op(allowed_origins=["ftp://x.com"]), "fields": OP_ONE},
+        {
+            "one_password": _op(allowed_origins=["https://x.com:65536"]),
+            "fields": OP_ONE,
+        },
+        {"one_password": _op(allowed_origins=["https://-x.com"]), "fields": OP_ONE},
+        {"one_password": _op(allowed_origins=["https://[nope]"]), "fields": OP_ONE},
+        {"one_password": _op(allowed_origins=[]), "fields": OP_ONE},
+        {
+            "one_password": _op(
+                allowed_origins=[f"https://a{i}.example.com" for i in range(21)]
+            ),
+            "fields": OP_ONE,
+        },
+        {"one_password": _op(allowed_origins="https://x.com"), "fields": OP_ONE},
+        {"one_password": _op(allowed_origins=[1]), "fields": OP_ONE},
+        {"one_password": {"token": "op-token", "vault": "v"}, "fields": OP_ONE},
+        # The token's name and the 1Password parts.
+        {"one_password": _op(token="bad name"), "fields": OP_ONE},
+        {"one_password": _op(vault=""), "fields": OP_ONE},
+        {"one_password": _op(vault="a/b"), "fields": OP_ONE},
+        {"one_password": _op(vault=".."), "fields": OP_ONE},
+        {"one_password": _op(vault="v" * 257), "fields": OP_ONE},
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": "#p", "ref": {"item": ".", "field": "f"}}],
+        },
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": "#p", "ref": {"item": "i\u200b", "field": "f"}}],
+        },
+        {
+            "one_password": OP_SOURCE,
+            "fields": [
+                {"selector": "#p", "ref": {"item": "i", "section": "a?b", "field": "f"}}
+            ],
+        },
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": "#p", "ref": {"item": "i", "field": "f?Attr=x"}}],
+        },
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": "#p", "ref": {"item": "i"}}],
+        },
+        # op://<vault>/<item>/<field> is at most 512 bytes: this is 513.
+        {
+            "one_password": _op(vault="v" * 200),
+            "fields": [
+                {"selector": "#p", "ref": {"item": "i" * 200, "field": "f" * 106}}
+            ],
+        },
+        # Strict objects: unknown keys fail.
+        {"one_password": _op(allowedOrigins=["https://x.com"]), "fields": OP_ONE},
+        {"one_password": _op(fields={}), "fields": OP_ONE},
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": "#p", "ref": dict(OP_REF, vault="v")}],
+        },
+        {"onePassword": OP_SOURCE, "fields": OP_ONE},
+        # The usual field rules.
+        {"one_password": OP_SOURCE, "fields": OP_ONE + OP_ONE},
+        {"one_password": OP_SOURCE, "fields": []},
+        {
+            "one_password": OP_SOURCE,
+            "fields": [{"selector": f"#f{i}", "ref": OP_REF} for i in range(17)],
+        },
+    ],
+)
+def test_invalid_onepassword_fills_fail_before_http(sdk, params):
+    client, call, calls, outcomes = sdk
+    with pytest.raises(HyperbrowserError) as raised:
+        call(client.sessions.credentials.fill, "s", params)
+    assert raised.value.code == "invalid_request"
+    assert not calls
+
+
+def test_onepassword_fill_limits_are_inclusive(sdk):
+    client, call, calls, outcomes = sdk
+    respond(outcomes, OP_RESULT)
+    # 504 characters of host: a 512-character origin.
+    host = ".".join(["a" * 63] * 7 + ["a" * 56])
+    origins = [f"https://{host}"] + [f"https://a{i}.example.com" for i in range(19)]
+    call(
+        client.sessions.credentials.fill,
+        "s",
+        {
+            "one_password": _op(vault="v" * 200, allowed_origins=origins),
+            "fields": [
+                # op://<200>/<200>/<105> is 512 bytes.
+                {"selector": f"#f{i}", "ref": {"item": "i" * 200, "field": "f" * 105}}
+                for i in range(16)
+            ],
+        },
+    )
+    body = json.loads(calls[0].content)
+    assert len(body["onePassword"]["allowedOrigins"][0]) == 512
+    assert len(body["onePassword"]["allowedOrigins"]) == 20
+    assert len(body["fields"]) == 16
+
+    with pytest.raises(HyperbrowserError):
+        call(
+            client.sessions.credentials.fill,
+            "s",
+            {"one_password": _op(allowed_origins=[origins[0] + "a"]), "fields": OP_ONE},
+        )
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1",
+        "http://[::1]:8080",
+        "https://[2001:db8::1]",
+        "https://*.example.co.uk",
+        "HTTPS://Example.COM:443/",
+        " https://example.com ",
+    ],
+)
+def test_onepassword_fill_origins_the_server_accepts_pass(sdk, origin):
+    client, call, calls, outcomes = sdk
+    respond(outcomes, OP_RESULT)
+    call(
+        client.sessions.credentials.fill,
+        "s",
+        {"one_password": _op(allowed_origins=[origin]), "fields": OP_ONE},
+    )
+    # Sent as given: the server normalizes it.
+    assert json.loads(calls[0].content)["onePassword"]["allowedOrigins"] == [origin]

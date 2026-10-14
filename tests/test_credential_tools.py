@@ -236,6 +236,22 @@ def test_tool_runner_returns_errors_as_json(sdk):
         dict(TOOL_INPUT, credential="github-password"),
         dict(TOOL_INPUT, page_id="A", page_url="https://github.com/"),
         dict(TOOL_INPUT, fields=[{"selector": "#u", "field": None}]),
+        # The tool never fills from 1Password: a model must not choose the
+        # allowed origins, so one_password is dropped and ref refused.
+        {
+            "one_password": {
+                "token": "op-token",
+                "vault": "Dev",
+                "allowed_origins": ["https://github.com"],
+            },
+            "fields": [{"selector": "#u", "ref": {"item": "i", "field": "f"}}],
+        },
+        dict(
+            TOOL_INPUT,
+            fields=[
+                {"selector": "#u", "field": "U", "ref": {"item": "i", "field": "f"}}
+            ],
+        ),
     ]:
         error = json.loads(call(runner, client, "s", bad))
         assert error["error"]["code"] == "invalid_request"

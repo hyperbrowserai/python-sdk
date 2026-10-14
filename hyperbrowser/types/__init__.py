@@ -8,6 +8,7 @@ as JSON Schema objects, untouched.
 from .credential import (
     CredentialFillField,
     FillCredentialParams,
+    OnePasswordFillSource,
 )
 from .vault import (
     CreateVaultParams,
@@ -150,6 +151,7 @@ from .session import (
     CaptchaSolverType,
     CreateSessionParams,
     SessionCredentialInput,
+    SessionCredentialOnePassword,
     SessionCredentialSecret,
     SessionCredentialVault,
     CreateSessionProfile,
@@ -343,6 +345,7 @@ __all__ = [
     "CaptchaSolverType",
     "CreateSessionParams",
     "SessionCredentialInput",
+    "SessionCredentialOnePassword",
     "SessionCredentialSecret",
     "SessionCredentialVault",
     "CreateSessionProfile",
@@ -362,6 +365,7 @@ __all__ = [
     "UpdateSessionSolveCaptchasParams",
     "CreateSecretParams",
     "OnePasswordField",
+    "OnePasswordFillSource",
     "OnePasswordSource",
     "SecretBrowserMetadata",
     "SecretListParams",

@@ -4,6 +4,7 @@ from .credential import (
     CredentialFillOutcome,
     CredentialFillResult,
     FillCredentialParams,
+    OnePasswordFillSource,
 )
 from .webmcp import (
     WebMCPAnnotations,
@@ -348,6 +349,7 @@ from .session import (
     Session,
     SessionCredential,
     SessionCredentialInput,
+    SessionCredentialOnePassword,
     SessionCredentialSecret,
     SessionCredentialVault,
     SessionDetail,
@@ -695,6 +697,7 @@ __all__ = [
     # secret
     "CreateSecretParams",
     "OnePasswordField",
+    "OnePasswordFillSource",
     "OnePasswordSource",
     "SandboxResolvedSecret",
     "Secret",
@@ -749,6 +752,7 @@ __all__ = [
     "Session",
     "SessionCredential",
     "SessionCredentialInput",
+    "SessionCredentialOnePassword",
     "SessionCredentialSecret",
     "SessionCredentialVault",
     "SessionDetail",
