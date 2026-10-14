@@ -192,7 +192,7 @@ Things to know:
 - Fill is safe to retry and never retried automatically. It waits at least
   30 seconds for the API (the client timeout when longer).
 - Attaching credentials needs an API key with `secrets.use`; filling also needs
-  `browser-sessions.update`. The team needs the secrets feature. Sessions with
+  `browser.sessions.update`. The team needs the secrets feature. Sessions with
   credentials run as Firecracker browsers with Chrome's password manager off.
 - Fills are recorded in the session's event log as `credential_filled` and
   `credential_fill_refused`.
@@ -210,7 +210,7 @@ Things to know:
   - `CREDENTIAL_NOT_READY` (409): the credential has no allowed origins or no
     value.
   - `CREDENTIAL_PAGE_NOT_FOUND`, `CREDENTIAL_FRAME_NOT_FOUND` (404),
-    `SECRET_NOT_FOUND` (404), `SECRET_TYPE_MISMATCH` (400, a plain secret was
+    `SECRET_NOT_FOUND` (404), `SECRET_TYPE_MISMATCH` (409, a plain secret was
     named), `SESSION_NOT_ACTIVE` (409).
   - `CREDENTIAL_FILL_TIMEOUT` (503/504, retryable) and
     `CREDENTIAL_FILL_FAILED` (500/502, retryable as flagged).
