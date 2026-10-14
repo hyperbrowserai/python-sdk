@@ -722,8 +722,8 @@ Things to know:
     `vault` or `secrets` also sets.
   - `SECRET_VALUE_INVALID` (422): a stored value is unusable, such as a bad
     TOTP seed; fix it by adding a new version.
-  - `SECRET_TOTP_UNSUPPORTED` and `SECRET_ONEPASSWORD_UNSUPPORTED` (503): the
-    sandbox's host predates TOTP or 1Password, so nothing started. Retryable
+  - `SECRET_TOTP_UNSUPPORTED` (501) and `SECRET_ONEPASSWORD_UNSUPPORTED` (503):
+    the sandbox's host predates TOTP or 1Password, so nothing started. Retryable
     on sandbox create, which may land on a newer host; not on a process start.
   - `SECRET_ONEPASSWORD_REFERENCE_FAILED` (422, `details` names the
     variables) and `SECRET_ONEPASSWORD_AUTH_FAILED` (422): fix the entries or

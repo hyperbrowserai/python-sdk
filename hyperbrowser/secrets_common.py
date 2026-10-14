@@ -134,8 +134,8 @@ def _check_totp_base32(seed: str) -> None:
     if not _BASE32_PATTERN.fullmatch(normalized):
         raise _invalid_totp("the seed is not base32")
     # Lengths of 1, 3 or 6 (mod 8) leave characters that don't make a whole
-    # byte; the platform would drop them and generate wrong codes, so the
-    # seed was most likely copied incompletely.
+    # byte, so the seed was most likely copied incompletely. The platform
+    # refuses them too (older hosts dropped them and generated wrong codes).
     if len(normalized) % 8 in (1, 3, 6):
         raise _invalid_totp(
             "the seed's length is not valid base32; check that it was copied in full"
