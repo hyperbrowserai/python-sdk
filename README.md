@@ -710,10 +710,10 @@ Things to know:
     deliver `secrets` to. Create the sandbox without them, then pass them to
     `sandbox.exec()` or `sandbox.processes.start()`.
   - `VAULT_NOT_FOUND` (404), `VAULT_NAME_TAKEN`, `VAULT_LIMIT_REACHED`,
-    `VAULT_ENTRY_LIMIT_REACHED` (409), `VAULT_ENTRY_INVALID` (400, the
-    message starts with the variable), and `VAULT_SOURCE_INVALID` (400: an
-    entry of the wrong kind for the vault's source, or a source change on a
-    stored vault).
+    `VAULT_ENTRY_LIMIT_REACHED` (409), `VAULT_ENTRY_INVALID` (400: a bad
+    entry, including one of the wrong kind for the vault's source; the message
+    starts with the variable), and `VAULT_SOURCE_INVALID` (400: a source change
+    on a stored vault, or a 1Password vault used in a browser session).
   - `SECRET_IN_USE` (409): a vault uses the secret, as an entry or as its
     1Password token; `SECRET_VERSION_IN_USE` (409): a vault pins the version.
   - `SECRET_TYPE_MISMATCH` (409): an `op_token` used as a variable or vault
