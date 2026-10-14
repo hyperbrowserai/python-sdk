@@ -256,8 +256,8 @@ Things to know:
   - `CREDENTIAL_FILL_TIMEOUT` (503/504, retryable) and
     `CREDENTIAL_FILL_FAILED` (500/502, retryable as flagged).
   - `CREDENTIALS_UNSUPPORTED_RUNTIME` (400), `CREDENTIAL_FILL_UNSUPPORTED`
-    (501) and `CREDENTIAL_VALUE_UNSUPPORTED` (501, such as TOTP on an older
-    host): the session's browser can't fill this.
+    (501) and `CREDENTIAL_VALUE_UNSUPPORTED` (501): the session's browser
+    can't fill this.
   - Locally, invalid fill requests raise `invalid_request` and invalid values
     raise `invalid_secret_value`, before any request.
 
