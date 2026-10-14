@@ -1091,7 +1091,7 @@ def test_malformed_http_error_preserves_generic_error_parsing(service):
     "payload",
     [
         {"process": {"id": "proc_9"}, "secrets": RESOLVED},
-        {"process": AGENT_PROCESS, "secrets": [{"env": "API_KEY"}]},
+        {"process": AGENT_PROCESS, "secrets": [{"name": "provider-key"}]},
     ],
 )
 def test_secret_start_preserves_process_id_when_response_metadata_is_invalid(payload):
@@ -1106,7 +1106,7 @@ def test_secret_start_preserves_process_id_when_response_metadata_is_invalid(pay
 @pytest.mark.anyio
 async def test_async_secret_start_keeps_process_id_on_invalid_metadata():
     async def start(payload):
-        return {"process": AGENT_PROCESS, "secrets": [{"env": "API_KEY"}]}
+        return {"process": AGENT_PROCESS, "secrets": [{"name": "provider-key"}]}
 
     api = AsyncSandboxProcessesApi(AsyncRuntimeScript(), start, "sbx_123")
     with pytest.raises(HyperbrowserError) as error:

@@ -7,8 +7,19 @@ as JSON Schema objects, untouched.
 
 from .credential import (
     CredentialFillField,
-    CredentialFillFrame,
     FillCredentialParams,
+)
+from .vault import (
+    CreateVaultParams,
+    OnePasswordEntry,
+    OnePasswordSourceUpdate,
+    OnePasswordVaultSource,
+    StoredEntry,
+    StoredVaultSource,
+    UpdateVaultParams,
+    VaultEntryInput,
+    VaultListParams,
+    VaultSourceInput,
 )
 from .webmcp import (
     WebMCPInvokeParams,
@@ -144,6 +155,9 @@ from .session import (
     CaptchaEvaluationType,
     CaptchaSolverType,
     CreateSessionParams,
+    SessionCredentialInput,
+    SessionCredentialSecret,
+    SessionCredentialVault,
     CreateSessionProfile,
     ImageCaptchaParam,
     ScreenConfig,
@@ -162,7 +176,7 @@ from .session import (
 )
 from .secret import (
     CreateSecretParams,
-    CredentialBrowserMetadata,
+    SecretBrowserMetadata,
     SecretListParams,
     SecretMetadata,
     SecretReference,
@@ -202,8 +216,17 @@ from .web import (
 
 __all__ = [
     "CredentialFillField",
-    "CredentialFillFrame",
     "FillCredentialParams",
+    "CreateVaultParams",
+    "OnePasswordEntry",
+    "OnePasswordSourceUpdate",
+    "OnePasswordVaultSource",
+    "StoredEntry",
+    "StoredVaultSource",
+    "UpdateVaultParams",
+    "VaultEntryInput",
+    "VaultListParams",
+    "VaultSourceInput",
     "WebMCPInvokeParams",
     "WebMCPStartParams",
     "WebMCPResultParams",
@@ -329,6 +352,9 @@ __all__ = [
     "CaptchaEvaluationType",
     "CaptchaSolverType",
     "CreateSessionParams",
+    "SessionCredentialInput",
+    "SessionCredentialSecret",
+    "SessionCredentialVault",
     "CreateSessionProfile",
     "ImageCaptchaParam",
     "ScreenConfig",
@@ -345,7 +371,7 @@ __all__ = [
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
     "CreateSecretParams",
-    "CredentialBrowserMetadata",
+    "SecretBrowserMetadata",
     "SecretListParams",
     "SecretMetadata",
     "SecretReference",

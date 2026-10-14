@@ -11,9 +11,9 @@ import json
 import os
 import re
 import time
-from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence, Type, Union
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from cryptography.hazmat.primitives import hashes
@@ -21,7 +21,6 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from .client._request import coerce_request
-from .credentials_common import CREDENTIAL_FIELD_PATTERN
 from .exceptions import HyperbrowserError
 from .models.secret import (
     SecretsPublicKey,
@@ -97,80 +96,115 @@ def _invalid_value(message: str) -> HyperbrowserError:
     return HyperbrowserError(message, code="invalid_secret_value")
 
 
-def credential_value_bytes(value: Any) -> bytes:
-    """Return a credential value's bytes: its compact UTF-8 JSON.
+# The TOTP parameters an otpauth://totp/ URI may set, as vm-service reads them.
+TOTP_ALGORITHMS = ("SHA1", "SHA256", "SHA512")
+TOTP_DIGITS = (6, 8)
+MAX_TOTP_PERIOD_SECONDS = 300
+_BASE32_PATTERN = re.compile(r"^[A-Z2-7]+$")
+_ASCII_INTEGER_PATTERN = re.compile(r"^[+-]?[0-9]+$")
+_URI_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
+_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 
-    A credential value maps field names (such as ``"username"``) to non-empty
-    strings. Field names match ``^[a-zA-Z0-9_.-]{1,64}$``, and the JSON follows
-    the same size and UTF-8 rules as plain secret values. Errors name fields,
-    never values.
-    """
-    if not isinstance(value, Mapping):
-        raise _invalid_value(
-            "Credential value must be a mapping of field names to strings, "
-            f"got {type(value).__name__}"
+
+def _invalid_totp(reason: str) -> HyperbrowserError:
+    return _invalid_value(
+        f"Invalid TOTP seed: {reason}. Use the base32 seed a site shows, or an "
+        "otpauth://totp/ URI with SHA1, SHA256 or SHA512, 6 or 8 digits and a "
+        "period of 1 to 300 seconds"
+    )
+
+
+def _check_totp_base32(seed: str) -> None:
+    # Spaces, hyphens, lowercase and trailing "=" padding are accepted, as
+    # sites show seeds in all of these forms.
+    normalized = seed.replace(" ", "").replace("-", "").upper().rstrip("=")
+    if not normalized:
+        raise _invalid_totp("the seed is empty")
+    if not _BASE32_PATTERN.match(normalized):
+        raise _invalid_totp("the seed is not base32")
+    # Lengths of 1, 3 or 6 (mod 8) leave characters that don't make a whole
+    # byte; the platform would drop them and generate wrong codes, so the
+    # seed was most likely copied incompletely.
+    if len(normalized) % 8 in (1, 3, 6):
+        raise _invalid_totp(
+            "the seed's length is not valid base32; check that it was copied in full"
         )
-    if not value:
-        raise _invalid_value("Credential value must have at least one field")
-    fields: Dict[str, str] = {}
-    for field, field_value in value.items():
-        if not isinstance(field, str) or not CREDENTIAL_FIELD_PATTERN.fullmatch(field):
-            raise _invalid_value(
-                "Credential field names must be 1-64 letters, digits, '_', '.' "
-                "or '-'"
-            )
-        if not isinstance(field_value, str):
-            raise _invalid_value(
-                f'Credential field "{field}" must be a string, '
-                f"got {type(field_value).__name__}"
-            )
-        if not field_value:
-            raise _invalid_value(f'Credential field "{field}" is empty')
-        if "\x00" in field_value:
-            raise _invalid_value(
-                f'Credential field "{field}" must not contain NUL characters'
-            )
-        fields[field] = field_value
-    serialized = json.dumps(fields, separators=(",", ":"), ensure_ascii=False)
-    return secret_value_bytes(serialized)
 
 
-def secret_payload_bytes(secret_type: str, value: Any) -> bytes:
+def _totp_uri_seed(uri: str) -> str:
+    if _URI_CONTROL_PATTERN.search(uri):
+        raise _invalid_totp("the URI contains control characters")
+    parsed = urlsplit(uri)
+    host = parsed.netloc.lower()
+    if host == "hotp":
+        raise _invalid_totp("HOTP (counter-based) codes are not supported")
+    if host != "totp":
+        raise _invalid_totp("the URI must start with otpauth://totp/")
+    query = parse_qs(parsed.query, keep_blank_values=True)
+
+    def param(name: str) -> str:
+        return query.get(name, [""])[0]
+
+    algorithm = param("algorithm")
+    if algorithm and algorithm.upper() not in TOTP_ALGORITHMS:
+        raise _invalid_totp("algorithm must be SHA1, SHA256 or SHA512")
+    digits = param("digits")
+    if digits and (
+        not _ASCII_INTEGER_PATTERN.match(digits) or int(digits) not in TOTP_DIGITS
+    ):
+        raise _invalid_totp("digits must be 6 or 8")
+    period = param("period")
+    if period and (
+        not _ASCII_INTEGER_PATTERN.match(period)
+        or not 1 <= int(period) <= MAX_TOTP_PERIOD_SECONDS
+    ):
+        raise _invalid_totp("period must be 1 to 300 seconds")
+    seed = param("secret")
+    if not seed:
+        raise _invalid_totp("the URI has no secret parameter")
+    return seed
+
+
+def check_totp_seed(value: str) -> None:
+    """Check a TOTP seed the way the platform reads it: base32, or an
+    ``otpauth://totp/`` URI whose ``secret`` is base32.
+
+    The server can't see the value, so a bad seed would otherwise only fail
+    when it is filled or delivered. Seeds under 10 bytes (16 base32
+    characters) are accepted, though they are weaker than sites usually
+    issue. Errors never include the value.
+    """
+    text = value.strip()
+    if text.startswith("\ufeff"):
+        text = text[1:].strip()
+    if text.lower().startswith("otpauth://"):
+        text = _totp_uri_seed(text)
+    elif _SCHEME_PATTERN.match(text):
+        raise _invalid_totp("only otpauth://totp/ URIs are accepted")
+    _check_totp_base32(text)
+
+
+def secret_payload_bytes(secret_type: Optional[str], value: Any) -> bytes:
     """Check a value against its secret's type and return the bytes to encrypt.
 
-    Credentials take a mapping of field names to strings; plain secrets take
-    str or bytes.
+    Every type takes str or bytes of 1 byte to 32 KiB of UTF-8 without NUL.
+    A ``totp`` value must also be a valid seed. An ``op_token`` is a 1Password
+    service account token; tokens start with ``ops_``, but others are not
+    refused. Types the SDK doesn't know get only the common checks.
     """
-    if secret_type == "credential":
-        if not isinstance(value, Mapping):
-            raise _invalid_value(
-                "A credential's value must be a mapping of field names to "
-                'strings, such as {"username": ..., "password": ...}, got '
-                f"{type(value).__name__}"
-            )
-        return credential_value_bytes(value)
-    if isinstance(value, Mapping):
-        raise _invalid_value(
-            "Only credentials take a mapping value; a plain secret's value is "
-            "str or bytes"
-        )
     if not isinstance(value, (str, bytes, bytearray)):
         raise _invalid_value(
             f"Secret value must be str or bytes, got {type(value).__name__}"
         )
-    return secret_value_bytes(value)
-
-
-def check_secret_value(value: Any) -> None:
-    """Check a value's contents before its secret's type is known."""
-    secret_payload_bytes(
-        "credential" if isinstance(value, Mapping) else "secret", value
-    )
+    data = secret_value_bytes(value)
+    if secret_type == "totp":
+        check_totp_seed(data.decode("utf-8"))
+    return data
 
 
 def browser_metadata(allowed_origins: Optional[Sequence[str]]) -> Dict[str, Any]:
-    """Credential metadata allowing fills on ``allowed_origins``; ``None``
-    clears the browser metadata in an update. The server checks the origins."""
+    """Metadata allowing fills on ``allowed_origins``; ``None`` clears the
+    browser metadata in an update. The server checks the origins."""
     if allowed_origins is None:
         return {"browser": None}
     if isinstance(allowed_origins, (str, bytes)) or not all(
@@ -182,6 +216,20 @@ def browser_metadata(allowed_origins: Optional[Sequence[str]]) -> Dict[str, Any]
             code="invalid_secret_metadata",
         )
     return {"browser": {"allowed_origins": list(allowed_origins)}}
+
+
+def check_secret_metadata(secret_type: Optional[str], metadata: Any) -> None:
+    """Refuse browser metadata on an ``op_token``, which is never filled."""
+    if (
+        secret_type == "op_token"
+        and isinstance(metadata, dict)
+        and metadata.get("browser") is not None
+    ):
+        raise HyperbrowserError(
+            "An op_token secret can't have allowed origins: it is never typed "
+            "into browser pages",
+            code="invalid_secret_metadata",
+        )
 
 
 def update_secret_body(params: Any) -> Dict[str, Any]:

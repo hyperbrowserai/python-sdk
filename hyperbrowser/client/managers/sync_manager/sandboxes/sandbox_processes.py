@@ -353,6 +353,7 @@ class SandboxProcessesApi:
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
         secrets: Optional[SecretReferences] = None,
+        vault: Optional[str] = None,
     ) -> SandboxProcessResult:
         handle = self.start(
             input,
@@ -363,6 +364,7 @@ class SandboxProcessesApi:
             run_as=run_as,
             max_output_bytes=max_output_bytes,
             secrets=secrets,
+            vault=vault,
         )
         if handle.secrets is not None:
             return self._finish_secret_exec(handle)
@@ -382,12 +384,14 @@ class SandboxProcessesApi:
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
         secrets: Optional[SecretReferences] = None,
+        vault: Optional[str] = None,
     ) -> SandboxProcessHandle:
         """Start a process.
 
-        With ``secrets``, the start goes through the control API, which has the
-        platform decrypt them into the process environment; output is then
-        read with ``wait()`` rather than collected from the start.
+        With ``secrets`` or ``vault``, the start goes through the control API,
+        which has the platform decrypt them into the process environment;
+        output is then read with ``wait()`` rather than collected from the
+        start. ``secrets`` are merged over the vault's entries.
         """
         validate_output_limit(max_output_bytes)
         params = _normalize_exec_params(
@@ -398,8 +402,9 @@ class SandboxProcessesApi:
             timeout_sec=timeout_sec,
             run_as=run_as,
             secrets=secrets,
+            vault=vault,
         )
-        if params.secrets:
+        if params.uses_secrets:
             return self._start_with_secrets(params)
         close_stream = []
         events = self._transport.stream_sse(

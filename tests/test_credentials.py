@@ -1,7 +1,8 @@
-"""Credentials: typed secrets that browser sessions fill into pages."""
+"""Typed secrets (totp, op_token), browser metadata, and credential fill."""
 
 import asyncio
 import json
+import warnings
 
 import httpx
 import pytest
@@ -19,9 +20,10 @@ from hyperbrowser.models import (
     FillCredentialParams,
     Secret,
     SecretMetadata,
+    SessionCredentialVault,
     UpdateSecretParams,
 )
-from hyperbrowser.secrets_common import credential_value_bytes
+from hyperbrowser.secrets_common import check_totp_seed
 from tests.test_secrets import (
     SECRET_ID,
     AsyncScriptedHTTPClient,
@@ -32,9 +34,10 @@ from tests.test_secrets import (
     _secret,
 )
 
-CREDENTIAL_CONTEXT = f"hb-secret-v1:team_1:{SECRET_ID}:credential"
-LOGIN = {"username": "ada@example.com", "password": "pässwörd-hunter2"}
+TOTP_CONTEXT = f"hb-secret-v1:team_1:{SECRET_ID}:totp"
+OP_TOKEN_CONTEXT = f"hb-secret-v1:team_1:{SECRET_ID}:op_token"
 ORIGINS = ["https://github.com", "https://*.github.com"]
+SEED = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"
 
 
 @pytest.fixture(scope="module")
@@ -42,31 +45,33 @@ def private_key():
     return rsa.generate_private_key(public_exponent=65537, key_size=3072)
 
 
-def _credential(name="github", origins=None, latest=None):
+def _typed(secret_type, name="github-otp", origins=None, context=None):
+    metadata = {"browser": {"allowedOrigins": origins}} if origins else {}
     return dict(
-        _secret(name=name, latest=latest),
-        type="credential",
-        encryptionContext=CREDENTIAL_CONTEXT,
-        metadata={"browser": {"allowedOrigins": origins or ORIGINS}},
+        _secret(name=name),
+        type=secret_type,
+        encryptionContext=context
+        or {"totp": TOTP_CONTEXT, "op_token": OP_TOKEN_CONTEXT}.get(
+            secret_type, _secret()["encryptionContext"]
+        ),
+        metadata=metadata,
     )
 
 
-def _create_routes(private_key, upload=None):
+def _create_routes(private_key, created, upload=None):
     return {
         ("GET", "/secrets/public-key"): (200, _public_key_payload(private_key)),
-        ("POST", "/secrets"): (201, _credential()),
+        ("POST", "/secrets"): (201, created),
         ("POST", f"/secrets/{SECRET_ID}/versions"): upload
         or (201, {"version": 1, "kid": "k", "createdAt": "2026-10-01T00:00:00Z"}),
     }
 
 
-def _assert_no_plaintext(calls):
-    sent = json.dumps([call["json"] for call in calls], ensure_ascii=False)
-    for value in LOGIN.values():
-        assert value not in sent
+def _assert_not_sent(calls, value):
+    assert value not in json.dumps([call["json"] for call in calls])
 
 
-# --- secret type and metadata ---
+# --- secret types and metadata ---
 
 
 def test_secrets_default_to_plain_and_keep_unknown_metadata():
@@ -78,219 +83,253 @@ def test_secrets_default_to_plain_and_keep_unknown_metadata():
         payload = dict(_secret(), type=None, metadata=missing)
         assert Secret.model_validate(payload).metadata.browser is None
 
-    credential = Secret.model_validate(
+    secret = Secret.model_validate(
         dict(
-            _credential(),
+            _typed("totp"),
             metadata={
                 "browser": {"allowedOrigins": ORIGINS, "future": 1},
                 "other": {"x": True},
             },
         )
     )
-    assert credential.type == "credential"
-    assert credential.metadata.browser.allowed_origins == ORIGINS
-    dumped = credential.metadata.model_dump(by_alias=True)
+    assert secret.type == "totp"
+    assert secret.metadata.browser.allowed_origins == ORIGINS
+    dumped = secret.metadata.model_dump(by_alias=True)
     assert dumped["other"] == {"x": True}
     assert dumped["browser"]["future"] == 1
 
 
-def test_credential_values_serialize_as_compact_utf8_json():
-    assert credential_value_bytes({"username": "ada", "pass.word-1_": "é x"}) == (
-        '{"username":"ada","pass.word-1_":"é x"}'.encode("utf-8")
-    )
-    assert credential_value_bytes({"a" * 64: "x"}) == b'{"' + b"a" * 64 + b'":"x"}'
-
-
-# --- create_credential ---
-
-
-def test_create_credential_uploads_json_bound_to_the_credential_context(private_key):
-    http = ScriptedHTTPClient(_create_routes(private_key))
+def test_create_with_allowed_origins_makes_a_fillable_secret(private_key):
+    created = _typed("secret", name="github-password", origins=ORIGINS)
+    http = ScriptedHTTPClient(_create_routes(private_key, created))
     manager = SecretManager(FakeClient(http))
 
-    secret = manager.create_credential("github", LOGIN, ORIGINS, description="d")
-
-    assert secret.type == "credential"
-    assert secret.latest_version == 1
-    assert secret.metadata.browser.allowed_origins == ORIGINS
-    assert [c["path"] for c in http.calls] == [
-        "/secrets/public-key",
-        "/secrets",
-        f"/secrets/{SECRET_ID}/versions",
-    ]
-    assert http.calls[1]["json"] == {
-        "name": "github",
-        "description": "d",
-        "type": "credential",
-        "metadata": {"browser": {"allowedOrigins": ORIGINS}},
-    }
-    upload = http.calls[2]["json"]
-    assert set(upload) == {"envelope"}
-    header, value = _open(private_key, upload["envelope"])
-    assert header["ctx"] == CREDENTIAL_CONTEXT
-    assert value == json.dumps(LOGIN, separators=(",", ":"), ensure_ascii=False).encode(
-        "utf-8"
-    )
-    assert json.loads(value) == LOGIN
-    _assert_no_plaintext(http.calls)
-
-
-def test_create_accepts_a_credential_type_and_metadata(private_key):
-    http = ScriptedHTTPClient(_create_routes(private_key))
-    manager = SecretManager(FakeClient(http))
-
-    manager.create(
+    secret = manager.create(
         {
-            "name": "github",
-            "type": "credential",
-            "metadata": {"browser": {"allowed_origins": ORIGINS}},
-            "value": LOGIN,
+            "name": "github-password",
+            "value": "hunter2",
+            "allowed_origins": ORIGINS,
+            "description": "d",
         }
     )
 
+    assert secret.latest_version == 1
     assert http.calls[1]["json"] == {
-        "name": "github",
-        "type": "credential",
+        "name": "github-password",
+        "description": "d",
         "metadata": {"browser": {"allowedOrigins": ORIGINS}},
     }
     _, value = _open(private_key, http.calls[2]["json"]["envelope"])
-    assert json.loads(value) == LOGIN
+    assert value == b"hunter2"
+    _assert_not_sent(http.calls, "hunter2")
 
-
-def test_a_failed_credential_upload_reports_the_partial_create(private_key):
-    http = ScriptedHTTPClient(
-        _create_routes(
-            private_key,
-            upload=(409, {"code": "SECRET_KEY_OUTDATED", "message": "key rotated"}),
+    # metadata.browser works too, but not together with allowed_origins.
+    manager.create(
+        CreateSecretParams(
+            name="github-password",
+            metadata=SecretMetadata.model_validate(
+                {"browser": {"allowed_origins": ORIGINS}}
+            ),
         )
+    )
+    assert http.calls[-1]["json"]["metadata"] == {
+        "browser": {"allowedOrigins": ORIGINS}
+    }
+    http.calls.clear()
+    with pytest.raises(ValueError, match="not both"):
+        manager.create(
+            {
+                "name": "x",
+                "allowed_origins": ORIGINS,
+                "metadata": {"browser": {"allowed_origins": ORIGINS}},
+            }
+        )
+    with pytest.raises(ValueError):
+        manager.create({"name": "x", "allowed_origins": "https://github.com"})
+    assert http.calls == []
+
+
+def test_totp_secrets_seal_the_seed_under_the_returned_context(private_key):
+    created = _typed("totp", origins=ORIGINS)
+    http = ScriptedHTTPClient(_create_routes(private_key, created))
+    manager = SecretManager(FakeClient(http))
+
+    secret = manager.create(
+        {
+            "name": "github-otp",
+            "type": "totp",
+            "value": SEED.lower(),
+            "allowed_origins": ORIGINS,
+        }
+    )
+
+    assert secret.type == "totp"
+    assert http.calls[1]["json"] == {
+        "name": "github-otp",
+        "type": "totp",
+        "metadata": {"browser": {"allowedOrigins": ORIGINS}},
+    }
+    header, value = _open(private_key, http.calls[2]["json"]["envelope"])
+    # The API's context, never one the SDK builds; the value is sent as given.
+    assert header["ctx"] == TOTP_CONTEXT
+    assert value == SEED.lower().encode()
+    _assert_not_sent(http.calls, SEED.lower())
+
+
+GOOD_SEEDS = [
+    SEED,
+    SEED.lower(),
+    "jbsw y3dp ehpk 3pxp jbsw y3dp ehpk 3pxp",
+    "JBSW-Y3DP-EHPK-3PXP-JBSW-Y3DP-EHPK-3PXP",
+    "﻿" + SEED + "\n",
+    "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PX=",
+    f"otpauth://totp/GitHub:ada?secret={SEED}&issuer=GitHub",
+    f"OTPAUTH://TOTP/x?secret={SEED}&algorithm=sha512&digits=8&period=300",
+    f"otpauth://totp/x?secret={SEED}&algorithm=SHA256&digits=6&period=1",
+]
+BAD_SEEDS = [
+    ("", "empty"),
+    ("====", "empty"),
+    ("not base32!", "not base32"),
+    ("JBSWY3D1", "not base32"),
+    (f"otpauth://hotp/x?secret={SEED}&counter=1", "HOTP"),
+    (f"otpauth://steam/x?secret={SEED}", "otpauth://totp/"),
+    (f"https://totp/x?secret={SEED}", "only otpauth://totp/"),
+    ("otpauth://totp/x?issuer=GitHub", "no secret"),
+    ("otpauth://totp/x?secret=", "no secret"),
+    ("otpauth://totp/x?secret=0189", "not base32"),
+    (f"otpauth://hotp/x?secret={SEED}", "HOTP"),
+    (f"otpauth://totp/x?secret={SEED}&issuer=a\tb", "control characters"),
+    (f"otpauth://totp/x?secret={SEED}\x7f", "control characters"),
+    ("JBSW=Y3DP", "not base32"),
+    ("JBSWY3DPE", "length"),
+    ("JBSWY3DPEHP", "length"),
+    ("JBSWY3DPEHPK3P", "length"),
+    (f"otpauth://totp/x?secret={SEED}A", "length"),
+    (f"otpauth://totp/x?secret={SEED}&algorithm=MD5", "algorithm"),
+    (f"otpauth://totp/x?secret={SEED}&digits=7", "digits"),
+    (f"otpauth://totp/x?secret={SEED}&digits=six", "digits"),
+    (f"otpauth://totp/x?secret={SEED}&period=0", "period"),
+    (f"otpauth://totp/x?secret={SEED}&period=301", "period"),
+    (f"otpauth://totp/x?secret={SEED}&period=1_0", "period"),
+]
+
+
+@pytest.mark.parametrize("seed", GOOD_SEEDS)
+def test_totp_seeds_the_platform_accepts_pass(seed):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        check_totp_seed(seed)
+
+
+@pytest.mark.parametrize("seed,reason", BAD_SEEDS)
+def test_bad_totp_seeds_fail_before_any_request(seed, reason):
+    http = ScriptedHTTPClient({})
+    manager = SecretManager(FakeClient(http))
+
+    with pytest.raises(HyperbrowserError) as error:
+        manager.create({"name": "github-otp", "type": "totp", "value": seed})
+
+    assert error.value.code == "invalid_secret_value"
+    assert reason in str(error.value)
+    if len(seed) > 4:
+        assert seed not in str(error.value)
+    assert http.calls == []
+
+
+def test_short_totp_seeds_pass_without_warnings():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        check_totp_seed("JBSWY3DP")
+        check_totp_seed("MY")
+
+
+def test_op_tokens_take_any_string_but_never_allowed_origins(private_key):
+    created = _typed("op_token", name="op-token")
+    http = ScriptedHTTPClient(_create_routes(private_key, created))
+    manager = SecretManager(FakeClient(http))
+
+    # Tokens start with ops_, but other strings aren't refused.
+    for token in ["ops_eyJzaWduSW5BZGRyZXNz", "not-a-prefix"]:
+        manager.create({"name": "op-token", "type": "op_token", "value": token})
+        header, value = _open(private_key, http.calls[-1]["json"]["envelope"])
+        assert header["ctx"] == OP_TOKEN_CONTEXT and value == token.encode()
+
+    http.calls.clear()
+    for params in [
+        {"name": "op-token", "type": "op_token", "allowed_origins": ORIGINS},
+        {
+            "name": "op-token",
+            "type": "op_token",
+            "metadata": {"browser": {"allowed_origins": ORIGINS}},
+        },
+    ]:
+        with pytest.raises(ValueError, match="op_token"):
+            manager.create(params)
+    assert http.calls == []
+
+
+def test_updates_refuse_allowed_origins_on_an_op_token():
+    http = ScriptedHTTPClient(
+        {
+            ("GET", "/secrets"): (
+                200,
+                {"secrets": [_typed("op_token", name="op-token")], "totalCount": 1},
+            )
+        }
     )
     manager = SecretManager(FakeClient(http))
 
     with pytest.raises(HyperbrowserError) as error:
-        manager.create_credential("github", LOGIN, ORIGINS)
-
-    assert error.value.code == "secret_value_not_stored"
-    assert error.value.details == {"secretId": SECRET_ID, "name": "github"}
-    assert error.value.cause.code == "SECRET_KEY_OUTDATED"
+        manager.set_allowed_origins("op-token", ORIGINS)
+    assert error.value.code == "invalid_secret_metadata"
+    assert all(call["method"] == "GET" for call in http.calls)
 
 
-BAD_CREDENTIAL_VALUES = [
-    {},
-    {"bad key": "x"},
-    {"": "x"},
-    {"a" * 65: "x"},
-    {"user/name": "x"},
-    {1: "x"},
-    {"username": ""},
-    {"username": 1},
-    {"username": None},
-    {"username": "a\x00b"},
-    {"username": "\ud800"},
-    {"password": "x" * (32 * 1024)},
-    "a plain string",
-    b"plain bytes",
-]
-
-
-@pytest.mark.parametrize("value", BAD_CREDENTIAL_VALUES)
-def test_bad_credential_values_fail_before_any_request(value):
-    http = ScriptedHTTPClient({})
-    manager = SecretManager(FakeClient(http))
-
-    attempts = [
-        lambda: manager.create_credential("github", value, ORIGINS),
-        lambda: manager.create(
-            {"name": "github", "type": "credential", "value": value}
-        ),
-    ]
-    if isinstance(value, dict):
-        # A str or bytes value is checked against the secret's type, which
-        # takes a lookup; see the add_version tests.
-        attempts.append(lambda: manager.add_version("github", value))
-    for attempt in attempts:
-        with pytest.raises(HyperbrowserError) as error:
-            attempt()
-        assert error.value.code == "invalid_secret_value"
-        message = str(error.value)
-        for item in value.values() if isinstance(value, dict) else [value]:
-            if isinstance(item, str) and item:
-                assert item not in message
-    assert http.calls == []
-
-
-def test_a_mapping_is_refused_for_a_plain_secret_before_any_request():
-    http = ScriptedHTTPClient({})
-    manager = SecretManager(FakeClient(http))
-
-    for params in [
-        {"name": "provider-key", "value": LOGIN},
-        {"name": "provider-key", "type": "secret", "value": LOGIN},
-    ]:
-        with pytest.raises(HyperbrowserError) as error:
-            manager.create(params)
-        assert error.value.code == "invalid_secret_value"
-        assert "credential" in str(error.value)
-    assert http.calls == []
-
-
-def test_credential_values_stay_out_of_reprs_and_dumps():
-    params = CreateSecretParams(name="github", type="credential", value=LOGIN)
+def test_values_stay_out_of_reprs_and_dumps():
+    params = CreateSecretParams(name="github-otp", type="totp", value=SEED)
     for text in [repr(params), str(params), json.dumps(params.model_dump())]:
-        assert LOGIN["password"] not in text
+        assert SEED not in text
     with pytest.raises(ValueError) as error:
-        CreateSecretParams.model_validate({"value": LOGIN})
-    assert LOGIN["password"] not in str(error.value)
-
-
-def test_allowed_origins_must_be_a_list():
-    http = ScriptedHTTPClient({})
-    manager = SecretManager(FakeClient(http))
-
-    for origins in ["https://github.com", [1]]:
-        with pytest.raises(HyperbrowserError) as error:
-            manager.create_credential("github", LOGIN, origins)
-        assert error.value.code == "invalid_secret_metadata"
-        with pytest.raises(HyperbrowserError):
-            manager.set_allowed_origins("github", origins)
-    assert http.calls == []
+        CreateSecretParams.model_validate({"value": SEED})
+    assert SEED not in str(error.value)
+    with pytest.raises(ValueError):
+        CreateSecretParams(name="x", value={"username": "a"})  # type: ignore[arg-type]
 
 
 # --- add_version ---
 
 
-def test_add_version_checks_the_value_against_the_secrets_type(private_key):
+def test_add_version_checks_the_value_against_the_stored_type(private_key):
     versions_path = f"/secrets/{SECRET_ID}/versions"
     routes = {
-        ("GET", "/secrets"): (200, {"secrets": [_credential()], "totalCount": 1}),
+        ("GET", "/secrets"): (200, {"secrets": [_typed("totp")], "totalCount": 1}),
         ("GET", "/secrets/public-key"): (200, _public_key_payload(private_key)),
         ("POST", versions_path): (201, {"version": 2, "kid": "k"}),
     }
     http = ScriptedHTTPClient(routes)
     manager = SecretManager(FakeClient(http))
 
-    assert manager.add_version("github", LOGIN).version == 2
+    assert manager.add_version("github-otp", SEED).version == 2
     header, value = _open(private_key, http.calls[-1]["json"]["envelope"])
-    assert header["ctx"] == CREDENTIAL_CONTEXT
-    assert json.loads(value) == LOGIN
-    _assert_no_plaintext(http.calls)
+    assert header["ctx"] == TOTP_CONTEXT and value == SEED.encode()
 
-    http.calls.clear()
-    for value in ["plain", b"plain"]:
-        with pytest.raises(HyperbrowserError) as error:
-            manager.add_version("github", value)
-        assert error.value.code == "invalid_secret_value"
-    assert [c["path"] for c in http.calls] == ["/secrets", "/secrets"]
-
-    routes[("GET", "/secrets")] = (200, {"secrets": [_secret()], "totalCount": 1})
     http.calls.clear()
     with pytest.raises(HyperbrowserError) as error:
-        manager.add_version("provider-key", LOGIN)
+        manager.add_version("github-otp", "hunter2!")
     assert error.value.code == "invalid_secret_value"
-    assert all(c["path"] != versions_path for c in http.calls)
+    assert [c["path"] for c in http.calls] == ["/secrets"]
 
-    manager.add_version("provider-key", "plain")
-    header, value = _open(private_key, http.calls[-1]["json"]["envelope"])
-    assert header["ctx"] == _secret()["encryptionContext"] and value == b"plain"
+    # A plain secret takes any value; common rules apply before the lookup.
+    routes[("GET", "/secrets")] = (200, {"secrets": [_secret()], "totalCount": 1})
+    manager.add_version("provider-key", "hunter2!")
+    _, value = _open(private_key, http.calls[-1]["json"]["envelope"])
+    assert value == b"hunter2!"
+    http.calls.clear()
+    for bad in ["", "a\x00b", {"username": "a"}]:
+        with pytest.raises(HyperbrowserError):
+            manager.add_version("provider-key", bad)  # type: ignore[arg-type]
+    assert http.calls == []
 
 
 # --- metadata updates and listing ---
@@ -299,27 +338,32 @@ def test_add_version_checks_the_value_against_the_secrets_type(private_key):
 def test_set_allowed_origins_replaces_or_clears_the_browser_metadata():
     http = ScriptedHTTPClient(
         {
-            ("GET", "/secrets"): (200, {"secrets": [_credential()], "totalCount": 1}),
-            ("PATCH", f"/secrets/{SECRET_ID}"): (200, _credential()),
+            ("GET", "/secrets"): (200, {"secrets": [_typed("totp")], "totalCount": 1}),
+            ("PATCH", f"/secrets/{SECRET_ID}"): (200, _typed("totp")),
         }
     )
     manager = SecretManager(FakeClient(http))
 
-    manager.set_allowed_origins("github", ("https://github.com",))
+    manager.set_allowed_origins("github-otp", ("https://github.com",))
     assert http.calls[-1]["json"] == {
         "metadata": {"browser": {"allowedOrigins": ["https://github.com"]}}
     }
 
-    manager.set_allowed_origins("github", None)
+    manager.set_allowed_origins("github-otp", None)
     assert http.calls[-1]["json"] == {"metadata": {"browser": None}}
     assert json.dumps(http.calls[-1]["json"]) == '{"metadata": {"browser": null}}'
+
+    for origins in ["https://github.com", [1]]:
+        with pytest.raises(HyperbrowserError) as error:
+            manager.set_allowed_origins("github-otp", origins)  # type: ignore[arg-type]
+        assert error.value.code == "invalid_secret_metadata"
 
 
 def test_update_sends_only_the_members_given():
     http = ScriptedHTTPClient(
         {
-            ("GET", f"/secrets/{SECRET_ID}"): (200, dict(_credential(), versions=[])),
-            ("PATCH", f"/secrets/{SECRET_ID}"): (200, _credential()),
+            ("GET", f"/secrets/{SECRET_ID}"): (200, dict(_typed("totp"), versions=[])),
+            ("PATCH", f"/secrets/{SECRET_ID}"): (200, _typed("totp")),
         }
     )
     manager = SecretManager(FakeClient(http))
@@ -340,7 +384,7 @@ def test_update_sends_only_the_members_given():
     ]:
         updated = manager.update(SECRET_ID, params)
         assert http.calls[-1]["json"] == body
-        assert updated.type == "credential"
+        assert updated.type == "totp"
 
     http.calls.clear()
     with pytest.raises(ValueError):
@@ -348,18 +392,24 @@ def test_update_sends_only_the_members_given():
     assert http.calls == []
 
 
-def test_list_filters_by_type():
+@pytest.mark.parametrize("secret_type", ["secret", "totp", "op_token"])
+def test_list_filters_by_type(secret_type):
     http = ScriptedHTTPClient(
-        {("GET", "/secrets"): (200, {"secrets": [_credential()], "totalCount": 1})}
+        {
+            ("GET", "/secrets"): (
+                200,
+                {"secrets": [_typed(secret_type)], "totalCount": 1},
+            )
+        }
     )
     manager = SecretManager(FakeClient(http))
 
-    listing = manager.list({"type": "credential"})
+    listing = manager.list({"type": secret_type})
 
-    assert http.calls[0]["params"] == {"type": "credential"}
-    assert listing.secrets[0].type == "credential"
+    assert http.calls[0]["params"] == {"type": secret_type}
+    assert listing.secrets[0].type == secret_type
     with pytest.raises(ValueError):
-        manager.list({"type": "password"})
+        manager.list({"type": "credential"})  # type: ignore[typeddict-item]
 
 
 def test_secret_types_added_later_still_parse():
@@ -377,53 +427,47 @@ def test_secret_types_added_later_still_parse():
     assert manager.get("provider-key").type == "future_type"
     # Requests still only take the known types.
     with pytest.raises(ValueError):
-        CreateSecretParams(name="provider-key", type="future_type")
+        CreateSecretParams(name="provider-key", type="future_type")  # type: ignore[arg-type]
 
 
 @pytest.mark.anyio
-async def test_async_secret_types_added_later_still_parse():
-    future = dict(_secret(), type="future_type")
-    http = AsyncScriptedHTTPClient(
-        {
-            ("GET", "/secrets"): (200, {"secrets": [future], "totalCount": 1}),
-            ("GET", f"/secrets/{SECRET_ID}"): (200, dict(future, versions=[])),
-        }
+async def test_async_typed_secrets_round_trip(private_key):
+    routes = _create_routes(private_key, _typed("totp", origins=ORIGINS))
+    routes[("GET", "/secrets")] = (
+        200,
+        {"secrets": [_typed("totp", origins=ORIGINS)], "totalCount": 1},
     )
-    manager = AsyncSecretManager(FakeClient(http))
-
-    assert (await manager.list()).secrets[0].type == "future_type"
-    assert (await manager.get("provider-key")).type == "future_type"
-
-
-@pytest.mark.anyio
-async def test_async_credentials_round_trip(private_key):
-    routes = _create_routes(private_key)
-    routes[("GET", "/secrets")] = (200, {"secrets": [_credential()], "totalCount": 1})
-    routes[("PATCH", f"/secrets/{SECRET_ID}")] = (200, _credential())
+    routes[("PATCH", f"/secrets/{SECRET_ID}")] = (200, _typed("totp"))
     http = AsyncScriptedHTTPClient(routes)
     manager = AsyncSecretManager(FakeClient(http))
 
-    secret = await manager.create_credential("github", LOGIN, ORIGINS)
+    secret = await manager.create(
+        {
+            "name": "github-otp",
+            "type": "totp",
+            "value": SEED,
+            "allowed_origins": ORIGINS,
+        }
+    )
     assert secret.latest_version == 1
     assert http.calls[1]["json"]["metadata"] == {"browser": {"allowedOrigins": ORIGINS}}
     header, value = _open(private_key, http.calls[2]["json"]["envelope"])
-    assert header["ctx"] == CREDENTIAL_CONTEXT and json.loads(value) == LOGIN
+    assert header["ctx"] == TOTP_CONTEXT and value == SEED.encode()
 
-    await manager.add_version("github", LOGIN)
-    _, value = _open(private_key, http.calls[-1]["json"]["envelope"])
-    assert json.loads(value) == LOGIN
+    await manager.add_version("github-otp", f"otpauth://totp/x?secret={SEED}")
     with pytest.raises(HyperbrowserError) as error:
-        await manager.add_version("github", "plain")
+        await manager.add_version("github-otp", "hunter2!")
     assert error.value.code == "invalid_secret_value"
 
-    await manager.set_allowed_origins("github", None)
+    await manager.set_allowed_origins("github-otp", None)
     assert http.calls[-1]["json"] == {"metadata": {"browser": None}}
-    _assert_no_plaintext(http.calls)
+    _assert_not_sent(http.calls, SEED)
 
     http.calls.clear()
     with pytest.raises(HyperbrowserError):
-        await manager.create_credential("github", {"username": ""}, ORIGINS)
+        await manager.create({"name": "github-otp", "type": "totp", "value": "nope!"})
     assert http.calls == []
+    assert (await manager.list({"type": "totp"})).secrets[0].type == "totp"
 
 
 # --- sessions ---
@@ -481,52 +525,109 @@ SESSION = {
     "liveUrl": "https://live",
     "token": "t",
 }
+FIELDS = [
+    {"field": "USERNAME", "selector": "#login_field"},
+    {"field": "PASSWORD", "selector": "#password"},
+    {"field": "OTP", "selector": "#app_totp"},
+]
 FILL_RESULT = {
-    "version": 3,
     "pageId": "PAGE1",
     "origin": "https://github.com",
     "fields": [
-        {"field": "username", "outcome": "filled"},
-        {"field": "password", "outcome": "not_accepted"},
+        {
+            "selector": "#login_field",
+            "outcome": "filled",
+            "secretId": SECRET_ID,
+            "version": 1,
+            "field": "USERNAME",
+        },
+        {
+            "selector": "#password",
+            "outcome": "not_accepted",
+            "secretId": SECRET_ID,
+            "version": 3,
+            "field": "PASSWORD",
+        },
+        {
+            "selector": "#app_totp",
+            "outcome": "filled",
+            "secretId": SECRET_ID,
+            "version": 1,
+            "field": "OTP",
+            "expiresAt": "2026-10-14T12:00:30Z",
+        },
     ],
 }
-FIELDS = [
-    {"field": "username", "selector": "#login_field"},
-    {"field": "password", "selector": "#password"},
-]
 
 
-def test_sessions_attach_credentials_at_creation(sdk):
+def test_sessions_attach_secrets_and_vaults_at_creation(sdk):
     client, call, calls, outcomes = sdk
-    respond(
-        outcomes,
-        dict(SESSION, credentials=[{"id": SECRET_ID, "name": "github"}]),
-    )
+    attached = [{"id": SECRET_ID, "name": "github-password"}]
+    respond(outcomes, dict(SESSION, credentials=attached))
+    respond(outcomes, SESSION)
     respond(outcomes, SESSION)
 
-    session = call(client.sessions.create, {"credentials": ["github"]})
-    assert json.loads(calls[0].content)["credentials"] == ["github"]
+    session = call(
+        client.sessions.create,
+        {
+            "credentials": [
+                "github-password",
+                {"secret": "github-username"},
+                {"vault": "github-login"},
+            ]
+        },
+    )
+    assert json.loads(calls[0].content)["credentials"] == [
+        "github-password",
+        {"secret": "github-username"},
+        {"vault": "github-login"},
+    ]
     assert session.credentials is not None
-    assert [(c.id, c.name) for c in session.credentials] == [(SECRET_ID, "github")]
+    assert [(c.id, c.name) for c in session.credentials] == [
+        (SECRET_ID, "github-password")
+    ]
+
+    call(
+        client.sessions.create,
+        CreateSessionParams(credentials=[SessionCredentialVault(vault="github-login")]),
+    )
+    assert json.loads(calls[1].content)["credentials"] == [{"vault": "github-login"}]
 
     session = call(client.sessions.create, CreateSessionParams())
-    assert "credentials" not in json.loads(calls[1].content)
+    assert "credentials" not in json.loads(calls[2].content)
     assert session.credentials is None
 
 
-def test_fill_posts_the_request_and_parses_outcomes(sdk):
+@pytest.mark.parametrize(
+    "credentials",
+    [
+        ["bad name"],
+        [{"vault": "a", "secret": "b"}],
+        [{"vault": "-a"}],
+        [{"login": "a"}],
+        ["s"] * 21,
+        "github",
+    ],
+)
+def test_invalid_session_credentials_fail_before_http(sdk, credentials):
+    client, call, calls, outcomes = sdk
+    with pytest.raises(ValueError):
+        call(client.sessions.create, {"credentials": credentials})
+    assert not calls
+
+
+def test_vault_fills_post_fields_and_parse_per_input_results(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, FILL_RESULT)
-    respond(outcomes, dict(FILL_RESULT, fields=[{"field": "otp", "outcome": "new"}]))
 
     result = call(
         client.sessions.credentials.fill,
         "session /1",
         {
-            "credential": "github",
+            "vault": "github-login",
             "fields": FIELDS,
-            "page_id": "PAGE1",
-            "frame": {"url": "https://login.github.com/"},
+            "page_url": "https://github.com/login",
+            "frame_url": "https://github.com/",
         },
     )
 
@@ -534,31 +635,61 @@ def test_fill_posts_the_request_and_parses_outcomes(sdk):
     assert request.method == "POST"
     assert request.url.raw_path == b"/api/session/session%20%2F1/credentials/fill"
     assert json.loads(request.content) == {
-        "credential": "github",
-        "fields": FIELDS,
-        "pageId": "PAGE1",
-        "frame": {"url": "https://login.github.com/"},
+        "vault": "github-login",
+        "fields": [{"selector": f["selector"], "field": f["field"]} for f in FIELDS],
+        "pageUrl": "https://github.com/login",
+        "frame": {"url": "https://github.com/"},
     }
     assert request.extensions["timeout"]["read"] == 30
-    assert result.version == 3
+    assert result.version is None
     assert result.page_id == "PAGE1"
     assert result.origin == "https://github.com"
-    assert [(f.field, f.outcome) for f in result.fields] == [
-        ("username", "filled"),
-        ("password", "not_accepted"),
+    assert [(f.field, f.outcome, f.version) for f in result.fields] == [
+        ("USERNAME", "filled", 1),
+        ("PASSWORD", "not_accepted", 3),
+        ("OTP", "filled", 1),
     ]
+    assert result.fields[0].secret_id == SECRET_ID
+    assert result.fields[0].expires_at is None
+    assert result.fields[2].expires_at is not None
+    assert result.fields[2].expires_at.isoformat() == "2026-10-14T12:00:30+00:00"
+
+
+def test_single_secret_fills_report_the_version(sdk):
+    client, call, calls, outcomes = sdk
+    single = {
+        "version": 3,
+        "pageId": "PAGE1",
+        "origin": "https://github.com",
+        "fields": [
+            {
+                "selector": "#password",
+                "outcome": "new",
+                "secretId": SECRET_ID,
+                "version": 3,
+            }
+        ],
+    }
+    respond(outcomes, single)
 
     client.timeout = 120
     result = call(
         client.sessions.credentials.fill,
         "s",
-        FillCredentialParams(credential="github", fields=FIELDS[:1]),
+        FillCredentialParams(
+            credential="github-password",
+            fields=[{"selector": "#password"}],  # type: ignore[list-item]
+            page_id="PAGE1",
+        ),
     )
-    assert json.loads(calls[1].content) == {
-        "credential": "github",
-        "fields": FIELDS[:1],
+    assert json.loads(calls[0].content) == {
+        "credential": "github-password",
+        "fields": [{"selector": "#password"}],
+        "pageId": "PAGE1",
     }
-    assert calls[1].extensions["timeout"]["read"] == 120
+    assert calls[0].extensions["timeout"]["read"] == 120
+    assert result.version == 3
+    assert result.fields[0].field is None
     # Outcomes the SDK doesn't know yet still parse.
     assert result.fields[0].outcome == "new"
 
@@ -580,48 +711,53 @@ def test_fill_errors_keep_code_retryable_and_details(sdk):
         {"code": "CREDENTIAL_FILL_TIMEOUT", "message": "timed out", "retryable": True},
         504,
     )
+    params = {"credential": "c", "fields": [{"selector": "#p"}]}
 
     with pytest.raises(HyperbrowserError) as raised:
-        call(
-            client.sessions.credentials.fill, "s", {"credential": "c", "fields": FIELDS}
-        )
+        call(client.sessions.credentials.fill, "s", params)
     assert raised.value.code == "CREDENTIAL_PAGE_AMBIGUOUS"
     assert raised.value.status_code == 409
     assert raised.value.retryable is False
     assert raised.value.details["details"]["pages"] == pages
 
     with pytest.raises(HyperbrowserError) as raised:
-        call(
-            client.sessions.credentials.fill, "s", {"credential": "c", "fields": FIELDS}
-        )
+        call(client.sessions.credentials.fill, "s", params)
     assert raised.value.code == "CREDENTIAL_FILL_TIMEOUT"
     assert raised.value.retryable is True
     # A fill is never retried automatically.
     assert len(calls) == 2
 
 
+ONE = [{"selector": "#p"}]
+
+
 @pytest.mark.parametrize(
     "params",
     [
-        {"credential": "github", "fields": []},
-        {
-            "credential": "github",
-            "fields": [dict(FIELDS[0], field=f"f{i}") for i in range(17)],
-        },
-        {"credential": "github", "fields": [FIELDS[0], FIELDS[0]]},
-        {"credential": "github", "fields": [{"field": "user name", "selector": "#u"}]},
-        {"credential": "github", "fields": [{"field": "f" * 65, "selector": "#u"}]},
-        {"credential": "github", "fields": [{"field": "username", "selector": " "}]},
-        {"credential": "github", "fields": [{"field": "u", "selector": "é" * 513}]},
-        {"credential": "github", "fields": [{"field": "username"}]},
-        {"credential": "github", "fields": FIELDS, "page_id": ""},
-        {"credential": "github", "fields": FIELDS, "page_id": "p" * 129},
-        {"credential": "github", "fields": FIELDS, "frame": {"url": ""}},
-        {"credential": "github", "fields": FIELDS, "frame": {"url": "u" * 2049}},
-        {"credential": "", "fields": FIELDS},
-        {"fields": FIELDS},
-        {"credential": "github"},
-        {"credential": "github", "fields": "username"},
+        {"fields": ONE},
+        {"credential": "c", "vault": "v", "fields": ONE},
+        {"credential": "", "fields": ONE},
+        {"credential": "c" * 256, "fields": ONE},
+        {"credential": "c", "fields": [{"selector": "#p", "field": "PASSWORD"}]},
+        {"vault": "v", "fields": ONE},
+        {"vault": "bad name", "fields": [{"selector": "#p", "field": "P"}]},
+        {"vault": "v", "fields": [{"selector": "#p", "field": "1PASSWORD"}]},
+        {"vault": "v", "fields": [{"selector": "#p", "field": "__proto__"}]},
+        {"credential": "c", "fields": []},
+        {"credential": "c", "fields": [{"selector": f"#f{i}"} for i in range(17)]},
+        {"credential": "c", "fields": [{"selector": "#p"}, {"selector": "#p"}]},
+        {"credential": "c", "fields": [{"selector": " "}]},
+        {"credential": "c", "fields": [{"selector": "é" * 513}]},
+        {"credential": "c", "fields": [{}]},
+        {"credential": "c", "fields": ONE, "page_id": "p", "page_url": "https://x"},
+        {"credential": "c", "fields": ONE, "page_id": ""},
+        {"credential": "c", "fields": ONE, "page_id": "p" * 129},
+        {"credential": "c", "fields": ONE, "page_url": "u" * 2049},
+        {"credential": "c", "fields": ONE, "frame_url": ""},
+        {"credential": "c", "fields": ONE, "frame_url": "u" * 2049},
+        {"credential": "c", "fields": ONE, "frame": {"url": "https://x"}},
+        {"credential": "c"},
+        {"credential": "c", "fields": "#p"},
         "github",
     ],
 )
@@ -636,17 +772,27 @@ def test_invalid_fill_requests_fail_before_http(sdk, params):
 def test_fill_limits_are_inclusive(sdk):
     client, call, calls, outcomes = sdk
     respond(outcomes, FILL_RESULT)
+    respond(outcomes, FILL_RESULT)
     call(
         client.sessions.credentials.fill,
         "s",
         {
-            "credential": "github",
+            "vault": "v" * 128,
             "fields": [
-                {"field": f"f{i}" if i else "f" * 64, "selector": "é" * 512}
+                # 256-character entry names; 1024-byte selectors.
+                {
+                    "field": "F" * 256 if i == 0 else f"F{i}",
+                    "selector": "é" * 511 + f"{i:02d}",
+                }
                 for i in range(16)
             ],
             "page_id": "p" * 128,
-            "frame": {"url": "u" * 2048},
+            "frame_url": "u" * 2048,
         },
     )
-    assert len(calls) == 1
+    call(
+        client.sessions.credentials.fill,
+        "s",
+        {"credential": "c" * 255, "fields": ONE, "page_url": "u" * 2048},
+    )
+    assert len(calls) == 2

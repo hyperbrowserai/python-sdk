@@ -11,7 +11,12 @@ from pydantic import (
 )
 
 from ._parsers import _parse_optional_int
-from .secret import SecretReference, normalize_secret_references
+from .secret import (
+    SandboxResolvedSecret,
+    SecretReference,
+    normalize_secret_references,
+    validate_secret_name,
+)
 from .session import SessionLaunchState, SessionStatus
 
 SandboxStatus = SessionStatus
@@ -186,6 +191,11 @@ class Sandbox(SandboxBaseModel):
 class SandboxDetail(Sandbox):
     token: Optional[str] = None
     token_expires_at: Optional[datetime] = Field(default=None, alias="tokenExpiresAt")
+    # On a create with ``secrets`` or ``vault``: what each variable of the
+    # startup command received. Never values.
+    startup_secrets: Optional[List[SandboxResolvedSecret]] = Field(
+        default=None, alias="startupSecrets"
+    )
 
     @field_validator("token_expires_at", mode="before")
     @classmethod
@@ -246,11 +256,19 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
     # Environment variable name to secret, delivered to the image's startup
     # command only.
     secrets: Optional[Dict[str, SecretReference]] = None
+    # A vault, by name, whose entries are delivered to the startup command;
+    # ``secrets`` are merged over it.
+    vault: Optional[str] = None
 
     @field_validator("secrets", mode="before")
     @classmethod
     def normalize_secrets(cls, value):
         return normalize_secret_references(value)
+
+    @field_validator("vault")
+    @classmethod
+    def validate_vault(cls, value):
+        return None if value is None else validate_secret_name(value)
 
     @model_validator(mode="after")
     def validate_launch_source(self):
@@ -271,10 +289,10 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
             raise ValueError(
                 "cpu, memory_mib, and disk_mib are only supported for image launches"
             )
-        if self.snapshot_name and self.secrets:
+        if self.snapshot_name and (self.secrets or self.vault is not None):
             raise ValueError(
-                "secrets are only supported for image launches; snapshots don't "
-                "run a startup command"
+                "secrets and vault are only supported for image launches; "
+                "snapshots don't run a startup command"
             )
         return self
 
@@ -587,11 +605,24 @@ class SandboxExecParams(SandboxBaseModel):
     # Environment variable name to secret. A start with secrets goes through
     # the control API, which has the platform decrypt them in the sandbox.
     secrets: Optional[Dict[str, SecretReference]] = None
+    # A vault, by name, whose entries become environment variables; ``secrets``
+    # are merged over it. Starts through the control API like ``secrets``.
+    vault: Optional[str] = None
 
     @field_validator("secrets", mode="before")
     @classmethod
     def normalize_secrets(cls, value):
         return normalize_secret_references(value)
+
+    @field_validator("vault")
+    @classmethod
+    def validate_vault(cls, value):
+        return None if value is None else validate_secret_name(value)
+
+    @property
+    def uses_secrets(self) -> bool:
+        """Whether the start delivers secrets, so goes through the control API."""
+        return bool(self.secrets) or self.vault is not None
 
 
 class SandboxProcessSummary(SandboxBaseModel):

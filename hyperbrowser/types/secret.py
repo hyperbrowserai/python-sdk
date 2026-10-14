@@ -1,4 +1,4 @@
-from typing import List, Literal, Mapping, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from typing_extensions import Required, TypeAlias, TypedDict
 
@@ -14,18 +14,18 @@ class SecretReference(TypedDict, total=False):
 SecretReferenceInput: TypeAlias = Union[str, SecretReference]
 
 
-# A plain secret holds one string; a credential holds a website login that
-# browser sessions fill into pages. Fixed when the secret is created.
-SecretType = Literal["secret", "credential"]
+# What a secret's value is; fixed when the secret is created. "secret" is an
+# opaque string, "totp" a TOTP seed (base32 or an otpauth://totp/ URI) and
+# "op_token" a 1Password service account token.
+SecretType = Literal["secret", "totp", "op_token"]
 
-# str or bytes for a plain secret; a mapping of field names (such as
-# "username" and "password") to strings for a credential.
-SecretValue: TypeAlias = Union[str, bytes, Mapping[str, str]]
+# A secret value, encrypted locally before upload.
+SecretValue: TypeAlias = Union[str, bytes]
 
 
-class CredentialBrowserMetadata(TypedDict):
-    """Origins (``scheme://host[:port]``, ``*.`` for subdomains) a credential
-    may be filled on."""
+class SecretBrowserMetadata(TypedDict):
+    """Origins (``scheme://host[:port]``, ``*.`` for subdomains) a secret may
+    be typed into browser pages on."""
 
     allowed_origins: List[str]
 
@@ -33,15 +33,20 @@ class CredentialBrowserMetadata(TypedDict):
 class SecretMetadata(TypedDict, total=False):
     """Secret metadata. In an update, ``None`` removes a member."""
 
-    browser: Optional[CredentialBrowserMetadata]
+    browser: Optional[SecretBrowserMetadata]
 
 
 class CreateSecretParams(TypedDict, total=False):
-    """Parameters for creating a secret, optionally with its first value."""
+    """Parameters for creating a secret, optionally with its first value.
+
+    ``allowed_origins`` is shorthand for ``metadata.browser.allowed_origins``;
+    it makes a ``secret`` or ``totp`` fillable in browser sessions.
+    """
 
     name: Required[str]
     description: Optional[str]
     type: Optional[SecretType]
+    allowed_origins: Optional[List[str]]
     metadata: Optional[SecretMetadata]
     value: Optional[SecretValue]
 
@@ -65,7 +70,7 @@ class SecretListParams(TypedDict, total=False):
 
 __all__ = [
     "CreateSecretParams",
-    "CredentialBrowserMetadata",
+    "SecretBrowserMetadata",
     "SecretListParams",
     "SecretMetadata",
     "SecretReference",

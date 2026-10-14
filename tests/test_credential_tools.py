@@ -60,18 +60,33 @@ def test_fill_credential_tool_definitions():
         "ambiguous",
         "not_editable",
         "not_accepted",
-        "not_populated",
         "CREDENTIAL_PAGE_AMBIGUOUS",
         "page_id",
+        "page_url",
+        "vault",
+        "TOTP",
+        "current",
     ]:
         assert text in description
+    assert "not_populated" not in description
 
     schema = function["parameters"]
-    assert set(schema["properties"]) == {"credential", "fields", "page_id", "frame_url"}
+    assert set(schema["properties"]) == {
+        "credential",
+        "vault",
+        "fields",
+        "page_id",
+        "page_url",
+        "frame_url",
+    }
     assert "session" not in json.dumps(schema).lower().replace("session's", "")
     fields = schema["properties"]["fields"]
     assert (fields["minItems"], fields["maxItems"]) == (1, 16)
-    assert schema["properties"]["page_id"]["type"] == ["string", "null"]
+    assert set(fields["items"]["properties"]) == {"selector", "field"}
+    assert fields["items"]["properties"]["field"]["type"] == ["string", "null"]
+    assert fields["items"]["properties"]["selector"]["type"] == "string"
+    for name in ["credential", "vault", "page_id", "page_url", "frame_url"]:
+        assert schema["properties"][name]["type"] == ["string", "null"]
     for member in _walk(schema):
         assert (
             member.get("description") or member is schema or member is fields["items"]
@@ -98,11 +113,20 @@ def test_gemini_declarations_use_the_openapi_subset(tool):
 def test_gemini_schema_conversion():
     gemini = CredentialFillTool.gemini_tool_definition["parameters"]
     assert gemini["properties"]["page_id"]["type"] == "string"
-    assert gemini["properties"]["page_id"]["nullable"] is True
-    assert gemini["properties"]["frame_url"]["nullable"] is True
-    assert "nullable" not in gemini["properties"]["credential"]
+    for name in ["credential", "vault", "page_id", "page_url", "frame_url"]:
+        assert gemini["properties"][name]["nullable"] is True
+    items = gemini["properties"]["fields"]["items"]
+    assert items["properties"]["field"]["nullable"] is True
+    assert "nullable" not in items["properties"]["selector"]
     assert gemini["properties"]["fields"]["maxItems"] == 16
-    assert gemini["required"] == ["credential", "fields", "page_id", "frame_url"]
+    assert gemini["required"] == [
+        "credential",
+        "vault",
+        "fields",
+        "page_id",
+        "page_url",
+        "frame_url",
+    ]
 
     with pytest.raises(ValueError, match="type union"):
         to_gemini_schema({"type": ["string", "number"]})
@@ -113,11 +137,14 @@ def test_gemini_schema_conversion():
 
 
 TOOL_INPUT = {
-    "credential": "github",
-    "fields": FIELDS,
+    "credential": None,
+    "vault": "github-login",
+    "fields": [dict(field, field=field["field"]) for field in FIELDS],
     "page_id": None,
+    "page_url": None,
     "frame_url": None,
 }
+SENT_FIELDS = [{"selector": f["selector"], "field": f["field"]} for f in FIELDS]
 
 
 def test_tool_runner_maps_model_input_and_returns_json(sdk):
@@ -127,26 +154,52 @@ def test_tool_runner_maps_model_input_and_returns_json(sdk):
         if isinstance(client, AsyncHyperbrowser)
         else CredentialFillTool.runnable
     )
-    respond(outcomes, FILL_RESULT)
-    respond(outcomes, FILL_RESULT)
+    for _ in range(3):
+        respond(outcomes, FILL_RESULT)
 
     text = call(runner, client, "session-1", TOOL_INPUT)
-    assert json.loads(calls[0].content) == {"credential": "github", "fields": FIELDS}
+    assert json.loads(calls[0].content) == {
+        "vault": "github-login",
+        "fields": SENT_FIELDS,
+    }
     assert calls[0].url.path == "/api/session/session-1/credentials/fill"
-    assert json.loads(text) == FILL_RESULT
+    output = json.loads(text)
+    assert output["pageId"] == "PAGE1"
+    assert output["fields"][2] == FILL_RESULT["fields"][2]
+    # Members the API left out stay out, rather than appearing as null.
+    assert "version" not in output and "expiresAt" not in output["fields"][0]
     assert " " not in text.replace("https://", "")
 
     call(
         runner,
         client,
         "session-1",
-        dict(TOOL_INPUT, page_id="PAGE2", frame_url="https://login.github.com/"),
+        dict(TOOL_INPUT, page_url="https://github.com/login", frame_url="https://x/"),
     )
     assert json.loads(calls[1].content) == {
-        "credential": "github",
-        "fields": FIELDS,
+        "vault": "github-login",
+        "fields": SENT_FIELDS,
+        "pageUrl": "https://github.com/login",
+        "frame": {"url": "https://x/"},
+    }
+
+    # A single secret: the model sends null for the vault and each field.
+    call(
+        runner,
+        client,
+        "session-1",
+        dict(
+            TOOL_INPUT,
+            credential="github-password",
+            vault=None,
+            fields=[{"selector": "#password", "field": None}],
+            page_id="PAGE2",
+        ),
+    )
+    assert json.loads(calls[2].content) == {
+        "credential": "github-password",
+        "fields": [{"selector": "#password"}],
         "pageId": "PAGE2",
-        "frame": {"url": "https://login.github.com/"},
     }
 
 
@@ -178,9 +231,15 @@ def test_tool_runner_returns_errors_as_json(sdk):
         }
     }
 
-    error = json.loads(call(runner, client, "s", dict(TOOL_INPUT, fields=[])))
-    assert error["error"]["code"] == "invalid_request"
-    assert error["error"]["details"] is None
+    for bad in [
+        dict(TOOL_INPUT, fields=[]),
+        dict(TOOL_INPUT, credential="github-password"),
+        dict(TOOL_INPUT, page_id="A", page_url="https://github.com/"),
+        dict(TOOL_INPUT, fields=[{"selector": "#u", "field": None}]),
+    ]:
+        error = json.loads(call(runner, client, "s", bad))
+        assert error["error"]["code"] == "invalid_request"
+        assert error["error"]["details"] is None
     assert len(calls) == 1
 
 

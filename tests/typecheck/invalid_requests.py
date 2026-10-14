@@ -119,17 +119,22 @@ def invalid_web_bot_auth_and_proxy_routes_requests(client: Hyperbrowser) -> None
 
 
 def invalid_credential_requests(client: Hyperbrowser) -> None:
-    client.secrets.create({"name": "github", "type": "password"})  # M,P
-    client.secrets.create({"name": "github", "value": {"username": 1}})  # M,P
+    client.secrets.create({"name": "github", "type": "credential"})  # M,P
+    client.secrets.create({"name": "github", "value": {"username": "a"}})  # M,P
     client.secrets.list({"type": "login"})  # M,P
     client.secrets.update("github", {"metadata": {"browser": {"allowedOrigins": []}}})  # M,P
-    client.secrets.create_credential("github", "password", ["https://x.io"])  # M,P
+    client.secrets.create({"name": "github", "allowed_origins": "https://x.io"})  # M,P
+    client.vaults.create({"name": "v", "entries": {"A": {"version": 1}}})  # M,P
+    client.vaults.create({"name": "v", "source": {"type": "1password"}})  # M,P
+    client.vaults.update("v", {"source": {"type": "stored"}})  # M,P
     client.sessions.create({"credentials": "github"})  # M,P
+    client.sessions.create({"credentials": [{"login": "github"}]})  # M,P
     client.sessions.credentials.fill("s", {"credential": "github"})  # M,P
-    client.sessions.credentials.fill("s", {"credential": "c", "fields": [{"field": "u"}]})  # M,P
+    client.sessions.credentials.fill("s", {"vault": "v", "fields": [{"field": "U"}]})  # M,P
     client.sessions.credentials.fill("s", {"credential": "c", "fields": [], "pageId": "p"})  # M,P
 
 
 async def invalid_async_credential_requests(client: AsyncHyperbrowser) -> None:
-    await client.secrets.add_version("github", {"username": None})  # M,P
+    await client.secrets.add_version("github", {"username": "a"})  # M,P
     await client.sessions.credentials.fill("s", {"credential": "c", "fields": [], "frame": "u"})  # M,P
+    await client.vaults.create({"entries": {}})  # M,P

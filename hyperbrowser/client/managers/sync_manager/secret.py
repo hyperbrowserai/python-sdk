@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Mapping, Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Union
 
 from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
@@ -10,7 +10,6 @@ from ....models.secret import (
     SecretDetail,
     SecretListParams,
     SecretListResponse,
-    SecretMetadata,
     SecretsPublicKey,
     SecretVersion,
     SecretValue,
@@ -29,7 +28,7 @@ from ....secrets_common import (
     SECRET_NAME_LOOKUP_LIMIT,
     SecretsSealer,
     browser_metadata,
-    check_secret_value,
+    check_secret_metadata,
     check_secret_version,
     is_not_found,
     looks_like_secret_id,
@@ -77,6 +76,11 @@ class SecretManager:
     ) -> Secret:
         """Create a secret, and store its first version when ``value`` is set.
 
+        ``type`` is ``"secret"`` (the default), ``"totp"`` (a base32 seed or an
+        ``otpauth://totp/`` URI) or ``"op_token"`` (a 1Password service
+        account token, which starts with ``ops_``). ``allowed_origins`` makes
+        a ``secret`` or ``totp`` fillable into browser pages on those origins.
+
         The value and the public key are checked before the secret is created,
         so a bad value or an unavailable key leaves nothing behind.
         """
@@ -109,32 +113,6 @@ class SecretManager:
             return detail
         return self._get_by_id(detail.id)
 
-    def create_credential(
-        self,
-        name: str,
-        value: Mapping[str, str],
-        allowed_origins: Sequence[str],
-        description: Optional[str] = None,
-    ) -> Secret:
-        """Create a website credential that browser sessions can fill.
-
-        ``value`` maps field names to strings, such as
-        ``{"username": ..., "password": ...}``; it is encrypted locally and
-        stored as the first version. ``allowed_origins`` lists the origins
-        (``https://example.com``, ``https://*.example.com``) it may be filled on.
-        """
-        return self.create(
-            CreateSecretParams(
-                name=name,
-                description=description,
-                type="credential",
-                metadata=SecretMetadata.model_validate(
-                    browser_metadata(allowed_origins)
-                ),
-                value=value,
-            )
-        )
-
     def update(
         self,
         secret: str,
@@ -146,24 +124,25 @@ class SecretManager:
         stored one, ``None`` removes it, and members not sent are kept.
         """
         body = update_secret_body(params)
-        secret_id = self._resolve(secret)[0].id
-        payload = self._request("PATCH", f"/secrets/{secret_id}", data=body)
+        resolved = self._resolve(secret)[0]
+        check_secret_metadata(resolved.type, body.get("metadata"))
+        payload = self._request("PATCH", f"/secrets/{resolved.id}", data=body)
         return Secret(**payload)
 
     def set_allowed_origins(
         self, secret: str, allowed_origins: Optional[Sequence[str]]
     ) -> Secret:
-        """Replace the origins a credential may be filled on; ``None`` clears
-        them, after which the credential can't be filled."""
+        """Replace the origins a secret may be filled on; ``None`` clears
+        them, after which it can't be filled. Not for ``op_token`` secrets."""
         return self.update(secret, {"metadata": browser_metadata(allowed_origins)})
 
     def add_version(self, secret: str, value: SecretValue) -> SecretVersion:
         """Encrypt ``value`` locally and store it as the secret's next version.
 
-        A credential takes a mapping of field names to strings; a plain secret
-        takes str or bytes.
+        The value is checked against the secret's type first: a ``totp``
+        secret takes a base32 seed or an ``otpauth://totp/`` URI.
         """
-        check_secret_value(value)
+        secret_payload_bytes(None, value)
         resolved = self._resolve(secret)[0]
         payload = secret_payload_bytes(resolved.type, value)
         return self._add_version(

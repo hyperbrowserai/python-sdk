@@ -100,6 +100,7 @@ class CreateSandboxFromImageParams(_CreateSandboxCommon, total=False):
     memory_mib: Optional[int]
     disk_mib: Optional[int]
     secrets: Optional[Dict[str, SecretReferenceInput]]
+    vault: Optional[str]
 
 
 CreateSandboxParams: TypeAlias = Union[
@@ -253,6 +254,7 @@ class SandboxExecParams(TypedDict, total=False):
     run_as: Optional[str]
     use_shell: Optional[bool]
     secrets: Optional[Dict[str, SecretReferenceInput]]
+    vault: Optional[str]
 
 
 class SandboxProcessListParams(TypedDict, total=False):

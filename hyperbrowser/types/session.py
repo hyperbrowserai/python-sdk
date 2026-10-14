@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional, Union
 
-from typing_extensions import Required, TypedDict
+from typing_extensions import Required, TypeAlias, TypedDict
 
 from hyperbrowser.models.consts import (
     Country,
@@ -129,6 +129,24 @@ class ProxyRoute(TypedDict):
     proxy: Literal["direct", "default"]
 
 
+class SessionCredentialSecret(TypedDict):
+    """Attaches a secret, by name, to a new session."""
+
+    secret: str
+
+
+class SessionCredentialVault(TypedDict):
+    """Attaches the secrets of a stored vault, by name, to a new session."""
+
+    vault: str
+
+
+# A plain secret name is shorthand for {"secret": name}.
+SessionCredentialInput: TypeAlias = Union[
+    str, SessionCredentialSecret, SessionCredentialVault
+]
+
+
 class CreateSessionParams(TypedDict, total=False):
     """Configuration for creating a browser session."""
 
@@ -184,7 +202,7 @@ class CreateSessionParams(TypedDict, total=False):
     disable_post_quantum_key_agreement: Optional[bool]
     browser_memory_size: Optional[BrowserMemorySize]
     start_from_snapshot: Optional[StartSessionFromSnapshotParams]
-    credentials: Optional[List[str]]
+    credentials: Optional[List[SessionCredentialInput]]
 
 
 class UpdateSessionSolveCaptchasParams(TypedDict, total=False):
@@ -205,6 +223,9 @@ class SessionEventLogListParams(TypedDict, total=False):
 
 
 __all__ = [
+    "SessionCredentialInput",
+    "SessionCredentialSecret",
+    "SessionCredentialVault",
     "BrowserDevice",
     "BrowserMemorySize",
     "CaptchaEvaluationParams",

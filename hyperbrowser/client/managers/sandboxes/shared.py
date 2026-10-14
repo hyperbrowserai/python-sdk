@@ -97,6 +97,7 @@ def _normalize_exec_params(
     timeout_sec: Optional[int] = None,
     run_as: Optional[str] = None,
     secrets: Optional[SecretReferences] = None,
+    vault: Optional[str] = None,
 ) -> SandboxExecParams:
     if isinstance(input, str):
         params = SandboxExecParams(command=input)
@@ -119,9 +120,13 @@ def _normalize_exec_params(
         updates["secrets"] = SandboxExecParams.model_validate(
             {"command": params.command, "secrets": secrets}
         ).secrets
+    if vault is not None:
+        updates["vault"] = SandboxExecParams.model_validate(
+            {"command": params.command, "vault": vault}
+        ).vault
 
     normalized = params.model_copy(update=updates) if updates else params
-    if normalized.secrets and normalized.use_shell is not None:
+    if normalized.uses_secrets and normalized.use_shell is not None:
         # The control API's start has no such option; don't drop it silently.
         raise HyperbrowserError(
             "use_shell is not supported when starting a process with secrets",
@@ -132,7 +137,9 @@ def _normalize_exec_params(
 
 def _runtime_process_payload(params: SandboxExecParams) -> Dict[str, object]:
     """The runtime start payload; secrets only go through the control API."""
-    return dump_request(params.model_copy(update={"secrets": None}), SandboxExecParams)
+    return dump_request(
+        params.model_copy(update={"secrets": None, "vault": None}), SandboxExecParams
+    )
 
 
 def _secret_process_payload(params: SandboxExecParams) -> Dict[str, object]:
@@ -155,10 +162,14 @@ def _secret_process_payload(params: SandboxExecParams) -> Dict[str, object]:
         "env": params.env,
         "timeoutMs": timeout_ms,
         "runAs": params.run_as,
+        # A vault alone needs no secrets member.
         "secrets": {
             name: reference.model_dump(exclude_none=True)
             for name, reference in secrets.items()
-        },
+        }
+        if secrets or params.vault is None
+        else None,
+        "vault": params.vault,
     }
     return {key: value for key, value in payload.items() if value is not None}
 

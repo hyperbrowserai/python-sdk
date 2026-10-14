@@ -2,10 +2,11 @@ import asyncio
 import functools
 import time
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
+from ....models.secret import SandboxResolvedSecret
 from ....models.sandbox import (
     CompleteSandboxImageBuildParams,
     CreateSandboxParams,
@@ -145,6 +146,10 @@ class SandboxHandle:
     def __init__(self, service: "SandboxManager", detail: SandboxDetail):
         self._service = service
         self._detail = detail
+        # Only the create response reports them; refreshes keep them.
+        self.startup_secrets: Optional[List[SandboxResolvedSecret]] = (
+            detail.startup_secrets
+        )
         self._runtime_session = self._to_runtime_session(detail)
         self._transport = RuntimeTransport(
             self._resolve_runtime_connection,
@@ -331,14 +336,16 @@ class SandboxHandle:
         run_as: Optional[str] = None,
         max_output_bytes: int = 64 * 1024 * 1024,
         secrets: Optional[SecretReferences] = None,
+        vault: Optional[str] = None,
     ):
         """Run a command to completion.
 
         ``secrets`` maps environment variable names to stored secrets (a name,
-        or ``{"name": ..., "version": N}``). Anything else running as the
-        same user, or as root, in the sandbox can read a process's
-        environment, and the sandbox and its later snapshots are marked as
-        containing secrets.
+        or ``{"name": ..., "version": N}``). ``vault`` names a vault whose
+        entries become variables too; ``secrets`` win on a clash. Anything
+        else running as the same user, or as root, in the sandbox can read a
+        process's environment, and the sandbox and its later snapshots are
+        marked as containing secrets.
         """
         return await self.processes.exec(
             input,
@@ -349,6 +356,7 @@ class SandboxHandle:
             run_as=run_as,
             max_output_bytes=max_output_bytes,
             secrets=secrets,
+            vault=vault,
         )
 
     async def _start_secret_process(self, payload: Dict[str, object]) -> dict:
@@ -1178,16 +1186,19 @@ class SandboxManager:
     ) -> SandboxDetail:
         normalized = coerce_request(params, CreateSandboxParams)
         data = dump_request(normalized, CreateSandboxParams)
+        delivers_secrets = bool(normalized.secrets) or normalized.vault is not None
         try:
             payload = await self._request("POST", "/sandbox", data=data)
             detail = SandboxDetail(**payload)
-            if normalized.secrets and not detail.id.strip():
-                raise ValueError("The API accepted the create but returned no sandbox ID")
+            if delivers_secrets and not detail.id.strip():
+                raise ValueError(
+                    "The API accepted the create but returned no sandbox ID"
+                )
             return detail
         except Exception as error:
             # A create that may have reached the API may be running its
             # startup command with the secrets, so it must not look retryable.
-            if normalized.secrets and request_may_have_arrived(error):
+            if delivers_secrets and request_may_have_arrived(error):
                 raise sandbox_create_outcome_unknown_error(error)
             raise
 

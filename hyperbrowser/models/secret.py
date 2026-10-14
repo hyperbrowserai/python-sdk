@@ -1,7 +1,6 @@
 import re
-from collections.abc import Mapping as MappingABC
 from datetime import datetime
-from typing import List, Literal, Mapping, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -90,18 +89,20 @@ def normalize_secret_references(value):
     }
 
 
-# A plain secret holds one string; a credential holds a website login (an
-# object of strings such as {"username": ..., "password": ...}) that browser
-# sessions fill into pages. The type is fixed when the secret is created.
-SecretType = Literal["secret", "credential"]
+# What a secret's value is; fixed when the secret is created.
+#   secret    an opaque string: an environment variable, and typed into pages
+#             on its allowed origins
+#   totp      a TOTP seed (base32 or an otpauth://totp/ URI): delivered and
+#             typed as the code that is current at the time
+#   op_token  a 1Password service account token, used only by 1Password vaults
+SecretType = Literal["secret", "totp", "op_token"]
 
-# A secret value: str or bytes for a plain secret, or a mapping of field names
-# to strings for a credential.
-SecretValue = Union[str, bytes, Mapping[str, str]]
+# A secret value, encrypted locally before upload.
+SecretValue = Union[str, bytes]
 
 
-class CredentialBrowserMetadata(SecretBaseModel):
-    """Where a credential may be filled.
+class SecretBrowserMetadata(SecretBaseModel):
+    """Where a secret may be typed into browser pages.
 
     Origins are ``scheme://host[:port]``; a leading ``*.`` matches any
     subdomain. The server normalizes and checks them.
@@ -113,7 +114,7 @@ class CredentialBrowserMetadata(SecretBaseModel):
 
 
 class SecretMetadata(SecretBaseModel):
-    """Metadata stored with a secret. Credentials use ``browser``.
+    """Metadata stored with a secret. ``browser`` makes it fillable.
 
     Members the SDK doesn't know are kept. In an update, each member sent
     replaces the stored one and ``None`` removes it.
@@ -121,7 +122,7 @@ class SecretMetadata(SecretBaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-    browser: Optional[CredentialBrowserMetadata] = None
+    browser: Optional[SecretBrowserMetadata] = None
 
 
 def _check_secret_value_shape(value):
@@ -131,15 +132,16 @@ def _check_secret_value_shape(value):
         return value
     if isinstance(value, bytearray):
         return bytes(value)
-    if isinstance(value, MappingABC):
-        return dict(value)
-    raise ValueError(
-        "secret value must be str or bytes, or a mapping of field names to "
-        "strings for a credential"
-    )
+    raise ValueError("secret value must be str or bytes")
 
 
 class CreateSecretParams(SecretBaseModel):
+    """A new secret, optionally with its first value.
+
+    ``allowed_origins`` is shorthand for
+    ``metadata={"browser": {"allowed_origins": [...]}}``.
+    """
+
     model_config = ConfigDict(populate_by_name=True, hide_input_in_errors=True)
 
     name: str
@@ -147,6 +149,7 @@ class CreateSecretParams(SecretBaseModel):
     # Omitted means "secret".
     type: Optional[SecretType] = None
     metadata: Optional[SecretMetadata] = None
+    allowed_origins: Optional[List[str]] = Field(default=None, exclude=True)
     # Encrypted locally and uploaded as the first version; never sent as is.
     value: Optional[SecretValue] = Field(default=None, exclude=True, repr=False)
 
@@ -159,6 +162,39 @@ class CreateSecretParams(SecretBaseModel):
     @classmethod
     def validate_value(cls, value):
         return _check_secret_value_shape(value)
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def validate_allowed_origins(cls, value):
+        if isinstance(value, (str, bytes)):
+            raise ValueError(
+                'allowed_origins must be a list of origins such as ["https://example.com"]'
+            )
+        return value
+
+    @model_validator(mode="after")
+    def merge_allowed_origins(self):
+        if self.allowed_origins is not None:
+            if self.metadata is not None and self.metadata.browser is not None:
+                raise ValueError("Pass allowed_origins or metadata.browser, not both")
+            metadata = self.metadata or SecretMetadata()
+            self.metadata = metadata.model_copy(
+                update={
+                    "browser": SecretBrowserMetadata(
+                        allowed_origins=list(self.allowed_origins)
+                    )
+                }
+            )
+        if (
+            self.type == "op_token"
+            and self.metadata is not None
+            and self.metadata.browser is not None
+        ):
+            raise ValueError(
+                "An op_token secret can't have allowed origins: it is never "
+                "typed into browser pages"
+            )
+        return self
 
 
 class UpdateSecretParams(SecretBaseModel):
@@ -246,10 +282,40 @@ class SecretVersionDeleteResult(SecretBaseModel):
     version: int
 
 
+class SecretBindingSource(SecretBaseModel):
+    """Where a delivered variable came from: ``type`` is ``"vault"`` (with the
+    vault's ``name``) or ``"secrets"`` (the request's own ``secrets``)."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    type: str
+    name: Optional[str] = None
+
+
 class SandboxResolvedSecret(SecretBaseModel):
-    """The secret version a process environment variable received."""
+    """What a process environment variable received; never its value.
+
+    A stored secret sets ``name``, ``secret_id`` and ``version``, and
+    ``secret_type="totp"`` when the variable holds the code current at
+    process start. A 1Password vault entry sets ``reference`` (its
+    ``op://`` reference) and ``token_secret`` (the name of the op_token
+    secret used to sign in) instead. ``source`` is where the variable came
+    from, and ``overrides`` lists earlier sources it replaced.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     env: str
-    name: str
-    secret_id: str = Field(alias="secretId")
-    version: int
+    name: Optional[str] = None
+    secret_id: Optional[str] = Field(default=None, alias="secretId")
+    version: Optional[int] = None
+    secret_type: Optional[str] = Field(default=None, alias="secretType")
+    reference: Optional[str] = None
+    token_secret: Optional[str] = Field(default=None, alias="tokenSecret")
+    source: Optional[SecretBindingSource] = None
+    overrides: List[SecretBindingSource] = Field(default_factory=list)
+
+    @field_validator("overrides", mode="before")
+    @classmethod
+    def default_overrides(cls, value):
+        return [] if value is None else value

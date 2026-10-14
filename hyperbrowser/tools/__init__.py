@@ -152,23 +152,41 @@ class BrowserUseTool:
         return resp.data.final_result if resp.data and resp.data.final_result else ""
 
 
+def _present(value: Any) -> bool:
+    return value is not None and value != ""
+
+
 def _fill_credential_request(params: Mapping[str, Any]) -> Dict[str, Any]:
     """Map the model's tool input to a fill request; null means absent."""
-    request: Dict[str, Any] = {
-        "credential": params.get("credential"),
-        "fields": params.get("fields"),
-    }
-    page_id = params.get("page_id", params.get("pageId"))
-    if page_id is not None and page_id != "":
-        request["page_id"] = page_id
-    frame_url = params.get("frame_url", params.get("frameUrl"))
-    if frame_url is not None and frame_url != "":
-        request["frame"] = {"url": frame_url}
+    request: Dict[str, Any] = {}
+    for key in ("credential", "vault"):
+        if _present(params.get(key)):
+            request[key] = params.get(key)
+    fields = params.get("fields")
+    if isinstance(fields, list):
+        fields = [
+            {key: value for key, value in entry.items() if _present(value)}
+            if isinstance(entry, Mapping)
+            else entry
+            for entry in fields
+        ]
+    request["fields"] = fields
+    for key, alias in (
+        ("page_id", "pageId"),
+        ("page_url", "pageUrl"),
+        ("frame_url", "frameUrl"),
+    ):
+        value = params.get(key, params.get(alias))
+        if _present(value):
+            request[key] = value
     return request
 
 
 def _fill_credential_result_text(result: CredentialFillResult) -> str:
-    return json.dumps(result.model_dump(by_alias=True), separators=(",", ":"))
+    return json.dumps(
+        result.model_dump(mode="json", by_alias=True, exclude_none=True),
+        separators=(",", ":"),
+    )
 
 
 def _fill_credential_error_text(error: HyperbrowserError) -> str:
@@ -192,10 +210,11 @@ def _fill_credential_error_text(error: HyperbrowserError) -> str:
 
 
 class CredentialFillTool:
-    """Let a model fill a stored login credential into a browser session.
+    """Let a model fill a stored secret, or a vault's entries, into a browser
+    session.
 
-    The model chooses the credential by name and the inputs to fill; it never
-    sees the values. The application binds the session::
+    The model chooses the secret or vault by name and the inputs to fill; it
+    never sees the values. The application binds the session::
 
         result = CredentialFillTool.runnable(hb, session.id, tool_input)
 

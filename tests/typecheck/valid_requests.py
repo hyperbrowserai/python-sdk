@@ -11,6 +11,7 @@ from hyperbrowser.models import (
     SandboxImageBuildListParams as LegacySandboxImageBuildListParams,
     VolumeListParams as LegacyVolumeListParams,
     CreateSecretParams as LegacyCreateSecretParams,
+    CreateVaultParams as LegacyCreateVaultParams,
     SecretReference as LegacySecretReference,
     ScrollActionParams as LegacyScrollActionParams,
     ScrollAtCursorActionParams as LegacyScrollAtCursorActionParams,
@@ -587,77 +588,158 @@ async def valid_async_web_bot_auth_and_proxy_routes_requests(
 def valid_credential_requests(client: Hyperbrowser) -> None:
     from hyperbrowser.models import (
         CredentialFillField,
-        CredentialFillFrame,
         FillCredentialParams,
+        OnePasswordEntry,
+        OnePasswordVaultSource,
         SecretMetadata,
+        StoredEntry,
         UpdateSecretParams,
+        UpdateVaultParams,
+        VaultStoredEntry,
     )
 
-    secret = client.secrets.create_credential(
-        "github",
-        {"username": "ada", "password": "pw"},
-        ["https://github.com"],
-        description="GitHub login",
+    secret = client.secrets.create(
+        {
+            "name": "github-password",
+            "value": "pw",
+            "allowed_origins": ["https://github.com"],
+            "description": "GitHub password",
+        }
     )
     kind: str = secret.type
     origins = secret.metadata.browser.allowed_origins if secret.metadata.browser else []
     client.secrets.create(
         {
-            "name": "github",
-            "type": "credential",
+            "name": "github-otp",
+            "type": "totp",
             "metadata": {"browser": {"allowed_origins": origins}},
-            "value": {"username": "ada"},
+            "value": "JBSWY3DPEHPK3PXP",
         }
     )
+    client.secrets.create({"name": "op-token", "type": "op_token", "value": "ops_x"})
     client.secrets.create(
-        LegacyCreateSecretParams(name="github", type="credential", value={"u": "a"})
+        LegacyCreateSecretParams(name="github-otp", type="totp", value="JBSWY3DP")
     )
-    client.secrets.add_version("github", {"username": "ada", "password": "pw2"})
-    client.secrets.set_allowed_origins("github", ["https://github.com"])
-    client.secrets.set_allowed_origins("github", None)
-    client.secrets.update("github", {"metadata": {"browser": None}})
+    client.secrets.add_version("github-otp", "otpauth://totp/x?secret=JBSWY3DP")
+    client.secrets.set_allowed_origins("github-password", ["https://github.com"])
+    client.secrets.set_allowed_origins("github-password", None)
+    client.secrets.update("github-password", {"metadata": {"browser": None}})
     client.secrets.update(
-        "github", UpdateSecretParams(metadata=SecretMetadata(browser=None))
+        "github-password", UpdateSecretParams(metadata=SecretMetadata(browser=None))
     )
-    client.secrets.list({"type": "credential"})
+    client.secrets.list({"type": "totp"})
 
-    session = client.sessions.create({"credentials": [kind]})
+    vault = client.vaults.create(
+        {
+            "name": "github-login",
+            "entries": {
+                "USERNAME": {"name": "github-username"},
+                "PASSWORD": {"name": "github-password", "version": 2},
+                "OTP": {"name": "github-otp", "version": "latest"},
+            },
+        }
+    )
+    for env, entry in vault.entries.items():
+        if isinstance(entry, VaultStoredEntry):
+            print(env, entry.name, entry.secret_id, entry.version)
+        else:
+            print(env, entry.item, entry.section, entry.field, entry.reference)
+    source_type: str = vault.source.type
+    client.vaults.create(
+        {
+            "name": "prod-db",
+            "source": {
+                "type": "1password",
+                "token_secret": "op-token",
+                "vault": "Engineering",
+            },
+            "entries": {
+                "DB_PASS": {"item": "Postgres", "section": "prod", "field": "password"}
+            },
+        }
+    )
+    client.vaults.create(
+        LegacyCreateVaultParams(
+            name="prod-db",
+            source=OnePasswordVaultSource(
+                type="1password", token_secret="op-token", vault="Eng"
+            ),
+            entries={"DB": OnePasswordEntry(item="Postgres", field="password")},
+        )
+    )
+    client.vaults.update("github-login", {"entries": {"OTP": None}})
+    client.vaults.update("prod-db", {"source": {"vault": "Platform"}})
+    client.vaults.update(
+        "github-login",
+        UpdateVaultParams(entries={"OTP": StoredEntry(name="github-otp"), "X": None}),
+    )
+    listing = client.vaults.list({"search": "git", "limit": 10})
+    print(listing.total_count, client.vaults.get("github-login").id, source_type)
+    client.vaults.delete("github-login")
+
+    sandbox = client.sandboxes.create(
+        {"image_name": "node", "vault": "github-login", "secrets": {"A": "b"}}
+    )
+    print(sandbox.startup_secrets)
+    handle = sandbox.processes.start("node app.js", vault="prod-db")
+    for binding in handle.secrets or []:
+        print(binding.env, binding.name, binding.reference, binding.token_secret)
+    sandbox.exec("node app.js", vault="prod-db", secrets={"A": "b"})
+
+    session = client.sessions.create(
+        {"credentials": [kind, {"secret": "github-otp"}, {"vault": "github-login"}]}
+    )
     for attached in session.credentials or []:
         print(attached.id, attached.name)
-    client.sessions.create(LegacyCreateSessionParams(credentials=["github"]))
+    client.sessions.create(LegacyCreateSessionParams(credentials=["github-password"]))
     result = client.sessions.credentials.fill(
         session.id,
         {
-            "credential": "github",
-            "fields": [{"field": "username", "selector": "#login"}],
-            "page_id": "PAGE",
-            "frame": {"url": "https://login.github.com/"},
+            "vault": "github-login",
+            "fields": [
+                {"field": "USERNAME", "selector": "#login"},
+                {"field": "OTP", "selector": "#otp"},
+            ],
+            "page_url": "https://github.com/login",
+            "frame_url": "https://github.com/",
         },
     )
-    outcomes = [(field.field, field.outcome) for field in result.fields]
+    outcomes = [
+        (field.selector, field.field, field.outcome, field.expires_at)
+        for field in result.fields
+    ]
     print(result.version, result.page_id, result.origin, outcomes)
     client.sessions.credentials.fill(
         session.id,
         FillCredentialParams(
-            credential="github",
-            fields=[CredentialFillField(field="password", selector="#pw")],
-            frame=CredentialFillFrame(url="https://login.github.com/"),
+            credential="github-password",
+            fields=[CredentialFillField(selector="#pw")],
+            page_id="PAGE",
         ),
     )
-    text: str = CredentialFillTool.runnable(client, session.id, {"credential": "x"})
+    text: str = CredentialFillTool.runnable(client, session.id, {"vault": "x"})
     print(text, CredentialFillTool.gemini_tool_definition["name"])
 
 
 async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
-    await client.secrets.create_credential("github", {"u": "a"}, ["https://x.io"])
-    await client.secrets.set_allowed_origins("github", None)
-    await client.secrets.add_version("github", {"username": "ada"})
-    session = await client.sessions.create({"credentials": ["github"]})
+    await client.secrets.create(
+        {"name": "github-otp", "type": "totp", "value": "JBSWY3DP"}
+    )
+    await client.secrets.set_allowed_origins("github-otp", None)
+    await client.secrets.add_version("github-otp", "JBSWY3DP")
+    vault = await client.vaults.create(
+        {"name": "github-login", "entries": {"OTP": {"name": "github-otp"}}}
+    )
+    await client.vaults.update(vault.id, {"entries": {"OTP": None}})
+    await client.vaults.delete(vault.name)
+    session = await client.sessions.create({"credentials": [{"vault": "github-login"}]})
     result = await client.sessions.credentials.fill(
         session.id,
-        {"credential": "github", "fields": [{"field": "u", "selector": "#u"}]},
+        {"vault": "github-login", "fields": [{"field": "OTP", "selector": "#otp"}]},
     )
     print(result.fields)
+    sandbox = await client.sandboxes.create({"image_name": "node", "vault": "v"})
+    await sandbox.processes.start("node app.js", vault="v")
     text: str = await CredentialFillTool.async_runnable(
         client, session.id, {"credential": "x"}
     )

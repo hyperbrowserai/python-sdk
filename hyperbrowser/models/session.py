@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from hyperbrowser.models.secret import validate_secret_name
 from hyperbrowser.models.consts import (
     ISO639_1,
     Country,
@@ -254,7 +255,7 @@ class Session(BaseModel):
 
 
 class SessionCredential(BaseModel):
-    """A credential attached to a session at creation."""
+    """A secret attached to a session at creation, which fills may type."""
 
     model_config = ConfigDict(
         populate_by_alias=True,
@@ -262,6 +263,39 @@ class SessionCredential(BaseModel):
 
     id: str
     name: str
+
+
+MAX_SESSION_CREDENTIALS = 20
+
+
+class SessionCredentialSecret(BaseModel):
+    """Attaches a secret, by name, to a new session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    secret: str
+
+    @field_validator("secret")
+    @classmethod
+    def validate_secret(cls, value):
+        return validate_secret_name(value)
+
+
+class SessionCredentialVault(BaseModel):
+    """Attaches the secrets of a stored vault, by name, to a new session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    vault: str
+
+    @field_validator("vault")
+    @classmethod
+    def validate_vault(cls, value):
+        return validate_secret_name(value)
+
+
+# A plain secret name is shorthand for SessionCredentialSecret.
+SessionCredentialInput = Union[str, SessionCredentialSecret, SessionCredentialVault]
 
 
 class SessionDetail(Session):
@@ -616,12 +650,27 @@ class CreateSessionParams(BaseModel):
         default=None,
         serialization_alias="startFromSnapshot",
     )
-    credentials: Optional[List[str]] = Field(
+    credentials: Optional[List[SessionCredentialInput]] = Field(
         default=None, serialization_alias="credentials"
     )
-    """Names of credentials (up to 20) that ``sessions.credentials.fill()``
-    may fill into this session's pages. Credentials can only be attached when
+    """Up to 20 secrets (by name, or ``{"secret": name}``) or vaults
+    (``{"vault": name}``) that ``sessions.credentials.fill()`` may type into
+    this session's pages. A vault attaches the secrets its entries hold now.
+    Secrets need allowed origins to be filled, and can only be attached when
     the session is created."""
+
+    @field_validator("credentials", mode="before")
+    @classmethod
+    def validate_credentials(cls, value):
+        if isinstance(value, (list, tuple)):
+            if len(value) > MAX_SESSION_CREDENTIALS:
+                raise ValueError(
+                    f"At most {MAX_SESSION_CREDENTIALS} credentials can be attached"
+                )
+            for item in value:
+                if isinstance(item, str):
+                    validate_secret_name(item)
+        return value
 
 
 class CreateSessionSnapshotResponse(BaseModel):
