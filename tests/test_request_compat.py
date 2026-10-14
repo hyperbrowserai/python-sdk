@@ -12,11 +12,13 @@ from hyperbrowser.models import (
     CuaBaseUrls,
     CreateSandboxParams,
     CreateSessionParams,
+    GeminiComputerUseApiKeys,
     JevComputerUseApiKeys,
     MetaComputerUseApiKeys,
     StartBrowserUseTaskParams,
     StartClaudeComputerUseTaskParams,
     StartCuaTaskParams,
+    StartGeminiComputerUseTaskParams,
     StartJevComputerUseTaskParams,
     StartMetaComputerUseTaskParams,
 )
@@ -147,6 +149,42 @@ def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_
         "useCustomApiKeys": True,
         "apiKeys": {"anthropic": "anthropic-key"},
     }
+
+
+def test_gemini_computer_use_serializes_argon_reasoning_effort_for_mapping_and_legacy_model():
+    mapping = {
+        "task": "Complete the task",
+        "llm": "gemini-4-argon",
+        "reasoning_effort": "high",
+        "use_custom_api_keys": True,
+        "api_keys": {"google": "google-key"},
+    }
+    legacy = StartGeminiComputerUseTaskParams(
+        task="Complete the task",
+        llm="gemini-4-argon",
+        reasoning_effort="high",
+        use_custom_api_keys=True,
+        api_keys=GeminiComputerUseApiKeys(google="google-key"),
+    )
+
+    assert dump_request(mapping, StartGeminiComputerUseTaskParams) == dump_request(
+        legacy,
+        StartGeminiComputerUseTaskParams,
+    )
+    assert dump_request(mapping, StartGeminiComputerUseTaskParams) == {
+        "task": "Complete the task",
+        "llm": "gemini-4-argon",
+        "reasoningEffort": "high",
+        "useCustomApiKeys": True,
+        "apiKeys": {"google": "google-key"},
+    }
+
+
+def test_gemini_computer_use_omits_reasoning_effort_when_unset():
+    assert dump_request(
+        {"task": "Complete the task", "llm": "gemini-4-argon"},
+        StartGeminiComputerUseTaskParams,
+    ) == {"task": "Complete the task", "llm": "gemini-4-argon"}
 
 
 @pytest.mark.parametrize("llm", ["muse-spark-1.3", "muse-wonder-1.0"])

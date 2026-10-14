@@ -115,6 +115,7 @@ CuaReasoningEffort = Literal[
     "max",
 ]
 GeminiComputerUseLlm = Literal[
+    "gemini-4-argon",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.6-flash",
@@ -122,6 +123,13 @@ GeminiComputerUseLlm = Literal[
     "gemini-3.5-flash-lite",
     "gemini-3-flash-preview",
     "gemini-2.5-computer-use-preview-10-2025",
+]
+# Gemini 4 Argon, 3.8 Flash, and 3.7 Flash do not support "minimal".
+GeminiComputerUseReasoningEffort = Literal[
+    "minimal",
+    "low",
+    "medium",
+    "high",
 ]
 GrokComputerUseLlm = Literal[
     "grok-4.7",

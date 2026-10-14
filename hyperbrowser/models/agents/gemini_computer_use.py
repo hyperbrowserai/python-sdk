@@ -5,7 +5,7 @@ from typing import Any, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..session import CreateSessionParams
-from ..consts import GeminiComputerUseLlm
+from ..consts import GeminiComputerUseLlm, GeminiComputerUseReasoningEffort
 
 GeminiComputerUseTaskStatus = Literal[
     "pending", "running", "completed", "failed", "stopped"
@@ -35,6 +35,9 @@ class StartGeminiComputerUseTaskParams(BaseModel):
 
     task: str
     llm: Optional[GeminiComputerUseLlm] = Field(default=None, serialization_alias="llm")
+    reasoning_effort: Optional[GeminiComputerUseReasoningEffort] = Field(
+        default=None, serialization_alias="reasoningEffort"
+    )
     session_id: Optional[str] = Field(default=None, serialization_alias="sessionId")
     max_failures: Optional[int] = Field(default=None, serialization_alias="maxFailures")
     max_steps: Optional[int] = Field(default=None, serialization_alias="maxSteps")
