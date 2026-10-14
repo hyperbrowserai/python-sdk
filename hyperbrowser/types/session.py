@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 
 from typing_extensions import Required, TypedDict
 
@@ -114,10 +114,27 @@ class StartSessionFromSnapshotParams(TypedDict):
     snapshot_id: str
 
 
+class WebBotAuthParams(TypedDict, total=False):
+    """Hosts to limit Web Bot Auth signing to: hostnames such as "example.com",
+    each also covering its subdomains."""
+
+    only_domains: List[str]
+
+
+class ProxyRoute(TypedDict):
+    """Sends traffic for matching hosts through the session's proxy ("default")
+    or straight out ("direct"). A pattern is a hostname, "*.example.com" or "*"."""
+
+    match: Union[str, List[str]]
+    proxy: Literal["direct", "default"]
+
+
 class CreateSessionParams(TypedDict, total=False):
     """Configuration for creating a browser session."""
 
     enable_web_mcp: Optional[bool]
+    web_bot_auth: Optional[Union[bool, WebBotAuthParams]]
+    proxy_routes: Optional[List[ProxyRoute]]
     use_ultra_stealth: bool
     use_stealth: bool
     use_proxy: bool

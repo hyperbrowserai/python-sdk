@@ -547,3 +547,38 @@ async def valid_async_webmcp_requests(client: AsyncHyperbrowser) -> None:
         "session", handle.invocation_id, {"wait_seconds": 30}
     )
     await client.sessions.webmcp.cancel("session", handle.invocation_id)
+
+
+def valid_web_bot_auth_and_proxy_routes_requests(client: Hyperbrowser) -> None:
+    from hyperbrowser.models import ProxyRoute, WebBotAuthParams
+
+    client.sessions.create({"web_bot_auth": True})
+    client.sessions.create({"web_bot_auth": {"only_domains": ["example.com"]}})
+    client.sessions.create(
+        {
+            "use_proxy": True,
+            "proxy_routes": [
+                {"match": "api.example.com", "proxy": "default"},
+                {"match": ["*.example.com", "cdn.example.net"], "proxy": "direct"},
+            ],
+        }
+    )
+    client.sessions.create(
+        LegacyCreateSessionParams(
+            web_bot_auth=WebBotAuthParams(only_domains=["example.com"]),
+            use_proxy=True,
+            proxy_routes=[ProxyRoute(match="*", proxy="direct")],
+        )
+    )
+    client.agents.browser_use.start(
+        {"task": "Open example.com", "session_options": {"web_bot_auth": True}}
+    )
+
+
+async def valid_async_web_bot_auth_and_proxy_routes_requests(
+    client: AsyncHyperbrowser,
+) -> None:
+    await client.sessions.create({"web_bot_auth": {"only_domains": ["example.com"]}})
+    await client.sessions.create(
+        {"use_proxy": True, "proxy_routes": [{"match": "*", "proxy": "direct"}]}
+    )

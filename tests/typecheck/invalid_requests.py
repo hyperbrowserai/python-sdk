@@ -109,3 +109,10 @@ def invalid_webmcp_requests(client: Hyperbrowser) -> None:
 async def invalid_async_webmcp_requests(client: AsyncHyperbrowser) -> None:
     await client.sessions.webmcp.invoke("s", {"tool_ref": "t", "timeout_seconds": "60"})  # M,P
     await client.sessions.webmcp.get_result("s", "i", {"waitSeconds": 30})  # M,P
+
+
+def invalid_web_bot_auth_and_proxy_routes_requests(client: Hyperbrowser) -> None:
+    client.sessions.create({"web_bot_auth": {"onlyDomains": ["a.com"]}})  # M,P
+    client.sessions.create({"web_bot_auth": "yes"})  # M,P
+    client.sessions.create({"proxy_routes": [{"match": "a.com"}]})  # M,P
+    client.sessions.create({"proxy_routes": [{"match": "*", "proxy": "up"}]})  # M,P
