@@ -225,8 +225,9 @@ Things to know:
   it.
   Without `page_id`, fill considers the tabs whose URL starts with `page_url`
   (all tabs when it's not given). If one is left, that's the target. If several
-  are left, it prefers the tabs on an origin every secret allows, then the
-  visible one among them; if more than one still qualifies, it fails with
+  are left, it prefers the tabs on an origin every secret allows (skipped with
+  `frame_url`, since a login frame's tab is usually on another origin), then
+  the visible one among them; if more than one still qualifies, it fails with
   `CREDENTIAL_PAGE_AMBIGUOUS`. The chosen tab's origin is then checked: on any
   other origin nothing is typed and the fill fails with
   `CREDENTIAL_ORIGIN_NOT_ALLOWED`. Under Playwright every tab reports as visible, so pass
@@ -266,15 +267,17 @@ Things to know:
     `SECRET_NOT_FOUND`, `SECRET_VERSION_NOT_FOUND`, `VAULT_NOT_FOUND`,
     `VAULT_ENTRY_NOT_FOUND` (404), `SESSION_NOT_ACTIVE` (409).
   - `CREDENTIAL_FILL_TIMEOUT` (503/504, retryable) and
-    `CREDENTIAL_FILL_FAILED` (500/502, retryable as flagged).
+    `CREDENTIAL_FILL_FAILED` (500/502/503, retryable as flagged).
   - `CREDENTIALS_UNSUPPORTED_RUNTIME` (400), `CREDENTIAL_FILL_UNSUPPORTED`
     (501) and `CREDENTIAL_VALUE_UNSUPPORTED` (501): the session's browser
     can't fill this, such as 1Password fields on an older host.
   - `SECRET_ONEPASSWORD_REFERENCE_FAILED` (422): a 1Password item or field
     couldn't be read, so nothing was filled. `details` has the failing
     `selectors` and `reasons` by selector. `SECRET_ONEPASSWORD_AUTH_FAILED`
-    (422): the token can't sign in. `SECRET_ONEPASSWORD_RATE_LIMITED` (429)
-    and `SECRET_ONEPASSWORD_FAILED` (502) are retryable. Each has the
+    (422): 1Password rejected the token, or the token is malformed or doesn't
+    sign in to `1password.com`, `.ca` or `.eu` (or a subdomain), so it wasn't
+    sent to 1Password. `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
+    `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable. Each has the
     token's `tokenSecretId` and `tokenVersion` in `details`.
   - Locally, invalid fill requests raise `invalid_request` and invalid values
     raise `invalid_secret_value`, before any request.
@@ -816,8 +819,10 @@ Things to know:
     sandbox's host predates TOTP or 1Password, so nothing started. Retryable
     on sandbox create, which may land on a newer host; not on a process start.
   - `SECRET_ONEPASSWORD_REFERENCE_FAILED` (422, `details` names the
-    variables) and `SECRET_ONEPASSWORD_AUTH_FAILED` (422): fix the fields or
-    the token. `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
+    variables) and `SECRET_ONEPASSWORD_AUTH_FAILED` (422, also a malformed
+    token, or one that doesn't sign in to `1password.com`, `.ca` or `.eu`,
+    which is never sent to 1Password): fix the fields or the token.
+    `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
     `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable.
   - `retryable` is the API's flag when it sends one.
 

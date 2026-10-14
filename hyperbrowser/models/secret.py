@@ -77,15 +77,7 @@ def normalize_secret_references(value):
             f"At most {MAX_SECRET_BINDINGS} secrets can be delivered at once"
         )
     for env in value:
-        if (
-            not isinstance(env, str)
-            or not SECRET_ENV_NAME_PATTERN.fullmatch(env)
-            or env == "__proto__"
-        ):
-            raise ValueError(
-                f"Invalid environment variable name {env!r} for a secret: "
-                "expected letters, digits and '_', not starting with a digit"
-            )
+        validate_secret_env_name(env)
     return {
         env: {"name": reference} if isinstance(reference, str) else reference
         for env, reference in value.items()
@@ -289,6 +281,30 @@ _ALLOWED_ORIGIN_PATTERN = re.compile(
 )
 _ORIGIN_HOST_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)", re.ASCII)
 _LOCAL_ORIGIN_HOSTS = frozenset({"localhost", "127.0.0.1", "[::1]"})
+# What JavaScript's trim() removes, which the server trims origins with. Unlike
+# Python's strip(), it removes a byte-order mark and keeps \x1c-\x1f and \x85.
+_JS_WHITESPACE = "".join(
+    chr(code)
+    for code in [0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x20, 0xA0, 0x1680]
+    + list(range(0x2000, 0x200B))
+    + [0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]
+)
+# The zone ID Node's isIPv6 accepts after an address, as in fe80::1%eth0.
+_IPV6_ZONE = re.compile(r"[0-9a-zA-Z.:-]+", re.ASCII)
+
+
+def _is_ipv6(address: str) -> bool:
+    """Whether Node's isIPv6 accepts ``address``. Python 3.8 knows no zone
+    IDs, and later versions accept zones Node refuses, so the zone is
+    checked here."""
+    address, mark, zone = address.partition("%")
+    if mark and not _IPV6_ZONE.fullmatch(zone):
+        return False
+    try:
+        ipaddress.IPv6Address(address)
+    except ValueError:
+        return False
+    return True
 
 
 def validate_allowed_origin(entry) -> str:
@@ -309,7 +325,7 @@ def validate_allowed_origin(entry) -> str:
     def reject(reason: str) -> ValueError:
         return ValueError(f"Allowed origin {entry!r} {reason}")
 
-    match = _ALLOWED_ORIGIN_PATTERN.fullmatch(entry.strip())
+    match = _ALLOWED_ORIGIN_PATTERN.fullmatch(entry.strip(_JS_WHITESPACE))
     if not match:
         raise reject("must be scheme://host[:port] with no path")
     scheme, wildcard, host, port = match.groups()
@@ -333,11 +349,8 @@ def validate_allowed_origin(entry) -> str:
             raise reject("cannot use a wildcard with an IP address")
     elif wildcard:
         raise reject("cannot use a wildcard with an IP address")
-    else:
-        try:
-            ipaddress.IPv6Address(host[1:-1])
-        except ValueError:
-            raise reject("has an invalid host") from None
+    elif not _is_ipv6(host[1:-1]):
+        raise reject("has an invalid host")
     return entry
 
 

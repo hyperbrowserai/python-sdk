@@ -405,6 +405,12 @@ BAD_ORIGINS = [
     "https://[::g]",
     "https://" + "a" * 505 + ".com",
     "",
+    # The server trims as JavaScript does, which keeps these.
+    "https://example.com\x1c",
+    "https://example.com\x85",
+    # Node's isIPv6 takes only these characters in a zone.
+    "https://[fe80::1%e_th]",
+    "https://[fe80::1%]",
 ]
 
 
@@ -451,6 +457,10 @@ def test_secrets_take_origins_the_server_accepts(private_key):
         "http://[::1]:8080",
         "https://[2001:db8::1]",
         "https://10.0.0.1:8443",
+        # JavaScript's trim() removes a byte-order mark; Python's strip() doesn't.
+        "\ufeffhttps://github.com",
+        # Zones Node's isIPv6 accepts, which Python 3.8's ipaddress refuses.
+        "https://[fe80::1%eth0]",
     ]
     http = ScriptedHTTPClient(_create_routes(private_key, _typed("secret")))
     SecretManager(FakeClient(http)).create(

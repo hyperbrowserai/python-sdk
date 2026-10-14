@@ -1532,11 +1532,12 @@ def test_secret_names_env_names_and_versions_are_checked_locally():
             CreateSecretParams(name=name)
     assert CreateSecretParams(name="a" * 128).name == "a" * 128
 
-    for env in ["1ABC", "API-KEY", "", "__proto__", "KEY\n"]:
+    for env in ["1ABC", "API-KEY", "", "__proto__", "KEY\n", "A" * 257]:
         with pytest.raises(ValueError, match="environment variable name"):
             SandboxExecParams(command="x", secrets={env: "provider-key"})
         with pytest.raises(ValueError, match="environment variable name"):
             CreateSandboxParams(image_name="node", secrets={env: "provider-key"})
+    assert SandboxExecParams(command="x", secrets={"A" * 256: "provider-key"}).secrets
     with pytest.raises(ValueError, match="Invalid secret name"):
         SandboxExecParams(command="x", secrets={"API_KEY": "bad name"})
 
