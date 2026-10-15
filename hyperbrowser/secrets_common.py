@@ -12,15 +12,21 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Sequence, Type, Union
+from urllib.parse import unquote_plus, urlsplit
 
 import httpx
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from .client._request import coerce_request
 from .exceptions import HyperbrowserError
-from .models.secret import SecretsPublicKey, validate_secret_version
+from .models.secret import (
+    SecretsPublicKey,
+    UpdateSecretParams,
+    validate_secret_version,
+)
 
 # The largest secret value the platform accepts.
 MAX_SECRET_VALUE_BYTES = 32 * 1024
@@ -54,7 +60,12 @@ def secret_value_bytes(value: Union[str, bytes, bytearray]) -> bytes:
     Values are used byte-for-byte, including trailing newlines.
     """
     if isinstance(value, str):
-        data = value.encode("utf-8")
+        try:
+            data = value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise HyperbrowserError(
+                "Secret value must be valid UTF-8", code="invalid_secret_value"
+            ) from None
     elif isinstance(value, (bytes, bytearray)):
         data = bytes(value)
     else:
@@ -79,6 +90,177 @@ def secret_value_bytes(value: Union[str, bytes, bytearray]) -> bytes:
             "Secret value must not contain NUL bytes", code="invalid_secret_value"
         )
     return data
+
+
+def _invalid_value(message: str) -> HyperbrowserError:
+    return HyperbrowserError(message, code="invalid_secret_value")
+
+
+# The TOTP parameters an otpauth://totp/ URI may set, as vm-service reads them.
+TOTP_ALGORITHMS = ("SHA1", "SHA256", "SHA512")
+TOTP_DIGITS = (6, 8)
+MAX_TOTP_PERIOD_SECONDS = 300
+_BASE32_PATTERN = re.compile(r"[A-Z2-7]+")
+_ASCII_INTEGER_PATTERN = re.compile(r"[+-]?[0-9]+")
+_URI_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
+_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+# A "%" that doesn't start an escape, which Go's url.Parse refuses.
+_BAD_ESCAPE_PATTERN = re.compile(r"%(?![0-9A-Fa-f]{2})")
+# What Go's url.Parse allows in userinfo besides letters and digits.
+_USERINFO_PATTERN = re.compile(r"[A-Za-z0-9\-._:~!$&'()*+,;=%@]*")
+# Go's unicode.IsSpace, which vm-service trims seeds with.
+_GO_SPACE = "\t\n\v\f\r \x85\xa0        " "        　"
+
+
+def _invalid_totp(reason: str) -> HyperbrowserError:
+    return _invalid_value(
+        f"Invalid TOTP seed: {reason}. Use the base32 seed a site shows, or an "
+        "otpauth://totp/ URI with SHA1, SHA256 or SHA512, 6 or 8 digits and a "
+        "period of 1 to 300 seconds"
+    )
+
+
+def _check_totp_base32(seed: str) -> None:
+    # Spaces, hyphens, line breaks, lowercase and trailing "=" padding are
+    # accepted, as sites show seeds in all of these forms and the platform
+    # skips them too. Characters are uppercased one
+    # at a time, as Go does, so "ß" can't turn into "SS".
+    normalized = "".join(
+        upper if len(upper) == 1 else char
+        for char in re.sub(r"[ \r\n-]", "", seed)
+        for upper in [char.upper()]
+    ).rstrip("=")
+    if not normalized:
+        raise _invalid_totp("the seed is empty")
+    if not _BASE32_PATTERN.fullmatch(normalized):
+        raise _invalid_totp("the seed is not base32")
+    # Lengths of 1, 3 or 6 (mod 8) leave characters that don't make a whole
+    # byte, so the seed was most likely copied incompletely. The platform
+    # refuses them too (older hosts dropped them and generated wrong codes).
+    if len(normalized) % 8 in (1, 3, 6):
+        raise _invalid_totp(
+            "the seed's length is not valid base32; check that it was copied in full"
+        )
+
+
+def _query_params(query: str) -> Dict[str, str]:
+    """The first value of each query parameter, as Go's url.ParseQuery reads
+    them: pairs with a ";" or an invalid escape are skipped."""
+    params: Dict[str, str] = {}
+    for pair in query.split("&"):
+        if not pair or ";" in pair:
+            continue
+        key, _, value = pair.partition("=")
+        if _BAD_ESCAPE_PATTERN.search(key) or _BAD_ESCAPE_PATTERN.search(value):
+            continue
+        params.setdefault(unquote_plus(key), unquote_plus(value))
+    return params
+
+
+def _totp_uri_seed(uri: str) -> str:
+    if _URI_CONTROL_PATTERN.search(uri):
+        raise _invalid_totp("the URI contains control characters")
+    try:
+        parsed = urlsplit(uri)
+    except ValueError:
+        raise _invalid_totp("the URI is malformed") from None
+    userinfo, at, host = parsed.netloc.rpartition("@")
+    if (
+        _BAD_ESCAPE_PATTERN.search(parsed.path)
+        or _BAD_ESCAPE_PATTERN.search(parsed.fragment)
+        or (at and not _USERINFO_PATTERN.fullmatch(userinfo))
+        or _BAD_ESCAPE_PATTERN.search(userinfo)
+    ):
+        raise _invalid_totp("the URI is malformed")
+    if host.lower() == "hotp":
+        raise _invalid_totp("HOTP (counter-based) codes are not supported")
+    if host.lower() != "totp":
+        raise _invalid_totp("the URI must start with otpauth://totp/")
+    query = _query_params(parsed.query)
+
+    algorithm = query.get("algorithm", "")
+    if algorithm and algorithm.upper() not in TOTP_ALGORITHMS:
+        raise _invalid_totp("algorithm must be SHA1, SHA256 or SHA512")
+    digits = query.get("digits", "")
+    if digits and (
+        not _ASCII_INTEGER_PATTERN.fullmatch(digits) or int(digits) not in TOTP_DIGITS
+    ):
+        raise _invalid_totp("digits must be 6 or 8")
+    period = query.get("period", "")
+    if period and (
+        not _ASCII_INTEGER_PATTERN.fullmatch(period)
+        or not 1 <= int(period) <= MAX_TOTP_PERIOD_SECONDS
+    ):
+        raise _invalid_totp("period must be 1 to 300 seconds")
+    seed = query.get("secret", "")
+    if not seed:
+        raise _invalid_totp("the URI has no secret parameter")
+    return seed
+
+
+def check_totp_seed(value: str) -> None:
+    """Check a TOTP seed the way the platform reads it: base32, or an
+    ``otpauth://totp/`` URI whose ``secret`` is base32.
+
+    The server can't see the value, so a bad seed would otherwise only fail
+    when it is filled or delivered. Seeds under 10 bytes (16 base32
+    characters) are accepted, though they are weaker than sites usually
+    issue. Errors never include the value.
+    """
+    # As vm-service: one leading byte-order mark, then surrounding spaces.
+    text = value[1:] if value.startswith("﻿") else value
+    text = text.strip(_GO_SPACE)
+    if text.lower().startswith("otpauth://"):
+        text = _totp_uri_seed(text)
+    elif _SCHEME_PATTERN.match(text):
+        raise _invalid_totp("only otpauth://totp/ URIs are accepted")
+    _check_totp_base32(text)
+
+
+def secret_payload_bytes(secret_type: Optional[str], value: Any) -> bytes:
+    """Check a value against its secret's type and return the bytes to encrypt.
+
+    Every type takes str or bytes of 1 byte to 32 KiB of UTF-8 without NUL.
+    A ``totp`` value must also be a valid seed. An ``op_token`` is a 1Password
+    service account token; tokens start with ``ops_``, but others are not
+    refused. Types the SDK doesn't know get only the common checks.
+    """
+    if not isinstance(value, (str, bytes, bytearray)):
+        raise _invalid_value(
+            f"Secret value must be str or bytes, got {type(value).__name__}"
+        )
+    data = secret_value_bytes(value)
+    if secret_type == "totp":
+        check_totp_seed(data.decode("utf-8"))
+    return data
+
+
+def browser_metadata(allowed_origins: Optional[Sequence[str]]) -> Dict[str, Any]:
+    """Metadata allowing fills on ``allowed_origins``; ``None`` clears the
+    browser metadata in an update. The origins are checked when the update
+    is serialized."""
+    if allowed_origins is None:
+        return {"browser": None}
+    if isinstance(allowed_origins, (str, bytes)) or not all(
+        isinstance(origin, str) for origin in allowed_origins
+    ):
+        raise HyperbrowserError(
+            "allowed_origins must be a list of origins such as "
+            '["https://example.com"]',
+            code="invalid_secret_metadata",
+        )
+    return {"browser": {"allowed_origins": list(allowed_origins)}}
+
+
+def update_secret_body(params: Any) -> Dict[str, Any]:
+    """Serialize a secret update.
+
+    Fields left out are not sent. Inside ``metadata``, a member set to
+    ``None`` is sent as ``null``, which removes it.
+    """
+    normalized = coerce_request(params, UpdateSecretParams)
+    body = normalized.model_dump(by_alias=True, exclude_unset=True)
+    return {key: value for key, value in body.items() if value is not None}
 
 
 def secrets_key_id(public_key: rsa.RSAPublicKey) -> str:

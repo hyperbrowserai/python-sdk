@@ -109,6 +109,356 @@ and cannot be combined with `allow_internet_access=False`, `allow_out`, or
 `deny_out`. See the
 [proxy routes guide](https://hyperbrowser.ai/docs/sessions/proxy-routes).
 
+## Fill credentials into browser sessions
+
+Any secret with allowed origins can be typed into pages of a browser session.
+A website login is usually two such secrets grouped in a vault, plus a TOTP
+secret when the site asks for a one-time code. Values are encrypted on your
+machine; after upload, neither the API, your code, nor an LLM sees them again.
+
+```python
+from playwright.sync_api import sync_playwright
+
+from hyperbrowser import Hyperbrowser
+
+client = Hyperbrowser(api_key="test-key")
+
+origins = ["https://github.com"]
+client.secrets.create(
+    {"name": "github-username", "value": "ada@example.com", "allowed_origins": origins}
+)
+client.secrets.create(
+    {"name": "github-password", "value": "correct horse", "allowed_origins": origins}
+)
+# A TOTP seed: base32 as the site shows it, or an otpauth://totp/ URI.
+client.secrets.create(
+    {
+        "name": "github-otp",
+        "type": "totp",
+        "value": "JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP",
+        "allowed_origins": origins,
+    }
+)
+client.vaults.create(
+    {
+        "name": "github-login",
+        "entries": {
+            "USERNAME": {"name": "github-username"},
+            "PASSWORD": {"name": "github-password"},
+            "OTP": {"name": "github-otp"},
+        },
+    }
+)
+
+# Secrets and vaults can only be attached when the session is created.
+session = client.sessions.create({"credentials": [{"vault": "github-login"}]})
+
+with sync_playwright() as p:
+    browser = p.chromium.connect_over_cdp(session.ws_endpoint)
+    page = browser.contexts[0].pages[0]
+    page.goto("https://github.com/login")
+
+    # With a vault, each field names the entry to type.
+    result = client.sessions.credentials.fill(
+        session.id,
+        {
+            "vault": "github-login",
+            "fields": [
+                {"field": "USERNAME", "selector": "#login_field"},
+                {"field": "PASSWORD", "selector": "#password"},
+            ],
+        },
+    )
+    if all(field.outcome == "filled" for field in result.fields):
+        page.click("input[type=submit]")  # Fill only types; submitting is up to you.
+
+    page.wait_for_selector("#app_totp")
+    # A TOTP entry types the code that is current at fill time.
+    client.sessions.credentials.fill(
+        session.id,
+        {"vault": "github-login", "fields": [{"field": "OTP", "selector": "#app_totp"}]},
+    )
+
+client.sessions.stop(session.id)
+```
+
+A single secret works without a vault: attach it by name (`"credentials":
+["github-password"]` or `[{"secret": "github-password"}]`) and fill it with
+`{"credential": "github-password", "fields": [{"selector": "#password"}]}`.
+
+`fill()` returns the filled page's `page_id` and `origin`, the `version` for a
+single-secret fill, and per input its `selector`, `outcome`, `secret_id`,
+`version`, `field` (vault fills), `reference` (1Password fills) and
+`expires_at` (TOTP codes). Values are never returned.
+
+| Outcome | Meaning |
+| --- | --- |
+| `filled` | The input now holds the value. |
+| `not_found` | No input matched the selector. |
+| `ambiguous` | Several visible inputs matched the selector. |
+| `not_editable` | The input is disabled, read-only, hidden, or not a text input. |
+| `not_accepted` | The page didn't keep the value, for example because of `maxlength`. |
+
+Things to know:
+
+- A secret can be filled only on its allowed origins (`scheme://host[:port]`;
+  `https://*.example.com` matches any subdomain but not `example.com` itself).
+  A secret takes 1-20 of at most 512 characters, https only (http for
+  `localhost`, `127.0.0.1` and `[::1]`), with no path and `*.` only on a
+  registrable domain such as `example.com`, never `*.com` or an IP address.
+  The API validates and normalizes them.
+  Change them with `client.secrets.set_allowed_origins("github-password",
+  [...])`; `None` clears them, after which it can't be filled.
+  `client.secrets.update()` takes `{"metadata": {"browser": None}}` too: each
+  metadata member sent replaces the stored one and `None` removes it.
+- Secret types are `secret` (the default), `totp` and `op_token`, fixed at
+  creation; `client.secrets.list({"type": "totp"})` filters by type. TOTP
+  values are checked locally before upload: a base32 seed (spaces, hyphens, line breaks,
+  lowercase and trailing `=` are fine) or an `otpauth://totp/` URI with
+  `algorithm` SHA1/SHA256/SHA512, `digits` 6 or 8 and `period` 1-300. Seeds
+  shorter than 10 bytes (16 characters) are accepted but weak. The platform
+  can't read values, so a bad seed would otherwise only fail when used. A TOTP
+  secret delivered to a sandbox holds the code current at process start.
+- A fill takes one of `credential`, `vault` and `one_password`, and 1-16
+  fields with unique selectors; `field` is required with a vault and left out
+  without one, and `ref` is required with `one_password` and left out without
+  it.
+  Without `page_id`, fill considers the tabs whose URL starts with `page_url`
+  (all tabs when it's not given). If one is left, that's the target. If several
+  are left, it prefers the tabs on an origin every secret allows (skipped with
+  `frame_url`, since a login frame's tab is usually on another origin), then
+  the visible one among them; if more than one still qualifies, it fails with
+  `CREDENTIAL_PAGE_AMBIGUOUS`. The chosen tab's origin is then checked: on any
+  other origin nothing is typed and the fill fails with
+  `CREDENTIAL_ORIGIN_NOT_ALLOWED`. Under Playwright every tab reports as visible, so pass
+  `page_url` (a URL prefix) or the tab's CDP target ID as `page_id`:
+  `page.context.new_cdp_session(page).send("Target.getTargetInfo")["targetInfo"]["targetId"]`.
+  For a login form in an iframe, pass `frame_url` (a URL prefix).
+- Fill is safe to retry and never retried automatically. It waits at least
+  30 seconds for the API (the client timeout when longer).
+- Attaching secrets needs an API key with `secrets.use`; filling also needs
+  `browser.sessions.update`. The team needs the secrets feature. Sessions with
+  credentials run as Firecracker browsers with Chrome's password manager off.
+  A vault attaches the secrets its entries hold when the session is created.
+- Fills are recorded in the session's event log as `credential_filled` and
+  `credential_fill_refused`. Their metadata names the `credential` or `vault`;
+  for 1Password fills, `onePasswordToken` (the op_token's name) and its
+  `secretId`.
+- Errors are raised as `HyperbrowserError` with the API's `code`, `retryable`,
+  and `status_code`. `details` holds the API's response body, so the
+  candidate tabs of an ambiguous fill are in `error.details["details"]["pages"]`
+  (each with `pageId`, `url` and `title`). Error codes from the API:
+  - `CREDENTIAL_PAGE_AMBIGUOUS` (409): several tabs could be the target; pass
+    one's `pageId` as `page_id`, or a `page_url`. `CREDENTIAL_FRAME_AMBIGUOUS`
+    (409) is the same for frames.
+  - `CREDENTIAL_ORIGIN_NOT_ALLOWED` (403): the page's origin (in `details`)
+    isn't allowed; nothing was typed.
+  - `CREDENTIAL_NOT_ATTACHED` (403): the secret (or a 1Password fill's
+    op_token) wasn't attached when the session was created, or a vault entry
+    now points at another secret.
+  - `CREDENTIAL_NOT_READY` (409): the secret has no allowed origins or no
+    value.
+  - `SECRET_TYPE_MISMATCH` (409): an `op_token` can't be attached or filled
+    as a secret (by name, `{"secret": ...}` or a vault entry); attach it with
+    `{"one_password": ...}` instead. Also another type named as one.
+  - `SECRET_VALUE_INVALID` (422): the stored value is unusable, such as a bad
+    TOTP seed; add a new version.
+  - `CREDENTIAL_PAGE_NOT_FOUND`, `CREDENTIAL_FRAME_NOT_FOUND`,
+    `SECRET_NOT_FOUND`, `SECRET_VERSION_NOT_FOUND`, `VAULT_NOT_FOUND`,
+    `VAULT_ENTRY_NOT_FOUND` (404), `SESSION_NOT_ACTIVE` (409).
+  - `CREDENTIAL_FILL_TIMEOUT` (503/504, retryable) and
+    `CREDENTIAL_FILL_FAILED` (500/502/503, retryable as flagged).
+  - `CREDENTIALS_UNSUPPORTED_RUNTIME` (400), `CREDENTIAL_FILL_UNSUPPORTED`
+    (501) and `CREDENTIAL_VALUE_UNSUPPORTED` (501): the session's browser
+    can't fill this, such as 1Password fields on an older host.
+  - `SECRET_ONEPASSWORD_REFERENCE_FAILED` (422): a 1Password item or field
+    couldn't be read, so nothing was filled. `details` has the failing
+    `selectors` and `reasons` by selector. `SECRET_ONEPASSWORD_AUTH_FAILED`
+    (422): 1Password rejected the token, or the token is malformed or doesn't
+    sign in to `1password.com`, `.ca` or `.eu` (or a subdomain), so it wasn't
+    sent to 1Password. `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
+    `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable. Each has the
+    token's `tokenSecretId` and `tokenVersion` in `details`.
+  - Local fill shape errors raise `invalid_request`; invalid secret values
+    raise `invalid_secret_value` before upload. Fill, origin, vault-entry and
+    1Password policy errors come from the API. Inspect the status, code (when
+    supplied) and details; schema errors may have no machine code.
+
+### Fill from 1Password
+
+A fill can also type fields of a 1Password vault, read with a 1Password
+service account token stored as an `op_token` secret (see
+[Manage secrets](#manage-secrets-and-pass-them-to-sandbox-processes)). Attach
+the token when creating the session, then name the vault, the origins the
+values may be typed on, and each input's field:
+
+```python
+session = client.sessions.create({"credentials": [{"one_password": "op-token"}]})
+# ... open https://www.scrapingcourse.com/login in the session ...
+result = client.sessions.credentials.fill(
+    session.id,
+    {
+        "one_password": {
+            "token": "op-token",  # the op_token secret; its latest version signs in
+            "vault": "Dev Vault",  # the 1Password vault's name or ID
+            # Nothing stored says where a 1Password value belongs, so the
+            # request names the origins it may be typed on.
+            "allowed_origins": ["https://www.scrapingcourse.com"],
+        },
+        "fields": [
+            {"selector": "#email", "ref": {"item": "scrapingcourse login", "field": "username"}},
+            {"selector": "#password", "ref": {"item": "scrapingcourse login", "field": "password"}},
+            {
+                "selector": "#otp",
+                "ref": {"item": "scrapingcourse login", "section": "Security", "field": "otp?attribute=totp"},
+            },
+        ],
+        "page_url": "https://www.scrapingcourse.com/login",
+    },
+)
+for field in result.fields:
+    print(field.selector, field.outcome, field.reference)  # op://Dev Vault/...
+```
+
+- `token` names the op_token secret, which must be attached to the session
+  (`{"one_password": name}` counts toward the 20 credentials). An op_token is
+  never typed itself, and attaching or filling it as a plain secret fails with
+  `SECRET_TYPE_MISMATCH`.
+- `allowed_origins` takes 1-20 origins with the same rules as a secret's.
+  A page on another origin fails with
+  `CREDENTIAL_ORIGIN_NOT_ALLOWED`, as for stored secrets.
+- `ref` is `{"item", "section"?, "field"}` by name or ID, with the same rules
+  as a sandbox's `one_password` fields: a field may end with a query such as
+  `?attribute=otp`, and `op://<vault>/<item>/[<section>/]<field>` is at most
+  512 bytes. Every field takes `ref` and none takes `field`.
+- The result has no top-level `version`; each input's `secret_id` and
+  `version` are the op_token's, and `reference` is the `op://` reference it
+  was typed from.
+- The API validates these rules. Request models still reject unknown members
+  and invalid shapes locally.
+
+### Use with LLM SDKs
+
+`CredentialFillTool` lets a model fill a secret or vault by name while your
+application binds the session ID. It doesn't offer 1Password fills: their
+request names the allowed origins, which a model shouldn't choose, so call
+`client.sessions.credentials.fill()` with `one_password` directly. The model chooses only `credential` or
+`vault`, the fields (`selector`, and `field` with a vault), and optionally
+`page_id`, `page_url` or `frame_url`; it never sees the values. `runnable()`
+returns JSON text for the model: the fill result, or `{"error": {"code",
+"message", "retryable", "details"}}` when the fill fails, so the model can
+react (for example by choosing a `page_id`). Give the model your other
+browser tools too, since it must submit the form itself. `async_runnable()`
+does the same with `AsyncHyperbrowser`.
+
+OpenAI (Chat Completions):
+
+```python
+import json
+
+from openai import OpenAI
+
+from hyperbrowser.tools import CredentialFillTool
+
+openai_client = OpenAI()
+tools = [CredentialFillTool.openai_tool_definition]  # plus your browser tools
+messages = [{"role": "user", "content": "Sign in to GitHub with the vault named github-login."}]
+while True:
+    response = openai_client.chat.completions.create(
+        model="gpt-5", messages=messages, tools=tools
+    )
+    message = response.choices[0].message
+    messages.append(message)
+    if not message.tool_calls:
+        break
+    for call in message.tool_calls:
+        if call.function.name == "fill_credential":
+            output = CredentialFillTool.runnable(
+                client, session.id, json.loads(call.function.arguments)
+            )
+        else:
+            output = run_browser_tool(call)  # your click/press/navigate tools
+        messages.append({"role": "tool", "tool_call_id": call.id, "content": output})
+```
+
+Anthropic (Messages):
+
+```python
+import anthropic
+
+from hyperbrowser.tools import CredentialFillTool
+
+anthropic_client = anthropic.Anthropic()
+tools = [CredentialFillTool.anthropic_tool_definition]  # plus your browser tools
+messages = [{"role": "user", "content": "Sign in to GitHub with the vault named github-login."}]
+while True:
+    response = anthropic_client.messages.create(
+        model="claude-sonnet-5-5", max_tokens=1024, tools=tools, messages=messages
+    )
+    messages.append({"role": "assistant", "content": response.content})
+    if response.stop_reason != "tool_use":
+        break
+    results = []
+    for block in response.content:
+        if block.type != "tool_use":
+            continue
+        if block.name == "fill_credential":
+            output = CredentialFillTool.runnable(client, session.id, block.input)
+        else:
+            output = run_browser_tool(block)
+        results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
+    messages.append({"role": "user", "content": results})
+```
+
+Gemini (google-genai):
+
+```python
+from google import genai
+from google.genai import types
+
+from hyperbrowser.tools import CredentialFillTool
+
+gemini = genai.Client()
+config = types.GenerateContentConfig(
+    tools=[
+        types.Tool(function_declarations=[CredentialFillTool.gemini_tool_definition])
+    ]  # plus your browser tools
+)
+contents = [
+    types.Content(
+        role="user",
+        parts=[types.Part.from_text(text="Sign in to GitHub with the vault named github-login.")],
+    )
+]
+while True:
+    response = gemini.models.generate_content(
+        model="gemini-3.5-flash", contents=contents, config=config
+    )
+    contents.append(response.candidates[0].content)
+    if not response.function_calls:
+        break
+    parts = []
+    for call in response.function_calls:
+        if call.name == "fill_credential":
+            output = CredentialFillTool.runnable(client, session.id, call.args or {})
+        else:
+            output = run_browser_tool(call)
+        parts.append(
+            types.Part.from_function_response(name=call.name, response={"result": output})
+        )
+    contents.append(types.Content(role="user", parts=parts))
+```
+
+## Tools for LLM function calling
+
+`hyperbrowser.tools` has ready-made tools: `WebsiteScrapeTool`,
+`WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`,
+`BrowserUseTool` and `CredentialFillTool`. Each has `openai_tool_definition`
+(a strict Chat Completions function tool), `anthropic_tool_definition`, and
+`runnable()` / `async_runnable()` to run the model's input and return text for
+the model. `CredentialFillTool` also provides `gemini_tool_definition`, a
+function declaration dict for google-genai.
+
 ## Usage
 
 Hyperbrowser 1.0 accepts plain dictionaries for request parameters. Method
@@ -327,26 +677,75 @@ client.secrets.add_version("provider-key", "rotated-value")  # becomes version 2
 detail = client.secrets.get("provider-key")  # metadata and versions, never the value
 client.secrets.list({"search": "provider"})
 
+# A vault groups variables; sandboxes and processes take it by name.
+client.vaults.create(
+    {"name": "app-env", "entries": {"API_KEY": {"name": "provider-key"}}}
+)
+
 sandbox = client.sandboxes.create(
     {
         "image_name": "node",
         # Delivered to the image's startup command (image launches only).
-        "secrets": {"API_KEY": "provider-key"},
+        "vault": "app-env",
     }
 )
+print(sandbox.startup_secrets)  # what each variable received, never values
 
 # A plain name uses the latest version; {"name": ..., "version": N} pins one.
+# `secrets` are merged over the vault's entries and win on a clash.
 result = sandbox.exec(
     "node app.js",
+    vault="app-env",
     secrets={"API_KEY": {"name": "provider-key", "version": 2}},
 )
 process = sandbox.processes.start("node worker.js", secrets={"API_KEY": "provider-key"})
 print(process.secrets)  # the version each variable received
 
+client.vaults.delete("app-env")
 client.secrets.delete_version("provider-key", 1)
 client.secrets.delete("provider-key")
 client.close()
 ```
+
+Values can also come straight from a 1Password vault. Store a 1Password
+service account token (it starts with `ops_`) as an `op_token` secret: it is
+only used to sign in to 1Password, never set as a variable or typed into a
+browser itself, and can't have allowed origins. Browser sessions can fill
+1Password fields too; see [Fill from 1Password](#fill-from-1password). Then name the fields each variable
+takes with `one_password` when creating a sandbox or starting a process.
+Nothing about them is stored: the sandbox reads the fields when the process
+starts.
+
+```python
+client.secrets.create(
+    {"name": "op-token", "type": "op_token", "value": Path("op-token.txt").read_text().strip()}
+)
+one_password = {
+    "token": "op-token",  # the op_token secret's name; its latest version signs in
+    "vault": "Engineering",  # the 1Password vault's name or ID
+    # Items, sections and fields by name or ID: op://Engineering/Postgres/prod/password
+    "fields": {
+        "DB_PASS": {"item": "Postgres", "section": "prod", "field": "password"},
+        "DB_OTP": {"item": "Postgres", "field": "one-time password?attribute=totp"},
+    },
+}
+
+# Delivered to the image's startup command (image launches only).
+sandbox = client.sandboxes.create({"image_name": "node", "one_password": one_password})
+print(sandbox.startup_secrets)  # each with its op:// reference and token_secret
+
+result = sandbox.exec("psql -c 'select 1'", one_password=one_password)
+process = sandbox.processes.start("node worker.js", one_password=one_password)
+print(process.secrets)  # source.type is "onePassword" for these variables
+```
+
+`one_password` takes one token and vault per request and 1-32 fields, named
+like environment variables. A field may end with a query such as
+`?attribute=otp`, `?attribute=totp` or `?ssh-format=openssh`. Vaults, items,
+sections and fields are 1-256 characters (UTF-16 code units) without `/`, `?` or control characters, and
+not `.` or `..`; the whole `op://` reference is at most 512 bytes. These are
+checked by the API, as is a variable that `secrets`, `env` or the request's
+`vault` also sets: a variable from 1Password must come from it alone.
 
 Things to know:
 
@@ -383,11 +782,17 @@ Things to know:
   `sandbox.processes.list()` before retrying. When the API reported the
   unknown outcome itself, its response body, including its own code
   (`SECRET_PROCESS_OUTCOME_UNKNOWN`), is in the error's `details`.
-- `client.sandboxes.create()` with `secrets` raises the same
+- `client.sandboxes.create()` with `secrets`, `vault` or `one_password`
+  raises the same
   `secret_process_outcome_unknown` error when the create may have reached the
   API but its result is unknown (a timeout, a dropped connection, or an
   unreadable response): a sandbox may be running its startup command with the
   secrets, so list sandboxes before retrying.
+- Vaults hold up to 32 stored secrets, named like environment variables; a
+  team has up to 100. Methods that take a vault accept its ID or exact name,
+  and vaults need the same scopes as secrets. A vault, `secrets` and
+  `one_password` together deliver at most 32 variables, and a process's `env`
+  may not set one of them.
 - Error codes from the API:
   - `SECRETS_ADMIN_REQUIRED` (403): the request used an `hx auth login`
     session of a team member who isn't an owner or admin. API keys are
@@ -397,8 +802,31 @@ Things to know:
   - `SECRETS_NOT_CONFIGURED` (503): the platform has no secrets key
     configured. It isn't retried.
   - `SECRET_STARTUP_UNSUPPORTED` (400): the image has no startup command to
-    deliver `secrets` to. Create the sandbox without them, then pass them to
+    deliver `secrets`, a `vault` or `one_password` to. Create the sandbox without them, then pass them to
     `sandbox.exec()` or `sandbox.processes.start()`.
+  - `VAULT_NOT_FOUND` (404), `VAULT_NAME_TAKEN`, `VAULT_LIMIT_REACHED`,
+    `VAULT_ENTRY_LIMIT_REACHED` (409).
+  - `SECRET_IN_USE` (409): a vault uses the secret as an entry;
+    `SECRET_VERSION_IN_USE` (409): a vault pins the version. Only vaults
+    hold secrets, so an `op_token` can always be deleted.
+  - `SECRET_TYPE_MISMATCH` (409): an `op_token` used as a variable or vault
+    entry, or another type named as `one_password`'s `token`.
+  - `SECRET_SOURCES_INVALID` (400): for example `env` sets a variable that
+    `vault` or `secrets` also sets, a `one_password` variable is also set by
+    `vault`, `secrets` or `env`, or the sources deliver more than 32
+    variables.
+  - `SECRET_VALUE_INVALID` (422): a stored value is unusable, such as a bad
+    TOTP seed; fix it by adding a new version.
+  - `SECRET_TOTP_UNSUPPORTED` and `SECRET_ONEPASSWORD_UNSUPPORTED` (501): the
+    sandbox's host predates TOTP or 1Password, so nothing started. Retryable
+    on sandbox create, which may land on a newer host; not on a process start.
+  - `SECRET_ONEPASSWORD_REFERENCE_FAILED` (422, `details` names the
+    variables) and `SECRET_ONEPASSWORD_AUTH_FAILED` (422, also a malformed
+    token, or one that doesn't sign in to `1password.com`, `.ca` or `.eu`,
+    which is never sent to 1Password): fix the fields or the token.
+    `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
+    `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable.
+  - `retryable` is the API's flag when it sends one.
 
 ### List sandboxes with filters
 

@@ -5,6 +5,17 @@ known request keys to their wire aliases while leaving user-owned mappings, such
 as JSON Schema objects, untouched.
 """
 
+from .credential import (
+    CredentialFillField,
+    FillCredentialParams,
+    OnePasswordFillSource,
+)
+from .vault import (
+    CreateVaultParams,
+    StoredEntry,
+    UpdateVaultParams,
+    VaultListParams,
+)
 from .webmcp import (
     WebMCPInvokeParams,
     WebMCPStartParams,
@@ -139,6 +150,10 @@ from .session import (
     CaptchaEvaluationType,
     CaptchaSolverType,
     CreateSessionParams,
+    SessionCredentialInput,
+    SessionCredentialOnePassword,
+    SessionCredentialSecret,
+    SessionCredentialVault,
     CreateSessionProfile,
     ImageCaptchaParam,
     ScreenConfig,
@@ -157,9 +172,15 @@ from .session import (
 )
 from .secret import (
     CreateSecretParams,
+    OnePasswordField,
+    OnePasswordSource,
+    SecretBrowserMetadata,
     SecretListParams,
+    SecretMetadata,
     SecretReference,
     SecretReferenceInput,
+    SecretType,
+    SecretValue,
     UpdateSecretParams,
 )
 from .volume import CreateVolumeParams, VolumeListParams
@@ -192,6 +213,12 @@ from .web import (
 
 
 __all__ = [
+    "CredentialFillField",
+    "FillCredentialParams",
+    "CreateVaultParams",
+    "StoredEntry",
+    "UpdateVaultParams",
+    "VaultListParams",
     "WebMCPInvokeParams",
     "WebMCPStartParams",
     "WebMCPResultParams",
@@ -317,6 +344,10 @@ __all__ = [
     "CaptchaEvaluationType",
     "CaptchaSolverType",
     "CreateSessionParams",
+    "SessionCredentialInput",
+    "SessionCredentialOnePassword",
+    "SessionCredentialSecret",
+    "SessionCredentialVault",
     "CreateSessionProfile",
     "ImageCaptchaParam",
     "ScreenConfig",
@@ -333,9 +364,16 @@ __all__ = [
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
     "CreateSecretParams",
+    "OnePasswordField",
+    "OnePasswordFillSource",
+    "OnePasswordSource",
+    "SecretBrowserMetadata",
     "SecretListParams",
+    "SecretMetadata",
     "SecretReference",
     "SecretReferenceInput",
+    "SecretType",
+    "SecretValue",
     "UpdateSecretParams",
     "CreateVolumeParams",
     "VolumeListParams",

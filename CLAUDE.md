@@ -52,6 +52,8 @@ client.profiles     # Browser profile management
 client.extensions   # Browser extension management
 client.team         # Team/credit info
 client.computer_action  # Low-level computer actions
+client.secrets      # Encrypted secrets (secret, totp, op_token)
+client.vaults       # Named sets of stored secrets
 ```
 
 Each manager lives in `client/managers/sync_manager/` or `client/managers/async_manager/` with identical method signatures.
@@ -69,9 +71,10 @@ Response and legacy models are re-exported from
 
 ### Pre-built Tools
 
-`hyperbrowser/tools/` contains ready-to-use tool definitions for OpenAI and Anthropic function calling:
-- `WebsiteScrapeTool`, `WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`, `BrowserUseTool`
+`hyperbrowser/tools/` contains ready-to-use tool definitions for OpenAI, Anthropic and Gemini function calling:
+- `WebsiteScrapeTool`, `WebsiteScreenshotTool`, `WebsiteCrawlTool`, `WebsiteExtractTool`, `BrowserUseTool`, `CredentialFillTool`
 - Each has `openai_tool_definition`, `anthropic_tool_definition`, plus sync/async runnable methods
+- `CredentialFillTool` also has `gemini_tool_definition`; `tools/gemini.py` defines only credential fill
 
 ## Key Patterns
 

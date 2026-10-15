@@ -253,6 +253,52 @@ class Session(BaseModel):
         return value
 
 
+class SessionCredential(BaseModel):
+    """A secret attached to a session at creation, which fills may type."""
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str
+    name: str
+
+
+class SessionCredentialSecret(BaseModel):
+    """Attaches a secret, by name, to a new session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    secret: str
+
+
+class SessionCredentialVault(BaseModel):
+    """Attaches the secrets of a stored vault, by name, to a new session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    vault: str
+
+
+class SessionCredentialOnePassword(BaseModel):
+    """Attaches an ``op_token`` secret, by name, to a new session: fills may
+    then type 1Password fields it can read (``one_password`` in
+    ``sessions.credentials.fill()``). Sent as ``{"onePassword": name}``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    one_password: str = Field(serialization_alias="onePassword")
+
+
+# A plain secret name is shorthand for SessionCredentialSecret.
+SessionCredentialInput = Union[
+    str,
+    SessionCredentialSecret,
+    SessionCredentialVault,
+    SessionCredentialOnePassword,
+]
+
+
 class SessionDetail(Session):
     """
     Detailed session information including websocket endpoint.
@@ -270,6 +316,9 @@ class SessionDetail(Session):
     live_url: str = Field(alias="liveUrl")
     live_domain: Optional[str] = Field(alias="liveDomain", default=None)
     token: str = Field(alias="token")
+    credentials: Optional[List[SessionCredential]] = Field(
+        default=None, alias="credentials"
+    )
 
 
 class SessionGetParams(BaseModel):
@@ -602,6 +651,15 @@ class CreateSessionParams(BaseModel):
         default=None,
         serialization_alias="startFromSnapshot",
     )
+    credentials: Optional[List[SessionCredentialInput]] = Field(
+        default=None, serialization_alias="credentials"
+    )
+    """Up to 20 secrets (by name, or ``{"secret": name}``), vaults
+    (``{"vault": name}``) or op_token secrets (``{"one_password": name}``)
+    that ``sessions.credentials.fill()`` may type into this session's pages.
+    A vault attaches the secrets its entries hold now; an op_token lets fills
+    type the 1Password fields it can read. Secrets need allowed origins to be
+    filled, and can only be attached when the session is created."""
 
 
 class CreateSessionSnapshotResponse(BaseModel):

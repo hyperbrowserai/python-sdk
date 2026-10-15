@@ -187,3 +187,97 @@ BROWSER_USE_SCHEMA = {
     ],
     "additionalProperties": False,
 }
+
+FILL_CREDENTIAL_DESCRIPTION = (
+    "Fill a stored login into the browser session's page by typing saved "
+    "values into the inputs you select. You refer to the values by name and "
+    "never see them; they never appear in this tool's input or output. Pass "
+    "either credential (one saved secret, such as a password) or vault (a "
+    "saved login with several entries such as USERNAME and PASSWORD); with a "
+    "vault, each field names the entry to type into its selector. A TOTP "
+    "(one-time code) secret or entry types the code that is current now. "
+    "This tool only types: it does NOT submit the form. After a fill, click "
+    "the login button or press Enter with your other browser tools.\n\n"
+    "The result is JSON with the origin and pageId of the page that was "
+    "filled, and an outcome for each selector:\n"
+    "- filled: the input now holds the value.\n"
+    "- not_found: no input matched the selector. Look at the page again and "
+    "fix the selector; the form may not have loaded yet, or it may be inside "
+    "an iframe (pass frame_url).\n"
+    "- ambiguous: several visible inputs matched. Use a more specific "
+    "selector.\n"
+    "- not_editable: the input is disabled, read-only, hidden or not a text "
+    "input. Select the real input, or reveal it first (some sites show the "
+    "password input only after the username step).\n"
+    "- not_accepted: the page did not keep the value (for example a length "
+    "limit). Check that you selected the right input.\n"
+    "Filling again is safe. Errors come back as JSON with a code, for example "
+    '{"error": {"code": "CREDENTIAL_PAGE_AMBIGUOUS", "message": "...", '
+    '"retryable": false, "details": {"pages": [...]}}}. On '
+    "CREDENTIAL_PAGE_AMBIGUOUS, call again with page_id set to the pageId of "
+    "the tab that shows the login form, or page_url set to the start of its "
+    "URL. CREDENTIAL_ORIGIN_NOT_ALLOWED means the value may not be used on "
+    "this site; do not retry it there. When retryable is true, the same call "
+    "may succeed if you try again."
+)
+
+FILL_CREDENTIAL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "credential": {
+            "type": ["string", "null"],
+            "description": "The name of the saved secret to fill, as you were "
+            "told it. Use null when you pass vault.",
+        },
+        "vault": {
+            "type": ["string", "null"],
+            "description": "The name of the saved vault to fill entries from, "
+            "as you were told it. Use null when you pass credential.",
+        },
+        "fields": {
+            "type": "array",
+            "description": "The inputs to fill, each selector at most once.",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "selector": {
+                        "type": "string",
+                        "description": "A CSS selector matching exactly one "
+                        'visible input on the page, such as "#login_field" or '
+                        "\"input[name='password']\".",
+                    },
+                    "field": {
+                        "type": ["string", "null"],
+                        "description": "With vault: the vault entry to type, "
+                        'such as "USERNAME", "PASSWORD" or "OTP". Use null '
+                        "with credential.",
+                    },
+                },
+                "required": ["selector", "field"],
+                "additionalProperties": False,
+            },
+        },
+        "page_id": {
+            "type": ["string", "null"],
+            "description": "The browser tab to fill. Use null unless a previous "
+            "call failed with CREDENTIAL_PAGE_AMBIGUOUS; then pass the pageId of "
+            "the tab showing the login form, from that error's details.pages.",
+        },
+        "page_url": {
+            "type": ["string", "null"],
+            "description": "Instead of page_id: the start of the URL of the tab "
+            'to fill, such as "https://github.com/login". Use null unless the '
+            "page was ambiguous. Never pass both page_id and page_url.",
+        },
+        "frame_url": {
+            "type": ["string", "null"],
+            "description": "For a login form inside an iframe: the start of the "
+            'iframe\'s URL, such as "https://login.example.com/". Use null when '
+            "the form is in the page itself.",
+        },
+    },
+    "required": ["credential", "vault", "fields", "page_id", "page_url", "frame_url"],
+    "additionalProperties": False,
+}

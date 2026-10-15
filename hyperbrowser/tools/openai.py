@@ -5,6 +5,8 @@ from hyperbrowser.tools.schema import (
     BROWSER_USE_SCHEMA,
     CRAWL_SCHEMA,
     EXTRACT_SCHEMA,
+    FILL_CREDENTIAL_DESCRIPTION,
+    FILL_CREDENTIAL_SCHEMA,
     SCRAPE_SCHEMA,
     SCREENSHOT_SCHEMA,
 )
@@ -100,6 +102,16 @@ BROWSER_USE_TOOL_OPENAI: ChatCompletionToolParam = {
         "name": "browser_use",
         "description": "Have an AI agent use a browser to perform a task on the web.",
         "parameters": BROWSER_USE_SCHEMA,
+        "strict": True,
+    },
+}
+
+FILL_CREDENTIAL_TOOL_OPENAI: ChatCompletionToolParam = {
+    "type": "function",
+    "function": {
+        "name": "fill_credential",
+        "description": FILL_CREDENTIAL_DESCRIPTION,
+        "parameters": FILL_CREDENTIAL_SCHEMA,
         "strict": True,
     },
 }

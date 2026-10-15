@@ -21,7 +21,13 @@ DownloadsStatus = Literal[
     "not_enabled", "pending", "in_progress", "completed", "failed"
 ]
 SessionEventLogType = Literal[
-    "captcha_detected", "captcha_solved", "captcha_error", "file_downloaded"
+    "captcha_detected",
+    "captcha_solved",
+    "captcha_error",
+    "file_downloaded",
+    "tab_opened",
+    "credential_filled",
+    "credential_fill_refused",
 ]
 
 POLLING_ATTEMPTS = 5

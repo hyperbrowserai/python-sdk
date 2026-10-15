@@ -26,6 +26,7 @@ from .....types import (
     SandboxProcessStdinParams as SandboxProcessStdinParamsDict,
 )
 from ...sandboxes.shared import (
+    OnePasswordSourceInput,
     SecretReferences,
     _normalize_exec_params,
     _runtime_process_payload,
@@ -353,6 +354,8 @@ class SandboxProcessesApi:
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
         secrets: Optional[SecretReferences] = None,
+        vault: Optional[str] = None,
+        one_password: Optional[OnePasswordSourceInput] = None,
     ) -> SandboxProcessResult:
         handle = self.start(
             input,
@@ -363,6 +366,8 @@ class SandboxProcessesApi:
             run_as=run_as,
             max_output_bytes=max_output_bytes,
             secrets=secrets,
+            vault=vault,
+            one_password=one_password,
         )
         if handle.secrets is not None:
             return self._finish_secret_exec(handle)
@@ -382,12 +387,17 @@ class SandboxProcessesApi:
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
         secrets: Optional[SecretReferences] = None,
+        vault: Optional[str] = None,
+        one_password: Optional[OnePasswordSourceInput] = None,
     ) -> SandboxProcessHandle:
         """Start a process.
 
-        With ``secrets``, the start goes through the control API, which has the
-        platform decrypt them into the process environment; output is then
-        read with ``wait()`` rather than collected from the start.
+        With ``secrets``, ``vault`` or ``one_password``, the start goes through
+        the control API, which has the platform resolve them into the process
+        environment; output is then read with ``wait()`` rather than collected
+        from the start. ``secrets`` are merged over the vault's entries, and a
+        ``one_password`` variable may not also come from ``vault``,
+        ``secrets`` or ``env``.
         """
         validate_output_limit(max_output_bytes)
         params = _normalize_exec_params(
@@ -398,8 +408,10 @@ class SandboxProcessesApi:
             timeout_sec=timeout_sec,
             run_as=run_as,
             secrets=secrets,
+            vault=vault,
+            one_password=one_password,
         )
-        if params.secrets:
+        if params.uses_secrets:
             return self._start_with_secrets(params)
         close_stream = []
         events = self._transport.stream_sse(
