@@ -26,13 +26,20 @@ class ProcessOutput:
         }
 
     def failure(
-        self, message: str, code: str = "incomplete_output"
+        self,
+        message: str,
+        code: str = "incomplete_output",
+        details: Optional[Dict[str, int]] = None,
     ) -> HyperbrowserError:
         return HyperbrowserError(
             message,
             code=code,
             service="runtime",
-            details={"process_id": self.process_id, "last_seq": self.seq},
+            details={
+                "process_id": self.process_id,
+                "last_seq": self.seq,
+                **(details or {}),
+            },
         )
 
     def consume(self, event) -> None:
@@ -51,8 +58,9 @@ class ProcessOutput:
             self.size += len(raw)
             if self.size > self.max_bytes:
                 raise self.failure(
-                    "Command output exceeds max_output_bytes; increase the collection limit or disconnect a detached process",
+                    f"Command output exceeds max_output_bytes ({self.size} bytes received, limit {self.max_bytes}); increase the collection limit or disconnect a detached process",
                     "output_limit_exceeded",
+                    {"max_output_bytes": self.max_bytes, "received_bytes": self.size},
                 )
             self.seq = data["seq"]
             text = self._decoders[stream].decode(raw)
