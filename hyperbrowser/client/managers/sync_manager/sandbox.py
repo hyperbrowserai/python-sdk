@@ -1,9 +1,14 @@
 import time
+import math
+from threading import Event
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
+from ....models.computer_action import ComputerActionParams, ComputerActionResponse
+from ....types.computer_action import ComputerActionParams as ComputerActionParamsDict
+from .computer_action import _action_param_model
 from ....models.secret import SandboxResolvedSecret
 from ....models.sandbox import (
     CompleteSandboxImageBuildParams,
@@ -11,6 +16,8 @@ from ....models.sandbox import (
     CreateSandboxImageBuildParams,
     ReuseSandboxDockerImageParams,
     SandboxDetail,
+    SandboxGpuType,
+    SandboxCapabilities,
     SandboxExecParams,
     SandboxExposeParams,
     SandboxExposeResult,
@@ -89,7 +96,6 @@ from ..sandboxes.image_build import (
     docker_build_context_fingerprint,
     docker_image_digest,
     build_docker_image_from_dockerfile,
-    is_terminal_image_build_status,
     make_temp_docker_tag,
     merge_image_init,
     package_docker_build_context_manifest,
@@ -207,6 +213,34 @@ class SandboxHandle:
         return self._detail.timeout_minutes
 
     @property
+    def gpu_type(self) -> Optional[SandboxGpuType]:
+        return self._detail.gpu_type
+
+    @property
+    def gpu_count(self) -> Optional[int]:
+        return self._detail.gpu_count
+
+    @property
+    def preempt(self) -> Optional[bool]:
+        return self._detail.preempt
+
+    @property
+    def capabilities(self) -> Optional[SandboxCapabilities]:
+        return self._detail.capabilities
+
+    @property
+    def runtime_class(self) -> Optional[str]:
+        return self._detail.runtime_class
+
+    @property
+    def recording_enabled(self) -> Optional[bool]:
+        return self._detail.recording_enabled
+
+    @property
+    def close_reason(self) -> Optional[str]:
+        return self._detail.close_reason
+
+    @property
     def exposed_ports(self):
         return self._detail.exposed_ports
 
@@ -228,6 +262,107 @@ class SandboxHandle:
     def refresh(self) -> "SandboxHandle":
         self.info()
         return self
+
+    def computer_action(
+        self, params: Union[ComputerActionParamsDict, ComputerActionParams]
+    ) -> ComputerActionResponse:
+        """Run an action on the image's desktop using sandbox runtime authentication."""
+        payload = dump_request(params, _action_param_model(params), name="params")
+        response = self._transport.request_json(
+            "/computer-action", method="POST", json_body=payload
+        )
+        return ComputerActionResponse(**response)
+
+    def wait_until_ready(
+        self,
+        *,
+        timeout: Optional[float] = 20 * 60,
+        poll_interval: float = 3.0,
+        cancel_event: Optional[Event] = None,
+    ) -> "SandboxHandle":
+        """Wait for a runtime without stopping the sandbox on timeout or cancellation.
+
+        The interval backs off to 15 seconds. A sync cancellation event is checked
+        between reads; async callers can also cancel the awaiting task.
+        """
+        if (
+            not math.isfinite(poll_interval)
+            or poll_interval < 0
+            or (timeout is not None and (not math.isfinite(timeout) or timeout < 0))
+        ):
+            raise ValueError(
+                "timeout and poll_interval must be nonnegative finite seconds"
+            )
+        if not self.id.strip():
+            raise HyperbrowserError(
+                "Sandbox response is missing its ID", service="control"
+            )
+        deadline = None if timeout is None else time.monotonic() + timeout
+        delay = min(poll_interval, 15.0)
+        while True:
+            if cancel_event is not None and cancel_event.is_set():
+                raise HyperbrowserError(
+                    f"Stopped waiting for sandbox {self.id}; the sandbox was not stopped",
+                    code="wait_cancelled",
+                    service="control",
+                    details={"sandboxId": self.id},
+                )
+            if self.status in {"closed", "error", "close-error"}:
+                raise HyperbrowserError(
+                    f"Sandbox {self.id} ended before becoming ready: {self._detail.close_reason or self.status}",
+                    code="sandbox_not_running",
+                    service="control",
+                    details={
+                        "sandboxId": self.id,
+                        "status": self.status,
+                        "closeReason": self._detail.close_reason,
+                    },
+                )
+            if (
+                self.status == "active"
+                and self.runtime is not None
+                and self._detail.token
+            ):
+                return self
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise HyperbrowserError(
+                    f"Timed out waiting for sandbox {self.id}; the sandbox was not stopped",
+                    code="wait_timeout",
+                    service="control",
+                    details={"sandboxId": self.id},
+                )
+            try:
+                detail = self._service.get_detail(
+                    self.id,
+                    request_timeout=min(self._service.runtime_timeout, remaining)
+                    if remaining is not None
+                    else self._service.runtime_timeout,
+                    retry=False,
+                )
+                if detail.id != self.id:
+                    raise HyperbrowserError(
+                        "Sandbox response returned a different ID", service="control"
+                    )
+                self._hydrate(detail)
+                if self.status != "provisioning" and (
+                    self.status != "active"
+                    or (self.runtime is not None and self._detail.token)
+                ):
+                    continue
+            except HyperbrowserError as error:
+                if not error.retryable:
+                    raise
+            pause = (
+                delay
+                if deadline is None
+                else min(delay, max(0, deadline - time.monotonic()))
+            )
+            if cancel_event is None:
+                time.sleep(pause)
+            else:
+                cancel_event.wait(pause)
+            delay = min(delay * 2, 15.0)
 
     def connect(self) -> "SandboxHandle":
         self.create_runtime_session(force_refresh=True)
@@ -408,6 +543,13 @@ class SandboxHandle:
         )
 
     def _assert_runtime_available(self) -> None:
+        if self._detail.status == "provisioning":
+            raise HyperbrowserError(
+                f"Sandbox {self.id} is provisioning; call wait_until_ready() first",
+                status_code=409,
+                code="sandbox_not_ready",
+                service="runtime",
+            )
         if self._detail.status in {"closed", "error", "close-error"}:
             raise HyperbrowserError(
                 f"Sandbox {self.id} is not running",
@@ -419,7 +561,7 @@ class SandboxHandle:
 
     @staticmethod
     def _to_runtime_session(detail: SandboxDetail) -> Optional[SandboxRuntimeSession]:
-        if not detail.token:
+        if detail.status != "active" or not detail.token or detail.runtime is None:
             return None
         return SandboxRuntimeSession(
             sandbox_id=detail.id,
@@ -500,8 +642,20 @@ class SandboxManager:
         )
         return SandboxImageListResponse(**payload)
 
-    def find_ready_image(self, image_name: str) -> Optional[SandboxImageSummary]:
+    def find_ready_image(
+        self, image_name: str, *, enable_gpu_builds: bool = False
+    ) -> Optional[SandboxImageSummary]:
         """Find an exact ready team image, including revisions awaiting backup."""
+        gpu_ids = None
+        if enable_gpu_builds:
+            builds = self.list_image_builds({"status": "completed", "limit": 100})
+            gpu_ids = {
+                build.image_id
+                for build in builds.builds
+                if build.image_name == image_name and build.gpu_image_ready
+            }
+            if not gpu_ids:
+                return None
         page = 1
         while True:
             response = self.list_images(
@@ -510,8 +664,10 @@ class SandboxManager:
                 )
             )
             for image in response.images:
-                if image.image_name == image_name and (
-                    image.uploaded or getattr(image, "ready", False)
+                if (
+                    image.image_name == image_name
+                    and (gpu_ids is None or image.id in gpu_ids)
+                    and (image.uploaded or getattr(image, "ready", False))
                 ):
                     return image
             if len(response.images) < 100:
@@ -533,6 +689,7 @@ class SandboxManager:
         expected_image_digest: Optional[str] = None,
         image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
         image_config_user: Optional[str] = None,
+        enable_gpu_builds: bool = False,
         builder_cpus: Optional[int] = None,
         builder_memory_mib: Optional[int] = None,
         builder_scratch_mib: Optional[int] = None,
@@ -552,6 +709,8 @@ class SandboxManager:
         wait_timeout applies to this caller's polling, independently of uploads.
         This composes existing APIs; lookup plus creation is not server-atomic.
         """
+        if enable_gpu_builds and docker_image is not None:
+            raise ValueError("GPU image builds require a remote Dockerfile context")
         platform = platform.strip().lower()
         if platform != "linux/amd64":
             raise ValueError("Image builds require platform='linux/amd64'")
@@ -588,9 +747,12 @@ class SandboxManager:
             platform=platform,
             image_init=image_init,
             image_config_user=image_config_user,
+            enable_gpu_builds=enable_gpu_builds,
         )
         if not force_build:
-            image = self.find_ready_image(image_name)
+            image = self.find_ready_image(
+                image_name, **({"enable_gpu_builds": True} if enable_gpu_builds else {})
+            )
             if image is not None:
                 return SandboxImageBuildResolution(
                     outcome="reused",
@@ -605,6 +767,7 @@ class SandboxManager:
             builder_cpus=builder_cpus,
             builder_memory_mib=builder_memory_mib,
             builder_scratch_mib=builder_scratch_mib,
+            **({"enable_gpu_builds": True} if enable_gpu_builds else {}),
             wait=False,
             upload_timeout=upload_timeout,
             temp_dir=temp_dir,
@@ -632,21 +795,30 @@ class SandboxManager:
                     **common,
                 )
         except HyperbrowserError as error:
-            existing = matching_image_build(error, image_name, input_format)
+            existing = matching_image_build(
+                error, image_name, input_format, enable_gpu_builds=enable_gpu_builds
+            )
             if existing is None:
                 raise
             build = existing
             outcome = "joined"
-        if wait and build.status != "completed":
+        if wait and (
+            build.status != "completed"
+            or (
+                (enable_gpu_builds or build.enable_gpu_builds)
+                and not build.gpu_image_ready
+            )
+        ):
             build = self.wait_for_image_build(
                 build.id,
                 poll_interval=poll_interval,
                 timeout=wait_timeout,
+                **({"enable_gpu_builds": True} if enable_gpu_builds else {}),
             )
         return SandboxImageBuildResolution(
             outcome=outcome,
             image_name=image_name,
-            image_id=completed_image_id(build),
+            image_id=completed_image_id(build, enable_gpu_builds=enable_gpu_builds),
             build=build,
         )
 
@@ -749,20 +921,30 @@ class SandboxManager:
         self,
         build_id: str,
         *,
+        enable_gpu_builds: bool = False,
         poll_interval: float = 3.0,
         timeout: Optional[float] = 35 * 60,
     ) -> SandboxImageBuild:
         deadline = None if timeout is None else time.monotonic() + timeout
         while True:
             build = self.get_image_build(build_id)
-            if build.status == "completed":
+            needs_gpu = enable_gpu_builds or build.enable_gpu_builds
+            if (
+                needs_gpu
+                and build.metadata
+                and build.metadata.get("ociPublicationError")
+            ):
+                raise RuntimeError(
+                    "GPU image publication failed. Please rebuild the image."
+                )
+            if build.status == "completed" and (not needs_gpu or build.gpu_image_ready):
                 return build
             if build.status == "failed":
                 message = build.error_message or "image build failed"
                 if build.error_code:
                     message = f"image build failed [{build.error_code}]: {message}"
                 raise RuntimeError(message)
-            if is_terminal_image_build_status(build.status):
+            if build.status == "canceled":
                 raise RuntimeError(f"image build {build.status}")
             if deadline is not None and time.monotonic() >= deadline:
                 raise TimeoutError(f"timed out waiting for image build {build_id}")
@@ -777,6 +959,7 @@ class SandboxManager:
         platform: str = IMAGE_BUILD_SOURCE_PLATFORM,
         image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
         image_config_user: Optional[str] = None,
+        enable_gpu_builds: bool = False,
         builder_cpus: Optional[int] = None,
         builder_memory_mib: Optional[int] = None,
         builder_scratch_mib: Optional[int] = None,
@@ -786,6 +969,8 @@ class SandboxManager:
         temp_dir: Optional[str] = None,
         upload_timeout: Optional[float] = None,
     ) -> SandboxImageBuild:
+        if enable_gpu_builds:
+            raise ValueError("GPU image builds require a remote Dockerfile context")
         source = prepare_docker_image_manifest_source(
             docker_image,
             platform=platform,
@@ -916,6 +1101,7 @@ class SandboxManager:
         *,
         context_path,
         image_name: str,
+        enable_gpu_builds: bool,
         dockerfile,
         platform: str,
         remote_full_context: bool,
@@ -950,6 +1136,7 @@ class SandboxManager:
             create_result = self.create_image_build(
                 CreateSandboxImageBuildParams(
                     image_name=image_name,
+                    enable_gpu_builds=True if enable_gpu_builds else None,
                     input_sha256=artifact.sha256_hex,
                     input_size_bytes=artifact.size_bytes,
                     input_format=artifact.input_format,
@@ -977,6 +1164,7 @@ class SandboxManager:
                     build.id,
                     poll_interval=poll_interval,
                     timeout=wait_timeout,
+                    **({"enable_gpu_builds": True} if enable_gpu_builds else {}),
                 )
             return build
         except Exception:
@@ -1003,6 +1191,7 @@ class SandboxManager:
         build_args: Optional[Dict[str, str]] = None,
         image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
         image_config_user: Optional[str] = None,
+        enable_gpu_builds: bool = False,
         builder_cpus: Optional[int] = None,
         builder_memory_mib: Optional[int] = None,
         builder_scratch_mib: Optional[int] = None,
@@ -1012,6 +1201,8 @@ class SandboxManager:
         temp_dir: Optional[str] = None,
         upload_timeout: Optional[float] = None,
     ) -> SandboxImageBuild:
+        if enable_gpu_builds and not remote:
+            raise ValueError("GPU image builds require remote=True")
         if remote:
             if docker_tag is not None or build_args:
                 raise ValueError(
@@ -1021,6 +1212,7 @@ class SandboxManager:
             return self._build_image_from_remote_dockerfile(
                 context_path=context_path,
                 image_name=image_name,
+                enable_gpu_builds=enable_gpu_builds,
                 dockerfile=dockerfile,
                 platform=platform,
                 remote_full_context=remote_full_context,
@@ -1080,8 +1272,19 @@ class SandboxManager:
             )
         return session
 
-    def get_detail(self, sandbox_id: str) -> SandboxDetail:
-        payload = self._request("GET", f"/sandbox/{sandbox_id}")
+    def get_detail(
+        self,
+        sandbox_id: str,
+        *,
+        request_timeout: Optional[float] = None,
+        retry: bool = True,
+    ) -> SandboxDetail:
+        payload = self._request(
+            "GET",
+            f"/sandbox/{sandbox_id}",
+            request_timeout=request_timeout,
+            retry=retry,
+        )
         return SandboxDetail(**payload)
 
     def attach(self, detail: SandboxDetail) -> SandboxHandle:
@@ -1197,6 +1400,8 @@ class SandboxManager:
         *,
         params: Optional[Dict[str, object]] = None,
         data: Optional[Dict[str, object]] = None,
+        request_timeout: Optional[float] = None,
+        retry: bool = True,
     ):
         failed_attempt = 1
         while True:
@@ -1210,6 +1415,11 @@ class SandboxManager:
                         if value is not None
                     },
                     json=data,
+                    **(
+                        {"timeout": request_timeout}
+                        if request_timeout is not None
+                        else {}
+                    ),
                 )
                 ensure_response_ok(response, "control")
             except BaseException as cause:
@@ -1219,7 +1429,7 @@ class SandboxManager:
                     "Unknown error occurred",
                     request_context(method, path),
                 )
-                if not should_retry_get(method, error, failed_attempt):
+                if not retry or not should_retry_get(method, error, failed_attempt):
                     raise error
                 time.sleep(get_retry_delay_seconds(failed_attempt))
                 failed_attempt += 1

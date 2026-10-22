@@ -1,0 +1,182 @@
+{
+  "create": {
+    "imageName": "gpu-image",
+    "gpu": "H100",
+    "gpuCount": 2,
+    "preempt": false,
+    "region": "us",
+    "vcpus": 8,
+    "memMiB": 32768,
+    "diskSizeMiB": 524288,
+    "enableRecording": true,
+    "exposedPorts": [
+      {
+        "port": 8000,
+        "auth": true
+      }
+    ],
+    "allowInternetAccess": true,
+    "allowOut": [
+      "example.com"
+    ],
+    "denyOut": []
+  },
+  "provisioning": {
+    "id": "gpu-sandbox-1",
+    "teamId": "team-1",
+    "status": "provisioning",
+    "createdAt": "2026-10-22T00:00:00Z",
+    "updatedAt": "2026-10-22T00:00:00Z",
+    "region": "us",
+    "sessionUrl": "https://app.test/sandboxes/gpu-sandbox-1",
+    "duration": 0,
+    "runtimeClass": "gvisor-cpu",
+    "gpuType": "H100",
+    "gpuCount": 2,
+    "preempt": false,
+    "recordingEnabled": true,
+    "vcpus": 8,
+    "memMiB": 32768,
+    "diskSizeMiB": 524288,
+    "runtime": null,
+    "token": null,
+    "tokenExpiresAt": null,
+    "exposedPorts": [],
+    "network": {
+      "allowInternetAccess": true,
+      "allowOut": [],
+      "denyOut": []
+    },
+    "creditsUsed": 0,
+    "capabilities": {
+      "commands": true,
+      "files": true,
+      "pty": true,
+      "gpu": true,
+      "snapshots": false,
+      "volumes": false,
+      "exposedPorts": true,
+      "networkFiltering": true,
+      "liveNetworkUpdates": true,
+      "internetAccess": true,
+      "writableStorage": "disk"
+    }
+  },
+  "active": {
+    "id": "gpu-sandbox-1",
+    "teamId": "team-1",
+    "status": "active",
+    "createdAt": "2026-10-22T00:00:00Z",
+    "updatedAt": "2026-10-22T00:00:00Z",
+    "region": "us",
+    "sessionUrl": "https://app.test/sandboxes/gpu-sandbox-1",
+    "duration": 0,
+    "runtimeClass": "gvisor-cpu",
+    "gpuType": "H100",
+    "gpuCount": 2,
+    "preempt": false,
+    "recordingEnabled": true,
+    "vcpus": 8,
+    "memMiB": 32768,
+    "diskSizeMiB": 524288,
+    "runtime": {
+      "transport": "regional_proxy",
+      "host": "https://runtime.test",
+      "baseUrl": "https://runtime.test/sandbox/gpu-sandbox-1"
+    },
+    "token": "runtime-token",
+    "tokenExpiresAt": "2099-01-01T00:00:00Z",
+    "exposedPorts": [],
+    "network": {
+      "allowInternetAccess": true,
+      "allowOut": [],
+      "denyOut": []
+    },
+    "creditsUsed": 0,
+    "capabilities": {
+      "commands": true,
+      "files": true,
+      "pty": true,
+      "gpu": true,
+      "snapshots": false,
+      "volumes": false,
+      "exposedPorts": true,
+      "networkFiltering": true,
+      "liveNetworkUpdates": true,
+      "internetAccess": true,
+      "writableStorage": "disk"
+    }
+  },
+  "closed": {
+    "id": "gpu-sandbox-1",
+    "teamId": "team-1",
+    "status": "closed",
+    "createdAt": "2026-10-22T00:00:00Z",
+    "updatedAt": "2026-10-22T00:00:00Z",
+    "region": "us",
+    "sessionUrl": "https://app.test/sandboxes/gpu-sandbox-1",
+    "duration": 0,
+    "runtimeClass": "gvisor-cpu",
+    "gpuType": "H100",
+    "gpuCount": 2,
+    "preempt": false,
+    "recordingEnabled": true,
+    "vcpus": 8,
+    "memMiB": 32768,
+    "diskSizeMiB": 524288,
+    "runtime": null,
+    "token": null,
+    "tokenExpiresAt": null,
+    "exposedPorts": [],
+    "network": {
+      "allowInternetAccess": true,
+      "allowOut": [],
+      "denyOut": []
+    },
+    "creditsUsed": 1.25,
+    "capabilities": {
+      "commands": true,
+      "files": true,
+      "pty": true,
+      "gpu": true,
+      "snapshots": false,
+      "volumes": false,
+      "exposedPorts": true,
+      "networkFiltering": true,
+      "liveNetworkUpdates": true,
+      "internetAccess": true,
+      "writableStorage": "disk"
+    },
+    "closeReason": "preempted"
+  },
+  "building": {
+    "id": "gpu-build-1",
+    "imageName": "gpu-image",
+    "imageId": "gpu-image-1",
+    "status": "completed",
+    "enableGPUBuilds": true,
+    "imageReady": true,
+    "uploaded": true,
+    "gpuUploaded": false,
+    "gpuImageReady": false,
+    "metadata": {
+      "inputFormat": "dockerfile_context_manifest_v1",
+      "sourcePlatform": "linux/amd64"
+    }
+  },
+  "gpuReady": {
+    "id": "gpu-build-1",
+    "imageName": "gpu-image",
+    "imageId": "gpu-image-1",
+    "status": "completed",
+    "enableGPUBuilds": true,
+    "imageReady": true,
+    "uploaded": true,
+    "gpuUploaded": true,
+    "gpuImageReady": true,
+    "metadata": {
+      "inputFormat": "dockerfile_context_manifest_v1",
+      "sourcePlatform": "linux/amd64"
+    }
+  }
+}

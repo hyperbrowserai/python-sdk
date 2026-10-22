@@ -20,6 +20,7 @@ def image_build_name(
     platform: str = "linux/amd64",
     image_init: Optional[Union[SandboxImageInitDict, SandboxImageInit]] = None,
     image_config_user: Optional[str] = None,
+    enable_gpu_builds: bool = False,
 ) -> str:
     """Name an immutable input identity without packaging or uploading it.
 
@@ -49,6 +50,8 @@ def image_build_name(
     else:
         raise ValueError("source must be 'dockerfile' or 'prebuilt'")
     options = {}
+    if enable_gpu_builds:
+        options["enableGPUBuilds"] = True
     if image_init is not None:
         normalized = coerce_request(image_init, SandboxImageInit, name="image_init")
         initialization = normalized.model_dump(by_alias=True, exclude_none=True)
@@ -72,7 +75,11 @@ def image_build_name(
 
 
 def matching_image_build(
-    error: HyperbrowserError, image_name: str, input_format: str
+    error: HyperbrowserError,
+    image_name: str,
+    input_format: str,
+    *,
+    enable_gpu_builds: bool = False,
 ) -> Optional[SandboxImageBuild]:
     if error.status_code != 409 or error.code != "image_build_in_progress":
         return None
@@ -90,12 +97,18 @@ def matching_image_build(
         build = SandboxImageBuild(**dict(data))
     except (TypeError, ValueError):
         return None
+    if enable_gpu_builds and not build.enable_gpu_builds:
+        return None
     if not build.id or build.image_name != image_name:
         return None
     return build
 
 
-def completed_image_id(build: SandboxImageBuild) -> Optional[str]:
+def completed_image_id(
+    build: SandboxImageBuild, *, enable_gpu_builds: bool = False
+) -> Optional[str]:
+    if (enable_gpu_builds or build.enable_gpu_builds) and not build.gpu_image_ready:
+        return None
     if build.status != "completed":
         return None
     if not build.image_id:
