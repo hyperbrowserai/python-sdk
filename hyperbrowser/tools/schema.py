@@ -146,9 +146,9 @@ BROWSER_USE_LLM_SCHEMA = {
     "enum": [
         "gpt-4o",
         "gpt-4o-mini",
-        "claude-3-7-sonnet-20250219",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
+        "claude-sonnet-5",
+        "claude-sonnet-4-6",
+        "claude-haiku-5-5",
         "gemini-2.0-flash",
     ],
     "default": "gemini-2.0-flash",

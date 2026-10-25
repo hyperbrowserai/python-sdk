@@ -44,8 +44,10 @@ BrowserUseLlm = Literal[
     "gpt-5-mini",
     "claude-sonnet-5",
     "claude-sonnet-4-6",
-    "claude-sonnet-4-5",
     "claude-haiku-5-5",
+    # Deprecated: retires November 30, 2026. Use "claude-sonnet-5".
+    "claude-sonnet-4-5",
+    # Retired: accepted for backward compatibility and mapped by the API.
     "claude-sonnet-4-20250514",
     "claude-3-7-sonnet-20250219",
     "claude-3-5-sonnet-20241022",
@@ -55,6 +57,7 @@ BrowserUseLlm = Literal[
     "gemini-3.8-flash",
 ]
 HyperAgentLlm = Literal[
+    "gpt-6-luna",
     "gpt-5.6-luna",
     "gpt-5.5",
     "gpt-5.2",
@@ -68,8 +71,9 @@ HyperAgentLlm = Literal[
     "gpt-4.1-nano",
     "claude-sonnet-5",
     "claude-sonnet-4-6",
-    "claude-sonnet-4-5",
     "claude-haiku-5-5",
+    # Deprecated: retires November 30, 2026. Use "claude-sonnet-5".
+    "claude-sonnet-4-5",
     "gemini-2.5-flash",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
@@ -79,18 +83,22 @@ ClaudeComputerUseLlm = Literal[
     "claude-opus-5-5",
     "claude-fable-5-1",
     "claude-opus-5",
-    "claude-opus-4-5",
-    "claude-opus-4-6",
-    "claude-opus-4-7",
     "claude-opus-4-8",
-    "claude-haiku-5-5",
-    "claude-haiku-4-5-20251001",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+    "claude-opus-4-5",
     "claude-sonnet-5-5",
     "claude-sonnet-5",
     "claude-sonnet-4-6",
+    "claude-haiku-5-5",
+    "claude-haiku-4-5-20251001",
+    # Deprecated: retires November 30, 2026. Use "claude-sonnet-5-5".
     "claude-sonnet-4-5",
+    # Retired: accepted for backward compatibility and mapped by the API.
     "claude-sonnet-4-20250514",
     "claude-3-7-sonnet-20250219",
+    "claude-opus-4-20250514",
+    "claude-4-opus-20250514",
 ]
 ClaudeComputerUseReasoningEffort = Literal[
     "low",
