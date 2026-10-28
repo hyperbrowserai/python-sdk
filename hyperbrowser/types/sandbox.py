@@ -5,7 +5,23 @@ from typing_extensions import Required, TypeAlias, TypedDict
 from .secret import OnePasswordSource, SecretReferenceInput
 
 
-SandboxStatus: TypeAlias = Literal["active", "closed", "error", "close-error"]
+SandboxStatus: TypeAlias = Literal[
+    "provisioning", "active", "closed", "error", "close-error"
+]
+SandboxGpuType: TypeAlias = Literal[
+    "L4",
+    "A10G",
+    "L40S",
+    "L40",
+    "H100",
+    "H200",
+    "B200",
+    "B300",
+    "A100-40GB",
+    "A100-80GB",
+    "RTX-PRO-6000",
+]
+SandboxRuntimeClass: TypeAlias = Literal["firecracker", "gvisor-cpu"]
 SandboxRegion: TypeAlias = Literal[
     "us-central",
     "asia-south",
@@ -95,6 +111,10 @@ class CreateSandboxFromImageParams(_CreateSandboxCommon, total=False):
     """Parameters for creating a sandbox from an image."""
 
     image_name: Required[str]
+    runtime_class: Optional[SandboxRuntimeClass]
+    gpu: Optional[SandboxGpuType]
+    gpu_count: Optional[int]
+    preempt: Optional[bool]
     image_id: Optional[str]
     cpu: Optional[int]
     memory_mib: Optional[int]
@@ -114,7 +134,7 @@ StartSandboxFromSnapshotParams: TypeAlias = CreateSandboxFromSnapshotParams
 class SandboxListParams(TypedDict, total=False):
     """Filters and pagination for listing sandboxes."""
 
-    status: Optional[SandboxStatus]
+    status: Optional[Literal["active", "closed", "error", "close-error"]]
     page: int
     limit: int
     start: Optional[int]
@@ -211,6 +231,7 @@ class CreateSandboxImageBuildParams(TypedDict, total=False):
     """Metadata for starting an uploaded sandbox image build."""
 
     image_name: Required[str]
+    enable_gpu_builds: Optional[bool]
     input_sha256: Required[str]
     input_size_bytes: Required[int]
     builder_cpus: Optional[int]
@@ -524,6 +545,8 @@ __all__ = [
     "SandboxSnapshotListParams",
     "SandboxSnapshotStatus",
     "SandboxStatus",
+    "SandboxGpuType",
+    "SandboxRuntimeClass",
     "SandboxTerminalCreateParams",
     "SandboxTerminalKillParams",
     "SandboxTerminalWaitParams",

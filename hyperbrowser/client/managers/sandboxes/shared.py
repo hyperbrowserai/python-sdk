@@ -207,6 +207,13 @@ def _resolve_sandbox_runtime_session_host(runtime, base_url) -> str:
 
 
 def _build_sandbox_exposed_url(runtime, port: int) -> str:
+    if runtime is None:
+        raise HyperbrowserError(
+            "Sandbox runtime is not ready; call wait_until_ready() first",
+            code="sandbox_not_ready",
+            status_code=409,
+            service="runtime",
+        )
     parsed = urlsplit(runtime.base_url)
     session_host = _resolve_sandbox_runtime_session_host(runtime, parsed)
     if not session_host:

@@ -385,8 +385,11 @@ from .session import (
 )
 from .sandbox import (
     SandboxStatus,
+    SandboxGpuType,
+    SandboxRuntimeClass,
     SandboxRegion,
     SandboxRuntimeTarget,
+    SandboxCapabilities,
     Sandbox,
     SandboxDetail,
     SandboxRuntimeSession,
@@ -787,8 +790,11 @@ __all__ = [
     "UpdateSessionSolveCaptchasResponse",
     # sandbox
     "SandboxStatus",
+    "SandboxGpuType",
+    "SandboxRuntimeClass",
     "SandboxRegion",
     "SandboxRuntimeTarget",
+    "SandboxCapabilities",
     "Sandbox",
     "SandboxDetail",
     "SandboxRuntimeSession",

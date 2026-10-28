@@ -1042,3 +1042,89 @@ their explicit-name behavior and continue to report build conflicts directly.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### GPU sandboxes
+
+Build a GPU-ready image from a remote Dockerfile context, then select a GPU when
+creating the sandbox. GPU image publication happens after the ordinary build;
+`enable_gpu_builds=True` makes the build helpers wait for `gpu_image_ready` and
+keeps CPU-only images out of GPU cache reuse. Local/prebuilt Docker image imports
+do not support GPU publication.
+
+```python
+from hyperbrowser import Hyperbrowser
+
+client = Hyperbrowser()
+image = client.sandboxes.get_or_build_image(
+    context_path="./gpu-image",  # Your CUDA-compatible Dockerfile and context
+    enable_gpu_builds=True,
+)
+sandbox = client.sandboxes.create({
+    "image_name": image.image_name,
+    "image_id": image.image_id,
+    "gpu": "H100",
+    "gpu_count": 2,
+    "preempt": False,  # Require on-demand capacity; account enablement required
+    "region": "us",
+    "cpu": 8,
+    "memory_mib": 32768,
+    "disk_mib": 65536,
+    "exposed_ports": [{"port": 8000, "auth": True}],
+})
+try:
+    # create() can return status='provisioning', runtime=None, and token=None.
+    sandbox.wait_until_ready(timeout=20 * 60)
+    result = sandbox.exec("nvidia-smi -L")
+    print(result.stdout)
+    sandbox.update_network({"allow_out": ["example.com"], "deny_out": []})
+finally:
+    sandbox.stop()
+```
+
+`gpu_count` defaults to one and accepts 1–8; the API checks that the requested
+GPU, CPU, and memory combination is available. Omitted `preempt` (or `True`)
+allows spot capacity. `False` requires on-demand capacity. GPU launches require
+`region="us"`; `runtime_class="gvisor-cpu"` is inferred by the API. The disk is
+quota-limited ephemeral storage, from 12 GiB (the default) up to 512 GiB, subject
+to your plan and host capacity. Snapshots, volume mounts, and startup secrets are
+not supported for GPU launches.
+
+`wait_until_ready()` returns the same handle, retries transient reads with
+backoff, and reports failures with the sandbox ID and close reason. Its timeout
+is independent of `timeout_minutes`, which controls the sandbox lifetime.
+Timeout or cancellation stops only the wait. For synchronous cancellation, pass
+a `threading.Event` as `cancel_event`; it is checked between HTTP reads. Async
+clients support the same methods with `await`, and the waiting task can be
+cancelled. After cancelling a wait, use the saved ID to inspect or stop the
+sandbox. `get()` and `list()` can also return provisioning sandboxes; the list
+API's existing `status="active"` filter includes provisioning requests.
+
+GPU handles expose `gpu_type`, `gpu_count`, `preempt`, `runtime_class`,
+`capabilities`, `recording_enabled`, and `close_reason`. Existing files, commands,
+PTY, exposed-port authentication, and network-update methods work after readiness.
+`credits_used` and termination details remain available through `info()`.
+
+For a custom image that starts an X11 desktop and installs the receiver's input
+and screenshot tools, use the sandbox runtime computer-action endpoint:
+
+```python
+screenshot = sandbox.computer_action({"action": "screenshot"})
+sandbox.computer_action({"action": "click", "x": 300, "y": 200})
+sandbox.computer_action({"action": "type_text", "text": "Hello"})
+```
+
+These calls belong inside the sandbox's active lifetime (before `stop()`). They
+use the sandbox runtime token, including token refresh, and accept the existing
+computer-action TypedDicts and legacy Pydantic request models. The image owns
+display startup; runtime readiness does not imply desktop readiness. Set
+`enable_recording=True` at creation to record a supported image's display and
+retrieve the video through `client.sessions.get_video_recording_url(sandbox.id)`.
+
+GPU cache lookup verifies the API's latest 100 completed builds. An older image
+may be rebuilt when its GPU readiness cannot be verified from that window.
+For live validation, set `HYPERBROWSER_API_KEY` and
+`HYPERBROWSER_GPU_IMAGE_NAME` (an already published image containing `nvidia-smi`),
+then run `pytest tests/sandbox/e2e/test_gpu.py`. Optional `HYPERBROWSER_GPU_TYPE`,
+`HYPERBROWSER_GPU_COUNT`, and `HYPERBROWSER_GPU_PREEMPT=false` select the GPU
+configuration; `HYPERBROWSER_GPU_DESKTOP=1` also checks screenshots. These tests
+create billable sandboxes and stop them in cleanup.

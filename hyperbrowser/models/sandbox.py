@@ -19,7 +19,21 @@ from .secret import (
 )
 from .session import SessionLaunchState, SessionStatus
 
-SandboxStatus = SessionStatus
+SandboxStatus = Literal["provisioning", "active", "closed", "error", "close-error"]
+SandboxGpuType = Literal[
+    "L4",
+    "A10G",
+    "L40S",
+    "L40",
+    "H100",
+    "H200",
+    "B200",
+    "B300",
+    "A100-40GB",
+    "A100-80GB",
+    "RTX-PRO-6000",
+]
+SandboxRuntimeClass = Literal["firecracker", "gvisor-cpu"]
 SandboxRegion = Literal[
     "us-central",
     "asia-south",
@@ -136,7 +150,27 @@ class SandboxNetworkUpdateResult(SandboxBaseModel):
     network: SandboxNetworkPolicy
 
 
+class SandboxCapabilities(SandboxBaseModel):
+    commands: bool
+    files: bool
+    pty: bool
+    gpu: Optional[bool] = None
+    snapshots: Optional[bool] = None
+    volumes: Optional[bool] = None
+    exposed_ports: Optional[bool] = Field(default=None, alias="exposedPorts")
+    internet_access: Optional[bool] = Field(default=None, alias="internetAccess")
+    network_filtering: bool = Field(default=False, alias="networkFiltering")
+    live_network_updates: bool = Field(default=False, alias="liveNetworkUpdates")
+    writable_storage: Optional[str] = Field(default=None, alias="writableStorage")
+
+
 class Sandbox(SandboxBaseModel):
+    runtime_class: Optional[str] = Field(default=None, alias="runtimeClass")
+    gpu_type: Optional[SandboxGpuType] = Field(default=None, alias="gpuType")
+    gpu_count: Optional[int] = Field(default=None, alias="gpuCount")
+    preempt: Optional[bool] = None
+    capabilities: Optional[SandboxCapabilities] = None
+    recording_enabled: Optional[bool] = Field(default=None, alias="recordingEnabled")
     id: str
     team_id: str = Field(alias="teamId")
     status: SandboxStatus
@@ -161,7 +195,7 @@ class Sandbox(SandboxBaseModel):
     memory_mib: Optional[int] = Field(default=None, alias="memMiB")
     disk_mib: Optional[int] = Field(default=None, alias="diskSizeMiB")
     timeout_minutes: Optional[int] = Field(default=None, alias="timeoutMinutes")
-    runtime: SandboxRuntimeTarget
+    runtime: Optional[SandboxRuntimeTarget]
     exposed_ports: List[SandboxExposeResult] = Field(
         default_factory=list,
         alias="exposedPorts",
@@ -242,6 +276,14 @@ class _SandboxLaunchCommonParams(SandboxBaseModel):
 
 
 class CreateSandboxParams(_SandboxLaunchCommonParams):
+    runtime_class: Optional[SandboxRuntimeClass] = Field(
+        default=None, serialization_alias="runtimeClass"
+    )
+    gpu: Optional[SandboxGpuType] = None
+    gpu_count: Optional[int] = Field(
+        default=None, ge=1, le=8, strict=True, serialization_alias="gpuCount"
+    )
+    preempt: Optional[bool] = Field(default=None, strict=True)
     snapshot_name: Optional[str] = Field(
         default=None, serialization_alias="snapshotName"
     )
@@ -272,6 +314,27 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
 
     @model_validator(mode="after")
     def validate_launch_source(self):
+        if self.gpu is None:
+            if self.gpu_count is not None or self.preempt is not None:
+                raise ValueError("gpu_count and preempt require gpu")
+            if self.runtime_class == "gvisor-cpu":
+                raise ValueError("runtime_class gvisor-cpu requires gpu")
+        else:
+            if self.runtime_class == "firecracker":
+                raise ValueError("GPU sandboxes require runtime_class gvisor-cpu")
+            if self.region not in (None, "us"):
+                raise ValueError("GPU sandboxes require region us")
+            if not self.image_name or self.snapshot_name or self.mounts:
+                raise ValueError(
+                    "GPU sandboxes require an image and do not support snapshots or volumes"
+                )
+            if self.secrets or self.vault is not None or self.one_password is not None:
+                raise ValueError("GPU sandboxes do not support startup secrets")
+            if (
+                self.disk_mib is not None
+                and not 12 * 1024 <= self.disk_mib <= 512 * 1024
+            ):
+                raise ValueError("GPU disk_mib must be between 12288 and 524288 MiB")
         if self.snapshot_id and not self.snapshot_name:
             raise ValueError("snapshot_id requires snapshot_name")
         if self.image_id and not self.image_name:
@@ -307,7 +370,7 @@ class StartSandboxFromSnapshotParams(_SandboxLaunchCommonParams):
 
 
 class SandboxListParams(SandboxBaseModel):
-    status: Optional[SandboxStatus] = Field(default=None, exclude=None)
+    status: Optional[SessionStatus] = Field(default=None, exclude=None)
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=10, ge=1)
     start: Optional[int] = None
@@ -458,6 +521,9 @@ class SandboxDockerImageManifest(SandboxBaseModel):
 
 
 class CreateSandboxImageBuildParams(SandboxBaseModel):
+    enable_gpu_builds: Optional[bool] = Field(
+        default=None, serialization_alias="enableGPUBuilds"
+    )
     image_name: str = Field(serialization_alias="imageName")
     input_sha256: str = Field(serialization_alias="inputSha256")
     input_size_bytes: int = Field(serialization_alias="inputSizeBytes")
@@ -497,6 +563,15 @@ class CreateSandboxImageBuildParams(SandboxBaseModel):
         serialization_alias="dockerImageManifest",
     )
 
+    @model_validator(mode="after")
+    def validate_gpu_build(self):
+        if self.enable_gpu_builds and self.input_format not in (
+            "dockerfile_context_tar_gz",
+            "dockerfile_context_manifest_v1",
+        ):
+            raise ValueError("GPU image builds require a remote Dockerfile context")
+        return self
+
 
 class ReuseSandboxDockerImageParams(SandboxBaseModel):
     image_name: str = Field(serialization_alias="imageName")
@@ -535,6 +610,11 @@ class SandboxImageBuildUpload(SandboxBaseModel):
 
 
 class SandboxImageBuild(SandboxBaseModel):
+    enable_gpu_builds: Optional[bool] = Field(default=None, alias="enableGPUBuilds")
+    image_ready: Optional[bool] = Field(default=None, alias="imageReady")
+    uploaded: Optional[bool] = None
+    gpu_uploaded: Optional[bool] = Field(default=None, alias="gpuUploaded")
+    gpu_image_ready: Optional[bool] = Field(default=None, alias="gpuImageReady")
     id: str
     team_id: Optional[str] = Field(default=None, alias="teamId")
     user_id: Optional[str] = Field(default=None, alias="userId")

@@ -146,3 +146,15 @@ async def invalid_async_credential_requests(client: AsyncHyperbrowser) -> None:
     await client.vaults.create({"entries": {}})  # M,P
     sandbox = await client.sandboxes.get("s")
     await sandbox.exec("x", one_password={"token": "t", "vault": "v", "fields": {"A": {"item": "i"}}})  # M,P
+
+
+def invalid_gpu_requests(client: Hyperbrowser) -> None:
+    client.sandboxes.create({"image_name": "cuda", "gpu": "A100"})  # M,P
+    client.sandboxes.create({"image_name": "cuda", "gpu_count": "2"})  # M,P
+    client.sandboxes.create({"image_name": "cuda", "preempt": "false"})  # M,P
+    client.sandboxes.create({"snapshot_name": "saved", "gpu": "H100"})  # M,P
+    client.sandboxes.list({"status": "provisioning"})  # M,P
+    client.sandboxes.get_or_build_image(context_path=".", enable_gpu_builds="yes")  # M,P
+    sandbox = client.sandboxes.get("sandbox")
+    sandbox.wait_until_ready(timeout="20")  # M,P
+    sandbox.computer_action({"action": "click", "x": "left"})  # M,P

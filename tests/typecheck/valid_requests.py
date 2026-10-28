@@ -833,3 +833,29 @@ async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
         client, session.id, {"credential": "x"}
     )
     print(text)
+
+
+def valid_gpu_requests(client: Hyperbrowser) -> None:
+    sandbox = client.sandboxes.create({
+        "image_name": "cuda", "gpu": "H100", "gpu_count": 2,
+        "preempt": False, "disk_mib": 524288,
+    })
+    sandbox.wait_until_ready(timeout=1200, poll_interval=3)
+    sandbox.computer_action({"action": "screenshot"})
+    client.sandboxes.get_or_build_image(context_path=".", enable_gpu_builds=True)
+    client.sandboxes.create_image_build({
+        "image_name": "cuda", "input_sha256": "a" * 64, "input_size_bytes": 1,
+        "input_format": "dockerfile_context_manifest_v1", "enable_gpu_builds": True,
+    })
+    client.sandboxes.wait_for_image_build("build", enable_gpu_builds=True)
+
+
+async def valid_async_gpu_requests(client: AsyncHyperbrowser) -> None:
+    sandbox = await client.sandboxes.create({
+        "image_name": "cuda", "gpu": "B300", "gpu_count": 8, "preempt": False,
+    })
+    await sandbox.wait_until_ready()
+    await sandbox.computer_action({"action": "click", "x": 1, "y": 2})
+    await client.sandboxes.build_image_from_dockerfile(
+        context_path=".", image_name="cuda", enable_gpu_builds=True,
+    )
