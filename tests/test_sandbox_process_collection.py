@@ -232,3 +232,13 @@ def test_invalid_collection_limit_rejected_before_start(limit):
     with pytest.raises(ValueError, match="positive integer"):
         SyncProcesses(transport).start("test", max_output_bytes=limit)
     assert not transport.calls
+
+
+def test_output_limit_error_reports_limit_and_received_bytes():
+    transport = SyncTransport([output(1, b"too much"), done(1)])
+    with pytest.raises(HyperbrowserError) as exc:
+        SyncProcesses(transport).exec("test", max_output_bytes=4)
+    assert exc.value.code == "output_limit_exceeded"
+    assert exc.value.details["max_output_bytes"] == 4
+    assert exc.value.details["received_bytes"] == 8
+    assert "8 bytes received, limit 4" in str(exc.value)
