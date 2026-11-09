@@ -79,6 +79,7 @@ from ..sandboxes.image_resolution import (
 )
 from ..sandboxes.shared import (
     OnePasswordSourceInput,
+    VaultSourceInput,
     SecretReferences,
     _build_sandbox_exposed_url,
     _copy_model,
@@ -329,7 +330,7 @@ class SandboxHandle:
         run_as: Optional[str] = None,
         max_output_bytes: int = 64 * 1024 * 1024,
         secrets: Optional[SecretReferences] = None,
-        vault: Optional[str] = None,
+        vault: Optional[VaultSourceInput] = None,
         one_password: Optional[OnePasswordSourceInput] = None,
     ):
         """Run a command to completion.
@@ -337,6 +338,8 @@ class SandboxHandle:
         ``secrets`` maps environment variable names to stored secrets (a name,
         or ``{"name": ..., "version": N}``). ``vault`` names a vault whose
         entries become variables too; ``secrets`` win on a clash.
+        Customer-protected secrets are passed as the references
+        ``secrets.unwrap()`` and ``vaults.unwrap()`` return.
         ``one_password`` sets variables from fields of a 1Password vault
         (``{"token": op_token_secret, "vault": ..., "fields": {ENV: {"item",
         "section", "field"}}}``); those variables may come from nothing else.

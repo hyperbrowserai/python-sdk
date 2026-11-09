@@ -18,6 +18,7 @@ from .secret import (
     normalize_secret_references,
 )
 from .session import SessionLaunchState, SessionStatus
+from .vault import VaultReference
 
 SandboxStatus = SessionStatus
 SandboxRegion = Literal[
@@ -257,8 +258,9 @@ class CreateSandboxParams(_SandboxLaunchCommonParams):
     # command only.
     secrets: Optional[Dict[str, SecretReference]] = None
     # A vault, by name, whose entries are delivered to the startup command;
-    # ``secrets`` are merged over it.
-    vault: Optional[str] = None
+    # ``secrets`` are merged over it. A vault with customer-protected entries
+    # is passed as the reference ``vaults.unwrap()`` returns.
+    vault: Optional[Union[str, VaultReference]] = None
     # Fields of a 1Password vault, delivered to the startup command. A
     # variable here may not also come from ``vault`` or ``secrets``.
     one_password: Optional[OnePasswordSource] = Field(
@@ -608,8 +610,10 @@ class SandboxExecParams(SandboxBaseModel):
     # the control API, which has the platform decrypt them in the sandbox.
     secrets: Optional[Dict[str, SecretReference]] = None
     # A vault, by name, whose entries become environment variables; ``secrets``
-    # are merged over it. Starts through the control API like ``secrets``.
-    vault: Optional[str] = None
+    # are merged over it. Starts through the control API like ``secrets``. A
+    # vault with customer-protected entries is passed as the reference
+    # ``vaults.unwrap()`` returns.
+    vault: Optional[Union[str, VaultReference]] = None
     # Fields of a 1Password vault as environment variables, resolved in the
     # sandbox at start. A variable here may not also come from ``vault``,
     # ``secrets`` or ``env``. Starts through the control API like ``secrets``.

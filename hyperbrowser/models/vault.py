@@ -6,7 +6,15 @@ from typing import Dict, List, Literal, Optional, Union
 
 from pydantic import ConfigDict, Field, field_validator
 
-from .secret import SecretBaseModel
+from .secret import (
+    MAX_SECRET_BINDINGS,
+    SecretBaseModel,
+    WrappedSecretVersion,
+    validate_secret_env_name,
+    validate_secret_name,
+    validate_secret_version,
+    validate_unwrapped_envelope,
+)
 
 
 class StoredEntry(SecretBaseModel):
@@ -29,6 +37,9 @@ class VaultEntry(StoredEntry):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     secret_id: Optional[str] = Field(default=None, alias="secretId")
+    # The secret's protection: a "customer" entry is used through the
+    # reference ``vaults.unwrap()`` returns.
+    protection: Optional[str] = None
 
 
 class CreateVaultParams(SecretBaseModel):
@@ -95,6 +106,79 @@ class VaultDeleteResult(SecretBaseModel):
     name: Optional[str] = None
 
 
+class WrappedVaultEntry(WrappedSecretVersion):
+    """A customer-protected entry's wrapped envelope: the version of secret
+    ``name`` the entry resolves to now."""
+
+    name: str
+    secret_id: str = Field(alias="secretId")
+
+
+class WrappedVault(SecretBaseModel):
+    """A vault's customer-protected entries, wrapped; other entries are
+    left out."""
+
+    id: str
+    name: str
+    entries: Dict[str, WrappedVaultEntry] = Field(default_factory=dict)
+
+    @field_validator("entries", mode="before")
+    @classmethod
+    def default_entries(cls, value):
+        return {} if value is None else value
+
+
+class VaultUnwrappedEntry(SecretBaseModel):
+    """One customer-protected entry, unwrapped: the version it was unwrapped
+    from and its envelope, which only the platform can open."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    version: int
+    unwrapped: str = Field(repr=False)
+
+    @field_validator("version", mode="before")
+    @classmethod
+    def validate_version(cls, value):
+        return validate_secret_version(value)
+
+    @field_validator("unwrapped", mode="plain")
+    @classmethod
+    def validate_unwrapped(cls, value):
+        if value is None:
+            raise ValueError("unwrapped is required")
+        return validate_unwrapped_envelope(value, "the vault entry")
+
+
+class VaultReference(SecretBaseModel):
+    """A vault with its customer-protected entries unwrapped, as
+    ``vaults.unwrap()`` returns it. Pass it as a sandbox's or process's
+    ``vault``; entries that aren't customer-protected are delivered as
+    usual."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    name: str
+    unwrapped: Dict[str, VaultUnwrappedEntry]
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        return validate_secret_name(value)
+
+    @field_validator("unwrapped", mode="before")
+    @classmethod
+    def validate_entries(cls, value):
+        if isinstance(value, dict):
+            if len(value) > MAX_SECRET_BINDINGS:
+                raise ValueError(
+                    f"At most {MAX_SECRET_BINDINGS} unwrapped vault entries are allowed"
+                )
+            for env in value:
+                validate_secret_env_name(env, "a vault entry")
+        return value
+
+
 __all__ = [
     "CreateVaultParams",
     "StoredEntry",
@@ -104,4 +188,8 @@ __all__ = [
     "VaultEntry",
     "VaultListParams",
     "VaultListResponse",
+    "VaultReference",
+    "VaultUnwrappedEntry",
+    "WrappedVault",
+    "WrappedVaultEntry",
 ]

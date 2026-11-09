@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from .client._request import coerce_request
+from .customer_key import check_customer_key
 from .exceptions import HyperbrowserError
 from .models.secret import (
     SecretsPublicKey,
@@ -356,6 +357,55 @@ def check_secret_version(version: int) -> int:
         return validate_secret_version(version)
     except (TypeError, ValueError) as error:
         raise HyperbrowserError(str(error), code="invalid_secret_version") from None
+
+
+def check_secret_version_or_latest(version: Any) -> Union[int, str]:
+    """Check a version number, or ``"latest"``, before it is used in a path."""
+    if version == "latest" and isinstance(version, str):
+        return version
+    return check_secret_version(version)
+
+
+def invalid_request(message: str) -> HyperbrowserError:
+    return HyperbrowserError(message, code="invalid_request")
+
+
+def create_secret_protection(params: Any) -> Optional[str]:
+    """The protection a create sends, after checking it fits ``customer_key``:
+    a customer key implies ``"customer"``, and a customer-protected value
+    needs one to be wrapped with."""
+    customer_key = params.customer_key
+    protection = params.protection
+    if protection is None and customer_key is not None:
+        protection = "customer"
+    if customer_key is not None:
+        if protection != "customer":
+            raise invalid_request(
+                'customer_key is only for secrets with protection "customer"'
+            )
+        check_customer_key(customer_key)
+    if protection == "customer" and params.value is not None and customer_key is None:
+        raise invalid_request(
+            "A customer-protected secret's value is wrapped with your own key: "
+            "pass customer_key"
+        )
+    return protection
+
+
+def check_customer_protection(secret: Any, customer_key: Any) -> None:
+    """Raise unless ``customer_key`` is given exactly for a customer-protected
+    secret."""
+    customer = secret.protection == "customer"
+    if customer and customer_key is None:
+        raise invalid_request(
+            f"Secret {secret.name} is customer-protected: pass customer_key to "
+            "wrap the value with"
+        )
+    if not customer and customer_key is not None:
+        raise invalid_request(
+            f"Secret {secret.name} is not customer-protected, so its versions "
+            "aren't wrapped: omit customer_key"
+        )
 
 
 def secret_not_found_error(key: str) -> HyperbrowserError:

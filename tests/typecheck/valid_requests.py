@@ -833,3 +833,99 @@ async def valid_async_credential_requests(client: AsyncHyperbrowser) -> None:
         client, session.id, {"credential": "x"}
     )
     print(text)
+
+
+class KmsCustomerKey:
+    kid = "kms/customer-key-1"
+
+    async def wrap(self, inner_envelope: str, encryption_context: str) -> str:
+        return inner_envelope
+
+    async def unwrap(self, wrapped_envelope: str) -> str:
+        return wrapped_envelope
+
+
+def valid_customer_protected_requests(client: Hyperbrowser) -> None:
+    from hyperbrowser import create_customer_key
+    from hyperbrowser.models import (
+        OnePasswordSource,
+        ReplaceSecretVersionWrappingParams,
+        VaultReference,
+        VaultUnwrappedEntry,
+        WrappedSecretVersion,
+        WrappedVault,
+    )
+
+    key = create_customer_key("-----BEGIN PRIVATE KEY-----", kid="team-key")
+    can_unwrap: bool = key.can_unwrap
+    client.secrets.create({"name": "db-pass", "value": "pw", "customer_key": key})
+    client.secrets.create(
+        {"name": "db-pass", "protection": "customer" if can_unwrap else "platform"}
+    )
+    client.secrets.create(
+        LegacyCreateSecretParams(name="db-pass", value="pw", customer_key=key)
+    )
+    client.secrets.add_version("db-pass", "pw2", customer_key=key)
+    wrapped: WrappedSecretVersion = client.secrets.get_wrapped_version("db-pass", 2)
+    outer_kid: str = wrapped.outer_kid
+    db_pass = client.secrets.unwrap(
+        "db-pass", [key] if outer_kid == key.kid else [], version=wrapped.version
+    )
+    client.secrets.rewrap("db-pass", from_key=[key], to_key=key, versions=[1, 2])
+    client.secrets.replace_version_wrapping(
+        "db-pass", 1, {"envelope": "e", "inner_digest": "d"}
+    )
+    client.secrets.replace_version_wrapping(
+        "db-pass", 1, ReplaceSecretVersionWrappingParams(envelope="e", inner_digest="d")
+    )
+    vault_envelopes: WrappedVault = client.vaults.get_wrapped("app-env")
+    app_env = client.vaults.unwrap(vault_envelopes.name, key)
+    client.sandboxes.create(
+        {
+            "image_name": "node",
+            "secrets": {"A": {"name": "a", "version": 1, "unwrapped": "e"}},
+            "vault": {
+                "name": "app-env",
+                "unwrapped": {"B": {"version": 2, "unwrapped": "e"}},
+            },
+            "one_password": {
+                "token": {"name": "op-token", "version": 1, "unwrapped": "e"},
+                "vault": "Engineering",
+                "fields": {"C": {"item": "i", "field": "f"}},
+            },
+        }
+    )
+    sandbox = client.sandboxes.get("sandbox_123")
+    sandbox.exec("node app.js", secrets={"DB_PASS": db_pass}, vault=app_env)
+    sandbox.exec(
+        "node app.js",
+        vault=VaultReference(
+            name="app-env",
+            unwrapped={"B": VaultUnwrappedEntry(version=2, unwrapped="e")},
+        ),
+        one_password=OnePasswordSource(token=db_pass, vault="v", fields={}),
+    )
+    client.sessions.credentials.fill(
+        "session_123",
+        {
+            "one_password": {
+                "token": {"name": "op-token", "version": 1, "unwrapped": "e"},
+                "vault": "v",
+                "allowed_origins": ["https://example.com"],
+            },
+            "fields": [{"selector": "#p", "ref": {"item": "i", "field": "f"}}],
+        },
+    )
+    session = client.sessions.get("session_123")
+    vault_names = [vault.name for vault in session.vaults or []]
+    client.sessions.create({"credentials": [{"vault": name} for name in vault_names]})
+
+
+async def valid_async_customer_protected_requests(client: AsyncHyperbrowser) -> None:
+    kms = KmsCustomerKey()
+    await client.secrets.create({"name": "db-pass", "value": "pw", "customer_key": kms})
+    reference = await client.secrets.unwrap("db-pass", kms)
+    await client.vaults.unwrap("app-env", [kms])
+    await client.secrets.rewrap("db-pass", from_key=kms, to_key=kms)
+    sandbox = await client.sandboxes.get("sandbox_123")
+    await sandbox.processes.start("node app.js", secrets={"DB_PASS": reference})

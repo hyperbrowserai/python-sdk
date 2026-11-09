@@ -27,6 +27,7 @@ from .....types import (
 )
 from ...sandboxes.shared import (
     OnePasswordSourceInput,
+    VaultSourceInput,
     SecretReferences,
     _normalize_exec_params,
     _runtime_process_payload,
@@ -354,7 +355,7 @@ class SandboxProcessesApi:
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
         secrets: Optional[SecretReferences] = None,
-        vault: Optional[str] = None,
+        vault: Optional[VaultSourceInput] = None,
         one_password: Optional[OnePasswordSourceInput] = None,
     ) -> SandboxProcessResult:
         handle = self.start(
@@ -387,7 +388,7 @@ class SandboxProcessesApi:
         run_as: Optional[str] = None,
         max_output_bytes: int = DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
         secrets: Optional[SecretReferences] = None,
-        vault: Optional[str] = None,
+        vault: Optional[VaultSourceInput] = None,
         one_password: Optional[OnePasswordSourceInput] = None,
     ) -> SandboxProcessHandle:
         """Start a process.
