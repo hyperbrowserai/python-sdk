@@ -239,7 +239,9 @@ Things to know:
 - Attaching secrets needs an API key with `secrets.use`; filling also needs
   `browser.sessions.update`. The team needs the secrets feature. Sessions with
   credentials run as Firecracker browsers with Chrome's password manager off.
-  A vault attaches the secrets its entries hold when the session is created.
+  A vault is attached by reference, so each fill uses the secrets its entries
+  name at that moment; `session.vaults` lists the attached vaults as `id` and
+  `name`.
 - Fills are recorded in the session's event log as `credential_filled` and
   `credential_fill_refused`. Their metadata names the `credential` or `vault`;
   for 1Password fills, `onePasswordToken` (the op_token's name) and its
@@ -253,9 +255,12 @@ Things to know:
     (409) is the same for frames.
   - `CREDENTIAL_ORIGIN_NOT_ALLOWED` (403): the page's origin (in `details`)
     isn't allowed; nothing was typed.
-  - `CREDENTIAL_NOT_ATTACHED` (403): the secret (or a 1Password fill's
-    op_token) wasn't attached when the session was created, or a vault entry
-    now points at another secret.
+  - `CREDENTIAL_NOT_ATTACHED` (403): the secret, vault or 1Password fill's
+    op_token wasn't attached to the session, directly or as an entry of an
+    attached vault.
+  - `SECRET_REQUIRES_CUSTOMER_UNWRAP` (400): a customer-protected secret
+    can't be typed into a page (see
+    [Customer-protected secrets](#customer-protected-secrets)).
   - `CREDENTIAL_NOT_READY` (409): the secret has no allowed origins or no
     value.
   - `SECRET_TYPE_MISMATCH` (409): an `op_token` can't be attached or filled
@@ -827,6 +832,105 @@ Things to know:
     `SECRET_ONEPASSWORD_RATE_LIMITED` (429) and
     `SECRET_ONEPASSWORD_FAILED` (502/503) are retryable.
   - `retryable` is the API's flag when it sends one.
+
+### Customer-protected secrets
+
+A secret created with `protection="customer"` is also wrapped with your own
+key, so the platform stores nothing it can open alone. Each version is sealed
+to the platform key as usual, then wrapped locally with your key. To use one,
+unwrap it locally and pass the result. Only the platform can open the
+unwrapped envelope, and it checks that the envelope belongs to the version
+you pinned.
+
+```python
+import os
+
+from hyperbrowser import Hyperbrowser, create_customer_key
+
+client = Hyperbrowser()
+
+# RSA (2048 bits or more), EC P-256/P-384/P-521, X25519 or X448: a
+# cryptography key object, PEM/DER or a JWK dict. A public key can wrap;
+# unwrapping needs the private key.
+customer_key = create_customer_key(os.environ["HB_CUSTOMER_KEY_PEM"])
+
+client.secrets.create({"name": "db-pass", "value": "hunter2", "customer_key": customer_key})
+client.secrets.add_version("db-pass", "hunter3", customer_key=customer_key)
+
+# A reference pinned to the version unwrapped: name, version and unwrapped.
+db_pass = client.secrets.unwrap("db-pass", customer_key)
+sandbox = client.sandboxes.create({"image_name": "my-image", "secrets": {"DB_PASS": db_pass}})
+sandbox.exec("python migrate.py", secrets={"DB_PASS": db_pass})
+
+# A vault's customer-protected entries, unwrapped together. Its other entries
+# are delivered as usual.
+app_env = client.vaults.unwrap("app-env", customer_key)
+sandbox.processes.start("python worker.py", vault=app_env)
+
+# A customer-protected op_token, for sandboxes and 1Password fills.
+token = client.secrets.unwrap("op-token", customer_key)
+sandbox.exec(
+    "python app.py",
+    one_password={
+        "token": token,
+        "vault": "Engineering",
+        "fields": {"DB_PASS": {"item": "Postgres", "field": "password"}},
+    },
+)
+```
+
+- `protection` is `"platform"` (the default) or `"customer"`, and is fixed when
+  the secret is created. Passing `customer_key` to `create` implies
+  `"customer"`. Creating one without a value gives an empty secret; add its
+  first version with `add_version(secret, value, customer_key=...)`.
+- The key's `kid` is its RFC 7638 thumbprint unless the JWK has a `kid` or you
+  pass `create_customer_key(key, kid=...)`. RSA keys wrap with `RSA-OAEP-256`.
+  EC and OKP keys default to `ECDH-ES+A256KW`; pass `algorithm="ECDH-ES"` for
+  direct key agreement. To keep the private key in a KMS or HSM, implement the
+  `CustomerKey` protocol yourself: `kid`, `wrap(inner_envelope,
+  encryption_context)` and `unwrap(wrapped_envelope)` produce and open a
+  compact JWE with protected header `{"alg", "enc": "A256GCM", "kid", "ctx"}`.
+  `ctx` must be the secret's `encryption_context`. With `AsyncHyperbrowser`,
+  either method may be a coroutine; the sync client refuses one.
+- `unwrap(secret, keys, version=...)` unwraps the latest version by default.
+  `vaults.unwrap(vault, keys)` unwraps the versions the vault's entries
+  resolve to now. Both take a list of keys, such as during a rotation, and use
+  the one whose `kid` wrapped each version (`customer_key_mismatch` if none
+  did). The unwrapped envelope is checked against the version's
+  `inner_digest` locally, and again by the API.
+- An unwrapped reference must pin a number, never `"latest"`. A vault
+  reference is refused with `SECRET_VAULT_CHANGED` when an entry was repointed
+  or moved to a newer version since it was unwrapped; unwrap it again.
+- Customer-protected secrets can't be typed into browser pages, including as
+  vault entries in a fill (`SECRET_REQUIRES_CUSTOMER_UNWRAP`). A
+  customer-protected `op_token` can still sign 1Password fills: pass the
+  unwrapped reference as `one_password`'s `token`.
+- Rotate your key with `rewrap(secret, from_key=..., to_key=...)`. It unwraps
+  each version still wrapped with another key and rewraps it with `to_key`,
+  all locally; the value and the version numbers don't change. It skips
+  versions already wrapped with `to_key`, so an interrupted rotation resumes
+  where it stopped. `get_wrapped_version` and `replace_version_wrapping` are
+  the single-version steps, for wrapping done elsewhere.
+- Version details include `outer_kid`, the customer key that wrapped them, and
+  `retires_at`. A version whose platform key is retired is refused with
+  `SECRET_KEY_RETIRED`: add a new version.
+- Fetching wrapped versions needs `secrets.use`, and rewrapping needs
+  `secrets.manage`. Signed-in users must be team owners or admins.
+- Error codes from the API:
+  - `SECRET_REQUIRES_CUSTOMER_UNWRAP` (400): a customer-protected secret was
+    used without its unwrapped envelope, unwrapped with `"latest"` instead of a
+    pinned version, or used where it can't be (a fill).
+  - `SECRET_PROTECTION_MISMATCH` (400): an unwrapped envelope for a secret
+    that isn't customer-protected, or a version uploaded in the other
+    protection's form.
+  - `SECRET_DIGEST_MISMATCH` (409): the unwrapped envelope (or a rewrap's
+    `inner_digest`) doesn't match the version.
+  - `SECRET_VERSION_DUPLICATE` (409): another version already holds this
+    inner envelope; rewrap that version instead.
+  - `SECRET_VAULT_CHANGED` (409): a vault entry resolves to another secret or
+    version than the one unwrapped; unwrap the vault again.
+  - `SECRET_KEY_RETIRED` (409): the version was sealed to a retired platform
+    key; add a new version.
 
 ### List sandboxes with filters
 
