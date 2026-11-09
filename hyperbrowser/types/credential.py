@@ -1,10 +1,10 @@
 """Typed dictionary requests for filling secrets into browser pages."""
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from typing_extensions import Required, TypedDict
 
-from .secret import OnePasswordField
+from .secret import OnePasswordField, SecretReference
 
 
 class CredentialFillField(TypedDict, total=False):
@@ -22,7 +22,7 @@ class OnePasswordFillSource(TypedDict):
     (attached to the session) from ``vault``, typed only on
     ``allowed_origins`` (1-20 origins such as ``https://example.com``)."""
 
-    token: str
+    token: Union[str, SecretReference]
     vault: str
     allowed_origins: List[str]
 

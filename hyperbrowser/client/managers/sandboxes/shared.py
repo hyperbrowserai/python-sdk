@@ -25,8 +25,10 @@ from ....sandbox_common import (
     runtime_base_url_session_id,
 )
 from ....models.secret import OnePasswordSource, SecretReference
+from ....models.vault import VaultReference
 from ....types import (
     OnePasswordSource as OnePasswordSourceDict,
+    VaultReference as VaultReferenceDict,
     SecretReference as SecretReferenceDict,
     SandboxExecParams as SandboxExecParamsDict,
     SandboxFileWriteEntry as SandboxFileWriteEntryDict,
@@ -37,6 +39,8 @@ from ....types import (
 SecretReferences = Dict[str, Union[str, SecretReferenceDict, SecretReference]]
 # Fields of a 1Password vault, as a mapping or model.
 OnePasswordSourceInput = Union[OnePasswordSourceDict, OnePasswordSource]
+# A vault's name, or the reference vaults.unwrap() returns.
+VaultSourceInput = Union[str, VaultReferenceDict, VaultReference]
 
 DEFAULT_WATCH_TIMEOUT_MS = 60_000
 # The receiver sends process SSE keepalives every 15 seconds.
@@ -100,7 +104,7 @@ def _normalize_exec_params(
     timeout_sec: Optional[int] = None,
     run_as: Optional[str] = None,
     secrets: Optional[SecretReferences] = None,
-    vault: Optional[str] = None,
+    vault: Optional[VaultSourceInput] = None,
     one_password: Optional[OnePasswordSourceInput] = None,
 ) -> SandboxExecParams:
     if isinstance(input, str):
@@ -180,7 +184,9 @@ def _secret_process_payload(params: SandboxExecParams) -> Dict[str, object]:
         }
         if secrets or (params.vault is None and params.one_password is None)
         else None,
-        "vault": params.vault,
+        "vault": params.vault
+        if params.vault is None or isinstance(params.vault, str)
+        else params.vault.model_dump(exclude_none=True),
         "onePassword": params.one_password.model_dump(exclude_none=True)
         if params.one_password is not None
         else None,

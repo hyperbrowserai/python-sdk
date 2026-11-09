@@ -28,6 +28,22 @@ class UpdateVaultParams(TypedDict, total=False):
     entries: Optional[Dict[str, Optional[StoredEntry]]]
 
 
+class VaultUnwrappedEntry(TypedDict):
+    """One customer-protected entry, unwrapped: the version it was unwrapped
+    from and its envelope."""
+
+    version: int
+    unwrapped: str
+
+
+class VaultReference(TypedDict):
+    """A vault with its customer-protected entries unwrapped, as
+    ``vaults.unwrap()`` returns it."""
+
+    name: str
+    unwrapped: Dict[str, VaultUnwrappedEntry]
+
+
 class VaultListParams(TypedDict, total=False):
     """Filters and pagination for listing vaults."""
 
@@ -41,4 +57,6 @@ __all__ = [
     "StoredEntry",
     "UpdateVaultParams",
     "VaultListParams",
+    "VaultReference",
+    "VaultUnwrappedEntry",
 ]

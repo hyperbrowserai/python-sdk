@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -11,6 +11,8 @@ SECRET_ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MAX_SECRET_VERSION = 2**31 - 1
 MAX_SECRET_BINDINGS = 32
 MAX_SECRET_ENV_NAME_LENGTH = 256
+# The longest unwrapped envelope the API takes.
+MAX_UNWRAPPED_ENVELOPE_LENGTH = 64 * 1024
 
 
 def validate_secret_name(name: str) -> str:
@@ -34,6 +36,18 @@ def validate_secret_version(version: int) -> int:
     return version
 
 
+def validate_unwrapped_envelope(value, what: str = "the secret"):
+    if value is not None and (
+        not isinstance(value, str)
+        or not 1 <= len(value) <= MAX_UNWRAPPED_ENVELOPE_LENGTH
+    ):
+        raise ValueError(
+            f"The unwrapped envelope of {what} must be a string of 1 to "
+            f"{MAX_UNWRAPPED_ENVELOPE_LENGTH} characters"
+        )
+    return value
+
+
 class SecretBaseModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -41,11 +55,15 @@ class SecretBaseModel(BaseModel):
 class SecretReference(SecretBaseModel):
     """Selects a stored secret for an environment variable.
 
-    An omitted version (or ``"latest"``) means the latest version.
+    An omitted version (or ``"latest"``) means the latest version. A
+    customer-protected secret also takes ``unwrapped``, the envelope
+    ``secrets.unwrap()`` returns, and then ``version`` must be the version
+    number it was unwrapped from.
     """
 
     name: str
     version: Optional[Union[int, Literal["latest"]]] = None
+    unwrapped: Optional[str] = Field(default=None, repr=False)
 
     @field_validator("name")
     @classmethod
@@ -58,6 +76,21 @@ class SecretReference(SecretBaseModel):
         if value is not None and value != "latest":
             validate_secret_version(value)
         return value
+
+    @field_validator("unwrapped", mode="plain")
+    @classmethod
+    def validate_unwrapped(cls, value):
+        return validate_unwrapped_envelope(value)
+
+    @model_validator(mode="after")
+    def require_pinned_version(self):
+        # An unwrapped envelope is one version's value; "latest" could move on.
+        if self.unwrapped is not None and not isinstance(self.version, int):
+            raise ValueError(
+                f"Pin the version of secret {self.name} to the version you "
+                'unwrapped when passing "unwrapped"'
+            )
+        return self
 
 
 SecretReferenceInput = Union[str, SecretReference]
@@ -119,7 +152,9 @@ class OnePasswordSource(SecretBaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
-    token: str
+    # The op_token secret's name, or for a customer-protected op_token the
+    # reference ``secrets.unwrap()`` returns.
+    token: Union[str, SecretReference]
     vault: str
     fields: Dict[str, OnePasswordField]
 
@@ -132,6 +167,12 @@ class OnePasswordSource(SecretBaseModel):
 #   op_token  a 1Password service account token, used only to sign in for
 #             one_password fields
 SecretType = Literal["secret", "totp", "op_token"]
+
+# Who can open a secret's stored versions; fixed when the secret is created.
+#   platform  the platform alone (the default)
+#   customer  only with the customer's own key as well: each version is
+#             wrapped with it, and each use passes the unwrapped envelope
+SecretProtection = Literal["platform", "customer"]
 
 # A secret value, encrypted locally before upload.
 SecretValue = Union[str, bytes]
@@ -185,9 +226,14 @@ class CreateSecretParams(SecretBaseModel):
     # Omitted means "secret".
     type: Optional[SecretType] = None
     metadata: Optional[SecretMetadata] = None
+    # Omitted means "platform", or "customer" when customer_key is given.
+    protection: Optional[SecretProtection] = None
     allowed_origins: Optional[List[str]] = Field(default=None, exclude=True)
     # Encrypted locally and uploaded as the first version; never sent as is.
     value: Optional[SecretValue] = Field(default=None, exclude=True, repr=False)
+    # A CustomerKey that wraps the first version of a customer-protected
+    # secret; never sent.
+    customer_key: Optional[Any] = Field(default=None, exclude=True, repr=False)
 
     @field_validator("name")
     @classmethod
@@ -268,23 +314,43 @@ class Secret(SecretBaseModel):
     # One of SecretType; kept as str so types the API adds later still parse.
     type: str = "secret"
     metadata: SecretMetadata = Field(default_factory=SecretMetadata)
+    # One of SecretProtection; kept as str like ``type``.
+    protection: str = "platform"
     encryption_context: str = Field(alias="encryptionContext")
     latest_version: Optional[int] = Field(default=None, alias="latestVersion")
     created_at: Optional[datetime] = Field(default=None, alias="createdAt")
     updated_at: Optional[datetime] = Field(default=None, alias="updatedAt")
 
-    @field_validator("type", "metadata", mode="before")
+    @field_validator("type", "metadata", "protection", mode="before")
     @classmethod
     def default_when_null(cls, value, info):
         if value is not None:
             return value
-        return "secret" if info.field_name == "type" else {}
+        return {"type": "secret", "protection": "platform"}.get(info.field_name, {})
 
 
 class SecretVersion(SecretBaseModel):
     version: int
+    # The platform key the value is sealed to.
     kid: str
+    # The customer key that wrapped a customer-protected version.
+    outer_kid: Optional[str] = Field(default=None, alias="outerKid")
+    # When the platform key retires; a retired version can't be used.
+    retires_at: Optional[datetime] = Field(default=None, alias="retiresAt")
     created_at: Optional[datetime] = Field(default=None, alias="createdAt")
+
+
+class WrappedSecretVersion(SecretBaseModel):
+    """A customer-protected version as stored: ``envelope`` is the inner
+    envelope (sealed to the platform key ``kid``) wrapped with the customer
+    key ``outer_kid``, and ``inner_digest`` identifies the inner envelope."""
+
+    version: int
+    kid: str
+    retires_at: Optional[datetime] = Field(default=None, alias="retiresAt")
+    outer_kid: str = Field(alias="outerKid")
+    inner_digest: str = Field(alias="innerDigest")
+    envelope: str = Field(repr=False)
 
 
 class SecretDetail(Secret):
@@ -307,6 +373,16 @@ class SecretDeleteResult(SecretBaseModel):
 class SecretVersionDeleteResult(SecretBaseModel):
     deleted: bool
     version: int
+
+
+class ReplaceSecretVersionWrappingParams(SecretBaseModel):
+    """A customer-protected version's new outer envelope. ``inner_digest``
+    must be the version's: only the wrapping changes, never the value."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    envelope: str = Field(min_length=1, repr=False)
+    inner_digest: str = Field(min_length=1, serialization_alias="innerDigest")
 
 
 class SecretBindingSource(SecretBaseModel):

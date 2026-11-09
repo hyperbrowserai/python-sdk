@@ -1,11 +1,11 @@
 """Request and response models for filling secrets into browser pages."""
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .secret import OnePasswordField
+from .secret import OnePasswordField, SecretReference
 
 # What a fill did with each requested input. New outcomes may be added, so
 # results keep any string the server sends.
@@ -44,8 +44,9 @@ class OnePasswordFillSource(BaseModel):
     """1Password fields to fill, read with an ``op_token`` secret attached to
     the session.
 
-    ``token`` names the op_token secret (its latest version signs in);
-    ``vault`` is the 1Password vault's name or ID. ``allowed_origins`` lists
+    ``token`` names the op_token secret (its latest version signs in), or
+    for a customer-protected op_token is the reference ``secrets.unwrap()``
+    returns; ``vault`` is the 1Password vault's name or ID. ``allowed_origins`` lists
     the 1-20 origins (``scheme://host[:port]``, a leading ``*.`` for
     subdomains) the values may be typed on: unlike stored secrets, nothing
     else says where a 1Password value belongs.
@@ -53,7 +54,7 @@ class OnePasswordFillSource(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
-    token: str
+    token: Union[str, SecretReference]
     vault: str
     allowed_origins: List[str] = Field(serialization_alias="allowedOrigins")
 

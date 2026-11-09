@@ -264,6 +264,18 @@ class SessionCredential(BaseModel):
     name: str
 
 
+class SessionVault(BaseModel):
+    """A vault attached to a session at creation. Fills read its entries as
+    they are when the fill runs."""
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    id: str
+    name: str
+
+
 class SessionCredentialSecret(BaseModel):
     """Attaches a secret, by name, to a new session."""
 
@@ -319,6 +331,8 @@ class SessionDetail(Session):
     credentials: Optional[List[SessionCredential]] = Field(
         default=None, alias="credentials"
     )
+    # The vaults attached at creation, by reference.
+    vaults: Optional[List[SessionVault]] = Field(default=None, alias="vaults")
 
 
 class SessionGetParams(BaseModel):

@@ -266,6 +266,7 @@ from .secret import (
     CreateSecretParams,
     OnePasswordField,
     OnePasswordSource,
+    ReplaceSecretVersionWrappingParams,
     SandboxResolvedSecret,
     Secret,
     SecretBindingSource,
@@ -276,6 +277,7 @@ from .secret import (
     SecretListParams,
     SecretListResponse,
     SecretMetadata,
+    SecretProtection,
     SecretReference,
     SecretReferenceInput,
     SecretsPublicKey,
@@ -284,6 +286,7 @@ from .secret import (
     SecretVersion,
     SecretVersionDeleteResult,
     UpdateSecretParams,
+    WrappedSecretVersion,
 )
 from .volume import (
     CreateVolumeParams,
@@ -348,6 +351,7 @@ from .session import (
     ScreenConfig,
     Session,
     SessionCredential,
+    SessionVault,
     SessionCredentialInput,
     SessionCredentialOnePassword,
     SessionCredentialSecret,
@@ -502,6 +506,10 @@ from .vault import (
     VaultEntry,
     VaultListParams,
     VaultListResponse,
+    VaultReference,
+    VaultUnwrappedEntry,
+    WrappedVault,
+    WrappedVaultEntry,
 )
 
 __all__ = [
@@ -694,11 +702,16 @@ __all__ = [
     "VaultEntry",
     "VaultListParams",
     "VaultListResponse",
+    "VaultReference",
+    "VaultUnwrappedEntry",
+    "WrappedVault",
+    "WrappedVaultEntry",
     # secret
     "CreateSecretParams",
     "OnePasswordField",
     "OnePasswordFillSource",
     "OnePasswordSource",
+    "ReplaceSecretVersionWrappingParams",
     "SandboxResolvedSecret",
     "Secret",
     "SecretBindingSource",
@@ -709,6 +722,7 @@ __all__ = [
     "SecretListParams",
     "SecretListResponse",
     "SecretMetadata",
+    "SecretProtection",
     "SecretReference",
     "SecretReferenceInput",
     "SecretsPublicKey",
@@ -717,6 +731,7 @@ __all__ = [
     "SecretVersion",
     "SecretVersionDeleteResult",
     "UpdateSecretParams",
+    "WrappedSecretVersion",
     # volume
     "CreateVolumeParams",
     "Volume",
@@ -751,6 +766,7 @@ __all__ = [
     "ScreenConfig",
     "Session",
     "SessionCredential",
+    "SessionVault",
     "SessionCredentialInput",
     "SessionCredentialOnePassword",
     "SessionCredentialSecret",
