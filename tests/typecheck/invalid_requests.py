@@ -146,3 +146,15 @@ async def invalid_async_credential_requests(client: AsyncHyperbrowser) -> None:
     await client.vaults.create({"entries": {}})  # M,P
     sandbox = await client.sandboxes.get("s")
     await sandbox.exec("x", one_password={"token": "t", "vault": "v", "fields": {"A": {"item": "i"}}})  # M,P
+
+
+def invalid_customer_protected_requests(client: Hyperbrowser) -> None:
+    client.secrets.create({"name": "g", "protection": "vendor"})  # M,P
+    client.secrets.create({"name": "g", "customer_key": "pem"})  # M,P
+    client.secrets.unwrap("g", "not a key")  # M,P
+    client.secrets.unwrap("g", [], version="newest")  # M,P
+    client.secrets.replace_version_wrapping("g", 1, {"envelope": "e"})  # M,P
+    client.sandboxes.create({"image_name": "node", "vault": {"name": "v"}})  # M,P
+    sandbox = client.sandboxes.get("s")
+    sandbox.exec("x", vault={"name": "v", "unwrapped": {"A": {"version": 1}}})  # M,P
+    sandbox.exec("x", secrets={"A": {"name": "a", "unwrapped": 1}})  # M,P
