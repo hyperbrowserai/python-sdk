@@ -35,3 +35,23 @@ def test_start_claude_computer_use_accepts_sonnet_5_5() -> None:
     assert dumped_mapping == dumped_legacy
     assert dumped_mapping["llm"] == "claude-sonnet-5-5"
     assert dumped_mapping["reasoningEffort"] == "max"
+
+
+def test_start_claude_computer_use_accepts_fable_5_2() -> None:
+    mapping = {
+        "task": "Inspect the page",
+        "llm": "claude-fable-5-2",
+        "reasoning_effort": "xhigh",
+    }
+    legacy = StartClaudeComputerUseTaskParams(
+        task="Inspect the page",
+        llm="claude-fable-5-2",
+        reasoning_effort="xhigh",
+    )
+
+    dumped_mapping = dump_request(mapping, StartClaudeComputerUseTaskParams)
+    dumped_legacy = dump_request(legacy, StartClaudeComputerUseTaskParams)
+
+    assert dumped_mapping == dumped_legacy
+    assert dumped_mapping["llm"] == "claude-fable-5-2"
+    assert dumped_mapping["reasoningEffort"] == "xhigh"
