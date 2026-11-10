@@ -426,8 +426,11 @@ async def test_session_webgl_fingerprinting_solver_type_and_active_count():
     dumped = params.model_dump(by_alias=True, exclude_none=True)
     assert dumped["enableWebglFingerprinting"] is True
 
-    launch_state = SessionLaunchState(solverType="future-solver-v2")
+    launch_state = SessionLaunchState(
+        solverType="future-solver-v2", enableWebglFingerprinting=True
+    )
     assert launch_state.solver_type == "future-solver-v2"
+    assert launch_state.enable_webgl_fingerprinting is True
 
     def handler(request: httpx.Request):
         assert request.method == "GET"

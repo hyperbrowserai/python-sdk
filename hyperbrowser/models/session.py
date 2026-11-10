@@ -195,6 +195,9 @@ class SessionLaunchState(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, alias="disablePostQuantumKeyAgreement"
     )
+    enable_webgl_fingerprinting: Optional[bool] = Field(
+        default=None, alias="enableWebglFingerprinting"
+    )
 
 
 class SessionCreditBreakdown(BaseModel):
