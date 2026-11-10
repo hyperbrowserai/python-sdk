@@ -198,6 +198,9 @@ class SessionLaunchState(BaseModel):
     enable_webgl_fingerprinting: Optional[bool] = Field(
         default=None, alias="enableWebglFingerprinting"
     )
+    """Deprecated and discontinued: WebGL fingerprinting was removed from the
+    browser and the server ignores this option. Kept so existing code that
+    sets or reads it keeps working."""
 
 
 class SessionCreditBreakdown(BaseModel):
@@ -664,6 +667,9 @@ class CreateSessionParams(BaseModel):
     enable_webgl_fingerprinting: Optional[bool] = Field(
         default=None, serialization_alias="enableWebglFingerprinting"
     )
+    """Deprecated and discontinued: WebGL fingerprinting was removed from the
+    browser and the server ignores this option. Kept so existing code that
+    sets or reads it keeps working."""
     browser_memory_size: Optional[BrowserMemorySize] = Field(
         default=None, serialization_alias="browserMemorySize"
     )
@@ -692,12 +698,6 @@ class GetActiveSessionsCountResponse(BaseModel):
     )
 
     active_sessions_count: int = Field(alias="activeSessionsCount")
-    max_concurrent_sessions: Optional[int] = Field(
-        default=None, alias="maxConcurrentSessions"
-    )
-    total_active_sessions_count: Optional[int] = Field(
-        default=None, alias="totalActiveSessionsCount"
-    )
 
 
 class CreateSessionSnapshotResponse(BaseModel):

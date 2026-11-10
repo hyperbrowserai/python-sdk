@@ -210,7 +210,7 @@ class CreateSessionParams(TypedDict, total=False):
     live_view_ttl_seconds: Optional[int]
     replace_native_elements: Optional[bool]
     disable_post_quantum_key_agreement: Optional[bool]
-    enable_webgl_fingerprinting: Optional[bool]
+    enable_webgl_fingerprinting: Optional[bool]  # Deprecated: ignored by the server
     browser_memory_size: Optional[BrowserMemorySize]
     start_from_snapshot: Optional[StartSessionFromSnapshotParams]
     credentials: Optional[List[SessionCredentialInput]]

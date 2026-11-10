@@ -439,8 +439,6 @@ async def test_session_webgl_fingerprinting_solver_type_and_active_count():
             200,
             json={
                 "activeSessionsCount": 3,
-                "maxConcurrentSessions": 10,
-                "totalActiveSessionsCount": 4,
             },
         )
 
@@ -456,8 +454,6 @@ async def test_session_webgl_fingerprinting_solver_type_and_active_count():
     session_mgr = SessionManager(client)
     res = session_mgr.get_active_sessions_count()
     assert res.active_sessions_count == 3
-    assert res.max_concurrent_sessions == 10
-    assert res.total_active_sessions_count == 4
     client.transport.close()
 
     async_client = AsyncHyperbrowser.__new__(AsyncHyperbrowser)
@@ -477,8 +473,6 @@ async def test_session_webgl_fingerprinting_solver_type_and_active_count():
     async_session_mgr = AsyncSessionManager(async_client)
     async_res = await async_session_mgr.get_active_sessions_count()
     assert async_res.active_sessions_count == 3
-    assert async_res.max_concurrent_sessions == 10
-    assert async_res.total_active_sessions_count == 4
     await async_client.transport.close()
 
 
