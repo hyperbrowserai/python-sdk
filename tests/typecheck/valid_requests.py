@@ -335,7 +335,7 @@ async def valid_async_requests(client: AsyncHyperbrowser) -> None:
     await client.agents.claude_computer_use.start(
         {
             "task": "Complete the task",
-            "llm": "claude-sonnet-5-5",
+            "llm": "claude-fable-5-2",
             "reasoning_effort": "max",
         }
     )
