@@ -5,6 +5,7 @@ from hyperbrowser.credentials_common import (
     CREDENTIAL_FILL_REQUEST_TIMEOUT_SECONDS,
     fill_credential_payload,
 )
+from hyperbrowser.exceptions import HyperbrowserError
 from hyperbrowser.models.credential import CredentialFillResult, FillCredentialParams
 from hyperbrowser.types.credential import (
     FillCredentialParams as FillCredentialParamsDict,
@@ -42,10 +43,12 @@ class SessionCredentialsManager:
         ``error.details["details"]["pages"]``; pass one's ``pageId`` as
         ``page_id``, or a URL prefix as ``page_url``.
         """
+        if not isinstance(session_id, str) or not session_id.strip():
+            raise HyperbrowserError("A session ID is required", code="invalid_request")
         body = fill_credential_payload(params)
         response = self._client.transport.post(
             self._client._build_url(
-                f"/session/{quote(session_id, safe='')}/credentials/fill"
+                f"/session/{quote(session_id.strip(), safe='')}/credentials/fill"
             ),
             data=body,
             timeout=max(self._client.timeout, CREDENTIAL_FILL_REQUEST_TIMEOUT_SECONDS),

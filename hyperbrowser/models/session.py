@@ -17,7 +17,7 @@ from hyperbrowser.models.consts import (
 
 SessionStatus = Literal["active", "closed", "error", "close-error"]
 BrowserMemorySize = Literal["small", "medium", "large"]
-CaptchaSolverType = Literal["visual"]
+CaptchaSolverType = Union[Literal["visual"], str]
 CaptchaEvaluationType = Literal[
     "turnstile",
     "cloudflare-challenge",
@@ -195,6 +195,12 @@ class SessionLaunchState(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, alias="disablePostQuantumKeyAgreement"
     )
+    enable_webgl_fingerprinting: Optional[bool] = Field(
+        default=None, alias="enableWebglFingerprinting"
+    )
+    """Deprecated and discontinued: WebGL fingerprinting was removed from the
+    browser and the server ignores this option. Kept so existing code that
+    sets or reads it keeps working."""
 
 
 class SessionCreditBreakdown(BaseModel):
@@ -658,6 +664,12 @@ class CreateSessionParams(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, serialization_alias="disablePostQuantumKeyAgreement"
     )
+    enable_webgl_fingerprinting: Optional[bool] = Field(
+        default=None, serialization_alias="enableWebglFingerprinting"
+    )
+    """Deprecated and discontinued: WebGL fingerprinting was removed from the
+    browser and the server ignores this option. Kept so existing code that
+    sets or reads it keeps working."""
     browser_memory_size: Optional[BrowserMemorySize] = Field(
         default=None, serialization_alias="browserMemorySize"
     )
@@ -674,6 +686,18 @@ class CreateSessionParams(BaseModel):
     A vault attaches the secrets its entries hold now; an op_token lets fills
     type the 1Password fields it can read. Secrets need allowed origins to be
     filled, and can only be attached when the session is created."""
+
+
+class GetActiveSessionsCountResponse(BaseModel):
+    """
+    Response containing the active sessions count.
+    """
+
+    model_config = ConfigDict(
+        populate_by_alias=True,
+    )
+
+    active_sessions_count: int = Field(alias="activeSessionsCount")
 
 
 class CreateSessionSnapshotResponse(BaseModel):

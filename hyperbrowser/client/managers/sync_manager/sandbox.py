@@ -1,6 +1,7 @@
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+from urllib.parse import quote
 
 from ..._request import coerce_request, dump_request
 from ....exceptions import HyperbrowserError
@@ -367,7 +368,16 @@ class SandboxHandle:
         return self.processes.get(process_id)
 
     def _hydrate(self, detail: SandboxDetail) -> None:
+        if (
+            detail.startup_secrets is None
+            and getattr(self, "_detail", None) is not None
+            and self._detail.startup_secrets is not None
+        ):
+            detail = detail.model_copy(
+                update={"startup_secrets": self._detail.startup_secrets}
+            )
         self._detail = detail
+        self.startup_secrets = self._detail.startup_secrets
         self._runtime_session = self._to_runtime_session(detail)
 
     def _resolve_runtime_connection(
@@ -386,18 +396,6 @@ class SandboxHandle:
             sandbox_id=self.id,
             base_url=session.runtime.base_url,
             token=session.token,
-        )
-
-    def _apply_runtime_session(self, session: SandboxRuntimeSession) -> None:
-        self._runtime_session = _copy_model(session)
-        self._detail = self._detail.model_copy(
-            update={
-                "status": session.status,
-                "region": session.region,
-                "runtime": session.runtime,
-                "token": session.token,
-                "token_expires_at": session.token_expires_at,
-            }
         )
 
     def _clear_runtime_session(self, status: Optional[str] = None) -> None:
@@ -484,7 +482,7 @@ class SandboxManager:
         return SandboxListResponse(**payload)
 
     def delete_image(self, image: str) -> SandboxImageDeleteResult:
-        payload = self._request("DELETE", f"/images/{image}")
+        payload = self._request("DELETE", f"/images/{quote(str(image), safe='')}")
         return SandboxImageDeleteResult(**payload)
 
     def list_images(
@@ -670,15 +668,17 @@ class SandboxManager:
         return SandboxSnapshotListResponse(**payload)
 
     def get_snapshot(self, snapshot: str) -> SandboxSnapshotSummary:
-        payload = self._request("GET", f"/snapshots/{snapshot}")
+        payload = self._request("GET", f"/snapshots/{quote(str(snapshot), safe='')}")
         return SandboxSnapshotSummary(**payload["snapshot"])
 
     def delete_snapshot(self, snapshot: str) -> SandboxSnapshotDeleteResult:
-        payload = self._request("DELETE", f"/snapshots/{snapshot}")
+        payload = self._request("DELETE", f"/snapshots/{quote(str(snapshot), safe='')}")
         return SandboxSnapshotDeleteResult(**payload)
 
     def stop(self, sandbox_id: str) -> BasicResponse:
-        payload = self._request("PUT", f"/sandbox/{sandbox_id}/stop")
+        payload = self._request(
+            "PUT", f"/sandbox/{quote(str(sandbox_id), safe='')}/stop"
+        )
         return BasicResponse(**payload)
 
     def create_image_build(
@@ -696,7 +696,9 @@ class SandboxManager:
         return SandboxImageBuildCreateResult(**payload)
 
     def get_image_build(self, build_id: str) -> SandboxImageBuild:
-        payload = self._request("GET", f"/images/builds/{build_id}")
+        payload = self._request(
+            "GET", f"/images/builds/{quote(str(build_id), safe='')}"
+        )
         return SandboxImageBuild(**payload["build"])
 
     def reuse_docker_image(
@@ -723,13 +725,15 @@ class SandboxManager:
     ) -> SandboxImageBuild:
         payload = self._request(
             "POST",
-            f"/images/builds/{build_id}/complete",
+            f"/images/builds/{quote(str(build_id), safe='')}/complete",
             data=dump_request(params, CompleteSandboxImageBuildParams),
         )
         return SandboxImageBuild(**payload["build"])
 
     def cancel_image_build(self, build_id: str) -> SandboxImageBuild:
-        payload = self._request("POST", f"/images/builds/{build_id}/cancel")
+        payload = self._request(
+            "POST", f"/images/builds/{quote(str(build_id), safe='')}/cancel"
+        )
         return SandboxImageBuild(**payload["build"])
 
     def list_image_builds(
@@ -1084,7 +1088,7 @@ class SandboxManager:
         return session
 
     def get_detail(self, sandbox_id: str) -> SandboxDetail:
-        payload = self._request("GET", f"/sandbox/{sandbox_id}")
+        payload = self._request("GET", f"/sandbox/{quote(str(sandbox_id), safe='')}")
         return SandboxDetail(**payload)
 
     def attach(self, detail: SandboxDetail) -> SandboxHandle:
@@ -1099,7 +1103,7 @@ class SandboxManager:
     ) -> SandboxMemorySnapshotResult:
         payload = self._request(
             "POST",
-            f"/sandbox/{sandbox_id}/snapshot",
+            f"/sandbox/{quote(str(sandbox_id), safe='')}/snapshot",
             data=dump_request(
                 params if params is not None else {},
                 SandboxMemorySnapshotParams,
@@ -1114,7 +1118,7 @@ class SandboxManager:
     ) -> SandboxNetworkUpdateResult:
         payload = self._request(
             "PUT",
-            f"/sandbox/{sandbox_id}/network",
+            f"/sandbox/{quote(str(sandbox_id), safe='')}/network",
             data=dump_request(
                 policy,
                 SandboxNetworkPolicy,
@@ -1133,7 +1137,7 @@ class SandboxManager:
     ) -> SandboxExposeResult:
         payload = self._request(
             "POST",
-            f"/sandbox/{sandbox_id}/expose",
+            f"/sandbox/{quote(str(sandbox_id), safe='')}/expose",
             data=dump_request(params, SandboxExposeParams),
         )
         target_runtime = runtime or self.get_detail(sandbox_id).runtime
@@ -1144,7 +1148,7 @@ class SandboxManager:
     def unexpose(self, sandbox_id: str, port: int) -> SandboxUnexposeResult:
         payload = self._request(
             "POST",
-            f"/sandbox/{sandbox_id}/unexpose",
+            f"/sandbox/{quote(str(sandbox_id), safe='')}/unexpose",
             data={"port": port},
         )
         return SandboxUnexposeResult(**payload)
@@ -1157,7 +1161,9 @@ class SandboxManager:
         """
         try:
             response = self._request(
-                "POST", f"/sandbox/{sandbox_id}/processes", data=payload
+                "POST",
+                f"/sandbox/{quote(str(sandbox_id), safe='')}/processes",
+                data=payload,
             )
         except HyperbrowserError as error:
             raise secret_process_start_error(sandbox_id, error)

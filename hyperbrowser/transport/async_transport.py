@@ -10,7 +10,6 @@ from hyperbrowser.sandbox_common import (
     error_payload_retryable,
     get_request_id,
     get_retry_delay_seconds,
-    is_retryable_network_error,
     normalize_network_error,
     request_context,
     should_retry_get,
@@ -22,8 +21,8 @@ class AsyncTransport(TransportStrategy):
     """Asynchronous transport implementation using httpx"""
 
     def __init__(self, api_key: str):
-        self.client = httpx.AsyncClient(headers={"x-api-key": api_key})
         self._closed = False
+        self.client = httpx.AsyncClient(headers={"x-api-key": api_key})
 
     async def close(self) -> None:
         if not self._closed:
@@ -86,11 +85,15 @@ class AsyncTransport(TransportStrategy):
                 service="control",
             )
         except httpx.RequestError as e:
-            raise HyperbrowserError(
+            req = getattr(response, "_request", None) or getattr(e, "_request", None)
+            raise normalize_network_error(
+                e,
+                "control",
                 "Request failed",
-                original_error=e,
-                retryable=is_retryable_network_error(e),
-                service="control",
+                request_context(
+                    req.method if req is not None else None,
+                    str(req.url) if req is not None else None,
+                ),
             )
 
     async def post(
@@ -146,20 +149,35 @@ class AsyncTransport(TransportStrategy):
                 await asyncio.sleep(get_retry_delay_seconds(failed_attempt))
                 failed_attempt += 1
 
-    async def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
+    async def put(
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         try:
-            response = await self.client.put(url, json=data)
+            kwargs = {}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
+            response = await self.client.put(url, json=data, **kwargs)
             return await self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Put request failed", original_error=e)
+        except BaseException as e:
+            raise normalize_network_error(
+                e, "control", "Request failed", request_context("PUT", url)
+            )
 
-    async def delete(self, url: str) -> APIResponse:
+    async def delete(
+        self,
+        url: str,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         try:
-            response = await self.client.delete(url)
+            kwargs = {}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
+            response = await self.client.delete(url, **kwargs)
             return await self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Delete request failed", original_error=e)
+        except BaseException as e:
+            raise normalize_network_error(
+                e, "control", "Request failed", request_context("DELETE", url)
+            )

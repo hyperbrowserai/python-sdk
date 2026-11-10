@@ -29,6 +29,7 @@ from .anthropic import (
     CRAWL_TOOL_ANTHROPIC,
 )
 from .gemini import FILL_CREDENTIAL_TOOL_GEMINI
+from .schema import FILL_CREDENTIAL_DESCRIPTION, FILL_CREDENTIAL_SCHEMA
 
 
 class WebsiteScrapeTool:
@@ -130,14 +131,22 @@ class BrowserUseTool:
     @staticmethod
     def runnable(hb: Hyperbrowser, params: StartBrowserUseTaskParams) -> str:
         resp = hb.agents.browser_use.start_and_wait(params=params)
-        return resp.data.final_result if resp.data and resp.data.final_result else ""
+        return (
+            resp.data.final_result
+            if resp.data and resp.data.final_result
+            else resp.error or ""
+        )
 
     @staticmethod
     async def async_runnable(
         hb: AsyncHyperbrowser, params: StartBrowserUseTaskParams
     ) -> str:
         resp = await hb.agents.browser_use.start_and_wait(params=params)
-        return resp.data.final_result if resp.data and resp.data.final_result else ""
+        return (
+            resp.data.final_result
+            if resp.data and resp.data.final_result
+            else resp.error or ""
+        )
 
 
 def _present(value: Any) -> bool:
@@ -250,6 +259,11 @@ class CredentialFillTool:
 
 __all__ = [
     "CredentialFillTool",
+    "FILL_CREDENTIAL_DESCRIPTION",
+    "FILL_CREDENTIAL_SCHEMA",
+    "FILL_CREDENTIAL_TOOL_ANTHROPIC",
+    "FILL_CREDENTIAL_TOOL_GEMINI",
+    "FILL_CREDENTIAL_TOOL_OPENAI",
     "WebsiteScrapeTool",
     "WebsiteScreenshotTool",
     "WebsiteCrawlTool",

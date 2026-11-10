@@ -15,7 +15,7 @@ from hyperbrowser.models.consts import (
 
 SessionStatus = Literal["active", "closed", "error", "close-error"]
 BrowserMemorySize = Literal["small", "medium", "large"]
-CaptchaSolverType = Literal["visual"]
+CaptchaSolverType = Union[Literal["visual"], str]
 CaptchaEvaluationType = Literal[
     "turnstile",
     "cloudflare-challenge",
@@ -210,6 +210,7 @@ class CreateSessionParams(TypedDict, total=False):
     live_view_ttl_seconds: Optional[int]
     replace_native_elements: Optional[bool]
     disable_post_quantum_key_agreement: Optional[bool]
+    enable_webgl_fingerprinting: Optional[bool]  # Deprecated: ignored by the server
     browser_memory_size: Optional[BrowserMemorySize]
     start_from_snapshot: Optional[StartSessionFromSnapshotParams]
     credentials: Optional[List[SessionCredentialInput]]
@@ -246,6 +247,7 @@ __all__ = [
     "CreateSessionParams",
     "CreateSessionProfile",
     "ImageCaptchaParam",
+    "ProxyRoute",
     "ScreenConfig",
     "SessionEventLogListParams",
     "SessionGetParams",
@@ -257,4 +259,5 @@ __all__ = [
     "UpdateSessionProxyParams",
     "UpdateSessionScreenParams",
     "UpdateSessionSolveCaptchasParams",
+    "WebBotAuthParams",
 ]
