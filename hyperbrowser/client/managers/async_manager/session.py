@@ -24,6 +24,7 @@ from ....models.session import (
     CaptchaEvaluationResponse,
     CreateSessionParams,
     CreateSessionSnapshotResponse,
+    GetActiveSessionsCountResponse,
     GetSessionDownloadsUrlResponse,
     GetSessionRecordingUrlResponse,
     GetSessionVideoRecordingUrlResponse,
@@ -138,6 +139,12 @@ class SessionManager:
             params=dump_request(params, SessionListParams),
         )
         return SessionListResponse(**response.data)
+
+    async def get_active_sessions_count(self) -> GetActiveSessionsCountResponse:
+        response = await self._client.transport.get(
+            self._client._build_url("/sessions/active-count")
+        )
+        return GetActiveSessionsCountResponse(**response.data)
 
     async def get_recording(self, id: str) -> List[SessionRecording]:
         response = await self._client.transport.get(

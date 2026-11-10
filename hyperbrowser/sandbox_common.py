@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 import re
@@ -154,8 +155,11 @@ def _parse_error_payload(
     raw_text: str, fallback_message: str
 ) -> Tuple[str, Optional[str], Any, Optional[json.JSONDecodeError]]:
     if not raw_text:
-        return fallback_message, None, None, json.JSONDecodeError(
-            "Empty response body", raw_text, 0
+        return (
+            fallback_message,
+            None,
+            None,
+            json.JSONDecodeError("Empty response body", raw_text, 0),
         )
 
     try:
@@ -260,7 +264,7 @@ def normalize_runtime_api_path(pathname: str, prepend_sandbox: bool) -> str:
     if absolute == "/sandbox":
         return "/"
     if absolute.startswith("/sandbox/"):
-        return f"/{absolute[len('/sandbox/'):]}"
+        return f"/{absolute[len('/sandbox/') :]}"
     return absolute
 
 
@@ -386,7 +390,7 @@ def normalize_network_error(
 ) -> HyperbrowserError:
     if isinstance(error, HyperbrowserError):
         return error
-    if not isinstance(error, Exception):
+    if not isinstance(error, Exception) or isinstance(error, asyncio.CancelledError):
         # CancelledError, KeyboardInterrupt and SystemExit are control flow, not
         # transport failures. Callers catch BaseException around their requests,
         # so wrapping these would strand the cancellation and report a request

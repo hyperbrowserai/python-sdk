@@ -1224,8 +1224,7 @@ def _follow_context_source_symlinks(
                 ) from exc
             if not target or "\x00" in target:
                 raise ValueError(
-                    f'build context symlink "{current_relative}" has an '
-                    "invalid target"
+                    f'build context symlink "{current_relative}" has an invalid target'
                 )
 
             remainder = parts[index + 1 :]
@@ -1634,6 +1633,10 @@ def _remove_docker_container(container_id: str) -> None:
         pass
 
 
+class DockerCommandError(RuntimeError):
+    """Raised when a local Docker CLI command fails."""
+
+
 def _run_command(args: Sequence[str]) -> None:
     _run_command_result(args)
 
@@ -1643,16 +1646,21 @@ def _run_command_output(args: Sequence[str]) -> str:
 
 
 def _run_command_result(args: Sequence[str]) -> subprocess.CompletedProcess:
-    result = subprocess.run(
-        list(args),
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            list(args),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise DockerCommandError(
+            "docker CLI is required for local Docker image operations"
+        ) from exc
     if result.returncode == 0:
         return result
     message = result.stderr.strip()
     if message:
-        raise RuntimeError(f"{' '.join(args)}: {message}")
-    raise RuntimeError(f"{' '.join(args)} failed with code {result.returncode}")
+        raise DockerCommandError(f"{' '.join(args)}: {message}")
+    raise DockerCommandError(f"{' '.join(args)} failed with code {result.returncode}")

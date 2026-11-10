@@ -11,7 +11,6 @@ from hyperbrowser.sandbox_common import (
     error_payload_retryable,
     get_request_id,
     get_retry_delay_seconds,
-    is_retryable_network_error,
     normalize_network_error,
     request_context,
     should_retry_get,
@@ -64,11 +63,15 @@ class SyncTransport(TransportStrategy):
                 service="control",
             )
         except httpx.RequestError as e:
-            raise HyperbrowserError(
+            req = getattr(response, "_request", None) or getattr(e, "_request", None)
+            raise normalize_network_error(
+                e,
+                "control",
                 "Request failed",
-                original_error=e,
-                retryable=is_retryable_network_error(e),
-                service="control",
+                request_context(
+                    req.method if req is not None else None,
+                    str(req.url) if req is not None else None,
+                ),
             )
 
     def close(self) -> None:
@@ -127,20 +130,35 @@ class SyncTransport(TransportStrategy):
                 time.sleep(get_retry_delay_seconds(failed_attempt))
                 failed_attempt += 1
 
-    def put(self, url: str, data: Optional[dict] = None) -> APIResponse:
+    def put(
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         try:
-            response = self.client.put(url, json=data)
+            kwargs = {}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
+            response = self.client.put(url, json=data, **kwargs)
             return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Put request failed", original_error=e)
+        except BaseException as e:
+            raise normalize_network_error(
+                e, "control", "Request failed", request_context("PUT", url)
+            )
 
-    def delete(self, url: str) -> APIResponse:
+    def delete(
+        self,
+        url: str,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         try:
-            response = self.client.delete(url)
+            kwargs = {}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
+            response = self.client.delete(url, **kwargs)
             return self._handle_response(response)
-        except HyperbrowserError:
-            raise
-        except Exception as e:
-            raise HyperbrowserError("Delete request failed", original_error=e)
+        except BaseException as e:
+            raise normalize_network_error(
+                e, "control", "Request failed", request_context("DELETE", url)
+            )

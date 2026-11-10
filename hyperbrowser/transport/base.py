@@ -66,9 +66,18 @@ class TransportStrategy(ABC):
         pass
 
     @abstractmethod
-    def put(self, url: str) -> APIResponse:
+    def put(
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         pass
 
     @abstractmethod
-    def delete(self, url: str) -> APIResponse:
+    def delete(
+        self,
+        url: str,
+        timeout: Optional[float] = None,
+    ) -> APIResponse:
         pass
