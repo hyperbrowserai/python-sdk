@@ -151,21 +151,29 @@ def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_
     }
 
 
-@pytest.mark.parametrize("llm", ["gemini-4-carbon", "gemini-4-argon"])
+@pytest.mark.parametrize(
+    ("llm", "reasoning_effort"),
+    [
+        ("gemini-4-hydrogen", "xhigh"),
+        ("gemini-4-carbon", "high"),
+        ("gemini-4-argon", "high"),
+    ],
+)
 def test_gemini_computer_use_serializes_gemini_4_reasoning_effort_for_mapping_and_legacy_model(
     llm,
+    reasoning_effort,
 ):
     mapping = {
         "task": "Complete the task",
         "llm": llm,
-        "reasoning_effort": "high",
+        "reasoning_effort": reasoning_effort,
         "use_custom_api_keys": True,
         "api_keys": {"google": "google-key"},
     }
     legacy = StartGeminiComputerUseTaskParams(
         task="Complete the task",
         llm=llm,
-        reasoning_effort="high",
+        reasoning_effort=reasoning_effort,
         use_custom_api_keys=True,
         api_keys=GeminiComputerUseApiKeys(google="google-key"),
     )
@@ -177,7 +185,7 @@ def test_gemini_computer_use_serializes_gemini_4_reasoning_effort_for_mapping_an
     assert dump_request(mapping, StartGeminiComputerUseTaskParams) == {
         "task": "Complete the task",
         "llm": llm,
-        "reasoningEffort": "high",
+        "reasoningEffort": reasoning_effort,
         "useCustomApiKeys": True,
         "apiKeys": {"google": "google-key"},
     }

@@ -140,6 +140,13 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             "reasoning_effort": "low",
         }
     )
+    client.agents.gemini_computer_use.start(
+        {
+            "task": "Complete the task",
+            "llm": "gemini-4-hydrogen",
+            "reasoning_effort": "xhigh",
+        }
+    )
     client.agents.jev_computer_use.start(
         {
             "task": "Find the order",

@@ -55,7 +55,7 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
         {  # P
             "task": "Complete the task",
             "llm": "gemini-4-argon",
-            "reasoning_effort": "xhigh",  # M
+            "reasoning_effort": "max",  # M
         }
     )
     WebsiteExtractTool.runnable(
