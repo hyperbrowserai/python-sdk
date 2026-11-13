@@ -64,7 +64,7 @@ async def _aiter_stream_content(stream, chunk_size: int = DEFAULT_TRANSFER_CHUNK
     if isinstance(stream, str):
         yield stream.encode("utf-8")
         return
-    if isinstance(stream, (bytes, bytearray)):
+    if isinstance(stream, (bytes, bytearray, memoryview)):
         yield bytes(stream)
         return
     if hasattr(stream, "__aiter__"):
@@ -492,6 +492,7 @@ class SandboxFilesApi:
         content_length: Optional[int] = None,
         chunk_size: int = DEFAULT_TRANSFER_CHUNK_SIZE,
     ):
+        """Upload a bytes-like buffer, readable file, or iterable of byte chunks."""
         headers = {}
         if content_length is not None:
             headers["content-length"] = str(content_length)
