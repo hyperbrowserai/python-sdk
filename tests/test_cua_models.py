@@ -7,7 +7,15 @@ from hyperbrowser.models.agents.cua import StartCuaTaskParams
 
 @pytest.mark.parametrize(
     "llm",
-    ["gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-sol", "gpt-6-luna", "gpt-6-astra"],
+    [
+        "gpt-6.2-astra",
+        "gpt-6.2-sol",
+        "gpt-6.1-sol",
+        "gpt-6.1-terra",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "gpt-6-astra",
+    ],
 )
 def test_start_cua_accepts_gpt6_models(llm: str) -> None:
     dumped = dump_request(
