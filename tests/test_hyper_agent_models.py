@@ -5,7 +5,7 @@ from hyperbrowser.client._request import dump_request
 from hyperbrowser.models.agents.hyper_agent import StartHyperAgentTaskParams
 
 
-@pytest.mark.parametrize("llm", ["gpt-6.1-terra", "gpt-6-luna"])
+@pytest.mark.parametrize("llm", ["gpt-6.2-sol", "gpt-6.1-terra", "gpt-6-luna"])
 def test_start_hyper_agent_accepts_gpt6_models(llm: str) -> None:
     dumped = dump_request(
         {"task": "Inspect the page", "llm": llm, "version": "1.1.0"},
