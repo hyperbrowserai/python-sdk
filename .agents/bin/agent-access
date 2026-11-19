@@ -83,7 +83,11 @@ install_tools() {
     for pkg in "${vendor[@]}"; do
       apt_install "$pkg" || { log "installing $pkg failed"; rc=1; }
     done
-    # Tailscale joins per session (agent-tailscale-up), never in the snapshot.
+  fi
+  # Tailscale joins per session (agent-tailscale-up), never in the snapshot,
+  # and on Cursor through its own userspace daemon with the proxies. A system
+  # tailscaled, newly installed or already in the image, would take its place.
+  if command -v tailscale >/dev/null; then
     sudo systemctl disable --now tailscaled >/dev/null 2>&1 || true
   fi
 
