@@ -154,6 +154,7 @@ def test_claude_computer_use_serializes_reasoning_effort_for_mapping_and_legacy_
 @pytest.mark.parametrize(
     ("llm", "reasoning_effort"),
     [
+        ("gemini-4-neon", "xhigh"),
         ("gemini-4-hydrogen", "xhigh"),
         ("gemini-4-carbon", "high"),
         ("gemini-4-argon", "high"),

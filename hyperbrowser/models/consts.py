@@ -54,6 +54,7 @@ BrowserUseLlm = Literal[
     "claude-3-5-haiku-20241022",
     "gemini-2.0-flash",
     "gemini-2.5-flash",
+    "gemini-4-neon",
     "gemini-4-hydrogen",
     "gemini-3.8-flash",
 ]
@@ -78,6 +79,7 @@ HyperAgentLlm = Literal[
     # Deprecated: retires November 30, 2026. Use "claude-sonnet-5".
     "claude-sonnet-4-5",
     "gemini-2.5-flash",
+    "gemini-4-neon",
     "gemini-4-hydrogen",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
@@ -137,6 +139,7 @@ CuaReasoningEffort = Literal[
     "max",
 ]
 GeminiComputerUseLlm = Literal[
+    "gemini-4-neon",
     "gemini-4-hydrogen",
     "gemini-4-carbon",
     "gemini-4-argon",
@@ -148,8 +151,8 @@ GeminiComputerUseLlm = Literal[
     "gemini-3-flash-preview",
     "gemini-2.5-computer-use-preview-10-2025",
 ]
-# Gemini 4 Hydrogen, Gemini 4 Carbon, Gemini 4 Argon, 3.8 Flash, and 3.7 Flash do not support "minimal".
-# Only Gemini 4 Hydrogen supports "xhigh".
+# Gemini 4 Neon, Gemini 4 Hydrogen, Gemini 4 Carbon, Gemini 4 Argon, 3.8 Flash, and 3.7 Flash do not support "minimal".
+# Only Gemini 4 Neon and Gemini 4 Hydrogen support "xhigh".
 GeminiComputerUseReasoningEffort = Literal[
     "minimal",
     "low",
