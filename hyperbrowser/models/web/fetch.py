@@ -40,6 +40,12 @@ class FetchResponseData(BaseModel):
     )
 
     metadata: Optional[Dict[str, Any]] = None
+    # HTTP status of the page the content came from. None when the browser
+    # received no response.
+    status_code: Optional[int] = Field(default=None, alias="statusCode")
+    # URL the page ended on after redirects. For a document such as a PDF, the
+    # URL of the downloaded file.
+    final_url: Optional[str] = Field(default=None, alias="finalUrl")
     html: Optional[str] = None
     markdown: Optional[str] = None
     links: Optional[List[str]] = None
