@@ -74,7 +74,7 @@ class PageData(BaseModel):
     error: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     # HTTP status of the page the content came from. None when the browser
-    # received no response, and on results cached before this field existed.
+    # received no response.
     status_code: Optional[int] = Field(default=None, alias="statusCode")
     # URL the page ended on after redirects. For a document such as a PDF, the
     # URL of the downloaded file.

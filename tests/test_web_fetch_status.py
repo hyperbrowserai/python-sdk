@@ -30,7 +30,7 @@ def test_fetch_response_reports_the_http_status_and_final_url():
 
 
 def test_fetch_response_without_the_status_fields_still_parses():
-    # Results cached before the API returned these fields omit them.
+    # The API can omit both fields.
     response = FetchResponse(
         **{"jobId": "job-1", "status": "completed", "data": {"markdown": "# Title"}}
     )
