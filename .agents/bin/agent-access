@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# Keyless GCP, AWS and tailnet access for a Cursor Cloud Agent VM of any
+# repository, on Cursor's default image or a custom one. The repository that
+# maintains the kit does the same through its own .cursor/ environment; other
+# repositories get this kit through its .agents/sync-kit.
+#
+#   agent-access install  Build step, cached in the environment snapshot:
+#                         installs curl, jq, gcloud, aws and tailscale when
+#                         missing, links the helpers into /usr/local/bin and
+#                         sets the shell environment gcloud and aws need.
+#   agent-access start    Every boot: saves the resource names, writes the
+#                         coding-agents gcloud configuration and AWS profile,
+#                         and keeps the VM on the tailnet in the background.
+#
+# Never fails the environment: a step that does not work is reported and
+# skipped, so the repository's own setup still runs.
+set -uo pipefail
+
+self="$(readlink -f "${BASH_SOURCE[0]}")"
+here="$(dirname "$self")"
+conf_dir="$HOME/.config/coding-agents"
+
+log() { echo "agent-access: $*"; }
+
+# Keep the resource names where helpers started without the Cursor secrets in
+# their environment (sudo, detached watchers) still find them. Only the
+# AGENT_ENV_CONF secret is saved; a committed agent-env.conf is read in place.
+save_conf() {
+  [ -f "$here/../agent-env.conf" ] && return 0
+  if [ -n "${AGENT_ENV_CONF:-}" ]; then
+    mkdir -p "$conf_dir" &&
+      printf '%s\n' "$AGENT_ENV_CONF" >"$conf_dir/agent-env.conf.tmp" &&
+      mv "$conf_dir/agent-env.conf.tmp" "$conf_dir/agent-env.conf"
+  elif [ ! -f "$conf_dir/agent-env.conf" ]; then
+    log "no AGENT_ENV_CONF secret and no .agents/agent-env.conf; cloud and tailnet access stay off"
+  fi
+}
+
+# Add an apt repository once. Keys that are already binary (Tailscale's
+# .noarmor.gpg) are saved as they are; armored ones are dearmored.
+apt_repo() { # name key-url key-file line
+  [ -f "/etc/apt/sources.list.d/$1.list" ] && return 0
+  case "$2" in
+    *.noarmor.gpg) sudo curl -fsSL "$2" -o "$3" ;;
+    *) curl -fsSL "$2" | sudo gpg --batch --yes --dearmor -o "$3" ;;
+  esac && echo "$4" | sudo tee "/etc/apt/sources.list.d/$1.list" >/dev/null
+}
+
+apt_install() { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "$@"; }
+
+# Each tool is installed on its own, so one failure (an unreachable vendor
+# repository, say) does not cost the others.
+install_tools() {
+  local base=() vendor=() codename rc=0
+  command -v curl >/dev/null || base+=(curl ca-certificates)
+  command -v jq >/dev/null || base+=(jq)
+  command -v unzip >/dev/null || base+=(unzip)
+  command -v gcloud >/dev/null || vendor+=(google-cloud-cli)
+  command -v tailscale >/dev/null || vendor+=(tailscale)
+  [ "${#vendor[@]}" -gt 0 ] && ! command -v gpg >/dev/null && base+=(gnupg)
+
+  if [ "${#base[@]}" -gt 0 ] || [ "${#vendor[@]}" -gt 0 ]; then
+    sudo apt-get update -qq || { log "apt-get update failed"; rc=1; }
+  fi
+  if [ "${#base[@]}" -gt 0 ]; then
+    apt_install "${base[@]}" || { log "installing ${base[*]} failed"; rc=1; }
+  fi
+  if [ "${#vendor[@]}" -gt 0 ]; then
+    codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
+    sudo install -d -m 0755 /etc/apt/keyrings
+    if [[ " ${vendor[*]} " == *" google-cloud-cli "* ]]; then
+      apt_repo google-cloud-sdk https://packages.cloud.google.com/apt/doc/apt-key.gpg /etc/apt/keyrings/cloud.google.gpg \
+        "deb [signed-by=/etc/apt/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" ||
+        log "adding the Google Cloud repository failed"
+    fi
+    if [[ " ${vendor[*]} " == *" tailscale "* ]]; then
+      apt_repo tailscale "https://pkgs.tailscale.com/stable/ubuntu/${codename}.noarmor.gpg" /etc/apt/keyrings/tailscale.gpg \
+        "deb [signed-by=/etc/apt/keyrings/tailscale.gpg] https://pkgs.tailscale.com/stable/ubuntu ${codename} main" ||
+        log "adding the Tailscale repository failed"
+    fi
+    sudo apt-get update -qq || log "apt-get update failed"
+    local pkg
+    for pkg in "${vendor[@]}"; do
+      apt_install "$pkg" || { log "installing $pkg failed"; rc=1; }
+    done
+    # Tailscale joins per session (agent-tailscale-up), never in the snapshot.
+    sudo systemctl disable --now tailscaled >/dev/null 2>&1 || true
+  fi
+
+  if ! command -v aws >/dev/null; then
+    local tmp
+    tmp="$(mktemp -d)"
+    if curl -fsSLo "$tmp/awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" &&
+       unzip -q "$tmp/awscliv2.zip" -d "$tmp" && sudo "$tmp/aws/install"; then
+      :
+    else
+      log "installing the AWS CLI failed"
+      rc=1
+    fi
+    rm -rf "$tmp"
+  fi
+  return "$rc"
+}
+
+shell_env() {
+  # Cursor resets PATH for agent shells, so the helpers go in /usr/local/bin,
+  # and gcloud may run the executable token helper only with this variable.
+  local f
+  for f in "$here"/agent-*; do sudo ln -sf "$f" /usr/local/bin/; done
+  printf '%s\n' \
+    'export GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES=1' \
+    'if [ -z "${AWS_PROFILE:-}" ] && grep -qE "^\[[[:space:]]*profile[[:space:]]+coding-agents[[:space:]]*\]" "${AWS_CONFIG_FILE:-$HOME/.aws/config}" 2>/dev/null; then export AWS_PROFILE=coding-agents; fi' |
+    sudo tee /etc/profile.d/agent-cloud.sh >/dev/null
+  grep -qF '/etc/profile.d/agent-cloud.sh' /etc/bash.bashrc 2>/dev/null ||
+    echo '. /etc/profile.d/agent-cloud.sh' | sudo tee -a /etc/bash.bashrc >/dev/null
+}
+
+case "${1:-}" in
+  install)
+    save_conf
+    install_tools || true
+    shell_env || log "linking the helpers failed"
+    # No login here: a snapshot build has no agent identity. start logs in.
+    ;;
+  start)
+    save_conf
+    # A snapshot from an older kit may lack the links.
+    [ -e /usr/local/bin/agent-tailscale-up ] || shell_env || true
+    export GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES=1
+    # The AWS profile is written at once. The GCP login needs the platform's
+    # identity, which can appear late, so keep trying in the background for
+    # up to 10 minutes rather than give up for the session.
+    if ! timeout 90 "$here/agent-cloud-login"; then
+      log "gcloud is not configured yet; retrying in the background (log: /tmp/agent-cloud-login.log)"
+      setsid nohup bash -c 'for _ in $(seq 1 20); do sleep 30; timeout 90 "$1" && exit 0; done; exit 1' \
+        agent-cloud-login-retry "$here/agent-cloud-login" >>/tmp/agent-cloud-login.log 2>&1 </dev/null &
+    fi
+    "$here/agent-tailscale-up" --background || log "could not start the tailnet watcher"
+    ;;
+  *)
+    echo "usage: agent-access install|start" >&2
+    exit 2
+    ;;
+esac
+exit 0
