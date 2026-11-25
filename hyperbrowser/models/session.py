@@ -195,6 +195,9 @@ class SessionLaunchState(BaseModel):
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, alias="disablePostQuantumKeyAgreement"
     )
+    disable_software_webgl: Optional[bool] = Field(
+        default=None, alias="disableSoftwareWebGL"
+    )
     enable_webgl_fingerprinting: Optional[bool] = Field(
         default=None, alias="enableWebglFingerprinting"
     )
@@ -663,6 +666,9 @@ class CreateSessionParams(BaseModel):
     """
     disable_post_quantum_key_agreement: Optional[bool] = Field(
         default=None, serialization_alias="disablePostQuantumKeyAgreement"
+    )
+    disable_software_webgl: Optional[bool] = Field(
+        default=None, serialization_alias="disableSoftwareWebGL"
     )
     enable_webgl_fingerprinting: Optional[bool] = Field(
         default=None, serialization_alias="enableWebglFingerprinting"

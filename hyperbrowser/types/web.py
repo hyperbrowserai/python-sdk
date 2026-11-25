@@ -8,6 +8,7 @@ from hyperbrowser.models.consts import (
     FetchScreenshotFormat,
     FetchStealthMode,
     FetchWaitUntil,
+    OperatingSystem,
     State,
 )
 from hyperbrowser.models.web.search import WebSearchFiletype
@@ -112,6 +113,8 @@ class FetchBrowserOptions(TypedDict, total=False):
     profile_id: Optional[str]
     solve_captchas: Optional[bool]
     location: Optional[FetchBrowserLocationOptions]
+    operating_system: Optional[OperatingSystem]
+    disable_software_webgl: Optional[bool]
 
 
 class FetchNavigationOptions(TypedDict, total=False):

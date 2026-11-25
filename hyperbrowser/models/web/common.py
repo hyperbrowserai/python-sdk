@@ -8,6 +8,7 @@ from hyperbrowser.models.consts import (
     Country,
     State,
     FetchSanitizeMode,
+    OperatingSystem,
 )
 from hyperbrowser.models.session import ScreenConfig
 from hyperbrowser.models.web.branding import BrandingProfile
@@ -165,6 +166,12 @@ class FetchBrowserOptions(BaseModel):
     )
     location: Optional[FetchBrowserLocationOptions] = Field(
         default=None, serialization_alias="location"
+    )
+    operating_system: Optional[OperatingSystem] = Field(
+        default=None, serialization_alias="operatingSystem"
+    )
+    disable_software_webgl: Optional[bool] = Field(
+        default=None, serialization_alias="disableSoftwareWebGL"
     )
 
 
