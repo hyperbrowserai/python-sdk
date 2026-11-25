@@ -670,8 +670,6 @@ class CreateSessionParams(BaseModel):
     disable_software_webgl: Optional[bool] = Field(
         default=None, serialization_alias="disableSoftwareWebGL"
     )
-    """When true, Ultra sessions skip forced software (SwiftShader) WebGL
-    rendering. On machines without a GPU, WebGL content may be unavailable."""
     enable_webgl_fingerprinting: Optional[bool] = Field(
         default=None, serialization_alias="enableWebglFingerprinting"
     )
