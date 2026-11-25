@@ -17,6 +17,7 @@ from hyperbrowser.models import (
     GeminiComputerUseApiKeys,
     JevComputerUseApiKeys,
     MetaComputerUseApiKeys,
+    SessionLaunchState,
     StartBatchFetchJobParams,
     StartBrowserUseTaskParams,
     StartClaudeComputerUseTaskParams,
@@ -363,3 +364,11 @@ def test_fetch_browser_operating_system_and_webgl_serialize_for_mapping_and_lega
 def test_fetch_browser_operating_system_rejects_unknown_values():
     with pytest.raises(ValidationError):
         FetchBrowserOptions(operating_system="beos")
+
+
+def test_session_launch_state_parses_disable_software_webgl():
+    assert (
+        SessionLaunchState(**{"disableSoftwareWebGL": True}).disable_software_webgl
+        is True
+    )
+    assert SessionLaunchState().disable_software_webgl is None
