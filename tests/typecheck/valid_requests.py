@@ -42,6 +42,7 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
     client.sessions.create(
         {
             "use_stealth": True,
+            "disable_software_webgl": True,
             "region": "us",
             "screen": {"width": 1440, "height": 900},
             "profile": {
@@ -69,6 +70,8 @@ def valid_sync_requests(client: Hyperbrowser) -> None:
             "browser": {
                 "screen": {"width": 1280, "height": 720},
                 "location": {"country": "US", "state": "CA"},
+                "operating_system": "macos",
+                "disable_software_webgl": True,
             },
         }
     )

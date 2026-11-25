@@ -12,15 +12,19 @@ from hyperbrowser.models import (
     CuaBaseUrls,
     CreateSandboxParams,
     CreateSessionParams,
+    FetchBrowserOptions,
+    FetchParams,
     GeminiComputerUseApiKeys,
     JevComputerUseApiKeys,
     MetaComputerUseApiKeys,
+    StartBatchFetchJobParams,
     StartBrowserUseTaskParams,
     StartClaudeComputerUseTaskParams,
     StartCuaTaskParams,
     StartGeminiComputerUseTaskParams,
     StartJevComputerUseTaskParams,
     StartMetaComputerUseTaskParams,
+    StartWebCrawlJobParams,
 )
 from hyperbrowser.tools import _normalize_extract_tool_params
 
@@ -313,3 +317,49 @@ def test_extract_tool_schema_string_is_parsed_without_mutating_input():
         "type": "object",
         "properties": {"snake_case": {"type": "string"}},
     }
+
+
+def test_session_disable_software_webgl_serializes_for_mapping_and_legacy_model():
+    mapping = {"disable_software_webgl": True}
+    legacy = CreateSessionParams(**mapping)
+
+    assert dump_request(mapping, CreateSessionParams) == dump_request(
+        legacy, CreateSessionParams
+    )
+    assert dump_request(mapping, CreateSessionParams)["disableSoftwareWebGL"] is True
+    assert (
+        dump_request({"disable_software_webgl": False}, CreateSessionParams)[
+            "disableSoftwareWebGL"
+        ]
+        is False
+    )
+    assert "disableSoftwareWebGL" not in dump_request({}, CreateSessionParams)
+
+
+@pytest.mark.parametrize(
+    ("model", "base"),
+    [
+        (FetchParams, {"url": "https://example.com"}),
+        (StartBatchFetchJobParams, {"urls": ["https://example.com"]}),
+        (StartWebCrawlJobParams, {"url": "https://example.com"}),
+    ],
+)
+def test_fetch_browser_operating_system_and_webgl_serialize_for_mapping_and_legacy_model(
+    model, base
+):
+    browser = {"operating_system": "macos", "disable_software_webgl": True}
+    mapping = {**base, "browser": browser}
+    legacy = model(**base, browser=FetchBrowserOptions(**browser))
+
+    expected = {"operatingSystem": "macos", "disableSoftwareWebGL": True}
+    assert dump_request(mapping, model)["browser"] == expected
+    assert dump_request(legacy, model)["browser"] == expected
+    assert "browser" not in dump_request(base, model)
+    assert dump_request({**base, "browser": {"operating_system": "ios"}}, model)[
+        "browser"
+    ] == {"operatingSystem": "ios"}
+
+
+def test_fetch_browser_operating_system_rejects_unknown_values():
+    with pytest.raises(ValidationError):
+        FetchBrowserOptions(operating_system="beos")

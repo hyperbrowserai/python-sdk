@@ -14,6 +14,18 @@ def invalid_sync_requests(client: Hyperbrowser) -> None:
             "outputs": {"formats": [{"type": "xml"}]},  # M
         }
     )
+    client.web.fetch(
+        {  # P
+            "url": "https://example.com",
+            "browser": {"operating_system": "beos"},  # M
+        }
+    )
+    client.web.fetch(
+        {  # P
+            "url": "https://example.com",
+            "browser": {"disable_software_webgl": "yes"},  # M
+        }
+    )
     client.sandboxes.create({"image_name": "node", "cpu": "four"})  # M,P
     client.secrets.create({"description": "missing name"})  # M,P
     client.sandboxes.create({"image_name": "node", "secrets": {"A": 1}})  # M,P
